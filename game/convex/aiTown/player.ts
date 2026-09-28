@@ -187,18 +187,14 @@ export class Player {
         throw new Error(`Only ${MAX_HUMAN_PLAYERS} human players allowed at once.`);
       }
     }
-    let position;
-    for (let attempt = 0; attempt < 10; attempt++) {
-      const candidate = {
-        x: Math.floor(Math.random() * game.worldMap.width),
-        y: Math.floor(Math.random() * game.worldMap.height),
-      };
-      if (blocked(game, now, candidate)) {
-        continue;
+    // The plane is mostly sea, so random probing rarely lands on ground: pick among free tiles.
+    const free = [];
+    for (let x = 0; x < game.worldMap.width; x++) {
+      for (let y = 0; y < game.worldMap.height; y++) {
+        if (!blocked(game, now, { x, y })) free.push({ x, y });
       }
-      position = candidate;
-      break;
     }
+    const position = free.length ? free[Math.floor(Math.random() * free.length)] : undefined;
     if (!position) {
       throw new Error(`Failed to find a free position!`);
     }
