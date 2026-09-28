@@ -1,3 +1,5 @@
+name: zendikar-journey
+
 services:
   frontend:
     build: .
@@ -51,8 +53,11 @@ services:
         condition: service_healthy
 
 volumes:
+  # Named explicitly so they survive the move from game/ (compose project "game").
   data:
+    name: game_data
   ollama:
+    name: game_ollama
 
 networks:
   ai-town-network:

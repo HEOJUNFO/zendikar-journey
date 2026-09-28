@@ -5,8 +5,8 @@
 ## 구조
 
 - `world/`: 세계관 원본. 카드 1장 = `cards/` 파일 1개, 세계 요소 = `entities/<종류>/` 파일. 규칙은 `world/README.md`.
-- `game/`: [AI Town](https://github.com/a16z-infra/ai-town) 포크 (upstream 커밋 `8e05997`, 2026-08-25). 2D 마을 + NPC 에이전트 + 플레이어 참여.
-- `tools/world-check.mjs`: world/ 형식·참조 검사.
+- 게임은 [AI Town](https://github.com/a16z-infra/ai-town) 포크다 (upstream 커밋 `8e05997`, 2026-08-25). 저장소 루트에 합쳐져 있다: `convex/`(백엔드), `src/`(프론트엔드), `data/`(맵, 장소, 캐릭터), `public/`(에셋). 원래 README는 `AI-TOWN.md`.
+- `tools/`: 세계관 검사(`world-check.mjs`), 맵 생성(`build-map.mjs`, `render-map.py`), 타일 그리기(`make-tiles.py`), 카드 불러오기(`card.mjs`).
 
 ## 세계관 구축 방식 (중요)
 
@@ -23,33 +23,33 @@
 
 ```sh
 npm run up          # Docker: Convex 백엔드(:3210), 임베딩용 Ollama, 대시보드(:6791)
-npm run dev         # game/ 프론트엔드 + convex dev
+npm run dev         # 프론트엔드 + convex dev
 npm run world:check
 ```
 
-게임 월드 초기화(NPC 생성)는 `cd game && npm run predev`. API 키 설정 후에 할 것.
+게임 월드 초기화(NPC 생성)는 `npm run predev`. API 키 설정 후에 할 것.
 
 ## LLM
 
-- 채팅: OpenAI 호환 API. **운영은 GPT, 테스트는 Gemini** (`game/convex/util/hostedChat.ts`). Claude는 쓰지 않는다.
+- 채팅: OpenAI 호환 API. **운영은 GPT, 테스트는 Gemini** (`convex/util/hostedChat.ts`). Claude는 쓰지 않는다.
   - `CHAT_PROVIDER=gemini` + `GEMINI_API_KEY` (+ 선택 `GEMINI_CHAT_MODEL`, 기본 `gemini-2.5-flash`)
   - `CHAT_PROVIDER=openai` + `OPENAI_API_KEY` (+ 선택 `OPENAI_CHAT_MODEL`, 기본 `gpt-5-mini`)
   - 선택 `CHAT_REASONING_EFFORT` (low 등). 추론 모델용이며, 설정하지 않으면 보내지 않는다.
   - 기본 모델명은 추정값이다. 키를 넣은 뒤 실제 사용 가능한 모델명인지 확인할 것.
 - 임베딩: Docker 안의 Ollama `bge-m3` (1024차원). 채팅 공급자를 바꿔도 NPC 기억이 호환되도록 고정했다.
   `LLM_PROVIDER=ollama` 는 반드시 유지해야 한다. OPENAI_API_KEY 가 있으면 AI Town이 임베딩까지 OpenAI(1536차원)로 보내려 하기 때문이다.
-- 설정: `cd game && npx convex env set <이름> <값>`
+- 설정: `npx convex env set <이름> <값>`
 
 ## 맵 (젠디카르 행성)
 
-망망대해에서 시작해서, 카드로 지역이 생길 때마다 location 의 `map` 블록으로 땅을 올린다. `npm run world:map` → `tools/build-map.mjs` 가 `game/data/zendikar.js`(AI Town 맵 형식, 96×72)와 `game/data/places.ts` 를 만들고, `tools/render-map.py` 가 미리보기 `world/map.png` 를 그린다. 규칙은 `world/README.md` 의 맵 절.
+망망대해에서 시작해서, 카드로 지역이 생길 때마다 location 의 `map` 블록으로 땅을 올린다. `npm run world:map` → `tools/build-map.mjs` 가 `data/zendikar.js`(AI Town 맵 형식, 96×72)와 `data/places.ts` 를 만들고, `tools/render-map.py` 가 미리보기 `world/map.png` 를 그린다. 규칙은 `world/README.md` 의 맵 절.
 
-타일셋은 `game/public/assets/zendikar-tiles.png` 다. AI Town의 gentle 타일셋(0..1439) 아래에 우리가 직접 그린 타일(1440~)을 붙인 것이다. 새 지형이 필요하면 `tools/make-tiles.py` 에 타일을 그려 넣고 실행한다 (Pillow 필요). 출력된 `CUSTOM` 번호를 `build-map.mjs` 의 `CUSTOM`, `TERRAINS` 에 반영한다. 외부 타일 에셋은 라이선스 때문에 쓰지 않는다.
+타일셋은 `public/assets/zendikar-tiles.png` 다. AI Town의 gentle 타일셋(0..1439) 아래에 우리가 직접 그린 타일(1440~)을 붙인 것이다. 새 지형이 필요하면 `tools/make-tiles.py` 에 타일을 그려 넣고 실행한다 (Pillow 필요). 출력된 `CUSTOM` 번호를 `build-map.mjs` 의 `CUSTOM`, `TERRAINS` 에 반영한다. 외부 타일 에셋은 라이선스 때문에 쓰지 않는다.
 
 맵을 바꾼 뒤 게임에 반영하려면 월드를 다시 만들어야 한다 (맵은 월드를 만들 때 DB에 복사된다):
-`cd game && npx convex run testing:stop && npx convex run testing:wipeAllTables && npx convex run init`
+`npx convex run testing:stop && npx convex run testing:wipeAllTables && npx convex run init`
 
-## NPC 인생 엔진 (`game/convex/life/`)
+## NPC 인생 엔진 (`convex/life/`)
 
 AI Town의 무작위 배회와 끊임없는 NPC 대화를 대체한다. NPC는 일정표대로 산다.
 
@@ -60,8 +60,8 @@ AI Town의 무작위 배회와 끊임없는 NPC 대화를 대체한다. NPC는 �
 - **실행** (`executor.ts`, LLM 없음): 현재 블록의 장소로 걸어가서 활동을 표시하고, 블록 종류에 따라 스탯(기력, 배고픔, 돈)을 바꾼다 (`rules.ts`).
 - **NPC끼리 대화**: 둘 다 같은 장소에서 social/eat 블록 중이고, 4칸 안에 있고, 오늘 서로 대화한 적이 없을 때만 시작한다. 확률로 정하지 않는다. 사람 플레이어와의 대화는 AI Town 방식 그대로다.
 - 끄고 켜기 (Convex env): `LIFE_NPC_CHAT=off` 이면 NPC끼리 대화하지 않는다. `LIFE_LLM_PLANNING=off` 이면 LLM 계획 없이 평소 일과만 쓴다.
-- 상태 확인: `cd game && npx convex run life/debug:state`
-- 테스트: `cd game && npm test -- convex/life`
+- 상태 확인: `npx convex run life/debug:state`
+- 테스트: `npm test -- convex/life`
 
 아직 없는 것: 하루를 마치며 하는 회고, GM 사건, 플레이어 인생 스탯, 시야 밖 NPC의 간략 시뮬레이션.
 

@@ -1,18 +1,18 @@
-# Renders game/data/zendikar.js to world/map.png with place names, for reviewing
+# Renders data/zendikar.js to world/map.png with place names, for reviewing
 # the plane as regions are added. Usage: npm run world:map (needs Python + Pillow).
 import json, re
 from pathlib import Path
 from PIL import Image, ImageDraw, ImageFont
 
 repo = Path(__file__).resolve().parent.parent
-data = (repo / 'game/data/zendikar.js').read_text()
-places_src = (repo / 'game/data/places.ts').read_text()
+data = (repo / 'data/zendikar.js').read_text()
+places_src = (repo / 'data/places.ts').read_text()
 grab = lambda name, src: json.loads(re.search(rf'export const {name}[^=]*= (.*?);?\n', src, re.S).group(1))
 layers = grab('bgtiles', data) + grab('objmap', data)
 places = json.loads(re.search(r'export const PLACES: Place\[\] = (.*?);\n', places_src, re.S).group(1))
 
 tileset_url = re.search(r'export const tilesetpath = "([^"]+)"', data).group(1)
-tileset = Image.open(repo / 'game/public/assets' / Path(tileset_url).name).convert('RGBA')
+tileset = Image.open(repo / 'public/assets' / Path(tileset_url).name).convert('RGBA')
 cols = tileset.width // 32
 tiles = {}
 def tile(i):

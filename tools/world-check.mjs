@@ -97,12 +97,12 @@ for (const [id, { rel, fm }] of entities) {
   if (!(terrain in TERRAINS)) err(rel, `map.terrain 은 ${Object.keys(TERRAINS).join('|')} 중 하나: ${terrain}`);
   mapped.push(id);
 }
-const placesFile = join(root, '..', 'game', 'data', 'places.ts');
+const placesFile = join(root, '..', 'data', 'places.ts');
 const built = existsSync(placesFile)
   ? [...readFileSync(placesFile, 'utf8').matchAll(/"id": "([^"]+)"/g)].map((m) => m[1])
   : [];
 if (mapped.sort().join() !== built.sort().join())
-  warn('game/data/places.ts', '맵이 세계관과 다름. npm run world:map 실행 필요');
+  warn('data/places.ts', '맵이 세계관과 다름. npm run world:map 실행 필요');
 
 // Cross-references
 for (const [id, { rel, fm }] of entities) {

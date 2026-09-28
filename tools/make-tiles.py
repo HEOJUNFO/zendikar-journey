@@ -1,4 +1,4 @@
-# Builds game/public/assets/zendikar-tiles.png: the AI Town gentle tileset with rows of
+# Builds public/assets/zendikar-tiles.png: the AI Town gentle tileset with rows of
 # our own pixel-art tiles appended below it, so gentle tile indices stay valid and custom
 # tiles start at 1440 (45 tiles per row). Tiles are drawn procedurally here (no third-party
 # art). tools/build-map.mjs refers to them by the CUSTOM index list printed at the end.
@@ -9,7 +9,7 @@ from pathlib import Path
 from PIL import Image, ImageDraw
 
 repo = Path(__file__).resolve().parent.parent
-gentle = Image.open(repo / 'game/public/assets/gentle-obj.png').convert('RGBA')
+gentle = Image.open(repo / 'public/assets/gentle-obj.png').convert('RGBA')
 T = 32
 COLS = gentle.width // T  # 45
 
@@ -178,7 +178,7 @@ sheet.paste(gentle, (0, 0))
 base = (gentle.height // T) * COLS
 for i, (_, tile) in enumerate(TILES):
     sheet.paste(tile, ((i % COLS) * T, gentle.height + (i // COLS) * T))
-out = repo / 'game/public/assets/zendikar-tiles.png'
+out = repo / 'public/assets/zendikar-tiles.png'
 sheet.save(out)
 
 custom = {}
