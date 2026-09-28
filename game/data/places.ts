@@ -9,6 +9,47 @@ export type Place = {
   spots: { x: number; y: number }[];
 };
 
-export const PLACES: Place[] = [];
+export const PLACES: Place[] = [
+  {
+    "id": "loc-emeria",
+    "name": "에메리아",
+    "description": "천사들이 머무는, 하늘 높이 떠 있는 고대 석조 폐허",
+    "entityId": "loc-emeria",
+    "spots": [
+      {
+        "x": 48,
+        "y": 13
+      },
+      {
+        "x": 47,
+        "y": 12
+      },
+      {
+        "x": 47,
+        "y": 14
+      },
+      {
+        "x": 49,
+        "y": 12
+      },
+      {
+        "x": 49,
+        "y": 14
+      },
+      {
+        "x": 46,
+        "y": 13
+      },
+      {
+        "x": 48,
+        "y": 11
+      },
+      {
+        "x": 48,
+        "y": 15
+      }
+    ]
+  }
+];
 
 export const PLACES_BY_ID = new Map(PLACES.map((p) => [p.id, p]));
