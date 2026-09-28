@@ -39,7 +39,8 @@ export default PixiComponent('Viewport', {
       .clamp({ direction: 'all', underflow: 'center' })
       .setZoom(-10)
       .clampZoom({
-        minScale: (1.04 * props.screenWidth) / (props.worldWidth / 2),
+        // Zoom out far enough to see the whole plane.
+        minScale: Math.min(props.screenWidth / props.worldWidth, props.screenHeight / props.worldHeight),
         maxScale: 3.0,
       });
     return viewport;

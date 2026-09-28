@@ -14,6 +14,7 @@ import { DebugPath } from './DebugPath.tsx';
 import { PositionIndicator } from './PositionIndicator.tsx';
 import { SHOW_DEBUG_UI } from './Game.tsx';
 import { ServerGame } from '../hooks/serverGame.ts';
+import { PLACES } from '../../data/places.ts';
 
 export const PixiGame = (props: {
   worldId: Id<'worlds'>;
@@ -81,6 +82,16 @@ export const PixiGame = (props: {
   };
   const { width, height, tileDim } = props.game.worldMap;
   const players = [...props.game.world.players.values()];
+
+  // Start at normal scale over land rather than the middle of the sea.
+  useEffect(() => {
+    const spots = PLACES.flatMap((p) => p.spots);
+    if (!viewportRef.current || !spots.length) return;
+    const cx = spots.reduce((sum, s) => sum + s.x, 0) / spots.length;
+    const cy = spots.reduce((sum, s) => sum + s.y, 0) / spots.length;
+    viewportRef.current.setZoom(1, true);
+    viewportRef.current.moveCenter(cx * tileDim, cy * tileDim);
+  }, []);
 
   // Zoom on the user’s avatar when it is created
   useEffect(() => {
