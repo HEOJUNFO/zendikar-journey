@@ -71,7 +71,10 @@ Rules:
 Answer: {"blocks":[{"start":0,"end":360,"placeId":"...","activity":"...","emoji":"...","kind":"sleep"}, ...]}`;
 }
 
-export function parsePlan(content: string): ScheduleBlock[] | null {
+export function parsePlan(
+  content: string,
+  placeIds: Set<string> = new Set(PLACES_BY_ID.keys()),
+): ScheduleBlock[] | null {
   const start = content.indexOf('{');
   const end = content.lastIndexOf('}');
   if (start === -1 || end <= start) return null;
@@ -86,7 +89,7 @@ export function parsePlan(content: string): ScheduleBlock[] | null {
   const blocks = [...parsed.data.blocks].sort((a, b) => a.start - b.start) as ScheduleBlock[];
   for (let i = 0; i < blocks.length; i++) {
     const b = blocks[i];
-    if (b.start >= b.end || !PLACES_BY_ID.has(b.placeId)) return null;
+    if (b.start >= b.end || !placeIds.has(b.placeId)) return null;
     if (i > 0 && blocks[i - 1].end > b.start) return null;
   }
   return blocks;

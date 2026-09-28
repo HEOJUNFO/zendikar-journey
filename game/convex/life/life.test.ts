@@ -13,16 +13,17 @@ const block = (start: number, end: number, placeId = 'plaza') => ({
 });
 
 describe('parsePlan', () => {
+  const places = new Set(['plaza', 'lodging']);
   test('accepts a valid plan wrapped in prose and sorts it', () => {
     const content = `Sure!\n${JSON.stringify({ blocks: [block(600, 1440), block(0, 600, 'lodging')] })}`;
-    const blocks = parsePlan(content)!;
+    const blocks = parsePlan(content, places)!;
     expect(blocks.map((b) => b.start)).toEqual([0, 600]);
   });
   test('rejects unknown places, overlaps, empty blocks and non-JSON', () => {
-    expect(parsePlan(JSON.stringify({ blocks: [block(0, 600, 'moon')] }))).toBeNull();
-    expect(parsePlan(JSON.stringify({ blocks: [block(0, 700), block(600, 1440)] }))).toBeNull();
-    expect(parsePlan(JSON.stringify({ blocks: [block(600, 600)] }))).toBeNull();
-    expect(parsePlan('no plan today')).toBeNull();
+    expect(parsePlan(JSON.stringify({ blocks: [block(0, 600, 'moon')] }), places)).toBeNull();
+    expect(parsePlan(JSON.stringify({ blocks: [block(0, 700), block(600, 1440)] }), places)).toBeNull();
+    expect(parsePlan(JSON.stringify({ blocks: [block(600, 600)] }), places)).toBeNull();
+    expect(parsePlan('no plan today', places)).toBeNull();
   });
 });
 

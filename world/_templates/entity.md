@@ -3,10 +3,13 @@ id: loc-example        # <접두사>-<영문 슬러그>, 파일 이름과 같게
 kind: location         # location | creature | character | faction | item | event | law
 name: ""               # 한국어 이름
 name_en: ""
+summary: ""            # 한 줄 요약. NPC 하루 계획 프롬프트에 장소 설명으로 들어감
 status: draft          # draft | canon
 sources: []            # 근거 카드 id (예: [ZEN-229])
 tags: []
 links: []              # 다른 요소와의 관계. 예: - { to: fac-joraga, rel: 거주 }
+# location 만: 맵에 땅으로 올릴 때. 없으면 맵에 나타나지 않는다 (world/README.md 맵 참고)
+# map: { x: 48, y: 36, w: 24, h: 16, terrain: forest }
 ---
 
 ## 설정

@@ -4,6 +4,7 @@ import { readdirSync, readFileSync, existsSync } from 'node:fs';
 import { join, basename } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { parse } from 'yaml';
+import { MAP_HEIGHT, MAP_WIDTH, TERRAINS } from './build-map.mjs';
 
 const root = join(fileURLToPath(new URL('.', import.meta.url)), '..', 'world');
 
@@ -79,6 +80,29 @@ for (const [kind, { prefix, dir }] of Object.entries(KINDS)) {
     entities.set(id, { rel, fm });
   }
 }
+
+// Map blocks (see world/README.md: 맵)
+const mapped = [];
+for (const [id, { rel, fm }] of entities) {
+  if (!fm.map) continue;
+  if (fm.kind !== 'location') {
+    err(rel, 'map 은 location 에만 쓸 수 있음');
+    continue;
+  }
+  const { x, y, w, h, terrain } = fm.map;
+  const num = (v) => typeof v === 'number' && Number.isFinite(v);
+  if (!num(x) || !num(y) || x < 0 || y < 0 || x >= MAP_WIDTH || y >= MAP_HEIGHT)
+    err(rel, `map.x/y 는 0..${MAP_WIDTH - 1} / 0..${MAP_HEIGHT - 1} 범위의 숫자: ${x}, ${y}`);
+  if (!num(w) || !num(h) || w < 4 || h < 4) err(rel, `map.w/h 는 4 이상의 숫자: ${w}, ${h}`);
+  if (!(terrain in TERRAINS)) err(rel, `map.terrain 은 ${Object.keys(TERRAINS).join('|')} 중 하나: ${terrain}`);
+  mapped.push(id);
+}
+const placesFile = join(root, '..', 'game', 'data', 'places.ts');
+const built = existsSync(placesFile)
+  ? [...readFileSync(placesFile, 'utf8').matchAll(/"id": "([^"]+)"/g)].map((m) => m[1])
+  : [];
+if (mapped.sort().join() !== built.sort().join())
+  warn('game/data/places.ts', '맵이 세계관과 다름. npm run world:map 실행 필요');
 
 // Cross-references
 for (const [id, { rel, fm }] of entities) {

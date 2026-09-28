@@ -6,7 +6,8 @@
     "world:check": "node tools/world-check.mjs",
     "up": "cd game && docker compose up -d backend ollama dashboard",
     "down": "cd game && docker compose stop",
-    "dev": "cd game && npm run dev"
+    "dev": "cd game && npm run dev",
+    "world:map": "node tools/build-map.mjs && python3 tools/render-map.py"
   },
   "devDependencies": {
     "yaml": "^2.9.1"
