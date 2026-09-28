@@ -17,6 +17,7 @@
 3. 확인되면 `world/entities/` 에 요소를 만들거나 보강하고, 카드의 `entities` 와 요소의 `sources` 를 서로 연결한다.
 4. `npm run world:check` 통과시킨다.
 5. 기존 설정과 연결되는 점, 부딪히는 점을 짚는다.
+6. 카드 하나당 커밋 하나를 만들고 (`카드 ZEN-xxx: <이름>`) 곧바로 `origin main` 으로 푸시한다.
 
 ## 실행
 
