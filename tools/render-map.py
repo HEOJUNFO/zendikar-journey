@@ -11,7 +11,8 @@ grab = lambda name, src: json.loads(re.search(rf'export const {name}[^=]*= (.*?)
 layers = grab('bgtiles', data) + grab('objmap', data)
 places = json.loads(re.search(r'export const PLACES: Place\[\] = (.*?);\n', places_src, re.S).group(1))
 
-tileset = Image.open(repo / 'game/public/assets/gentle-obj.png').convert('RGBA')
+tileset_url = re.search(r'export const tilesetpath = "([^"]+)"', data).group(1)
+tileset = Image.open(repo / 'game/public/assets' / Path(tileset_url).name).convert('RGBA')
 cols = tileset.width // 32
 tiles = {}
 def tile(i):

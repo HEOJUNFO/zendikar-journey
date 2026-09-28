@@ -42,7 +42,9 @@ npm run world:check
 
 ## 맵 (젠디카르 행성)
 
-망망대해에서 시작해서, 카드로 지역이 생길 때마다 location 의 `map` 블록으로 땅을 올린다. `npm run world:map` → `tools/build-map.mjs` 가 `game/data/zendikar.js`(AI Town 맵 형식, 96×72, gentle 타일셋)와 `game/data/places.ts` 를 만들고, `tools/render-map.py` 가 미리보기 `world/map.png` 를 그린다. 규칙은 `world/README.md` 의 맵 절.
+망망대해에서 시작해서, 카드로 지역이 생길 때마다 location 의 `map` 블록으로 땅을 올린다. `npm run world:map` → `tools/build-map.mjs` 가 `game/data/zendikar.js`(AI Town 맵 형식, 96×72)와 `game/data/places.ts` 를 만들고, `tools/render-map.py` 가 미리보기 `world/map.png` 를 그린다. 규칙은 `world/README.md` 의 맵 절.
+
+타일셋은 `game/public/assets/zendikar-tiles.png` 다. AI Town의 gentle 타일셋(0..1439) 아래에 우리가 직접 그린 타일(1440~)을 붙인 것이다. 새 지형이 필요하면 `tools/make-tiles.py` 에 타일을 그려 넣고 실행한다 (Pillow 필요). 출력된 `CUSTOM` 번호를 `build-map.mjs` 의 `CUSTOM`, `TERRAINS` 에 반영한다. 외부 타일 에셋은 라이선스 때문에 쓰지 않는다.
 
 맵을 바꾼 뒤 게임에 반영하려면 월드를 다시 만들어야 한다 (맵은 월드를 만들 때 DB에 복사된다):
 `cd game && npx convex run testing:stop && npx convex run testing:wipeAllTables && npx convex run init`
