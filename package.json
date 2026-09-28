@@ -1,0 +1,14 @@
+{
+  "name": "zendikar-journey",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "world:check": "node tools/world-check.mjs",
+    "up": "cd game && docker compose up -d backend ollama dashboard",
+    "down": "cd game && docker compose stop",
+    "dev": "cd game && npm run dev"
+  },
+  "devDependencies": {
+    "yaml": "^2.9.1"
+  }
+}
