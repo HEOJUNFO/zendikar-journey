@@ -74,3 +74,4 @@ AI Town의 무작위 배회와 끊임없는 NPC 대화를 대체한다. NPC는 �
 - `convex/aiTown/agent.ts`: life 프로필이 있는 에이전트는 `agentDoSomething` 대신 `lifeTick` 을 쓴다. 대화 기억(`toRemember`)을 먼저 처리하도록 순서를 바꿨고, `schedule`/`stats`/`talkedWith` 필드를 추가했다.
 - `world.ts`(clock), `game.ts`(시계 진행), `agentDescription.ts`(life), `agentOperations.ts`(agentPlanDay), `agentInputs.ts`(finishPlanDay).
 - `src/components/LifePanel.tsx`: 게임 시계, NPC의 역할, 스탯, 오늘 일정을 표시한다.
+- 정리: AI Town의 안 쓰는 파일을 지웠다. 기존 맵 `gentle.js`, Tiled 변환기, 맵 에디터 `src/editor`, fly.io/Vercel 배포 설정, 프론트엔드 Docker 이미지, 안 쓰는 타일셋과 로고, 배경과 테두리 CSS. 인증(Clerk), 배경음악, `ARCHITECTURE.md`, `agentDoSomething`(life 프로필이 없는 에이전트용 기본 동작)은 남겼다.

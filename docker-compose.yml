@@ -1,17 +1,6 @@
 name: zendikar-journey
 
 services:
-  frontend:
-    build: .
-    ports:
-      - '5173:5173'
-    volumes:
-      - .:/usr/src/app
-      - /usr/src/app/node_modules
-    environment:
-      - VITE_CONVEX_URL=http://127.0.0.1:${PORT:-3210}
-    networks:
-      - ai-town-network
   backend:
     image: ghcr.io/get-convex/convex-backend:latest
     ports:
