@@ -3,7 +3,7 @@ import type { Actor, State } from '../sim/state.ts';
 import { shortName } from '../sim/text.ts';
 import { hasPowers, MAP_HEIGHT, MAP_WIDTH, region, spellColors, TERRAINS, travelHours } from '../sim/world.ts';
 import type { World } from '../sim/world.ts';
-import { isTrap, nodeAt, trapStatus, visibleActors } from './view.ts';
+import { areaLabelAt, containerRadius, isTrap, nodeAt, trapStatus, visibleActors } from './view.ts';
 
 type Props = {
   world: World;
@@ -59,7 +59,7 @@ export function MapView({ world, state, selected, onSelect, all, picked, onPickA
           const to = nodeAt(world, region(world, a.travel!.to));
           return <line key={`road-${a.id}`} x1={from.x} y1={from.y} x2={to.x} y2={to.y} className="map-road" />;
         })}
-      {world.regions.map((r) => {
+      {[...world.regions].sort((a, b) => Number(!!a.parent) - Number(!!b.parent)).map((r) => {
         const t = TERRAINS[r.terrain];
         const conds = state?.regions[r.id]?.conditions ?? [];
         const destroyed = !!state?.regions[r.id]?.destroyed;
@@ -67,16 +67,32 @@ export function MapView({ world, state, selected, onSelect, all, picked, onPickA
         if (r.parent) {
           const { x, y } = nodeAt(world, r);
           const parent = region(world, r.parent);
+          const label = areaLabelAt(world, r);
           return (
             <g key={r.id} className="map-region map-area" onClick={() => onSelect(r.id)} tabIndex={0}
               onKeyDown={(e) => (e.key === 'Enter' || e.key === ' ') && onSelect(r.id)}>
               <title>{`${parent.name} › ${r.name} (${t.label})`}</title>
-              <line x1={parent.x} y1={parent.y} x2={x} y2={y} className="map-area-link" />
-              <circle cx={x} cy={y} r={1.9} fill={t.color} className="map-node" />
-              {isSel && <circle cx={x} cy={y} r={3} className="map-selected" />}
-              {destroyed && <text x={x} y={y + 0.8} className="map-destroyed map-area-mark">✕</text>}
-              {conds.length > 0 && <text x={x + 2.2} y={y - 1.6} className="map-alert map-area-mark">⚠</text>}
-              <text x={x + 2.6} y={y + 0.7} className="map-label map-area-label">{r.name}</text>
+              <circle cx={x} cy={y} r={1.6} fill={t.color} className="map-node" />
+              {isSel && <circle cx={x} cy={y} r={2.5} className="map-selected" />}
+              {destroyed && <text x={x} y={y + 0.7} className="map-destroyed map-area-mark">✕</text>}
+              {conds.length > 0 && <text x={x + 1.8} y={y - 1.4} className="map-alert map-area-mark">⚠</text>}
+              <text x={label.x} y={label.y} style={{ textAnchor: label.anchor }} className="map-label map-area-label">{r.name}</text>
+            </g>
+          );
+        }
+        const R = containerRadius(world, r);
+        if (R) {
+          const own = nodeAt(world, r);
+          return (
+            <g key={r.id} className="map-region" onClick={() => onSelect(r.id)} tabIndex={0}
+              onKeyDown={(e) => (e.key === 'Enter' || e.key === ' ') && onSelect(r.id)}>
+              <title>{`${r.name} (${t.label})`}</title>
+              <circle cx={r.x} cy={r.y} r={R} fill={t.color} className="map-container" />
+              <circle cx={own.x} cy={own.y} r={2.2} fill={t.color} className="map-node" />
+              {isSel && <circle cx={r.x} cy={r.y} r={R + 0.8} className="map-selected" />}
+              {destroyed && <text x={own.x} y={own.y + 0.9} className="map-destroyed">✕</text>}
+              {conds.length > 0 && <text x={own.x + 2.4} y={own.y - 1.8} className="map-alert">⚠</text>}
+              <text x={r.x} y={r.y - R - 1} className="map-label">{r.name}</text>
             </g>
           );
         }
@@ -106,7 +122,8 @@ export function MapView({ world, state, selected, onSelect, all, picked, onPickA
         const slot = p.travelling ? 0 : (slots.get(a.region) ?? 0);
         if (!p.travelling) slots.set(a.region, slot + 1);
         const angle = -Math.PI / 2 + slot * 0.9;
-        const ring = region(world, a.region).parent ? 2 : 3.2;
+        const here = region(world, a.region);
+        const ring = here.parent ? 2 : containerRadius(world, here) ? 2.6 : 3.2;
         const [x, y] = p.travelling ? [p.x, p.y] : [p.x + Math.cos(angle) * ring, p.y + Math.sin(angle) * ring];
         const legend = a.kind === 'npc' && hasPowers(npcDef(state!, world, a.id));
         const r = legend ? 1.5 : a.kind === 'npc' ? 1 : 1.3;

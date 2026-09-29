@@ -20,14 +20,41 @@ export function clock(state: State) {
   return formatClock(state.minutes);
 }
 
-// Where a land's node is drawn: a region at its place, an area as a small node beside its
-// region (the engine puts areas at the region's place).
-export const AREA_GAP = 7.5;
+// Where a land's node is drawn. A region holding areas is a large circle: its own node sits in
+// the upper part, its areas as small circles across the lower part. (The engine puts areas at
+// their region's place; this is only how they are drawn.)
+const AREA_RING = 3.4;
+const OWN_LIFT = 3;
+function areaAngle(world: World, r: Region) {
+  const sibs = world.regions.filter((x) => x.parent === r.parent);
+  const n = sibs.length;
+  const spread = Math.min(2.4, (n - 1) * 1.4);
+  return Math.PI / 2 + (n > 1 ? -spread / 2 + (spread * sibs.indexOf(r)) / (n - 1) : 0);
+}
+function ring(world: World, r: Region) {
+  return AREA_RING + Math.max(0, world.regions.filter((x) => x.parent === r.parent).length - 3) * 0.9;
+}
+
+// The large circle's radius for a region holding areas, 0 for one that holds none.
+export function containerRadius(world: World, r: Region) {
+  const n = world.regions.filter((x) => x.parent === r.id).length;
+  return n ? 7 + Math.max(0, n - 3) * 0.9 : 0;
+}
+
 export function nodeAt(world: World, r: Region) {
-  if (!r.parent) return { x: r.x, y: r.y };
-  const i = world.regions.filter((x) => x.parent === r.parent).indexOf(r);
-  const angle = -Math.PI / 12 + i * (Math.PI / 4);
-  return { x: r.x + Math.cos(angle) * AREA_GAP, y: r.y + Math.sin(angle) * AREA_GAP };
+  if (r.parent) {
+    const angle = areaAngle(world, r);
+    return { x: r.x + Math.cos(angle) * ring(world, r), y: r.y + Math.sin(angle) * ring(world, r) };
+  }
+  return containerRadius(world, r) ? { x: r.x, y: r.y - OWN_LIFT } : { x: r.x, y: r.y };
+}
+
+// An area's name: just outside its region's circle, in the area's direction.
+export function areaLabelAt(world: World, r: Region) {
+  const angle = areaAngle(world, r);
+  const d = containerRadius(world, world.regions.find((x) => x.id === r.parent)!) + 1.2;
+  const [dx, dy] = [Math.cos(angle), Math.sin(angle)];
+  return { x: r.x + dx * d, y: r.y + dy * d + 1, anchor: dx > 0.3 ? 'start' : dx < -0.3 ? 'end' : 'middle' } as const;
 }
 
 // Traps: events the land sets off by itself when someone comes (law-ruin-traps), unlike

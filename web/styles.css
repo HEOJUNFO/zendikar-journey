@@ -597,17 +597,20 @@ header h1 {
   }
 }
 
-/* --- areas inside a region --- */
+/* --- areas inside a region: a large circle holding small ones --- */
 
-.map-area-link {
+.map-container {
+  fill-opacity: 0.35;
   stroke: #f4ecd8;
-  stroke-width: 0.25;
-  stroke-dasharray: 0.6 0.6;
-  opacity: 0.6;
+  stroke-width: 0.3;
+  stroke-opacity: 0.7;
+}
+.map-region:focus .map-container,
+.map-region:hover .map-container {
+  stroke: var(--accent);
 }
 .map-area-label {
-  font-size: 1.9px;
-  text-anchor: start;
+  font-size: 1.8px;
 }
 .map-area-mark {
   font-size: 2px;
