@@ -51,6 +51,9 @@ export function dealDamage(state: State, a: Actor, amount: number, t: number, ca
 
 export function die(state: State, a: Actor, t: number, cause: string) {
   a.dead = { at: t, cause };
+  // A retainer who dies goes to their master's graveyard.
+  const m = a.master ? state.actors[a.master] : undefined;
+  if (m) m.fallen = [...(m.fallen ?? []), a.id];
   for (const r of retainersOf(state, a.id)) releaseRetainer(state, r, `${shortName(a.name)}의 죽음`);
   releaseItems(state, a, t);
   a.task = undefined;

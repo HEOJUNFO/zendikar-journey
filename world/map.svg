@@ -5,13 +5,19 @@
     .area { font: 600 14px sans-serif; fill: #f4ecd8; }
   </style>
   <rect width="100%" height="100%" fill="#16324f"/>
+  <g><line x1="580" y1="400" x2="652.4444369716801" y2="380.58857161731095" stroke="#f4ecd8" stroke-width="2" stroke-dasharray="5 5"/>
+    <circle cx="652.4444369716801" cy="380.58857161731095" r="16" fill="#6a5a82" stroke="#f4ecd8" stroke-width="2"/>
+    <text x="676.4444369716801" y="385.58857161731095" class="area">아게딤의 묘실</text></g>
   <g><line x1="760" y1="340" x2="832.4444369716801" y2="320.58857161731095" stroke="#f4ecd8" stroke-width="2" stroke-dasharray="5 5"/>
     <circle cx="832.4444369716801" cy="320.58857161731095" r="16" fill="#b08850" stroke="#f4ecd8" stroke-width="2"/>
     <text x="856.4444369716801" y="325.58857161731095" class="area">아쿰 피난처</text></g>
+  <g><line x1="580" y1="400" x2="644.951905283833" y2="437.5" stroke="#f4ecd8" stroke-width="2" stroke-dasharray="5 5"/>
+    <circle cx="644.951905283833" cy="437.5" r="16" fill="#8a8173" stroke="#f4ecd8" stroke-width="2"/>
+    <text x="668.951905283833" y="442.5" class="area">메마른 메사</text></g>
   <g><circle cx="760" cy="340" r="26" fill="#b5462c" stroke="#f4ecd8" stroke-width="3"/>
     <text x="760" y="388" text-anchor="middle" class="name">아쿰</text>
     <text x="760" y="406" text-anchor="middle" class="terrain">화산 지대</text></g>
-  <g><circle cx="620" cy="400" r="26" fill="#8a8173" stroke="#f4ecd8" stroke-width="3"/>
-    <text x="620" y="448" text-anchor="middle" class="name">메마른 메사</text>
-    <text x="620" y="466" text-anchor="middle" class="terrain">바위 지대</text></g>
+  <g><circle cx="580" cy="400" r="26" fill="#8fb35a" stroke="#f4ecd8" stroke-width="3"/>
+    <text x="580" y="448" text-anchor="middle" class="name">온두</text>
+    <text x="580" y="466" text-anchor="middle" class="terrain">초원</text></g>
 </svg>

@@ -58,6 +58,8 @@ export type Actor = {
   // Lands they sought out with a fetch land: gone from their "library". Kept for when
   // exploring can turn things up (fewer empty searches, as MTG's deck thinning).
   fetched?: string[];
+  // Their retainers who died serving them: their "graveyard" of creatures.
+  fallen?: string[];
   // Spells they know (world/entities/spells): their hand.
   spells?: string[];
   // Spells they let go of (discarded): their graveyard.

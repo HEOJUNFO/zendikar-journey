@@ -946,3 +946,26 @@ test('a landfall trap answers a land bonded from afar', async () => {
   await act(state, world, { type: 'wait', hours: 2 });
   assert.ok(texts(state).includes('땅이 울린다.')); // the second landfall of the day, on loc-c
 });
+
+const crypt: RawEntity = {
+  id: 'loc-crypt',
+  kind: 'location',
+  name: '묘실',
+  status: 'canon',
+  map: { in: 'loc-c', terrain: 'ruins', color: 'B' },
+  sim: { nonbasic: true, fallen_mana: { color: 'B', cost: 2 } },
+};
+
+test('a crypt gives one black mana, and more for each black retainer who died serving its holder, less its cost', async () => {
+  const world = fixture([crypt, ...[1, 2, 3, 4].map((i) => npc(`chr-v${i}`, { ...npcSim('loc-crypt'), mana: { B: 1 } })), npc('chr-g', { ...npcSim('loc-crypt'), mana: { G: 1 } })]);
+  const state = character(world, 'loc-crypt');
+  const p = state.actors[PLAYER_ID];
+  p.bonds = ['loc-crypt'];
+  assert.deepEqual(manaCapacity(state, world, p), { B: 1 });
+  for (const id of ['chr-v1', 'chr-v2', 'chr-v3', 'chr-v4', 'chr-g']) {
+    state.actors[id].master = PLAYER_ID;
+    die(state, state.actors[id], state.minutes, '시험');
+  }
+  assert.deepEqual(p.fallen, ['chr-v1', 'chr-v2', 'chr-v3', 'chr-v4', 'chr-g']);
+  assert.deepEqual(manaCapacity(state, world, p), { B: 2 }); // four black fallen, less {2}; the green one doesn't count
+});

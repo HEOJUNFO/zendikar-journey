@@ -4,7 +4,7 @@
 // does a land that enters tapped on the day it is bonded with.
 import { gameDay } from './clock.ts';
 import type { State } from './state.ts';
-import type { World } from './world.ts';
+import type { NpcDef, World } from './world.ts';
 
 export const COLORS = ['W', 'U', 'B', 'R', 'G'] as const;
 export type Color = (typeof COLORS)[number];
@@ -50,7 +50,12 @@ export function formatMana(mana: Mana) {
     .join(', ') || '없음';
 }
 
-type Holder = { id: string; bonds?: string[]; landfalls?: { day: number; regions: string[] } };
+// A creature's colors: as given, or those of its mana.
+export function creatureColors(def: NpcDef | undefined): Color[] {
+  return def?.colors ?? (Object.keys(def?.mana ?? {}) as Color[]);
+}
+
+type Holder = { id: string; bonds?: string[]; landfalls?: { day: number; regions: string[] }; fallen?: string[] };
 
 // What someone can draw on each turn (at `t`: a land that enters tapped gives nothing the day
 // they bonded with it).
@@ -63,6 +68,12 @@ export function manaCapacity(state: State, world: World, a: Holder, t?: number):
     const rs = state.regions[id];
     if (!r || r.noMana || rs?.destroyed || rs?.conditions.some((c) => c.tapped)) continue;
     if (r.entersTapped && t !== undefined && a.landfalls?.day === gameDay(t) && a.landfalls.regions.includes(id)) continue;
+    if (r.fallenMana) {
+      const { color, cost } = r.fallenMana;
+      const n = (a.fallen ?? []).filter((id) => creatureColors(world.npcs.find((x) => x.id === id) ?? state.tokens?.[id]).includes(color)).length;
+      out[color] = (out[color] ?? 0) + Math.max(1, n - cost);
+      continue;
+    }
     const sym: ManaSymbol = r.color ?? 'C';
     out[sym] = (out[sym] ?? 0) + 1;
   }

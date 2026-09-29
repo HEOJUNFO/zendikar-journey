@@ -40,6 +40,8 @@
 | "이 대지가 들어올 때" | 누군가 그 땅과 유대를 맺을 때 (location `sim.on_bond`) |
 | 기본 대지 종류 (산, 평원, 섬, 늪, 숲) | 지형으로: 바위·화산 산, 초원 평원, 해변 섬, 늪 늪, 숲 숲. 이름 있는 대지 카드(`sim.nonbasic`)는 종류가 없다 |
 | 마나 능력이 없는 대지 | `sim.no_mana`. 유대는 맺지만 마나를 내지 않는다 |
+| "당신의 무덤에 있는 생물 카드" | 그 이를 섬기다 죽은 권속 (`Actor.fallen`). 생물의 색은 `colors`, 없으면 마나 색 |
+| "{2}, {T}: 무덤의 흑색 생물마다 {B}" | location `sim.fallen_mana: { color, cost }`. 그 땅은 하루 max(1, N − cost)를 낸다 (순이익으로 단순화) |
 | 대지를 희생 | 그 이의 그 땅과의 유대가 끊긴다. 땅은 세계에 남는다 |
 | "서고에서 대지를 찾아 전장에" (페치) | 그 종류의 땅 가운데 아직 유대 없는 곳 하나와 멀리서 유대를 맺는다. 하루 한 땅에 들지 않고 상륙으로 친다. 서고를 섞는 것과 덱 압축은 아직 없다 (찾아온 땅은 `fetched` 에 기록) |
 | 마나 | 카드에서 온 존재: 카드의 마나 값만큼 카드의 색으로 (`sim.mana`). 플레이어: 유대를 맺은 땅 하나마다 그 색 1. 모두 00:00에 다시 찬다. 부서지거나 탭된 땅은 마나를 내지 않는다 |
@@ -88,7 +90,7 @@ map: { x: 48, y: 36, terrain: forest }
 ```
 
 - `x`, `y`: 지도 위 위치. 지도 크기는 96×72 (x 0..95, y 0..71). 두 지역 사이의 이동 시간은 거리 ÷ 4 시간이다 (올림, 최소 1시간).
-- `terrain`: `grassland` | `forest` | `rocky` | `beach` | `settlement` | `sky` | `volcanic` | `swamp` | `deepsea`.
+- `terrain`: `grassland` | `forest` | `rocky` | `beach` | `settlement` | `sky` | `volcanic` | `swamp` | `ruins` | `deepsea`. (`ruins` 폐허: 기본 색 없음, 기본 대지 종류 없음)
   - `sky` 는 공중섬이다. 비행(`fly`)할 수 있는 이만 오가고 머물 수 있다.
   - `deepsea` 는 바다 지역이다. 물에 사는 이(`aquatic`)만 머물 수 있고, 다른 이는 들어가거나 지나갈 수 없다. 바다에서 시작하는 사건의 기준점이 된다.
   - 정글, 설원처럼 젠디카르다운 다른 지형은 해당 카드가 나올 때 `sim/world.ts` 의 `TERRAINS` 에 더한다.
@@ -110,6 +112,7 @@ sim:
   # nonbasic: true                      # 이름 있는 대지 카드: 산·평원 같은 기본 종류가 없다
   # no_mana: true                       # 마나를 내지 않는다
   # fetch: { types: [mountain, plains], life: 1 }  # 내어 주고 생명 N: 그 종류 땅과 멀리서 유대
+  # fallen_mana: { color: B, cost: 2 }  # 거느리다 죽은 그 색 권속 N마다: 하루 max(1, N − 2)
 ```
 
 `npm run world:map` 은 미리보기 `world/map.svg` 를 다시 그린다. 게임은 요소 파일을 직접 읽으므로 생성해야 하는 파일은 없다.

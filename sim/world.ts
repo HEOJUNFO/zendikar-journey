@@ -25,6 +25,7 @@ export const TERRAIN_IDS = [
   'sky',
   'volcanic',
   'swamp',
+  'ruins',
   'deepsea',
 ] as const;
 export type Terrain = (typeof TERRAIN_IDS)[number];
@@ -53,6 +54,7 @@ export const TERRAINS: Record<Terrain, TerrainInfo> = {
   sky: { label: '공중섬', color: '#b9c8ea', mana: 'W', requires: 'fly' },
   volcanic: { label: '화산 지대', color: '#b5462c', mana: 'R', type: 'mountain' },
   swamp: { label: '늪', color: '#4f4a5e', mana: 'B', type: 'swamp' },
+  ruins: { label: '폐허', color: '#6a5a82', mana: null },
   deepsea: { label: '심해', color: '#1d3b66', mana: 'U', sea: true },
 };
 
@@ -74,6 +76,10 @@ export const LandSimSchema = z.strictObject({
   // it onto the battlefield": whoever holds it gives it up and N life, and bonds with a land of
   // one of these types they don't hold yet, from wherever they are.
   fetch: z.strictObject({ types: z.array(z.enum(LAND_TYPES)).min(1), life: z.number().int().min(0).default(0) }).optional(),
+  // "{2}, {T}: Add {B} for each black creature card in your graveyard": for each creature of
+  // that color who died serving whoever holds the land (their fallen retainers), one mana of
+  // it, less the cost; never less than the land's one mana.
+  fallen_mana: z.strictObject({ color: z.enum(COLORS), cost: z.number().int().min(0) }).optional(),
   on_bond: z.array(z.discriminatedUnion('type', [z.strictObject({ type: z.literal('gain_life'), amount: z.number().int().positive() })])).default([]),
 });
 export type BondEffect = z.infer<typeof LandSimSchema>['on_bond'][number];
@@ -334,6 +340,7 @@ export type Region = {
   nonbasic: boolean;
   noMana: boolean;
   fetch?: { types: LandType[]; life: number };
+  fallenMana?: { color: Color; cost: number };
   // An area inside this region (its x, y are the region's). Areas are lands of their own:
   // people meet, bond, and get hit by events there, but an event on the region reaches them.
   parent?: string;
@@ -355,6 +362,8 @@ export type NpcDef = {
   landfall?: { pt: [number, number]; trample: boolean };
   // The creature kind they are (e.g. cre-vampire), for "a Vampire you control".
   creature?: string;
+  // Their colors when their mana doesn't say (e.g. a black Vampire risen in play).
+  colors?: Color[];
   // Planeswalkers' loyalty, the colors of spells they hold, and powers the morning LLM may
   // use for them. Characters born in play (state.tokens) have none.
   loyalty?: number;
@@ -465,6 +474,7 @@ export function buildWorld(entities: RawEntity[]): { world: World; errors: strin
           nonbasic: land.data?.nonbasic ?? false,
           noMana: land.data?.no_mana ?? false,
           fetch: land.data?.fetch,
+          fallenMana: land.data?.fallen_mana,
         });
       }
     }
