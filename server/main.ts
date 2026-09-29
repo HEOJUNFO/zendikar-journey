@@ -16,8 +16,8 @@ try {
   // no .env: createLlm says what's missing
 }
 
-// Without LLM settings the server still starts: NPCs keep their routines, no GM events,
-// no narration, and free-text input fails. Good enough for looking around locally.
+// Without LLM settings the server still starts, for looking around locally: but no one's day
+// can be planned, so time doesn't move (advance and act answer with an error).
 let llm: Llm = {};
 try {
   llm = createLlm();

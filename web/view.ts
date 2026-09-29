@@ -31,7 +31,7 @@ export function nodeAt(world: World, r: Region) {
 }
 
 // Traps: events the land sets off by itself when someone comes (law-ruin-traps), unlike
-// the GM's events.
+// the events the morning LLM raises.
 export function isTrap(ev: EventDef) {
   return ev.trigger !== 'gm';
 }

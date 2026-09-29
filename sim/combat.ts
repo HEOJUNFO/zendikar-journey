@@ -11,6 +11,7 @@ import { doubleLife } from './life.ts';
 import { HUNT_HUNGER, KILL_FEED, KO_ACTIVITY, KO_HOURS } from './rules.ts';
 import { addLog, needsOf, npcDef, present, ptOf, random } from './state.ts';
 import type { Actor, State } from './state.ts';
+import { hasPowers } from './world.ts';
 import type { World } from './world.ts';
 import { josa, shortName } from './text.ts';
 
@@ -174,17 +175,17 @@ export function clash(state: State, attacker: Actor, defender: Actor, t: number)
   }
 }
 
-// A hungry beast picks the weakest one standing with it (not the great beings).
+// A hungry beast picks the weakest one standing with it (not those of legend, with powers).
 function prey(state: State, world: World, a: Actor, t: number) {
   const def = npcDef(state, world, a.id);
   if (!def?.beast || !needsOf(a).includes('hunger') || a.stats.hunger < HUNT_HUNGER) return undefined;
   if (a.task?.kind === 'sleep') return undefined;
   return present(state, a.region)
-    .filter((b) => b.id !== a.id && b.kind !== 'being' && b.boundUntil === undefined && !down(b) && !foesOf(a, t).includes(b.id))
+    .filter((b) => b.id !== a.id && !hasPowers(npcDef(state, world, b.id)) && b.boundUntil === undefined && !down(b) && !foesOf(a, t).includes(b.id))
     .sort((x, y) => ptOf(x)[1] - ptOf(y)[1] || x.id.localeCompare(y.id))[0];
 }
 
-// NPCs (and beings) attack a foe standing with them, one exchange per hour. Their hour goes
+// NPCs attack a foe standing with them, one exchange per hour. Their hour goes
 // to fighting. A hungry beast makes a foe of its prey; if it kills, it feeds.
 export function hostileNpcs(state: State, world: World, t: number) {
   for (const a of Object.values(state.actors)) {

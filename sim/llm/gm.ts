@@ -1,6 +1,6 @@
-// The GM decides once a day which of the world's events happen today, and which activated
-// abilities the GM-driven beings use on whom. It can only pick what world/entities defines;
-// what it does is up to the engine.
+// Each morning the LLM decides which of the world's events happen today, and which activated
+// abilities characters use on whom. It can only pick what world/entities defines; what it does
+// is up to the engine.
 import { z } from 'zod';
 import { ptOf } from '../state.ts';
 import type { GmPlan } from '../state.ts';
@@ -27,13 +27,13 @@ export async function gmDay(input: GmDayInput): Promise<GmPlan | null> {
   );
   const targets = Object.values(input.state.actors).filter((a) => !a.dead).map((a) => a.id);
   const plan = parseGmPlan(content, { ...input, targets });
-  if (!plan) console.warn('Unusable GM plan, no events today:', content);
+  if (!plan) console.warn('Unusable events plan, no events today:', content);
   return plan;
 }
 
-const SYSTEM_PROMPT = `You are the game master of a living fantasy world (the plane of Zendikar).
-Each morning you decide which world events happen today, and whether the great beings who act
-outside the daily routines use their powers. Events are rare and should feel earned: respect their
+const SYSTEM_PROMPT = `You keep a living fantasy world (the plane of Zendikar) turning.
+Each morning you decide which world events happen today, and whether characters of legend use their
+powers. Events are rare and should feel earned: respect their
 usual frequency, build on what happened lately, and often decide that nothing happens. Powers that
 kill are grave; use them rarely, in character, and with a reason the world could come to know.
 Answer with JSON only, no prose.`;
@@ -60,12 +60,12 @@ function userPrompt({ day, hour, world, state, eligible, abilities, news }: GmDa
   const powers = abilities
     .map(
       ({ being, ability }) =>
-        `- being ${being.id} (${being.name}, ${being.pt.join('/')}${state.actors[being.id]?.loyalty !== undefined ? `, loyalty ${state.actors[being.id].loyalty}` : ''}): ability ${ability.id} "${ability.name}" — ${ability.effects.map(describeEffect).join(' + ')}${ability.tap ? ' (then tapped until midnight)' : ''}${ability.loyalty !== undefined ? ` (loyalty ${ability.loyalty > 0 ? '+' : ''}${ability.loyalty}; one loyalty ability a day; at 0 loyalty they leave this plane)` : ''}${ability.target === false ? ' (no target: use "target": "")' : ''}`,
+        `- character ${being.id} (${being.name}, ${being.pt.join('/')}${state.actors[being.id]?.loyalty !== undefined ? `, loyalty ${state.actors[being.id].loyalty}` : ''}): ability ${ability.id} "${ability.name}" — ${ability.effects.map(describeEffect).join(' + ')}${ability.tap ? ' (then tapped until midnight)' : ''}${ability.loyalty !== undefined ? ` (loyalty ${ability.loyalty > 0 ? '+' : ''}${ability.loyalty}; one loyalty ability a day; at 0 loyalty they leave this plane)` : ''}${ability.target === false ? ' (no target: use "target": "")' : ''}`,
     )
     .join('\n');
   const targets = Object.values(state.actors)
     .filter((a) => !a.dead)
-    .map((a) => `- ${a.id}: ${a.name}${a.kind === 'player' ? ' (the player)' : a.kind === 'being' ? ' (a great being; not itself)' : ''}, ${ptOf(a).join('/')}, in ${a.region}`)
+    .map((a) => `- ${a.id}: ${a.name}${a.kind === 'player' ? ' (the player)' : ''}, ${ptOf(a).join('/')}, in ${a.region}`)
     .join('\n');
   return `Day ${day + 1}, now ${clockText(state)}.
 
@@ -78,7 +78,7 @@ ${news.length ? `\nLately:\n${news.map((n) => `- ${n}`).join('\n')}\n` : ''}
 Events you may raise today:
 ${events || '(none)'}
 
-Powers of GM-driven beings you may use today:
+Powers characters may use today (never on themselves):
 ${powers || '(none)'}
 
 Characters a power may target:

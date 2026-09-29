@@ -1,5 +1,5 @@
 // What the player character can do in one turn. Free text is turned into one of these by
-// the GM LLM (sim/llm/interpret.ts); the UI buttons send them directly.
+// the LLM (sim/llm/interpret.ts); the UI buttons send them directly.
 import { z } from 'zod';
 import { STEP_MINUTES } from './clock.ts';
 import { BOND_HOURS, KIND_EFFECTS } from './rules.ts';

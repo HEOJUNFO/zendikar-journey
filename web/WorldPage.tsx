@@ -5,7 +5,7 @@ import type { State } from '../sim/state.ts';
 import { areasOf, TERRAINS } from '../sim/world.ts';
 import type { World } from '../sim/world.ts';
 import { MapView } from './MapView.tsx';
-import { BeingsList, LogView, ObserverControls, PeopleList, PlayerCard, RegionCard } from './panels.tsx';
+import { LegendsList, LogView, ObserverControls, PeopleList, PlayerCard, RegionCard } from './panels.tsx';
 import { visibleActors } from './view.ts';
 
 type Props = {
@@ -45,7 +45,7 @@ export function WorldPage({ world, state, busy, error, onAdvance }: Props) {
         <RegionList world={world} state={state} selected={regionId} onSelect={setSelected} />
         {state && <PlayerCard world={world} state={state} />}
         {state && <PeopleList world={world} state={state} all />}
-        {state && <BeingsList world={world} state={state} all />}
+        {state && <LegendsList world={world} state={state} all />}
       </aside>
     </main>
   );

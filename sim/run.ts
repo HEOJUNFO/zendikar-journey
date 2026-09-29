@@ -16,7 +16,7 @@ import { bindRetainer, swayBlocked } from './retainers.ts';
 import { josa, shortName } from './text.ts';
 import type { ScheduleBlock } from './types.ts';
 import { canStay, placeName } from './world.ts';
-import type { ActivatedAbility, BeingDef, EventDef, Speaker, World } from './world.ts';
+import type { ActivatedAbility, EventDef, NpcDef, Speaker, World } from './world.ts';
 import type { PlanDayInput } from './llm/planner.ts';
 
 export type GmDayInput = {
@@ -25,7 +25,7 @@ export type GmDayInput = {
   world: World;
   state: State;
   eligible: EventDef[];
-  abilities: { being: BeingDef; ability: ActivatedAbility }[];
+  abilities: { being: NpcDef; ability: ActivatedAbility }[];
   news: string[];
 };
 export type NarrateInput = { world: World; state: State; entries: LogEntry[] };
@@ -61,14 +61,16 @@ export type TurnResult = { error?: string; entries: LogEntry[] };
 
 export async function advance(state: State, world: World, hours: number, llm: Llm = {}): Promise<TurnResult> {
   const firstId = state.nextLogId;
+  let error: string | undefined;
   for (let i = 0; i < hours; i++) {
-    await prepareDay(state, world, llm);
+    error = (await prepare(state, world, llm)) ?? undefined;
+    if (error) break;
     const before = state.nextLogId;
     step(state, world);
     await conversations(state, world, before, llm);
   }
   await narrate(state, world, firstId, llm);
-  return { entries: state.log.filter((e) => e.id >= firstId) };
+  return { error, entries: state.log.filter((e) => e.id >= firstId) };
 }
 
 export async function act(state: State, world: World, input: Action | string, llm: Llm = {}): Promise<TurnResult> {
@@ -81,6 +83,8 @@ export async function act(state: State, world: World, input: Action | string, ll
     if (!action) return { error: '무슨 행동인지 알아듣지 못했다. 다르게 말해 보자.', entries: [] };
   } else action = input;
 
+  const halted = await prepare(state, world, llm);
+  if (halted) return { error: halted, entries: [] };
   const firstId = state.nextLogId;
   const error = startAction(state, world, action);
   if (error) return { error, entries: [] };
@@ -88,8 +92,10 @@ export async function act(state: State, world: World, input: Action | string, ll
   if (action.type === 'attack') await attack(state, world, p, action.to, llm);
   if (action.type === 'cast') castSpell(state, world, p, action.spell, action.to, action.kick, state.minutes);
 
+  let halt: string | undefined;
   for (let n = 0; busy(p) && !state.over && n < MAX_ACT_HOURS; n++) {
-    await prepareDay(state, world, llm);
+    halt = (await prepare(state, world, llm)) ?? undefined;
+    if (halt) break;
     const before = state.nextLogId;
     step(state, world);
     await conversations(state, world, before, llm);
@@ -104,7 +110,7 @@ export async function act(state: State, world: World, input: Action | string, ll
     }
   }
   await narrate(state, world, firstId, llm);
-  return { entries: state.log.filter((e) => e.id >= firstId) };
+  return { error: halt, entries: state.log.filter((e) => e.id >= firstId) };
 }
 
 // NPCs who met this hour talk (step.ts logs the meeting; the words need the LLM). What they
@@ -208,46 +214,48 @@ async function attack(state: State, world: World, p: Actor, npcId: string, llm: 
   clash(state, p, target, state.minutes);
 }
 
-// Plans for the day, made once when the day starts: each NPC's schedule and the GM's
-// events. If a call fails the NPC keeps their routine / the GM raises nothing (step.ts).
-async function prepareDay(state: State, world: World, llm: Llm) {
+// An NPC's day is asked for this many times before the world halts.
+const PLAN_TRIES = 2;
+
+// What the LLM must give before the next hour: every living NPC's plan for today (a new day,
+// or someone new in the world), and once a day the day's events and powers. The world does
+// not move on without the NPCs' plans (there is no written routine to fall back on): returns
+// why it halts, or null. The events plan may fail: then nothing is raised that day.
+async function prepare(state: State, world: World, llm: Llm): Promise<string | null> {
   const day = gameDay(state.minutes);
-  if (state.preparedDay >= day) return;
-  state.preparedDay = day;
+  const unplanned = Object.values(state.actors).filter((a) => a.kind === 'npc' && !a.dead && a.schedule?.day !== day);
+  if (unplanned.length && !llm.planDay) return 'LLM 설정이 없어 인물들의 하루를 짤 수 없다. 세계가 멈춰 있다.';
   const news = recentNews(state, world);
-  const jobs: Promise<void>[] = [];
-  for (const npc of [...world.npcs, ...Object.values(state.tokens ?? {})]) {
-    const a = state.actors[npc.id];
-    if (!a || a.dead) continue;
-    a.schedule = { day, source: 'routine', blocks: npc.routine };
-    if (!llm.planDay) continue;
-    const planDay = llm.planDay;
-    jobs.push(
-      (async () => {
-        try {
-          const blocks = await planDay({
-            day,
-            name: npc.name,
-            persona: npc.persona,
-            goal: npc.goal,
-            role: npc.role,
-            home: npc.home,
-            stats: a.stats,
-            needs: npc.needs,
-            routine: npc.routine,
-            relations: relationsText(a),
-            items: claimableItems(state, world, a, state.minutes).map((x) => `  - ${x.id} in ${x.at}: ${x.name} (${x.summary}), costs ${x.costText}`),
-            regions: world.regions.filter((r) => canStay(r, npc.abilities)).map((r) => ({ ...r, name: placeName(world, r) })),
-            news,
-          });
-          if (blocks) a.schedule = { day, source: 'llm', blocks };
-        } catch (e) {
-          console.warn(`planDay for ${npc.id} failed, keeping routine:`, e);
-        }
-      })(),
-    );
-  }
-  if (llm.gmDay) {
+  const jobs: Promise<void>[] = unplanned.map(async (a) => {
+    const npc = npcDef(state, world, a.id);
+    if (!npc) return;
+    for (let i = 0; i < PLAN_TRIES && a.schedule?.day !== day; i++) {
+      try {
+        const blocks = await llm.planDay!({
+          id: npc.id,
+          day,
+          now: state.minutes % 1440,
+          name: npc.name,
+          persona: npc.persona,
+          goal: npc.goal,
+          role: npc.role,
+          home: npc.home,
+          here: a.region,
+          stats: a.stats,
+          needs: npc.needs,
+          relations: relationsText(a),
+          regions: world.regions.filter((r) => canStay(r, npc.abilities)).map((r) => ({ ...r, name: placeName(world, r) })),
+          items: claimableItems(state, world, a, state.minutes).map((x) => `  - ${x.id} in ${x.at}: ${x.name} (${x.summary}), costs ${x.costText}`),
+          news,
+        });
+        if (blocks) a.schedule = { day, source: 'llm', blocks };
+      } catch (e) {
+        console.warn(`planDay for ${npc.id} failed:`, e);
+      }
+    }
+  });
+  if (state.preparedDay < day && llm.gmDay) {
+    state.preparedDay = day;
     const gmDay = llm.gmDay;
     jobs.push(
       (async () => {
@@ -265,12 +273,15 @@ async function prepareDay(state: State, world: World, llm: Llm) {
     );
   }
   await Promise.all(jobs);
+  const missing = unplanned.filter((a) => a.schedule?.day !== day);
+  if (!missing.length) return null;
+  return `LLM이 ${missing.map((a) => shortName(a.name)).join(', ')}의 하루를 짜지 못해 세계가 멈췄다. 다시 진행하면 이어서 짠다.`;
 }
 
-// Activated abilities GM-driven beings could use today: untapped and able to pay.
+// Activated abilities characters could use today: untapped and able to pay.
 export function usableAbilities(state: State, world: World, t: number) {
-  return world.beings.flatMap((being) =>
-    being.activated.filter((x) => !abilityBlocked(state, world, being.id, x, t)).map((ability) => ({ being, ability })),
+  return world.npcs.flatMap((being) =>
+    (being.activated ?? []).filter((x) => !abilityBlocked(state, world, being.id, x, t)).map((ability) => ({ being, ability })),
   );
 }
 

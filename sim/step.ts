@@ -1,8 +1,9 @@
 // One game hour of the world, rules only (no LLM, no I/O). The LLM prepares the day's plans
-// ahead of time (sim/run.ts); this applies them. If a plan is missing (the LLM failed), NPCs
-// keep their routine and the GM raises nothing that day.
+// ahead of time (sim/run.ts): every NPC's day, and the day's events and powers. This applies
+// them. The world doesn't move on without every NPC's plan; without the day's events plan
+// nothing is raised that day.
 //
-// Order within an hour: GM events -> factions -> regions -> characters -> meetings.
+// Order within an hour: raised events -> factions -> regions -> characters -> meetings.
 import { formatClock, gameDay, minuteOfDay, STEP_MINUTES, untapTime } from './clock.ts';
 import {
   applyEffect,
@@ -28,7 +29,7 @@ import { payMana } from './mana.ts';
 import type { Actor, GmPlan, State, Task } from './state.ts';
 import { josa, shortName, toward } from './text.ts';
 import { currentBlock } from './types.ts';
-import { ABILITY_LABELS, affectedRegions, region, TERRAINS, travelHours } from './world.ts';
+import { ABILITY_LABELS, affectedRegions, hasPowers, region, TERRAINS, travelHours } from './world.ts';
 import type { EventDef, World } from './world.ts';
 
 export function step(state: State, world: World) {
@@ -58,10 +59,6 @@ export function step(state: State, world: World) {
 
 function startDay(state: State, world: World, t: number) {
   const day = gameDay(t);
-  for (const npc of [...world.npcs, ...Object.values(state.tokens ?? {})]) {
-    const a = state.actors[npc.id];
-    if (a && a.schedule?.day !== day) a.schedule = { day, source: 'routine', blocks: npc.routine };
-  }
   if (state.gm.day !== day) state.gm = { day, source: 'none', fires: [] };
   if (state.met.day !== day) state.met = { day, pairs: [] };
   // "Until end of turn" wears off.
@@ -77,7 +74,7 @@ function onCooldown(state: State, ev: EventDef, t: number) {
   return last !== undefined && t - last < ev.cooldownHours * 60;
 }
 
-// GM events that may be raised today. A being's doing needs the being alive.
+// Events the morning LLM may raise today. One someone must pay for needs them alive.
 export function eligibleGmEvents(state: State, world: World, t: number) {
   return world.events.filter(
     (e) =>
@@ -88,7 +85,7 @@ export function eligibleGmEvents(state: State, world: World, t: number) {
   );
 }
 
-// --- GM events ---------------------------------------------------------------------------
+// --- raised events -----------------------------------------------------------------------
 
 function gmLayer(state: State, world: World, t: number) {
   const due = state.pending.filter((p) => p.at <= t);
@@ -107,7 +104,7 @@ function gmLayer(state: State, world: World, t: number) {
     for (const u of state.gm.uses ?? []) {
       if (u.hour !== hour) continue;
       const why = useAbility(state, world, u.being, u.ability, u.target, t);
-      if (why) console.warn(`GM ability ${u.being}/${u.ability} on ${u.target} skipped: ${why}`);
+      if (why) console.warn(`Ability ${u.being}/${u.ability} on ${u.target} skipped: ${why}`);
     }
   }
 
@@ -269,7 +266,9 @@ export function travelBlocked(state: State, world: World, a: Actor, to: string):
   if (to === a.region) return '이미 그곳에 있다.';
   const dest = world.regions.find((r) => r.id === to);
   if (!dest) return '알 수 없는 곳이다.';
-  if (TERRAINS[dest.terrain].sea) return `${josa(dest.name, '은', '는')} 바다다. 배도 항로도 아직 없다.`;
+  if (a.abilities.includes('aquatic')) {
+    if (!TERRAINS[dest.terrain].sea) return `물에 사는 이라 뭍(${dest.name})에 오를 수 없다.`;
+  } else if (TERRAINS[dest.terrain].sea) return `${josa(dest.name, '은', '는')} 바다다. 배도 항로도 아직 없다.`;
   const from = region(world, a.region);
   for (const r of [from, dest]) {
     const need = TERRAINS[r.terrain].requires;
@@ -307,8 +306,8 @@ function actorHour(state: State, world: World, a: Actor, t: number) {
       return;
     }
     delete a.boundUntil;
-    // A being tapped by its own ability just untaps; others were held and are let go.
-    if (a.kind !== 'being') addLog(state, { kind: 'status', text: `${josa(name, '이', '가')} 풀려났다.`, regions: [a.region], actors: [a.id] });
+    // One tapped by their own power just untaps; others were held and are let go.
+    if (!hasPowers(npcDef(state, world, a.id))) addLog(state, { kind: 'status', text: `${josa(name, '이', '가')} 풀려났다.`, regions: [a.region], actors: [a.id] });
   }
   if (a.travel) return travelHour(state, world, a, t);
 

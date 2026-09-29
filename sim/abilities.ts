@@ -1,4 +1,4 @@
-// Landfall (bonding with a land) and activated abilities of GM-driven beings.
+// Landfall (bonding with a land) and activated abilities, used as the morning LLM plans.
 import { gameDay, untapTime } from './clock.ts';
 import { dealDamage, die, leavePlane } from './combat.ts';
 import { manaAvailable, payMana, planPayment } from './mana.ts';
@@ -54,7 +54,7 @@ export function bondLand(state: State, world: World, a: Actor, t: number) {
   itemsOnLandfall(state, world, a, t);
 }
 
-// Why a being can't use this ability now (loyalty, tap, mana), or null. The target is checked
+// Why they can't use this ability now (loyalty, tap, mana), or null. The target is checked
 // by useAbility.
 export function abilityBlocked(state: State, world: World, beingId: string, ability: ActivatedAbility, t: number): string | null {
   const bs = state.actors[beingId];
@@ -69,11 +69,11 @@ export function abilityBlocked(state: State, world: World, beingId: string, abil
   return null;
 }
 
-// A GM-driven being uses an activated ability (on a living character, if it targets). Returns
-// why not, or null.
+// A character uses an activated ability (on a living character, if it targets). Returns why
+// not, or null.
 export function useAbility(state: State, world: World, beingId: string, abilityId: string, targetId: string, t: number) {
-  const being = world.beings.find((b) => b.id === beingId);
-  const ability = being?.activated.find((x) => x.id === abilityId);
+  const being = npcDef(state, world, beingId);
+  const ability = being?.activated?.find((x) => x.id === abilityId);
   if (!being || !ability) return '그런 능력은 없다.';
   const target = ability.target ? state.actors[targetId] : undefined;
   if (ability.target && (!target || target.dead || target.id === beingId)) return '대상이 없다.';
@@ -153,7 +153,7 @@ function wheel(state: State, world: World, a: Actor, draw: number) {
 // who serves `master`.
 function raiseToken(state: State, world: World, from: Actor, creature: string, faction: string | undefined, master: string) {
   const kind = world.lore.find((l) => l.id === creature);
-  const masterName = shortName(world.beings.find((b) => b.id === master)?.name ?? master);
+  const masterName = shortName(npcDef(state, world, master)?.name ?? master);
   const factionName = faction ? world.lore.find((l) => l.id === faction)?.name : undefined;
   const id = `tok-${state.nextLogId}`;
   const was = shortName(from.name);
@@ -171,7 +171,6 @@ function raiseToken(state: State, world: World, from: Actor, creature: string, f
     abilities: [],
     needs: ['energy'],
     creature,
-    routine: [{ start: 0, end: 1440, regionId: from.region, kind: 'leisure', activity: `${masterName} 곁에서 부름을 기다림`, emoji: '🦇' }],
   };
   const def = state.tokens[id];
   state.actors[id] = {
@@ -216,10 +215,6 @@ export function spawnWild(state: State, world: World, creature: string, pt: [num
       needs: ['energy'],
       beast: true,
       creature,
-      routine: [
-        { start: 0, end: 360, regionId, kind: 'sleep', activity: '똬리를 틀고 쉼', emoji: '💤' },
-        { start: 360, end: 1440, regionId, kind: 'leisure', activity: '제 땅을 지킴', emoji: '🐍' },
-      ],
     };
     state.actors[id] = {
       id,

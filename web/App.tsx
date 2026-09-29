@@ -7,7 +7,7 @@ import { api } from './api.ts';
 import type { GameView } from './api.ts';
 import { FullMap } from './FullMap.tsx';
 import { MapView } from './MapView.tsx';
-import { BeingsList, CharacterControls, LogView, NewGame, ObserverControls, PeopleList, PlayerCard, RegionCard } from './panels.tsx';
+import { LegendsList, CharacterControls, LogView, NewGame, ObserverControls, PeopleList, PlayerCard, RegionCard } from './panels.tsx';
 import { clock } from './view.ts';
 import { WorldPage } from './WorldPage.tsx';
 
@@ -155,7 +155,7 @@ export function App() {
         <aside className="pane side-pane">
           <PlayerCard world={world} state={state} />
           <PeopleList world={world} state={state} />
-          <BeingsList world={world} state={state} />
+          <LegendsList world={world} state={state} />
         </aside>
       </main>
     </div>

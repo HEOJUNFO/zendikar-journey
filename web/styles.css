@@ -252,7 +252,7 @@ header h1 {
   stroke: #1a1408;
   stroke-width: 0.25;
 }
-.map-being circle {
+.map-legend circle {
   fill: #2a1f33;
   stroke: #e0c9ff;
   stroke-width: 0.35;
@@ -752,7 +752,7 @@ header h1 {
 .dot-npc {
   background: #f4ecd8;
 }
-.dot-being {
+.dot-legend {
   background: #2a1f33;
   border: 1px solid #e0c9ff;
 }

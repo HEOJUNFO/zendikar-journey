@@ -1,6 +1,6 @@
 // What a character is doing in a schedule block. Drives stat effects (rules.ts) and
 // whether characters in the same region meet (step.ts).
-// bond: bonding with the land they stand on (landfall), for those whose routine does it.
+// bond: bonding with the land they stand on (landfall), one land a day.
 // claim: taming an item that stands where they are (sim/items.ts), when one is theirs to take.
 export const LIFE_KINDS = ['sleep', 'eat', 'work', 'social', 'leisure', 'bond', 'claim'] as const;
 export type LifeKind = (typeof LIFE_KINDS)[number];
@@ -17,6 +17,7 @@ export type ScheduleBlock = {
 
 export type Schedule = {
   day: number;
+  // 'routine' only in saves from when characters had written routines.
   source: 'routine' | 'llm';
   blocks: ScheduleBlock[];
 };

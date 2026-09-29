@@ -6,6 +6,7 @@ import { addLog } from './state.ts';
 import type { Actor, State } from './state.ts';
 import { remember } from './relations.ts';
 import { josa, shortName } from './text.ts';
+import { hasPowers } from './world.ts';
 import type { World } from './world.ts';
 import { npcDef } from './state.ts';
 
@@ -25,7 +26,7 @@ export function creatureOf(state: State, world: World, id: string) {
 
 // Why `a` can't be won over as a retainer, or null.
 export function swayBlocked(state: State, world: World, a: Actor): string | null {
-  if (a.dead || a.kind !== 'npc') return `${josa(shortName(a.name), '은', '는')} 누구를 따를 존재가 아니다.`;
+  if (a.dead || a.kind !== 'npc' || hasPowers(npcDef(state, world, a.id))) return `${josa(shortName(a.name), '은', '는')} 누구를 따를 존재가 아니다.`;
   if (npcDef(state, world, a.id)?.beast) return '짐승은 말로 따르게 할 수 없다.';
   const m = masterOf(state, a);
   if (m) return `${josa(shortName(a.name), '은', '는')} 이미 ${shortName(m.name)}의 권속이다.`;

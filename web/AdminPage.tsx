@@ -26,7 +26,7 @@ type Props = {
   onAdvance: (hours: number) => void;
 };
 
-const KIND_LABELS: Record<Actor['kind'], string> = { npc: 'NPC', being: 'GM 존재', player: '플레이어' };
+const KIND_LABELS: Record<Actor['kind'], string> = { npc: 'NPC', player: '플레이어' };
 const RECENT_LOG = 10;
 
 export function AdminPage({ world, state, busy, error, onAdvance }: Props) {
@@ -43,7 +43,7 @@ export function AdminPage({ world, state, busy, error, onAdvance }: Props) {
           picked={picked} onPickActor={(id) => setPick({ kind: 'actor', id })} onPickTrap={(id) => setPick({ kind: 'trap', id })}
           onPickSpell={(id) => setPick({ kind: 'spell', id })} />
         <p className="muted admin-legend">
-          <span className="dot dot-npc" /> NPC <span className="dot dot-being" /> GM 존재 <span className="dot dot-player" /> 플레이어
+          <span className="dot dot-npc" /> NPC <span className="dot dot-legend" /> 능력을 지닌 이 <span className="dot dot-player" /> 플레이어
           <span className="diamond diamond-armed" /> 함정 (대기) <span className="diamond diamond-omen" /> 전조 <span className="diamond diamond-cooldown" /> 재발동 대기
           <span className="spell-dot spell-multi" /> 주문 (배우는 곳, 마나 색)
         </p>
@@ -123,7 +123,7 @@ export function AdminPage({ world, state, busy, error, onAdvance }: Props) {
 function ActorDetail({ world, state, a, onRegion }: { world: World; state: State; a: Actor; onRegion: (id: string) => void }) {
   const t = state.minutes;
   const def = a.kind === 'npc' ? npcDef(state, world, a.id) : undefined;
-  const being = a.kind === 'being' ? world.beings.find((b) => b.id === a.id) : undefined;
+  const powers = def?.activated ?? [];
   const token = !!state.tokens?.[a.id];
   const foes = foesOf(a, t);
   const block = a.schedule?.day === gameDay(t) ? currentBlock(a.schedule.blocks, minuteOfDay(t)) : undefined;
@@ -138,7 +138,7 @@ function ActorDetail({ world, state, a, onRegion }: { world: World; state: State
         {a.name} <small>{KIND_LABELS[a.kind]}{token ? ' · 게임 중 생김' : ''}{a.master ? ` · ${name(a.master)}의 권속` : ''} · {fighting(a, t)}</small>
       </h2>
       <p className="muted admin-id">{a.id}</p>
-      {(def?.summary || being?.summary) && <p>{def?.summary ?? being?.summary}</p>}
+      {def?.summary && <p>{def.summary}</p>}
       <p>{status(world, a)}</p>
       <button className="ghost admin-goto" onClick={() => onRegion(a.region)}>
         {placeName(world, region(world, a.region))} 보기
@@ -234,11 +234,11 @@ function ActorDetail({ world, state, a, onRegion }: { world: World; state: State
         )}
       </dl>
 
-      {being && being.activated.length > 0 && (
+      {powers.length > 0 && (
         <>
           <h3 className="admin-sub">능력</h3>
           <ul className="admin-list">
-            {being.activated.map((x) => (
+            {powers.map((x) => (
               <li key={x.id}>
                 {x.name} <small className="muted">{x.costText}{x.tap ? ', 탭' : ''}</small>
               </li>
@@ -246,7 +246,7 @@ function ActorDetail({ world, state, a, onRegion }: { world: World; state: State
           </ul>
           {uses.length > 0 && (
             <p className="muted">
-              오늘 GM 계획: {uses.map((u) => `${String(u.hour).padStart(2, '0')}시 ${being.activated.find((x) => x.id === u.ability)?.name ?? u.ability} → ${name(u.target)}`).join(', ')}
+              오늘 쓸 능력 (아침 LLM): {uses.map((u) => `${String(u.hour).padStart(2, '0')}시 ${powers.find((x) => x.id === u.ability)?.name ?? u.ability}${u.target ? ` → ${name(u.target)}` : ''}`).join(', ')}
             </p>
           )}
         </>
@@ -254,7 +254,7 @@ function ActorDetail({ world, state, a, onRegion }: { world: World; state: State
 
       {a.schedule && a.schedule.day === gameDay(t) && (
         <>
-          <h3 className="admin-sub">오늘 일정 <small className="muted">{a.schedule.source === 'llm' ? 'LLM' : '평소 일과'}</small></h3>
+          <h3 className="admin-sub">오늘 일정 <small className="muted">{a.schedule.source === 'llm' ? 'LLM' : '예전 저장의 평소 일과'}</small></h3>
           <ul className="admin-list">
             {a.schedule.blocks.map((b) => (
               <li key={b.start} className={b === block ? 'on' : ''}>

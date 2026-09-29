@@ -40,7 +40,7 @@ export function formatMana(mana: Mana) {
 // What someone can draw on each turn.
 export function manaCapacity(state: State, world: World, a: { id: string; bonds?: string[] }): Mana {
   const def =
-    world.npcs.find((n) => n.id === a.id) ?? world.beings.find((b) => b.id === a.id) ?? state.tokens?.[a.id];
+    world.npcs.find((n) => n.id === a.id) ?? state.tokens?.[a.id];
   const out: Mana = { ...(def?.mana ?? {}) };
   for (const id of a.bonds ?? []) {
     const r = world.regions.find((x) => x.id === id);

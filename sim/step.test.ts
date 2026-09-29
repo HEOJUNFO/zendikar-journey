@@ -1,13 +1,15 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { formatClock } from './clock.ts';
+import { formatClock, parseTimeOfDay } from './clock.ts';
 import { loadWorld } from './load.ts';
-import { act, advance } from './run.ts';
+import { act as runAct, advance as runAdvance } from './run.ts';
 import type { Llm } from './run.ts';
+import type { Action } from './actions.ts';
+import type { World } from './world.ts';
 import { die, knockedOut, woundsOf } from './combat.ts';
 import { manaAvailable, manaCapacity } from './mana.ts';
 import { MAX_TALKS_PER_DAY, usableAbilities } from './run.ts';
-import { eligibleGmEvents } from './step.ts';
+import { eligibleGmEvents, travelBlocked } from './step.ts';
 import { gainLife } from './life.ts';
 import { newState, PLAYER_ID, ptOf, syncWorld } from './state.ts';
 import { bondBlocked, bondLand, useAbility } from './abilities.ts';
@@ -24,9 +26,30 @@ const loc = (id: string, x: number, y: number, terrain: string): RawEntity => ({
   status: 'canon',
   map: { x, y, terrain },
 });
-const npc = (id: string, sim: object): RawEntity => ({ id, kind: 'character', name: `${id}, 누군가`, status: 'canon', sim });
+// No one's day is written anywhere: the LLM plans it. Here a fake planner stands in, giving
+// each character the day a test writes for them (`plan` in these helpers, as
+// [start, end, region, kind, activity, emoji] rows), or a day at leisure where they stand.
+const PLANS = new Map<string, unknown[][]>();
+const planned = (e: RawEntity): RawEntity => {
+  const { plan, ...sim } = e.sim as { plan?: unknown[][] };
+  if (plan) PLANS.set(e.id, plan);
+  else PLANS.delete(e.id);
+  return { ...e, sim };
+};
+const planDay: Llm['planDay'] = async (input) =>
+  (PLANS.get(input.id) ?? [['00:00', '24:00', input.here, 'leisure', '머무름', '🙂']]).map(([start, end, regionId, kind, activity, emoji]) => ({
+    start: parseTimeOfDay(start as string),
+    end: parseTimeOfDay(end as string),
+    regionId: regionId as string,
+    kind: kind as never,
+    activity: activity as string,
+    emoji: emoji as string,
+  }));
+const act = (state: State, world: World, action: Action | string, llm: Llm = {}) => runAct(state, world, action, { planDay, ...llm });
+const advance = (state: State, world: World, hours: number, llm: Llm = {}) => runAdvance(state, world, hours, { planDay, ...llm });
+const npc = (id: string, sim: object): RawEntity => planned({ id, kind: 'character', name: `${id}, 누군가`, status: 'canon', sim });
 const allDay = (region: string, kind = 'social') => [['00:00', '24:00', region, kind, '이야기', '💬']];
-const npcSim = (region: string, kind = 'social', pt = [1, 1]) => ({ pt, role: 'r', home: region, persona: 'p', goal: 'g', routine: allDay(region, kind) });
+const npcSim = (region: string, kind = 'social', pt = [1, 1]) => ({ pt, role: 'r', home: region, persona: 'p', goal: 'g', plan: allDay(region, kind) });
 
 function fixture(extra: RawEntity[] = []) {
   const { world, errors } = buildWorld([
@@ -80,7 +103,7 @@ const character = (world: ReturnType<typeof fixture>, region = 'loc-a', seed = 1
   newState(world, { seed, mode: 'character', player: { name: '나', background: '떠돌이', region } });
 const texts = (s: State) => s.log.map((e) => e.text);
 
-test('the real world loads and Iona keeps her routine in Emeria', async () => {
+test('the real world loads and Iona lives the day planned for her in Emeria', async () => {
   const world = loadWorld();
   assert.ok(world.npcs.some((n) => n.id === 'chr-iona' && n.abilities.includes('fly')));
   const state = newState(world, { seed: 7, mode: 'observer' });
@@ -88,7 +111,7 @@ test('the real world loads and Iona keeps her routine in Emeria', async () => {
   assert.equal(formatClock(state.minutes), '2일차 06:00');
   const iona = state.actors['chr-iona'];
   assert.equal(iona.region, 'loc-emeria');
-  assert.ok(texts(state).some((t) => t.includes('하늘 순찰')));
+  assert.equal(iona.schedule?.day, 1);
   assert.ok(iona.stats.energy > 0 && iona.stats.energy <= 100);
   // An angel lives by energy alone: no hunger, no pay.
   assert.deepEqual([iona.stats.hunger, iona.stats.coin], [20, 20]);
@@ -269,9 +292,12 @@ test('combat: a flyer may take to the air; an NPC may turn hostile while talking
 });
 
 const lore = (id: string, kind: string): RawEntity => ({ id, kind, name: id, status: 'canon' });
-const being = (id: string, sim: object): RawEntity => ({ id, kind: 'character', name: `${id}, 존재`, status: 'canon', sim: { gm: true, home: 'loc-sea', ...sim } });
+// A character of legend: powers of their own, no needs. By default one who lives in the sea.
+const being = (id: string, sim: object): RawEntity =>
+  planned({ id, kind: 'character', name: `${id}, 존재`, status: 'canon', sim: { role: 'r', persona: 'p', goal: 'g', needs: [], home: 'loc-sea', abilities: ['aquatic'], ...sim } });
 const kalitas = being('chr-k', {
   home: 'loc-c',
+  abilities: [],
   pt: [5, 5],
   mana: { B: 7 },
   activated: [
@@ -285,7 +311,7 @@ const kalitas = being('chr-k', {
   ],
 });
 
-test('a GM-driven being pays mana and taps to destroy someone, who rises as its retainer', async () => {
+test('a character of legend pays mana and taps to destroy someone, who rises as its retainer', async () => {
   const world = fixture([kalitas, lore('cre-v', 'creature'), lore('fac-g', 'faction'), npc('chr-x', npcSim('loc-a', 'work', [2, 3]))]);
   const state = newState(world, { seed: 1, mode: 'observer' });
   const gmDay: Llm['gmDay'] = async ({ day, hour, abilities }) => ({
@@ -303,6 +329,7 @@ test('a GM-driven being pays mana and taps to destroy someone, who rises as its 
   assert.equal(token.master, 'chr-k');
   assert.equal(token.region, 'loc-c');
   assert.match(state.tokens![token.id].role, /fac-g/);
+  assert.equal(token.schedule?.day, 0); // planned the hour it rose
   const bs = state.actors['chr-k'];
   assert.equal(formatClock(bs.boundUntil!), '2일차 00:00');
   assert.deepEqual(manaAvailable(state, world, bs, state.minutes), { B: 4 });
@@ -329,14 +356,34 @@ test('Lorthos taps only if he can pay his {8}', async () => {
   assert.ok(!texts(b).some((t) => t.includes('묶였다')));
 });
 
-test('GM-driven beings stay at home on the map, even at sea', async () => {
-  const world = fixture([kalitas, lore('cre-v', 'creature'), lore('fac-g', 'faction'), being('chr-l', { pt: [8, 8] })]);
+test('characters of legend live planned days like anyone; those of the sea never leave it', async () => {
+  const world = fixture([
+    being('chr-k', { ...(kalitas.sim as object), plan: allDay('loc-a', 'work') }),
+    lore('cre-v', 'creature'),
+    lore('fac-g', 'faction'),
+    being('chr-l', { pt: [8, 8], plan: allDay('loc-a', 'work') }),
+  ]);
   const state = newState(world, { seed: 1, mode: 'observer' });
   await advance(state, world, 30);
-  assert.equal(state.actors['chr-k'].kind, 'being');
-  assert.equal(state.actors['chr-k'].region, 'loc-c');
-  assert.equal(state.actors['chr-l'].region, 'loc-sea');
+  assert.equal(state.actors['chr-k'].kind, 'npc');
+  assert.equal(state.actors['chr-k'].region, 'loc-a');
   assert.equal(state.actors['chr-k'].stats.energy, 80); // lives by no needs
+  assert.equal(state.actors['chr-l'].region, 'loc-sea');
+  assert.match(travelBlocked(state, world, state.actors['chr-l'], 'loc-a')!, /뭍/);
+});
+
+test('without a day planned for everyone the world halts, and moves on once the plans come', async () => {
+  const world = fixture([npc('chr-x', npcSim('loc-a'))]);
+  const state = newState(world, { seed: 1, mode: 'observer' });
+  assert.match((await runAdvance(state, world, 3)).error!, /LLM 설정이 없어/);
+  let calls = 0;
+  const failing: Llm = { planDay: async () => (calls++, null) };
+  const r = await runAdvance(state, world, 3, failing);
+  assert.match(r.error!, /x의 하루를 짜지 못해 세계가 멈췄다/);
+  assert.equal(calls, 2); // asked again before halting
+  assert.equal(formatClock(state.minutes), '1일차 06:00');
+  assert.equal((await advance(state, world, 3)).error, undefined);
+  assert.equal(formatClock(state.minutes), '1일차 09:00');
 });
 
 test('the player can fight a being where it stays; it strikes back, and a dead being loses its powers', async () => {
@@ -369,9 +416,14 @@ test('an event its being must pay for stops when the being is dead', async () =>
 test('an old save gets its beings as actors, keeping their mana and tap', () => {
   const world = fixture([kalitas, lore('cre-v', 'creature'), lore('fac-g', 'faction')]);
   const state = newState(world, { seed: 1, mode: 'observer' });
+  const old = newState(world, { seed: 1, mode: 'observer' });
   delete state.actors['chr-k'];
   state.beings = { 'chr-k': { id: 'chr-k', boundUntil: 1440, manaSpent: { day: 0, spent: { B: 3 } } } };
   syncWorld(state, world);
+  // Saves from when such characters were 'beings' who stayed at home.
+  (old.actors['chr-k'] as { kind: string }).kind = 'being';
+  syncWorld(old, world);
+  assert.equal(old.actors['chr-k'].kind, 'npc');
   assert.equal(state.actors['chr-k'].region, 'loc-c');
   assert.equal(state.actors['chr-k'].boundUntil, 1440);
   assert.deepEqual(manaAvailable(state, world, state.actors['chr-k'], state.minutes), { B: 4 });
@@ -442,7 +494,7 @@ test('an enter trap bites only those who gained life today, and drains energy', 
   assert.ok(p.stats.energy > q.stats.energy);
 });
 
-const beast = (routine: unknown[][], extra: object = {}): RawEntity => ({
+const beast = (plan: unknown[][], extra: object = {}): RawEntity => planned({
   id: 'cre-b',
   kind: 'creature',
   name: '짐승',
@@ -456,7 +508,7 @@ const beast = (routine: unknown[][], extra: object = {}): RawEntity => ({
     needs: ['energy', 'hunger'],
     beast: true,
     landfall: { pt: [4, 4], trample: true },
-    routine,
+    plan,
     ...extra,
   },
 });
@@ -467,7 +519,7 @@ const beastDay = [
   ['12:00', '24:00', 'loc-a', 'leisure', '어슬렁', '🌳'],
 ];
 
-test('a beast bonds by routine, surges until midnight, hunts the land out and cannot claim it again', async () => {
+test('a beast bonds as its day is planned, surges until midnight, hunts the land out and cannot claim it again', async () => {
   const world = fixture([beast(beastDay)]);
   const state = newState(world, { seed: 1, mode: 'observer' });
   const b = state.actors['cre-b'];
@@ -670,6 +722,7 @@ const bolt: RawEntity = {
 };
 const walker = being('chr-w', {
   home: 'loc-a',
+  abilities: [],
   pt: [0, 5],
   loyalty: 5,
   knows_colors: ['R'],
@@ -757,20 +810,21 @@ test('buildWorld reports bad game data', () => {
     loc('loc-a', 10, 10, 'grassland'),
     loc('loc-sky', 50, 10, 'sky'),
     { id: 'loc-bad', kind: 'location', name: 'x', map: { x: 500, y: 1, terrain: 'lava' } },
-    npc('chr-gap', { ...npcSim('loc-a'), routine: [['00:00', '12:00', 'loc-a', 'work', '일', '🔨']] }),
+    // A written routine or a GM flag: no longer (the LLM plans every day).
+    { id: 'chr-routine', kind: 'character', name: 'x', sim: { ...npcSim('loc-a'), plan: undefined, routine: allDay('loc-a') } },
+    { id: 'chr-gm', kind: 'character', name: 'x', sim: { ...npcSim('loc-a'), plan: undefined, gm: true } },
     npc('chr-nowhere', npcSim('loc-moon')),
     npc('chr-grounded', npcSim('loc-sky')),
-    npc('chr-fasting', { ...npcSim('loc-a', 'eat'), needs: ['energy'] }),
+    npc('chr-fish', { ...npcSim('loc-a'), abilities: ['aquatic'] }),
     { ...tribute('loc-moon'), id: 'spl-lost' },
-    npc('chr-halfhour', { ...npcSim('loc-a'), routine: [['00:00', '00:30', 'loc-a', 'work', '일', '🔨'], ['00:30', '24:00', 'loc-a', 'sleep', '잠', '💤']] }),
   ]);
   const has = (id: string) => errors.some((e) => e.startsWith(`${id}:`));
   assert.ok(has('loc-bad'));
-  assert.ok(has('chr-gap'));
+  assert.ok(has('chr-routine'));
+  assert.ok(has('chr-gm'));
   assert.ok(has('chr-nowhere'));
   assert.ok(has('chr-grounded'));
-  assert.ok(has('chr-fasting'));
-  assert.ok(has('chr-halfhour'));
+  assert.ok(has('chr-fish'));
   assert.ok(has('spl-lost'));
 });
 

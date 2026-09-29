@@ -15,15 +15,20 @@ const BlockSchema = z.object({
 const PlanSchema = z.object({ blocks: z.array(BlockSchema).min(1).max(24) });
 
 export type PlanDayInput = {
+  id: string;
   day: number;
+  // Minute of the day it is now: planned for mid-day (someone new in the world), the hours
+  // before are already past.
+  now: number;
   name: string;
   persona: string;
   goal: string;
   role: string;
   home: string;
+  // Where they are now.
+  here: string;
   stats: Stats;
   needs: readonly Need[];
-  routine: ScheduleBlock[];
   // Regions this character can be in today (reachable and not sea).
   regions: { id: string; name: string; summary: string }[];
   // Today's news the character would know about (conditions, recent events).
@@ -34,19 +39,14 @@ export type PlanDayInput = {
   items?: string[];
 };
 
-// Kinds of blocks they may plan: no meals without hunger, bonding only if their routine bonds,
-// taming only if there is an item for them to tame.
-function kindsFor(input: Pick<PlanDayInput, 'needs' | 'routine' | 'items'>) {
-  return LIFE_KINDS.filter(
-    (k) =>
-      (k !== 'eat' || input.needs.includes('hunger')) &&
-      (k !== 'bond' || input.routine.some((b) => b.kind === 'bond')) &&
-      (k !== 'claim' || !!input.items?.length),
-  );
+// Kinds of blocks they may plan: no meals without hunger, taming only if there is an item for
+// them to tame.
+function kindsFor(input: Pick<PlanDayInput, 'needs' | 'items'>) {
+  return LIFE_KINDS.filter((k) => (k !== 'eat' || input.needs.includes('hunger')) && (k !== 'claim' || !!input.items?.length));
 }
 
-// Asks the chat model for today's schedule. Returns null when the answer isn't a
-// usable schedule; the caller then keeps the routine.
+// Asks the chat model for today's schedule. Returns null when the answer isn't a usable
+// schedule; the caller asks again, and the world waits for it (sim/run.ts).
 export async function planDay(input: PlanDayInput): Promise<ScheduleBlock[] | null> {
   const kinds = new Set<string>(kindsFor(input));
   const content = await chatCompletion(
@@ -58,16 +58,17 @@ export async function planDay(input: PlanDayInput): Promise<ScheduleBlock[] | nu
   );
   let blocks = parsePlan(content, new Set(input.regions.map((r) => r.id)));
   if (blocks?.some((b) => !kinds.has(b.kind))) blocks = null;
-  if (!blocks) console.warn(`Unusable plan for ${input.name}, keeping routine:`, content);
+  if (!blocks) console.warn(`Unusable plan for ${input.name}:`, content);
   return blocks;
 }
 
 const SYSTEM_PROMPT = `You plan one day in the life of a character in a simulated fantasy world (the plane of Zendikar).
-The character lives by their role, personality and goals, and takes care of their needs.
+No one has written a routine for them: you decide their whole day from who they are, their
+role and goals, their needs, what they know happened, and the people they know.
 Answer with JSON only, no prose.`;
 
 function userPrompt(input: PlanDayInput) {
-  const { day, name, persona, goal, role, home, stats, needs, routine, regions, news, relations = [], items = [] } = input;
+  const { day, now, name, persona, goal, role, home, here, stats, needs, regions, news, relations = [], items = [] } = input;
   const kinds = kindsFor(input);
   const state = [
     needs.includes('energy') && `energy ${Math.round(stats.energy)}/100 (low = tired)`,
@@ -75,22 +76,17 @@ function userPrompt(input: PlanDayInput) {
     needs.includes('coin') && `coin ${Math.round(stats.coin)}`,
   ].filter(Boolean);
   const regionList = regions.map((r) => `- ${r.id}: ${r.name} (${r.summary})`).join('\n');
-  const usual = routine
-    .map((b) => `- ${formatTimeOfDay(b.start)}-${formatTimeOfDay(b.end)} ${b.regionId} ${b.kind}: ${b.activity}`)
-    .join('\n');
   return `Plan day ${day + 1} for ${name}.
 
 Who they are: ${persona}
 Goal: ${goal}
 Role: ${role}
 Home: ${home}
-Current state: ${state.join(', ')}${needs.includes('hunger') ? '' : ' (does not need food)'}
+Now: ${formatTimeOfDay(now)} in ${here}${now ? ' (the hours before now are already past; plan the whole day anyway)' : ''}
+Current state: ${state.length ? state.join(', ') : 'never tires or hungers'}${needs.includes('hunger') || !state.length ? '' : ' (does not need food)'}
 ${news.length ? `\nWhat they know happened lately:\n${news.map((n) => `- ${n}`).join('\n')}\n` : ''}${
     relations.length ? `\nPeople they know, and what they think of them:\n${relations.join('\n')}\n` : ''
   }
-Usual day:
-${usual}
-
 Regions (use these ids only):
 ${regionList}
 
@@ -98,17 +94,14 @@ Rules:
 - Blocks are in minutes of the day (0 = 00:00, 1440 = 24:00), sorted, non-overlapping, start < end.
 - The world moves in whole hours: start and end are multiples of 60.
 - Cover the whole day from 0 to 1440, including sleep.
-- kind is one of: ${kinds.join(', ')}. Use "social" only when they would seek out other people.${
-    kinds.includes('bond')
-      ? '\n- "bond" takes 4 hours in one region: they make that land theirs (at most one land a day; not one already theirs or hunted out).'
-      : ''
-  }${
+- kind is one of: ${kinds.join(', ')}. Use "social" only when they would seek out other people.
+- "bond" takes 4 hours in one region: they make that land theirs and draw its mana each day (at most one land a day; not one already theirs or hunted out). Only if it fits who they are.${
     kinds.includes('claim')
       ? `\n- "claim" takes 1 hour where an item stands: they pay its mana and it becomes theirs (only if they would want it). Items no one holds:\n${items.join('\n')}`
       : ''
   }
 - Travel between regions takes hours; only change region when there is a reason.
-- Vary the usual day a little to fit today's state, news and goal; don't copy it blindly.
+- Let today follow from their state, news, goal and the people they know; days need not repeat.
 - activity is a short Korean phrase shown on screen (e.g. "폐허 순찰"); emoji is a single emoji.
 
 Answer: {"blocks":[{"start":0,"end":360,"regionId":"...","activity":"...","emoji":"...","kind":"sleep"}, ...]}`;

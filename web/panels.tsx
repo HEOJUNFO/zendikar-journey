@@ -15,7 +15,7 @@ import { travelBlocked } from '../sim/step.ts';
 import { shortName } from '../sim/text.ts';
 import { PACES } from '../sim/types.ts';
 import type { Pace } from '../sim/types.ts';
-import { areasOf, canStay, placeName, region, TERRAINS, travelHours } from '../sim/world.ts';
+import { areasOf, canStay, hasPowers, placeName, region, TERRAINS, travelHours } from '../sim/world.ts';
 import type { World } from '../sim/world.ts';
 import type { NewGameInput } from './api.ts';
 import { visibleActors, visibleLog } from './view.ts';
@@ -279,13 +279,14 @@ export function PlayerCard({ world, state }: { world: World; state: State }) {
   );
 }
 
-// GM-driven beings: what powers they have left today (the observer sees it).
-export function BeingsList({ world, state, all }: { world: World; state: State; all?: boolean }) {
-  if ((player(state) && !all) || !world.beings.length) return null;
+// Characters with powers of their own: what they have left today (the observer sees it).
+export function LegendsList({ world, state, all }: { world: World; state: State; all?: boolean }) {
+  const legends = world.npcs.filter(hasPowers);
+  if ((player(state) && !all) || !legends.length) return null;
   return (
     <section className="card">
-      <h2>GM이 움직이는 존재</h2>
-      {world.beings.map((b) => {
+      <h2>능력을 지닌 이들</h2>
+      {legends.map((b) => {
         const bs = state.actors[b.id];
         if (!bs) return null;
         const tapped = bs.boundUntil !== undefined && bs.boundUntil > state.minutes;

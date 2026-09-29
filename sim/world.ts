@@ -2,19 +2,19 @@
 // Game data lives in each entity's frontmatter: `map` on locations, `sim` on characters and
 // events. This module is pure so the web UI can share the types; sim/load.ts reads the files.
 import { z } from 'zod';
-import { parseTimeOfDay } from './clock.ts';
 import { TRAVEL_UNITS_PER_HOUR } from './rules.ts';
 import { COLORS, parseManaCost } from './mana.ts';
 import type { Color, Mana, ManaCost } from './mana.ts';
 import { LIFE_KINDS, NEEDS } from './types.ts';
-import type { Need, ScheduleBlock } from './types.ts';
+import type { Need } from './types.ts';
 
 export const MAP_WIDTH = 96;
 export const MAP_HEIGHT = 72;
 
-export const ABILITIES = ['fly'] as const;
+// fly: can reach sky islands. aquatic: lives in the sea, and only there.
+export const ABILITIES = ['fly', 'aquatic'] as const;
 export type Ability = (typeof ABILITIES)[number];
-export const ABILITY_LABELS: Record<Ability, string> = { fly: '비행' };
+export const ABILITY_LABELS: Record<Ability, string> = { fly: '비행', aquatic: '물에 삶' };
 
 export const TERRAIN_IDS = [
   'grassland',
@@ -71,54 +71,21 @@ export const MapSchema = z.union([
   }),
 ]);
 
-// Mana a being holds, from its card: { B: 7 } for {5}{B}{B}.
+// Mana a character holds, from its card: { B: 7 } for {5}{B}{B}.
 const ManaSchema = z.partialRecord(z.enum(COLORS), z.number().int().min(1));
 const CostSchema = z.string().refine((s) => parseManaCost(s) !== null, '마나 비용 형식: "{5}{B}{B}"');
-
-const Hhmm = z.string().regex(/^([01]\d|2[0-3]):[0-5]\d$|^24:00$/, 'HH:MM');
-// [start, end, region, kind, activity, emoji]
-const RoutineRow = z.tuple([
-  Hhmm,
-  Hhmm,
-  z.string(),
-  z.enum(LIFE_KINDS),
-  z.string().min(1),
-  z.string().min(1),
-]);
 
 // Power / toughness, as on the card. Combat damage piles up against toughness until the turn
 // ends; reaching it is death.
 const PtSchema = z.tuple([z.number().int().min(0), z.number().int().min(1)]);
 export type Pt = z.infer<typeof PtSchema>;
 
-export const CharacterSimSchema = z.strictObject({
-  pt: PtSchema,
-  mana: ManaSchema.optional(),
-  role: z.string().min(1),
-  home: z.string(),
-  persona: z.string().min(1),
-  goal: z.string().min(1),
-  abilities: z.array(z.enum(ABILITIES)).default([]),
-  // Stats this being lives by (default: all). Without hunger they never eat; without coin
-  // work earns nothing.
-  needs: z.array(z.enum(NEEDS)).min(1).default([...NEEDS]),
-  // A beast: doesn't talk, hunts whoever stands with it when hungry, hunts a land out, and
-  // holds only the hunting ground it last bonded with.
-  beast: z.boolean().default(false),
-  // Landfall: when they bond with a land, they get +P/+T (and trample) until the turn ends.
-  landfall: z.strictObject({ pt: z.tuple([z.number().int(), z.number().int()]), trample: z.boolean().default(false) }).optional(),
-  // The creature kind a character is (e.g. cre-vampire). A creature entity's sim is its own kind.
-  creature: z.string().optional(),
-  routine: z.array(RoutineRow).min(1),
-});
-
-// A character who doesn't live a routine but acts through GM events and abilities (e.g.
-// Lorthos). They stay at home, where others can meet them.
+// What an activated ability does (world/entities/characters sim.activated).
 const AbilityEffectSchema = z.discriminatedUnion('type', [
   // The target dies, whatever its toughness.
   z.strictObject({ type: z.literal('destroy') }),
   // If the target died this way, it rises as a new character of this creature kind,
-  // with its power/toughness, in this faction, as the being's retainer.
+  // with its power/toughness, in this faction, as the user's retainer.
   z.strictObject({ type: z.literal('raise'), creature: z.string(), faction: z.string().optional() }),
   // "Discard a card. If a <color> card is discarded this way, deal N damage to any target":
   // they let go of a spell they hold (their hand); if it was of that color, N damage.
@@ -132,34 +99,49 @@ const AbilityEffectSchema = z.discriminatedUnion('type', [
 ]);
 export type AbilityEffect = z.infer<typeof AbilityEffectSchema>;
 
-export const GmBeingSimSchema = z.strictObject({
-  gm: z.literal(true),
-  home: z.string(),
+const ActivatedSchema = z
+  .array(
+    z.strictObject({
+      id: z.string().min(1),
+      name: z.string().min(1),
+      cost: CostSchema.default('{0}'),
+      tap: z.boolean().default(false),
+      // A loyalty ability: +N / -N loyalty, one a turn (game day).
+      loyalty: z.number().int().optional(),
+      // Whether it has a target (a living character).
+      target: z.boolean().default(true),
+      effects: z.array(AbilityEffectSchema).min(1),
+    }),
+  )
+  .default([]);
+
+export const CharacterSimSchema = z.strictObject({
   pt: PtSchema,
   mana: ManaSchema.optional(),
+  role: z.string().min(1),
+  home: z.string(),
+  persona: z.string().min(1),
+  goal: z.string().min(1),
   abilities: z.array(z.enum(ABILITIES)).default([]),
+  // Stats they live by (default: all). Without hunger they never eat; without coin work earns
+  // nothing; with none (e.g. Kalitas) they neither tire nor gain or lose life.
+  needs: z.array(z.enum(NEEDS)).default([...NEEDS]),
+  // A beast: doesn't talk, hunts whoever stands with it when hungry, hunts a land out, and
+  // holds only the hunting ground it last bonded with.
+  beast: z.boolean().default(false),
+  // Landfall: when they bond with a land, they get +P/+T (and trample) until the turn ends.
+  landfall: z.strictObject({ pt: z.tuple([z.number().int(), z.number().int()]), trample: z.boolean().default(false) }).optional(),
+  // The creature kind a character is (e.g. cre-vampire). A creature entity's sim is its own kind.
+  creature: z.string().optional(),
   // A planeswalker's loyalty (law-planeswalkers): their momentum. Loyalty abilities raise
   // or spend it; damage wears it down; at 0 they leave this plane.
   loyalty: z.number().int().min(1).optional(),
   // They hold (know) every spell of these colors in the world: their hand.
   knows_colors: z.array(z.enum(COLORS)).default([]),
-  // Abilities the GM may use for them ("{cost}, {T}: effect" or "+1: effect").
-  activated: z
-    .array(
-      z.strictObject({
-        id: z.string().min(1),
-        name: z.string().min(1),
-        cost: CostSchema.default('{0}'),
-        tap: z.boolean().default(false),
-        // A loyalty ability: +N / -N loyalty, one a turn (game day).
-        loyalty: z.number().int().optional(),
-        // Whether it has a target (a living character).
-        target: z.boolean().default(true),
-        effects: z.array(AbilityEffectSchema).min(1),
-      }),
-    )
-    .default([]),
+  // Powers the morning LLM may use for them ("{cost}, {T}: effect" or "+1: effect").
+  activated: ActivatedSchema,
 });
+
 export type ActivatedAbility = {
   id: string;
   name: string;
@@ -296,8 +278,8 @@ export const ItemSimSchema = z.strictObject({
 export type ItemEffect = z.infer<typeof ItemSimSchema>['effects'][number];
 
 export const EventSimSchema = z.discriminatedUnion('trigger', [
-  // The GM decides each morning whether it happens today. `chance` is the share of days it
-  // usually happens on, a guide for the GM.
+  // The morning LLM decides whether it happens today. `chance` is the share of days it
+  // usually happens on, a guide for the LLM.
   z.strictObject({ ...EventBase, ...EventCost, trigger: z.literal('gm'), chance: z.number().min(0).max(1) }),
   // Goes off when someone makes landfall on `region` (arrives there) and it is at least their
   // `landfalls`-th landfall this turn (game day).
@@ -341,9 +323,13 @@ export type NpcDef = {
   needs: Need[];
   beast?: boolean;
   landfall?: { pt: [number, number]; trample: boolean };
-  routine: ScheduleBlock[];
   // The creature kind they are (e.g. cre-vampire), for "a Vampire you control".
   creature?: string;
+  // Planeswalkers' loyalty, the colors of spells they hold, and powers the morning LLM may
+  // use for them. Characters born in play (state.tokens) have none.
+  loyalty?: number;
+  knowsColors?: Color[];
+  activated?: ActivatedAbility[];
 };
 
 export type SpellDef = {
@@ -373,20 +359,6 @@ export type ItemDef = {
 // Who answers when spoken to.
 export type Speaker = Pick<NpcDef, 'id' | 'name' | 'persona' | 'goal' | 'role'>;
 
-export type BeingDef = {
-  id: string;
-  name: string;
-  summary: string;
-  // Where they stay (may be a sea: they belong there).
-  home: string;
-  pt: Pt;
-  mana?: Mana;
-  abilities: Ability[];
-  loyalty?: number;
-  knowsColors: Color[];
-  activated: ActivatedAbility[];
-};
-
 export type EventDef = {
   id: string;
   name: string;
@@ -411,8 +383,6 @@ export type Lore = { id: string; kind: string; name: string; summary: string };
 export type World = {
   regions: Region[];
   npcs: NpcDef[];
-  // GM-driven characters: no routine; they stay at home on the map.
-  beings: BeingDef[];
   events: EventDef[];
   spells: SpellDef[];
   items: ItemDef[];
@@ -439,7 +409,7 @@ function issues(error: z.ZodError) {
 // throwing so world-check can list them all.
 export function buildWorld(entities: RawEntity[]): { world: World; errors: string[] } {
   const errors: string[] = [];
-  const world: World = { regions: [], npcs: [], beings: [], events: [], spells: [], items: [], lore: [] };
+  const world: World = { regions: [], npcs: [], events: [], spells: [], items: [], lore: [] };
   const err = (id: string, msg: string) => errors.push(`${id}: ${msg}`);
 
   for (const e of entities) {
@@ -472,44 +442,22 @@ export function buildWorld(entities: RawEntity[]): { world: World; errors: strin
 
   for (const e of entities) {
     if (e.sim === undefined) continue;
-    if (e.kind === 'character' && (e.sim as { gm?: unknown }).gm === true) {
-      const sim = GmBeingSimSchema.safeParse(e.sim);
-      if (!sim.success) err(e.id, `sim 오류: ${issues(sim.error)}`);
-      else
-        world.beings.push({
-          id: e.id,
-          name: e.name,
-          summary: e.summary ?? '',
-          home: sim.data.home,
-          pt: sim.data.pt,
-          mana: sim.data.mana,
-          abilities: sim.data.abilities,
-          loyalty: sim.data.loyalty,
-          knowsColors: sim.data.knows_colors,
-          activated: sim.data.activated.map((x) => ({ ...x, cost: parseManaCost(x.cost)!, costText: x.cost })),
-        });
-    } else if (e.kind === 'character' || e.kind === 'creature') {
+    if (e.kind === 'character' || e.kind === 'creature') {
       // A creature's sim is one of its kind, living in the world (e.g. a roaming baloth).
       const sim = CharacterSimSchema.safeParse(e.sim);
       if (!sim.success) {
         err(e.id, `sim 오류: ${issues(sim.error)}`);
         continue;
       }
-      const { routine, ...rest } = sim.data;
+      const { knows_colors, activated, ...rest } = sim.data;
       world.npcs.push({
         id: e.id,
         name: e.name,
         summary: e.summary ?? '',
         ...rest,
         creature: e.kind === 'creature' ? e.id : rest.creature,
-        routine: routine.map(([start, end, regionId, kind, activity, emoji]) => ({
-          start: parseTimeOfDay(start),
-          end: parseTimeOfDay(end),
-          regionId,
-          kind,
-          activity,
-          emoji,
-        })),
+        knowsColors: knows_colors,
+        activated: activated.map((x) => ({ ...x, cost: parseManaCost(x.cost)!, costText: x.cost })),
       });
     } else if (e.kind === 'event') {
       const sim = EventSimSchema.safeParse(e.sim);
@@ -571,22 +519,14 @@ export function buildWorld(entities: RawEntity[]): { world: World; errors: strin
     return r;
   };
   for (const npc of world.npcs) {
-    for (const id of new Set([npc.home, ...npc.routine.map((b) => b.regionId)])) {
-      const r = regionOk(npc.id, id, 'sim 의 지역');
-      if (r && !canStay(r, npc.abilities)) err(npc.id, `${id} 에 머물 수 없음 (${TERRAINS[r.terrain].label})`);
-    }
-    if (!npc.needs.includes('hunger') && npc.routine.some((b) => b.kind === 'eat'))
-      err(npc.id, 'needs 에 hunger 가 없으면 sim.routine 에 eat 을 쓸 수 없음');
-    if (npc.routine.some((b) => b.start % 60 || b.end % 60)) err(npc.id, 'sim.routine 은 정시 단위로 나눠야 함 (세계는 1시간 단위로 돈다)');
-    const blocks = [...npc.routine].sort((a, b) => a.start - b.start);
-    if (blocks[0].start !== 0 || blocks.at(-1)!.end !== 1440 || blocks.some((b, i) => b.start >= b.end || (i > 0 && blocks[i - 1].end !== b.start)))
-      err(npc.id, 'sim.routine 은 00:00 부터 24:00 까지 빈틈 없이 이어져야 함');
+    const r = regionOk(npc.id, npc.home, 'sim.home');
+    if (r && !canStay(r, npc.abilities)) err(npc.id, `${npc.home} 에 머물 수 없음 (${TERRAINS[r.terrain].label})`);
   }
   const known = new Set(entities.map((e) => e.id));
   for (const ev of world.events) {
     regionOk(ev.id, ev.region, 'sim.region');
     for (const x of ev.effects) if (x.type === 'create' && !known.has(x.creature)) err(ev.id, `create 의 creature ${x.creature} 가 없음`);
-    if (ev.cost && !world.beings.some((b) => b.id === ev.cost!.by) && !world.npcs.some((n) => n.id === ev.cost!.by))
+    if (ev.cost && !world.npcs.some((n) => n.id === ev.cost!.by))
       err(ev.id, `sim.cost.by ${ev.cost.by} 가 sim 을 가진 인물이 아님`);
   }
   const ids = new Set(entities.map((e) => e.id));
@@ -599,9 +539,8 @@ export function buildWorld(entities: RawEntity[]): { world: World; errors: strin
     const r = regionOk(x.id, x.at, 'sim.at');
     if (r && TERRAINS[r.terrain].sea) err(x.id, `sim.at ${x.at} 은 바다라 아무도 머물 수 없음`);
   }
-  for (const b of world.beings) {
-    regionOk(b.id, b.home, 'sim.home');
-    for (const x of b.activated)
+  for (const b of world.npcs) {
+    for (const x of b.activated ?? [])
       for (const eff of x.effects)
         if (eff.type === 'raise') {
           if (!ids.has(eff.creature)) err(b.id, `activated ${x.id}: creature ${eff.creature} 가 없음`);
@@ -610,6 +549,11 @@ export function buildWorld(entities: RawEntity[]): { world: World; errors: strin
   }
 
   return { world, errors };
+}
+
+// A character of legend: one with powers of their own (activated abilities or loyalty).
+export function hasPowers(def: NpcDef | undefined) {
+  return !!(def?.activated?.length || def?.loyalty !== undefined);
 }
 
 // A spell's colors: those in its cost.
@@ -638,9 +582,11 @@ export function travelHours(a: Region, b: Region) {
   return road + (a.parent ? 1 : 0) + (b.parent ? 1 : 0);
 }
 
-// Whether someone with these abilities can be in a region at all.
+// Whether someone with these abilities can be in a region at all. The sea is for those who
+// live in it, and they never leave it.
 export function canStay(r: Region, abilities: readonly Ability[]) {
   const t = TERRAINS[r.terrain];
+  if (abilities.includes('aquatic')) return !!t.sea;
   return !t.sea && (!t.requires || abilities.includes(t.requires));
 }
 

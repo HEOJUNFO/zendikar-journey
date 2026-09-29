@@ -1,6 +1,7 @@
+import { npcDef } from '../sim/state.ts';
 import type { Actor, State } from '../sim/state.ts';
 import { shortName } from '../sim/text.ts';
-import { MAP_HEIGHT, MAP_WIDTH, region, spellColors, TERRAINS, travelHours } from '../sim/world.ts';
+import { hasPowers, MAP_HEIGHT, MAP_WIDTH, region, spellColors, TERRAINS, travelHours } from '../sim/world.ts';
 import type { World } from '../sim/world.ts';
 import { isTrap, nodeAt, trapStatus, visibleActors } from './view.ts';
 
@@ -107,9 +108,10 @@ export function MapView({ world, state, selected, onSelect, all, picked, onPickA
         const angle = -Math.PI / 2 + slot * 0.9;
         const ring = region(world, a.region).parent ? 2 : 3.2;
         const [x, y] = p.travelling ? [p.x, p.y] : [p.x + Math.cos(angle) * ring, p.y + Math.sin(angle) * ring];
-        const r = a.kind === 'npc' ? 1 : a.kind === 'being' ? 1.5 : 1.3;
+        const legend = a.kind === 'npc' && hasPowers(npcDef(state!, world, a.id));
+        const r = legend ? 1.5 : a.kind === 'npc' ? 1 : 1.3;
         return (
-          <g key={a.id} className={`map-${a.kind}${onPickActor ? ' map-pick' : ''}`}
+          <g key={a.id} className={`map-${legend ? 'legend' : a.kind}${onPickActor ? ' map-pick' : ''}`}
             {...(onPickActor ? pickable(() => onPickActor(a.id)) : {})}>
             <title>{shortName(a.name)}</title>
             {onPickActor && <circle cx={x} cy={y} r={r + 1} className="map-hit" />}
