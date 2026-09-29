@@ -7,7 +7,8 @@ import type { Llm } from './run.ts';
 import { woundsOf } from './combat.ts';
 import { manaAvailable, manaCapacity } from './mana.ts';
 import { usableAbilities } from './run.ts';
-import { newState, PLAYER_ID } from './state.ts';
+import { eligibleGmEvents } from './step.ts';
+import { newState, PLAYER_ID, syncWorld } from './state.ts';
 import type { State } from './state.ts';
 import { buildWorld } from './world.ts';
 import type { RawEntity } from './world.ts';
@@ -244,8 +245,9 @@ test('combat: a flyer may take to the air; an NPC may turn hostile while talking
 });
 
 const lore = (id: string, kind: string): RawEntity => ({ id, kind, name: id, status: 'canon' });
-const being = (id: string, sim: object): RawEntity => ({ id, kind: 'character', name: `${id}, 존재`, status: 'canon', sim: { gm: true, ...sim } });
+const being = (id: string, sim: object): RawEntity => ({ id, kind: 'character', name: `${id}, 존재`, status: 'canon', sim: { gm: true, home: 'loc-sea', ...sim } });
 const kalitas = being('chr-k', {
+  home: 'loc-c',
   pt: [5, 5],
   mana: { B: 7 },
   activated: [
@@ -274,7 +276,7 @@ test('a GM-driven being pays mana and taps to destroy someone, who rises as a to
   assert.deepEqual(token.pt, [2, 3]);
   assert.equal(token.region, 'loc-a');
   assert.match(state.tokens![token.id].role, /fac-g/);
-  const bs = state.beings!['chr-k'];
+  const bs = state.actors['chr-k'];
   assert.equal(formatClock(bs.boundUntil!), '2일차 00:00');
   assert.deepEqual(manaAvailable(state, world, bs, state.minutes), { B: 4 });
   assert.deepEqual(usableAbilities(state, world, state.minutes), []); // tapped
@@ -298,6 +300,55 @@ test('Lorthos taps only if he can pay his {8}', async () => {
   await act(b, poor, { type: 'wait', hours: 1 }, { gmDay });
   assert.ok(texts(b).some((t) => t.includes('힘이 남아 있지 않았다')));
   assert.ok(!texts(b).some((t) => t.includes('묶였다')));
+});
+
+test('GM-driven beings stay at home on the map, even at sea', async () => {
+  const world = fixture([kalitas, lore('cre-v', 'creature'), lore('fac-g', 'faction'), being('chr-l', { pt: [8, 8] })]);
+  const state = newState(world, { seed: 1, mode: 'observer' });
+  await advance(state, world, 30);
+  assert.equal(state.actors['chr-k'].kind, 'being');
+  assert.equal(state.actors['chr-k'].region, 'loc-c');
+  assert.equal(state.actors['chr-l'].region, 'loc-sea');
+  assert.equal(state.actors['chr-k'].stats.energy, 80); // lives by no needs
+});
+
+test('the player can fight a being where it stays; it strikes back, and a dead being loses its powers', async () => {
+  const world = fixture([kalitas, lore('cre-v', 'creature'), lore('fac-g', 'faction')]);
+  const state = character(world, 'loc-c');
+  await act(state, world, { type: 'attack', to: 'chr-k' }, {});
+  assert.equal(state.actors['chr-k'].wounds?.amount, 1);
+  assert.ok(state.over); // 5 power against a 1/1
+
+  const weak = fixture([
+    being('chr-k', { ...(kalitas.sim as object), home: 'loc-c', pt: [0, 1] }),
+    lore('cre-v', 'creature'),
+    lore('fac-g', 'faction'),
+  ]);
+  const s = character(weak, 'loc-c');
+  await act(s, weak, { type: 'attack', to: 'chr-k' }, {});
+  assert.ok(s.actors['chr-k'].dead);
+  assert.equal(s.over, undefined);
+  assert.deepEqual(usableAbilities(s, weak, s.minutes), []);
+});
+
+test('an event its being must pay for stops when the being is dead', async () => {
+  const world = fixture([being('chr-l', { pt: [8, 8], mana: { U: 8 } }), { ...tide, sim: { ...(tide.sim as object), cost: { by: 'chr-l', mana: '{8}' } } }]);
+  const state = newState(world, { seed: 1, mode: 'observer' });
+  assert.deepEqual(eligibleGmEvents(state, world, state.minutes).map((e) => e.id), ['evt-tide']);
+  state.actors['chr-l'].dead = { at: state.minutes, cause: '시험' };
+  assert.deepEqual(eligibleGmEvents(state, world, state.minutes), []);
+});
+
+test('an old save gets its beings as actors, keeping their mana and tap', () => {
+  const world = fixture([kalitas, lore('cre-v', 'creature'), lore('fac-g', 'faction')]);
+  const state = newState(world, { seed: 1, mode: 'observer' });
+  delete state.actors['chr-k'];
+  state.beings = { 'chr-k': { id: 'chr-k', boundUntil: 1440, manaSpent: { day: 0, spent: { B: 3 } } } };
+  syncWorld(state, world);
+  assert.equal(state.actors['chr-k'].region, 'loc-c');
+  assert.equal(state.actors['chr-k'].boundUntil, 1440);
+  assert.deepEqual(manaAvailable(state, world, state.actors['chr-k'], state.minutes), { B: 4 });
+  assert.equal(state.beings, undefined);
 });
 
 test('NPCs socialising in the same region meet once a day', async () => {

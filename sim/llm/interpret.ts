@@ -2,7 +2,7 @@
 import { z } from 'zod';
 import { ActionSchema } from '../actions.ts';
 import type { Action } from '../actions.ts';
-import { player, present, ptOf } from '../state.ts';
+import { isPerson, player, present, ptOf } from '../state.ts';
 import type { InterpretInput } from '../run.ts';
 import { travelBlocked } from '../step.ts';
 import { shortName } from '../text.ts';
@@ -28,7 +28,7 @@ export async function interpret({ world, state, text }: InterpretInput): Promise
       return `- ${r.id}: ${r.name} (${r.summary}) — ${why ? `갈 수 없음: ${why}` : `${travelHours(here, r)}시간`}`;
     });
   const people = present(state, p.region)
-    .filter((a) => a.kind === 'npc')
+    .filter(isPerson)
     .map((a) => `- ${a.id}: ${shortName(a.name)} (power/toughness ${ptOf(a).join('/')})`);
   const content = await chatCompletion(
     [

@@ -50,7 +50,7 @@ function userPrompt({ day, hour, world, state, eligible, abilities, news }: GmDa
     .join('\n');
   const targets = Object.values(state.actors)
     .filter((a) => !a.dead)
-    .map((a) => `- ${a.id}: ${a.name}${a.kind === 'player' ? ' (the player)' : ''}, ${ptOf(a).join('/')}, in ${a.region}`)
+    .map((a) => `- ${a.id}: ${a.name}${a.kind === 'player' ? ' (the player)' : a.kind === 'being' ? ' (a great being; not itself)' : ''}, ${ptOf(a).join('/')}, in ${a.region}`)
     .join('\n');
   return `Day ${day + 1}, now ${clockText(state)}.
 
@@ -91,7 +91,8 @@ export function parseGmPlan(
   if (fires.some((f) => !ids.has(f.eventId) || f.hour < hour)) return null;
   if (new Set(fires.map((f) => f.eventId)).size !== fires.length) return null;
   const powers = new Set(abilities.map((x) => `${x.being.id}/${x.ability.id}`));
-  if (uses.some((u) => !powers.has(`${u.being}/${u.ability}`) || !targets.includes(u.target) || u.hour < hour)) return null;
+  if (uses.some((u) => !powers.has(`${u.being}/${u.ability}`) || !targets.includes(u.target) || u.target === u.being || u.hour < hour))
+    return null;
   if (new Set(uses.map((u) => `${u.being}/${u.ability}`)).size !== uses.length) return null;
   return { day, source: 'llm', fires, uses, note: parsed.data.note };
 }

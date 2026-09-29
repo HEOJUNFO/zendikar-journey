@@ -2,7 +2,7 @@
 import { gameDay, untapTime } from './clock.ts';
 import { die } from './combat.ts';
 import { payMana } from './mana.ts';
-import { addLog, beingState, ptOf } from './state.ts';
+import { addLog, ptOf } from './state.ts';
 import type { Actor, State } from './state.ts';
 import { josa, shortName } from './text.ts';
 import { region } from './world.ts';
@@ -42,8 +42,9 @@ export function useAbility(state: State, world: World, beingId: string, abilityI
   const target = state.actors[targetId];
   if (!being || !ability) return '그런 능력은 없다.';
   if (!target || target.dead) return '대상이 없다.';
-  const bs = beingState(state, beingId);
+  const bs = state.actors[beingId];
   const name = shortName(being.name);
+  if (!bs || bs.dead) return `${josa(name, '은', '는')} 죽었다.`;
   if (bs.boundUntil !== undefined && bs.boundUntil > t) return `${josa(name, '은', '는')} 탭되어 있다.`;
   if (!payMana(state, world, bs, ability.cost, t)) return '마나가 모자라다.';
   if (ability.tap) bs.boundUntil = untapTime(t);

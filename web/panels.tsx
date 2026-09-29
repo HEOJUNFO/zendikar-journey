@@ -3,7 +3,7 @@ import type { ReactNode } from 'react';
 import type { Action } from '../sim/actions.ts';
 import { PACE_LABELS } from '../sim/actions.ts';
 import { formatClock, formatTimeOfDay, gameDay, minuteOfDay } from '../sim/clock.ts';
-import { needsOf, player, present, ptOf } from '../sim/state.ts';
+import { isPerson, needsOf, player, present, ptOf } from '../sim/state.ts';
 import { woundsOf } from '../sim/combat.ts';
 import { COLOR_LABELS, formatMana, manaAvailable, manaCapacity } from '../sim/mana.ts';
 import { bondBlocked } from '../sim/abilities.ts';
@@ -22,8 +22,8 @@ import { visibleActors, visibleLog } from './view.ts';
 
 const LOG_SHOWN = 400;
 
-export function LogView({ state }: { state: State }) {
-  const entries = useMemo(() => visibleLog(state).slice(-LOG_SHOWN), [state]);
+export function LogView({ state, all }: { state: State; all?: boolean }) {
+  const entries = useMemo(() => visibleLog(state, all).slice(-LOG_SHOWN), [state, all]);
   const end = useRef<HTMLDivElement>(null);
   useEffect(() => {
     end.current?.scrollIntoView({ block: 'end' });
@@ -60,16 +60,24 @@ function LogLine({ e }: { e: LogEntry }) {
 
 // --- region card -----------------------------------------------------------------------
 
-export function RegionCard(props: { world: World; state: State; regionId: string; busy: boolean; onAct: (a: Action) => void }) {
-  const { world, state, regionId, busy, onAct } = props;
+// Without onAct (the world page) it only describes the region; state null = no game yet.
+export function RegionCard(props: {
+  world: World;
+  state: State | null;
+  regionId: string;
+  busy?: boolean;
+  onAct?: (a: Action) => void;
+  all?: boolean;
+}) {
+  const { world, state, regionId, busy, onAct, all } = props;
   const r = region(world, regionId);
   const t = TERRAINS[r.terrain];
-  const conds = state.regions[r.id]?.conditions ?? [];
-  const destroyed = state.regions[r.id]?.destroyed;
-  const here = visibleActors(state).filter((a) => a.region === r.id && !a.travel);
-  const p = player(state);
+  const conds = state?.regions[r.id]?.conditions ?? [];
+  const destroyed = state?.regions[r.id]?.destroyed;
+  const here = state ? visibleActors(state, all).filter((a) => a.region === r.id && !a.travel) : [];
+  const p = state && player(state);
   let travel: ReactNode = null;
-  if (p && !t.sea) {
+  if (state && p && onAct && !t.sea) {
     if (p.region === r.id && !p.travel) {
       const why = bondBlocked(state, world, p, state.minutes);
       travel = (
@@ -147,10 +155,10 @@ function status(world: World, a: Actor) {
   return `${where} · ${task ? `${task.emoji} ${task.activity}` : '쉬는 중'}`;
 }
 
-export function PeopleList({ world, state }: { world: World; state: State }) {
-  const p = player(state);
-  const people = visibleActors(state).filter((a) => a.kind === 'npc');
-  const dead = p ? [] : Object.values(state.actors).filter((a) => a.kind === 'npc' && a.dead);
+export function PeopleList({ world, state, all }: { world: World; state: State; all?: boolean }) {
+  const p = all ? undefined : player(state);
+  const people = visibleActors(state, all).filter(isPerson);
+  const dead = p ? [] : Object.values(state.actors).filter((a) => isPerson(a) && a.dead);
   return (
     <section className="card">
       <h2>{p ? '곁에 있는 이' : '인물'}</h2>
@@ -204,18 +212,19 @@ export function PlayerCard({ world, state }: { world: World; state: State }) {
   );
 }
 
-// GM-driven beings: not on the map, but the observer sees them.
-export function BeingsList({ world, state }: { world: World; state: State }) {
-  if (player(state) || !world.beings.length) return null;
+// GM-driven beings: what powers they have left today (the observer sees it).
+export function BeingsList({ world, state, all }: { world: World; state: State; all?: boolean }) {
+  if ((player(state) && !all) || !world.beings.length) return null;
   return (
     <section className="card">
-      <h2>지도 밖의 존재</h2>
+      <h2>GM이 움직이는 존재</h2>
       {world.beings.map((b) => {
-        const bs = state.beings?.[b.id] ?? { id: b.id };
+        const bs = state.actors[b.id];
+        if (!bs) return null;
         const tapped = bs.boundUntil !== undefined && bs.boundUntil > state.minutes;
         return (
           <div key={b.id} className="person">
-            <b>{shortName(b.name)}</b> <small className="muted">{b.pt.join('/')}</small>
+            <b>{bs.dead ? '✝ ' : ''}{shortName(b.name)}</b> <small className="muted">{b.pt.join('/')} · {region(world, bs.region).name}</small>
             <p className="muted">
               마나 {formatMana(manaAvailable(state, world, bs, state.minutes))}
               {tapped ? ` · 탭됨 (${formatClock(bs.boundUntil!)}까지)` : ''}
@@ -261,7 +270,7 @@ export function CharacterControls(props: {
   const [pace, setPace] = useState<Pace>('careful');
   const [talkTo, setTalkTo] = useState('');
   const [line, setLine] = useState('');
-  const people = present(state, p.region).filter((a) => a.kind === 'npc' && a.boundUntil === undefined);
+  const people = present(state, p.region).filter((a) => isPerson(a) && a.boundUntil === undefined);
   const stuck = p.travel || p.forced || p.boundUntil !== undefined;
   const target = people.find((a) => a.id === talkTo) ?? people[0];
   if (state.over) {

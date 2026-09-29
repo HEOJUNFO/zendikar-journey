@@ -22,11 +22,12 @@ test('parseGmPlan rejects unknown events, past hours and repeats', () => {
 
 test('parseGmPlan checks ability uses: known power, living target, once each', () => {
   const abilities = [{ being: { id: 'chr-k' }, ability: { id: 'kin' } }] as never;
-  const at = { day: 0, hour: 6, eligible: [], abilities, targets: ['chr-x'] };
+  const at = { day: 0, hour: 6, eligible: [], abilities, targets: ['chr-x', 'chr-k'] };
   const use = (u: object) => JSON.stringify({ fires: [], uses: [u] });
   assert.equal(parseGmPlan(use({ being: 'chr-k', ability: 'kin', target: 'chr-x', hour: 9 }), at)?.uses?.length, 1);
   assert.equal(parseGmPlan(use({ being: 'chr-k', ability: 'kin', target: 'chr-dead', hour: 9 }), at), null);
   assert.equal(parseGmPlan(use({ being: 'chr-k', ability: 'fly', target: 'chr-x', hour: 9 }), at), null);
+  assert.equal(parseGmPlan(use({ being: 'chr-k', ability: 'kin', target: 'chr-k', hour: 9 }), at), null); // not itself
 });
 
 test('hosted body uses each provider’s token field and a floor', () => {

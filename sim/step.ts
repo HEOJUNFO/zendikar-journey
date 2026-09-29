@@ -14,7 +14,7 @@ import {
   STARVING_ENERGY,
   TRAVEL_EFFECT,
 } from './rules.ts';
-import { addLog, alive, beingState, landUnusable, needsOf, present, random } from './state.ts';
+import { addLog, alive, landUnusable, needsOf, present, random } from './state.ts';
 import { dealDamage, hostileNpcs } from './combat.ts';
 import { bondLand, useAbility } from './abilities.ts';
 import { payMana } from './mana.ts';
@@ -59,10 +59,14 @@ function onCooldown(state: State, ev: EventDef, t: number) {
   return last !== undefined && t - last < ev.cooldownHours * 60;
 }
 
-// GM events that may be raised today.
+// GM events that may be raised today. A being's doing needs the being alive.
 export function eligibleGmEvents(state: State, world: World, t: number) {
   return world.events.filter(
-    (e) => e.trigger === 'gm' && !onCooldown(state, e, t) && !state.pending.some((p) => p.eventId === e.id),
+    (e) =>
+      e.trigger === 'gm' &&
+      !onCooldown(state, e, t) &&
+      !state.pending.some((p) => p.eventId === e.id) &&
+      !(e.cost && state.actors[e.cost.by]?.dead),
   );
 }
 
@@ -127,9 +131,9 @@ function fire(state: State, world: World, ev: EventDef, t: number, omened: boole
   });
   // "You may pay X. If you do, ...": the effects need someone to pay.
   if (ev.cost) {
-    const payer = state.actors[ev.cost.by] ?? beingState(state, ev.cost.by);
-    const who = shortName(world.beings.find((b) => b.id === ev.cost!.by)?.name ?? state.actors[ev.cost.by]?.name ?? ev.cost.by);
-    if (!payMana(state, world, payer, ev.cost.mana, t)) {
+    const payer = state.actors[ev.cost.by];
+    const who = shortName(payer?.name ?? ev.cost.by);
+    if (!payer || payer.dead || !payMana(state, world, payer, ev.cost.mana, t)) {
       addLog(state, { kind: 'effect', text: `${who}에게는 힘이 남아 있지 않았다 (${ev.cost.text}).`, regions: [ev.region, ...regions], scope: ev.scope });
       return;
     }
@@ -253,7 +257,8 @@ function actorHour(state: State, world: World, a: Actor, t: number) {
       return;
     }
     delete a.boundUntil;
-    addLog(state, { kind: 'status', text: `${josa(name, '이', '가')} 풀려났다.`, regions: [a.region], actors: [a.id] });
+    // A being tapped by its own ability just untaps; others were held and are let go.
+    if (a.kind !== 'being') addLog(state, { kind: 'status', text: `${josa(name, '이', '가')} 풀려났다.`, regions: [a.region], actors: [a.id] });
   }
   if (a.travel) return travelHour(state, world, a, t);
 

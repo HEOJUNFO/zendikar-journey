@@ -3,7 +3,7 @@ import { START_MINUTES } from './clock.ts';
 import { INITIAL_STATS } from './rules.ts';
 import { NEEDS } from './types.ts';
 import type { LifeKind, Need, Pace, Schedule, Stats } from './types.ts';
-import type { Ability, NpcDef, Pt, World } from './world.ts';
+import type { Ability, BeingDef, NpcDef, Pt, Speaker, World } from './world.ts';
 import type { Mana } from './mana.ts';
 
 export type TaskKind = LifeKind | 'explore' | 'travel' | 'fight' | 'bond';
@@ -19,7 +19,8 @@ export type Task = {
 export type Actor = {
   id: string;
   name: string;
-  kind: 'npc' | 'player';
+  // being: a GM-driven character (sim.gm), staying at home; its abilities are the GM's.
+  kind: 'npc' | 'player' | 'being';
   // Where they are, or where they set out from while travelling.
   region: string;
   travel?: { to: string; arrive: number };
@@ -120,7 +121,8 @@ export type State = {
   actors: Record<string, Actor>;
   // Characters born in play (tokens), who have no entity file.
   tokens?: Record<string, NpcDef>;
-  // GM-driven beings (sim.gm): their mana and whether they are tapped.
+  // Saves from before GM-driven beings were actors: their mana and tap, moved onto the
+  // actor by syncWorld.
   beings?: Record<string, { id: string; manaSpent?: { day: number; spent: Mana }; boundUntil?: number }>;
   regions: Record<string, RegionState>;
   events: Record<string, { lastFired?: number }>;
@@ -176,6 +178,7 @@ export function newState(world: World, opts: NewGame): State {
       needs: [...npc.needs],
     };
   }
+  for (const b of world.beings) state.actors[b.id] = beingActor(b);
   if (opts.mode === 'character') {
     if (!opts.player) throw new Error('character mode needs a player');
     state.playerId = PLAYER_ID;
@@ -214,6 +217,28 @@ export function syncWorld(state: State, world: World) {
     state.actors[npc.id].needs = [...npc.needs];
     state.actors[npc.id].pt = [...npc.pt];
   }
+  for (const b of world.beings) {
+    const old = state.beings?.[b.id];
+    const a = (state.actors[b.id] ??= { ...beingActor(b), manaSpent: old?.manaSpent, boundUntil: old?.boundUntil });
+    a.pt = [...b.pt];
+    a.abilities = [...b.abilities];
+  }
+  delete state.beings;
+}
+
+// A GM-driven being on the map: at home, living by no needs.
+function beingActor(b: BeingDef): Actor {
+  return {
+    id: b.id,
+    name: b.name,
+    kind: 'being',
+    region: b.home,
+    stats: { ...INITIAL_STATS },
+    pt: [...b.pt],
+    pace: 'normal',
+    abilities: [...b.abilities],
+    needs: [],
+  };
 }
 
 export function needsOf(a: Actor): readonly Need[] {
@@ -232,9 +257,15 @@ export function npcDef(state: State, world: World, id: string): NpcDef | undefin
   return world.npcs.find((n) => n.id === id) ?? state.tokens?.[id];
 }
 
-export function beingState(state: State, id: string) {
-  state.beings ??= {};
-  return (state.beings[id] ??= { id });
+// Anyone the player can talk to or fight: an NPC, a token or a GM-driven being.
+export function speakerDef(state: State, world: World, id: string): Speaker | undefined {
+  const b = world.beings.find((x) => x.id === id);
+  if (!b) return npcDef(state, world, id);
+  return { id: b.id, name: b.name, persona: b.summary, goal: '(드러나지 않음)', role: '(드러나지 않음)' };
+}
+
+export function isPerson(a: Actor) {
+  return a.kind === 'npc' || a.kind === 'being';
 }
 
 export function player(state: State) {

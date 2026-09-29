@@ -3,7 +3,7 @@
 import { z } from 'zod';
 import { STEP_MINUTES } from './clock.ts';
 import { KIND_EFFECTS } from './rules.ts';
-import { addLog, landUnusable, player } from './state.ts';
+import { addLog, isPerson, landUnusable, player } from './state.ts';
 import type { State, Task } from './state.ts';
 import { startTravel, travelBlocked } from './step.ts';
 import { bondBlocked } from './abilities.ts';
@@ -79,7 +79,7 @@ export function startAction(state: State, world: World, action: Action): string 
     }
     case 'attack': {
       const npc = state.actors[action.to];
-      if (!npc || npc.kind !== 'npc' || npc.dead) return '그런 인물은 없다.';
+      if (!npc || !isPerson(npc) || npc.dead) return '그런 인물은 없다.';
       const name = shortName(npc.name);
       if (npc.travel || npc.region !== p.region) return `${josa(name, '은', '는')} 여기 없다.`;
       task = { kind: 'fight', activity: `${josa(name, '과', '와')} 싸움`, emoji: '⚔️', until: until(1) };
@@ -88,7 +88,7 @@ export function startAction(state: State, world: World, action: Action): string 
     }
     case 'talk': {
       const npc = state.actors[action.to];
-      if (!npc || npc.kind !== 'npc' || npc.dead) return '그런 인물은 없다.';
+      if (!npc || !isPerson(npc) || npc.dead) return '그런 인물은 없다.';
       const name = shortName(npc.name);
       if (npc.travel || npc.region !== p.region) return `${josa(name, '은', '는')} 여기 없다.`;
       if (npc.boundUntil !== undefined) return `${josa(name, '은', '는')} 묶여 있다.`;

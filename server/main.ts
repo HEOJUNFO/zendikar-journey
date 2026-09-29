@@ -7,6 +7,7 @@ import react from '@vitejs/plugin-react';
 import { createServer as createVite } from 'vite';
 import { z } from 'zod';
 import { createLlm } from '../sim/llm/index.ts';
+import type { Llm } from '../sim/run.ts';
 import { ActSchema, AdvanceSchema, Game, NewGameSchema, UserError } from './game.ts';
 
 try {
@@ -15,12 +16,13 @@ try {
   // no .env: createLlm says what's missing
 }
 
-let llm;
+// Without LLM settings the server still starts: NPCs keep their routines, no GM events,
+// no narration, and free-text input fails. Good enough for looking around locally.
+let llm: Llm = {};
 try {
   llm = createLlm();
 } catch (e) {
-  console.error(`LLM 설정 오류: ${(e as Error).message}`);
-  process.exit(1);
+  console.warn(`LLM 없이 시작: ${(e as Error).message}`);
 }
 const game = new Game(llm);
 
@@ -78,5 +80,5 @@ createServer((req, res) => {
   if (path.startsWith('/api/')) void api(req, res, path);
   else vite.middlewares(req, res);
 }).listen(port, () => {
-  console.log(`젠디카르: http://localhost:${port}  (LLM: ${process.env.CHAT_PROVIDER})`);
+  console.log(`젠디카르: http://localhost:${port}  (LLM: ${process.env.CHAT_PROVIDER ?? '없음'})`);
 });

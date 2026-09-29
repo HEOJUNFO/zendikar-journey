@@ -77,10 +77,10 @@ export function clash(state: State, attacker: Actor, defender: Actor, t: number)
   dealDamage(state, attacker, dp, t, `${josa(d, '과', '와')}의 싸움`);
 }
 
-// NPCs attack a foe standing with them, one exchange per hour. Their hour goes to fighting.
+// NPCs (and beings) attack a foe standing with them, one exchange per hour. Their hour goes to fighting.
 export function hostileNpcs(state: State, t: number) {
   for (const a of Object.values(state.actors)) {
-    if (a.kind !== 'npc' || a.dead || a.travel || a.boundUntil !== undefined) continue;
+    if (a.kind === 'player' || a.dead || a.travel || a.boundUntil !== undefined) continue;
     if (a.forced && a.forced.kind !== 'fight') continue; // collapsed
     if (a.lastClash === t) continue; // already fought this hour
     const foe = present(state, a.region).find((b) => foesOf(a, t).includes(b.id));

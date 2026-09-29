@@ -4,7 +4,7 @@
 import { formatClock, gameDay } from './clock.ts';
 import { startAction } from './actions.ts';
 import type { Action } from './actions.ts';
-import { addLog, beingState, npcDef, player } from './state.ts';
+import { addLog, player, speakerDef } from './state.ts';
 import type { Actor, GmPlan, LogEntry, State } from './state.ts';
 import { eligibleGmEvents, step } from './step.ts';
 import { addFoe, clash } from './combat.ts';
@@ -12,7 +12,7 @@ import { manaAvailable, planPayment } from './mana.ts';
 import { josa, shortName } from './text.ts';
 import type { ScheduleBlock } from './types.ts';
 import { canStay } from './world.ts';
-import type { ActivatedAbility, BeingDef, EventDef, NpcDef, World } from './world.ts';
+import type { ActivatedAbility, BeingDef, EventDef, Speaker, World } from './world.ts';
 import type { PlanDayInput } from './llm/planner.ts';
 
 export type GmDayInput = {
@@ -26,10 +26,10 @@ export type GmDayInput = {
 };
 export type NarrateInput = { world: World; state: State; entries: LogEntry[] };
 export type InterpretInput = { world: World; state: State; text: string };
-export type ReplyInput = { world: World; state: State; npc: NpcDef; say: string };
+export type ReplyInput = { world: World; state: State; npc: Speaker; say: string };
 // What the NPC says, and whether they now attack the player.
 export type Reply = { say: string; attack: boolean };
-export type EvadeInput = { world: World; state: State; npc: NpcDef; attacker: Actor };
+export type EvadeInput = { world: World; state: State; npc: Speaker; attacker: Actor };
 
 export type Llm = {
   planDay?: (input: PlanDayInput) => Promise<ScheduleBlock[] | null>;
@@ -95,7 +95,7 @@ function busy(p: Actor) {
 }
 
 async function talk(state: State, world: World, p: Actor, npcId: string, say: string, llm: Llm) {
-  const npc = npcDef(state, world, npcId)!;
+  const npc = speakerDef(state, world, npcId)!;
   const name = shortName(npc.name);
   addLog(state, { kind: 'speech', text: `${shortName(p.name)}: “${say}”`, regions: [p.region], actors: [p.id, npc.id] });
   let reply: Reply | null = null;
@@ -121,7 +121,7 @@ async function talk(state: State, world: World, p: Actor, npcId: string, say: st
 // The player's blow. A flyer may take to the air instead (only if the attacker can't fly).
 async function attack(state: State, world: World, p: Actor, npcId: string, llm: Llm) {
   const target = state.actors[npcId];
-  const npc = npcDef(state, world, npcId)!;
+  const npc = speakerDef(state, world, npcId)!;
   const flies = (a: Actor) => a.abilities.includes('fly');
   if (flies(target) && !flies(p) && target.boundUntil === undefined && llm.evade) {
     let evades = false;
@@ -203,7 +203,8 @@ async function prepareDay(state: State, world: World, llm: Llm) {
 // Activated abilities GM-driven beings could use today: untapped and able to pay.
 export function usableAbilities(state: State, world: World, t: number) {
   return world.beings.flatMap((being) => {
-    const bs = beingState(state, being.id);
+    const bs = state.actors[being.id];
+    if (!bs || bs.dead) return [];
     if (bs.boundUntil !== undefined && bs.boundUntil > t) return [];
     const available = manaAvailable(state, world, bs, t);
     return being.activated.filter((x) => planPayment(available, x.cost)).map((ability) => ({ being, ability }));

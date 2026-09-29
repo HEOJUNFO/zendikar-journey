@@ -252,6 +252,11 @@ header h1 {
   stroke: #1a1408;
   stroke-width: 0.25;
 }
+.map-being circle {
+  fill: #2a1f33;
+  stroke: #e0c9ff;
+  stroke-width: 0.35;
+}
 
 /* --- story --- */
 
@@ -472,5 +477,122 @@ header h1 {
   }
   .modes {
     grid-template-columns: 1fr;
+  }
+}
+
+/* --- pages --- */
+
+.nav {
+  display: flex;
+  gap: 4px;
+}
+.nav a {
+  padding: 3px 10px;
+  border-radius: 999px;
+  color: var(--muted);
+  text-decoration: none;
+  font-size: 13px;
+}
+.nav a:hover {
+  color: var(--ink);
+}
+.nav a.on {
+  color: var(--accent);
+  background: var(--panel-2);
+}
+
+.region-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.region-list button {
+  width: 100%;
+  text-align: left;
+  border: 0;
+  padding: 3px 6px;
+  font-weight: 400;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.region-list button.on {
+  color: var(--accent);
+}
+.swatch {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  flex: none;
+}
+
+/* --- full-screen map --- */
+
+.fullmap {
+  position: fixed;
+  inset: 0;
+  background: var(--sea);
+}
+.fullmap .map {
+  width: 100%;
+  height: 100%;
+  border: 0;
+  border-radius: 0;
+}
+.fullmap-top,
+.fullmap-region,
+.fullmap-feed {
+  position: absolute;
+  background: color-mix(in srgb, var(--panel) 88%, transparent);
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  backdrop-filter: blur(4px);
+}
+.fullmap-top {
+  top: 12px;
+  left: 12px;
+  right: 12px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+  padding: 8px 14px;
+}
+.fullmap-top h1 {
+  font-size: 18px;
+  margin-right: auto;
+}
+.fullmap-region {
+  left: 12px;
+  bottom: 12px;
+  width: min(360px, calc(100% - 24px));
+}
+.fullmap-region .card {
+  background: transparent;
+  border: 0;
+}
+.fullmap-region .close {
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  padding: 0 8px;
+  border: 0;
+}
+.fullmap-feed {
+  right: 12px;
+  bottom: 12px;
+  width: min(420px, calc(100% - 24px));
+  padding: 10px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.fullmap-feed .controls {
+  margin-top: 6px;
+}
+@media (max-width: 720px) {
+  .fullmap-region {
+    bottom: auto;
+    top: 120px;
   }
 }

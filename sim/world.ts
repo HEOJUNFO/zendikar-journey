@@ -24,6 +24,7 @@ export const TERRAIN_IDS = [
   'settlement',
   'sky',
   'volcanic',
+  'swamp',
   'deepsea',
 ] as const;
 export type Terrain = (typeof TERRAIN_IDS)[number];
@@ -45,6 +46,7 @@ export const TERRAINS: Record<Terrain, TerrainInfo> = {
   settlement: { label: '정착지', color: '#b08850', mana: null },
   sky: { label: '공중섬', color: '#b9c8ea', mana: 'W', requires: 'fly' },
   volcanic: { label: '화산 지대', color: '#b5462c', mana: 'R' },
+  swamp: { label: '늪', color: '#4f4a5e', mana: 'B' },
   deepsea: { label: '심해', color: '#1d3b66', mana: 'U', sea: true },
 };
 
@@ -92,9 +94,11 @@ export const CharacterSimSchema = z.strictObject({
   routine: z.array(RoutineRow).min(1),
 });
 
-// A character who doesn't live a routine but acts through GM events (e.g. Lorthos).
+// A character who doesn't live a routine but acts through GM events and abilities (e.g.
+// Lorthos). They stay at home, where others can meet them.
 export const GmBeingSimSchema = z.strictObject({
   gm: z.literal(true),
+  home: z.string(),
   pt: PtSchema,
   mana: ManaSchema.optional(),
   abilities: z.array(z.enum(ABILITIES)).default([]),
@@ -226,10 +230,15 @@ export type NpcDef = {
   routine: ScheduleBlock[];
 };
 
+// Who answers when spoken to.
+export type Speaker = Pick<NpcDef, 'id' | 'name' | 'persona' | 'goal' | 'role'>;
+
 export type BeingDef = {
   id: string;
   name: string;
   summary: string;
+  // Where they stay (may be a sea: they belong there).
+  home: string;
   pt: Pt;
   mana?: Mana;
   abilities: Ability[];
@@ -259,7 +268,7 @@ export type Lore = { id: string; kind: string; name: string; summary: string };
 export type World = {
   regions: Region[];
   npcs: NpcDef[];
-  // GM-driven characters: no routine, not on the map as actors.
+  // GM-driven characters: no routine; they stay at home on the map.
   beings: BeingDef[];
   events: EventDef[];
   lore: Lore[];
@@ -318,6 +327,7 @@ export function buildWorld(entities: RawEntity[]): { world: World; errors: strin
           id: e.id,
           name: e.name,
           summary: e.summary ?? '',
+          home: sim.data.home,
           pt: sim.data.pt,
           mana: sim.data.mana,
           abilities: sim.data.abilities,
@@ -391,13 +401,15 @@ export function buildWorld(entities: RawEntity[]): { world: World; errors: strin
       err(ev.id, `sim.cost.by ${ev.cost.by} 가 sim 을 가진 인물이 아님`);
   }
   const ids = new Set(entities.map((e) => e.id));
-  for (const b of world.beings)
+  for (const b of world.beings) {
+    regionOk(b.id, b.home, 'sim.home');
     for (const x of b.activated)
       for (const eff of x.effects)
         if (eff.type === 'raise') {
           if (!ids.has(eff.creature)) err(b.id, `activated ${x.id}: creature ${eff.creature} 가 없음`);
           if (eff.faction && !ids.has(eff.faction)) err(b.id, `activated ${x.id}: faction ${eff.faction} 가 없음`);
         }
+  }
 
   return { world, errors };
 }

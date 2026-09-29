@@ -12,7 +12,7 @@ rarity: mythic
 artist: "Todd Lockwood"
 scryfall: https://scryfall.com/card/zen/99/kalitas-bloodchief-of-ghet
 added: 2026-09-29
-entities: [chr-kalitas, cre-vampire, fac-ghet, law-mana-colors]
+entities: [chr-kalitas, cre-vampire, fac-ghet, law-mana-colors, loc-guul-draz]
 ---
 
 ## 카드 원문
@@ -35,7 +35,8 @@ entities: [chr-kalitas, cre-vampire, fac-ghet, law-mana-colors]
 - 이 능력을 쓰려면 흑색 마력을 치르고, 자신도 한동안 움직이지 못한다. [카드] {B}{B}{B}, {T}
 - 게트는 그가 이끄는 흡혈귀 혈족이다. [카드] "Bloodchief of Ghet"에서 추론, [배경] 게트는 흡혈귀 가문
 - 창백한 피부, 녹색 구슬을 꿴 긴 머리 가닥, 날개처럼 퍼진 가시 돋친 검은 갑옷. [그림]
-- 어디에 사는지, 성격과 말투는 알 수 없다. 그래서 일과 없이 GM이 움직이는 존재로 둔다. [가공]
+- 성격과 말투는 알 수 없다. 그래서 일과 없이 GM이 움직이는 존재로 둔다. [가공]
+- 거처는 카드에 없다. 젠디카르의 흡혈귀가 사는 늪의 땅 굴 드라즈로 정했다. [배경] 흡혈귀의 땅, [그림] 음울한 녹황색 하늘, [결정] 거처 추가
 
 ## 반영 내역
 
@@ -48,4 +49,8 @@ entities: [chr-kalitas, cre-vampire, fac-ghet, law-mana-colors]
   - 상륙은 "땅과 유대 맺기"로 바꿨다 (하루에 한 땅). 용암공 함정도 이 뜻을 따른다.
   - 로르토스의 {8}과 이오나의 역량(백 9)을 함께 반영했다.
   - 토큰은 게임 안에서 생기는 새 인물이다.
+- 2026-09-29 결정 (보강): 칼리타스와 로르토스를 지도에 올린다.
+  - `loc-guul-draz`: 새 지역 굴 드라즈 (34, 58), 새 지형 늪(`swamp`, 흑색 땅). 칼리타스의 거처, 게트 혈족의 거점.
+  - GM이 움직이는 존재는 거처(`home`)에 머무는 인물이 된다. 칼리타스는 굴 드라즈, 로르토스는 심해의 영역.
+  - 같은 지역이면 대화하고 싸울 수 있다. 공격받으면 그날 반격하고, 죽으면 능력과 출현도 끝난다.
 - 게임에 아직 없는 것: 마나를 쓰는 주문(플레이어는 마나를 얻지만 아직 쓸 곳이 없다).

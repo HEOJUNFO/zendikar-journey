@@ -10,6 +10,7 @@ tags: [흡혈귀, 흑색, 혈족]
 links:
   - { to: chr-kalitas, rel: 우두머리 }
   - { to: cre-vampire, rel: 구성원 }
+  - { to: loc-guul-draz, rel: 거점 }
 ---
 
 ## 설정
@@ -20,7 +21,7 @@ links:
 
 - 칼리타스의 능력으로 생긴 흡혈귀 토큰이 이 혈족에 속한다.
 - 세력 시스템은 아직 없다. 지금은 토큰 NPC의 역할과 persona에만 쓰인다.
-- 거점: 모른다.
+- 거점: 굴 드라즈(`loc-guul-draz`), 칼리타스의 거처.
 
 ## 미정/질문
 

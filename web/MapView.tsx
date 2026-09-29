@@ -6,9 +6,12 @@ import { visibleActors } from './view.ts';
 
 type Props = {
   world: World;
-  state: State;
+  // null: no game yet, so only the land itself is drawn.
+  state: State | null;
   selected: string | null;
   onSelect: (id: string) => void;
+  // Show everyone, even in character mode (the world page).
+  all?: boolean;
 };
 
 // Where an actor is drawn: at their region, or partway along the road.
@@ -21,8 +24,8 @@ function position(world: World, state: State, a: Actor) {
   return { x: from.x + (to.x - from.x) * done, y: from.y + (to.y - from.y) * done, travelling: true };
 }
 
-export function MapView({ world, state, selected, onSelect }: Props) {
-  const actors = visibleActors(state);
+export function MapView({ world, state, selected, onSelect, all }: Props) {
+  const actors = state ? visibleActors(state, all) : [];
   // Spread actors standing in the same region around its node.
   const slots = new Map<string, number>();
   return (
@@ -37,8 +40,8 @@ export function MapView({ world, state, selected, onSelect }: Props) {
         })}
       {world.regions.map((r) => {
         const t = TERRAINS[r.terrain];
-        const conds = state.regions[r.id]?.conditions ?? [];
-        const destroyed = !!state.regions[r.id]?.destroyed;
+        const conds = state?.regions[r.id]?.conditions ?? [];
+        const destroyed = !!state?.regions[r.id]?.destroyed;
         const isSel = selected === r.id;
         return (
           <g key={r.id} className="map-region" onClick={() => onSelect(r.id)} tabIndex={0}
@@ -62,15 +65,15 @@ export function MapView({ world, state, selected, onSelect }: Props) {
         );
       })}
       {actors.map((a) => {
-        const p = position(world, state, a);
+        const p = position(world, state!, a);
         const slot = p.travelling ? 0 : (slots.get(a.region) ?? 0);
         if (!p.travelling) slots.set(a.region, slot + 1);
         const angle = -Math.PI / 2 + slot * 0.9;
         const [x, y] = p.travelling ? [p.x, p.y] : [p.x + Math.cos(angle) * 3.2, p.y + Math.sin(angle) * 3.2];
         return (
-          <g key={a.id} className={a.kind === 'player' ? 'map-player' : 'map-npc'}>
+          <g key={a.id} className={`map-${a.kind}`}>
             <title>{shortName(a.name)}</title>
-            <circle cx={x} cy={y} r={a.kind === 'player' ? 1.3 : 1} />
+            <circle cx={x} cy={y} r={a.kind === 'npc' ? 1 : a.kind === 'being' ? 1.5 : 1.3} />
           </g>
         );
       })}
