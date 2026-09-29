@@ -32,6 +32,14 @@ const CUSTOM = {
   hedron: [1451],
   rubble: [1452],
   motes: [1453],
+  basalt: [1454, 1455, 1456],
+  ash: [1457, 1458],
+  blackSand: [1459, 1460],
+  lavaCrack: [1461],
+  lavaPool: [1462, 1463],
+  spire: [1464],
+  boulder: [1465],
+  embers: [1466],
 };
 const T = {
   water: [451, 452],
@@ -61,6 +69,18 @@ export const TERRAINS = {
     decor: CUSTOM.motes,
     decorChance: 0.05,
     floating: true,
+  },
+  // Volcanic chasm (Lavaball Trap): basalt and ash with glowing cracks, lava pools and
+  // spires to walk around, black sand where it meets the sea.
+  volcanic: {
+    ground: [...CUSTOM.basalt, ...CUSTOM.basalt, ...CUSTOM.ash, ...CUSTOM.lavaCrack],
+    coast: CUSTOM.blackSand,
+    // A lava river meanders along the chasm; it breaks wherever it would cut the area in two.
+    river: CUSTOM.lavaPool,
+    obstacles: [...CUSTOM.spire, ...CUSTOM.boulder, ...CUSTOM.spire],
+    obstacleChance: 0.08,
+    decor: CUSTOM.embers,
+    decorChance: 0.06,
   },
 };
 
@@ -143,12 +163,13 @@ export function buildMap(locations) {
     const rand = rng(hashString(`${id}:${x}:${y}`));
     const terrain = TERRAINS[byId.get(id).map.terrain];
     const coast = nearSea(x, y);
-    bg[x][y] = pick(rand, coast && !terrain.floating ? T.sand : terrain.ground);
+    bg[x][y] = pick(rand, coast && !terrain.floating ? (terrain.coast ?? T.sand) : terrain.ground);
     obj[x][y] = -1;
     if (!coast && terrain.decor.length && rand() < terrain.decorChance) deco[x][y] = pick(rand, terrain.decor);
   }
   for (const loc of ordered) {
     const terrain = TERRAINS[loc.map.terrain];
+    if (terrain.river) paintRiver(loc, terrain.river, owner, obj, nearSea, W, H, walkable);
     if (!terrain.obstacles.length) continue;
     for (let x = 0; x < W; x++) for (let y = 0; y < H; y++) {
       if (owner[x][y] !== loc.id || nearSea(x, y) || deco[x][y] !== -1) continue;
@@ -169,6 +190,24 @@ export function buildMap(locations) {
     spots: pickSpots(loc, owner, walkable),
   }));
   return { bg, deco, obj, places };
+}
+
+// A meandering channel (1-2 tiles wide) along the location's long axis.
+function paintRiver(loc, tiles, owner, obj, nearSea, W, H, walkable) {
+  const { x: cx, y: cy, w, h } = loc.map;
+  const horizontal = w >= h;
+  const noise = valueNoise(`${loc.id}:river`, 6);
+  const span = horizontal ? w : h;
+  for (let t = -span; t <= span; t++) {
+    const along = Math.round((horizontal ? cx : cy) + t);
+    const across = (horizontal ? cy : cx) + noise(t, 0) * (horizontal ? h : w) * 0.2;
+    for (const off of [0, noise(t, 7) > 0 ? 1 : -1]) {
+      const [x, y] = horizontal ? [along, Math.round(across) + off] : [Math.round(across) + off, along];
+      if (x < 0 || y < 0 || x >= W || y >= H || owner[x][y] !== loc.id || nearSea(x, y) || obj[x][y] !== -1) continue;
+      obj[x][y] = pick(rng(hashString(`${loc.id}:river:${x}:${y}`)), tiles);
+      if (!connected(W, H, walkable, x, y)) obj[x][y] = -1;
+    }
+  }
 }
 
 // Around floating islands the sea becomes sky: open air near the island, a ring of

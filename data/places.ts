@@ -11,6 +11,46 @@ export type Place = {
 
 export const PLACES: Place[] = [
   {
+    "id": "loc-lava-chasm",
+    "name": "용암 협곡",
+    "description": "용암이 흐르는 좁고 깊은 화산 협곡. 고대의 함정이 도사린 곳",
+    "entityId": "loc-lava-chasm",
+    "spots": [
+      {
+        "x": 70,
+        "y": 49
+      },
+      {
+        "x": 70,
+        "y": 46
+      },
+      {
+        "x": 68,
+        "y": 49
+      },
+      {
+        "x": 69,
+        "y": 50
+      },
+      {
+        "x": 71,
+        "y": 50
+      },
+      {
+        "x": 72,
+        "y": 49
+      },
+      {
+        "x": 68,
+        "y": 46
+      },
+      {
+        "x": 72,
+        "y": 46
+      }
+    ]
+  },
+  {
     "id": "loc-emeria",
     "name": "에메리아",
     "description": "천사들이 머무는, 하늘 높이 떠 있는 고대 석조 폐허",

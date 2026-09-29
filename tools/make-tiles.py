@@ -162,6 +162,79 @@ def motes(seed):
             d.point((x + dx, y + dy), fill=(255, 250, 190, 140))
     return img
 
+# --- Volcanic chasm (Lavaball Trap): basalt, ash, black sand, lava ---
+BASALT = rgb('#3b3538'); BASALT_D = rgb('#29242a'); BASALT_L = rgb('#4f4649')
+ASH = rgb('#443d3f'); ASH_D = rgb('#383234'); ASH_L = rgb('#514a4b')
+LAVA = rgb('#ff7a1a'); LAVA_HOT = rgb('#ffc94a'); CRUST = rgb('#7a2a10')
+
+def cracks(img, seed, color, n=3, glow=None):
+    d = ImageDraw.Draw(img)
+    rnd = random.Random(seed)
+    for _ in range(n):
+        x, y = rnd.randint(3, 28), rnd.randint(3, 28)
+        for _ in range(6):
+            nx = min(31, max(0, x + rnd.randint(-3, 3)))
+            ny = min(31, max(0, y + rnd.randint(-3, 3)))
+            if glow:
+                d.line([(x, y + 1), (nx, ny + 1)], fill=glow)
+            d.line([(x, y), (nx, ny)], fill=color)
+            x, y = nx, ny
+    return img
+
+def basalt(seed):
+    return cracks(noise_tile(seed, BASALT, BASALT_D, BASALT_L, 0.2), seed, BASALT_D)
+
+def ash(seed):
+    return noise_tile(seed, ASH, ASH_D, ASH_L, 0.3)
+
+def black_sand(seed):
+    return noise_tile(seed, rgb('#2f2b2d'), rgb('#1f1c1e'), rgb('#48413f'), 0.35)
+
+def lava_crack(seed):
+    return cracks(noise_tile(seed, BASALT, BASALT_D, BASALT_L, 0.2), seed, LAVA, 1, glow=CRUST)
+
+def lava_pool(seed):
+    img = noise_tile(seed, LAVA, CRUST, LAVA_HOT, 0.25)
+    d = ImageDraw.Draw(img)
+    rnd = random.Random(seed)
+    for _ in range(4):  # cooling crust plates
+        x, y, r = rnd.randint(4, 27), rnd.randint(4, 27), rnd.randint(2, 4)
+        d.ellipse([x - r, y - r, x + r, y + r], fill=CRUST)
+        d.ellipse([x - r + 1, y - r + 1, x + r - 2, y + r - 2], fill=rgb('#5a2010'))
+    for _ in range(3):  # bubbles
+        x, y = rnd.randint(4, 27), rnd.randint(4, 27)
+        d.ellipse([x - 1, y - 1, x + 1, y + 1], fill=LAVA_HOT)
+    return img
+
+def spire(seed):
+    img = Image.new('RGBA', (T, T), (0, 0, 0, 0))
+    d = ImageDraw.Draw(img)
+    d.ellipse([6, 25, 26, 31], fill=(0, 0, 0, 80))
+    d.polygon([(9, 29), (13, 6), (16, 1), (19, 7), (23, 29)], fill=BASALT)
+    d.polygon([(9, 29), (13, 6), (16, 1), (15, 29)], fill=BASALT_L)
+    d.line([(17, 10), (19, 22)], fill=BASALT_D)
+    d.line([(12, 18), (14, 24)], fill=LAVA)  # a glowing seam
+    return img
+
+def boulder(seed):
+    img = Image.new('RGBA', (T, T), (0, 0, 0, 0))
+    d = ImageDraw.Draw(img)
+    d.ellipse([5, 22, 27, 31], fill=(0, 0, 0, 80))
+    d.polygon([(5, 25), (8, 13), (16, 8), (25, 12), (27, 24), (18, 29)], fill=BASALT)
+    d.polygon([(8, 13), (16, 8), (19, 14), (11, 18)], fill=BASALT_L)
+    d.line([(18, 29), (22, 18)], fill=BASALT_D)
+    return img
+
+def embers(seed):
+    img = Image.new('RGBA', (T, T), (0, 0, 0, 0))
+    d = ImageDraw.Draw(img)
+    rnd = random.Random(seed)
+    for _ in range(5):
+        x, y = rnd.randint(3, 28), rnd.randint(3, 28)
+        d.point((x, y), fill=LAVA_HOT)
+        d.point((x + 1, y), fill=(255, 122, 26, 160))
+    return img
+
 # Order defines indices: 1440 + position. Keep in sync with tools/build-map.mjs (CUSTOM).
 TILES = [
     ('sky', sky(1, 0)), ('sky', sky(2, 1)), ('sky', sky(3, 0)),
@@ -170,6 +243,14 @@ TILES = [
     ('skyRim', rim(9)), ('skyRim', rim(10)),
     ('pillar', pillar(11)), ('hedron', hedron(12)), ('rubble', rubble(13)),
     ('motes', motes(14)),
+    # Appended for ZEN-135 (volcanic). Only ever append, so existing indices stay valid.
+    ('basalt', basalt(15)), ('basalt', basalt(16)), ('basalt', basalt(17)),
+    ('ash', ash(18)), ('ash', ash(19)),
+    ('blackSand', black_sand(20)), ('blackSand', black_sand(21)),
+    ('lavaCrack', lava_crack(22)),
+    ('lavaPool', lava_pool(23)), ('lavaPool', lava_pool(24)),
+    ('spire', spire(25)), ('boulder', boulder(26)),
+    ('embers', embers(27)),
 ]
 
 rows = math.ceil(len(TILES) / COLS)
