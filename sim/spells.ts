@@ -5,6 +5,7 @@ import { addFoe } from './combat.ts';
 import { gainLife, lifeOf, loseLife } from './life.ts';
 import { formatMana, manaAvailable, payMana, planPayment } from './mana.ts';
 import { remember } from './relations.ts';
+import { creatureOf, retainersOf } from './retainers.ts';
 import { addLog, present } from './state.ts';
 import type { Actor, State } from './state.ts';
 import { josa, shortName } from './text.ts';
@@ -35,11 +36,10 @@ export function learnSpell(state: State, world: World, a: Actor, spellId: string
   addLog(state, { kind: 'status', text: `${josa(shortName(a.name), '이', '가')} ${josa(s.name, '을', '를')} 익혔다.`, regions: [a.region], actors: [a.id], t });
 }
 
-// Creatures of `kind` that `a` controls and could tap now (a kicker's "tap an untapped …").
-export function tappable(state: State, a: Actor, kind: string) {
-  return Object.values(state.actors).filter(
-    (x) => !x.dead && x.boundUntil === undefined && state.tokens?.[x.id]?.master === a.id && state.tokens[x.id].creature === kind,
-  );
+// `a`'s retainers of creature `kind` who could be tapped now (a kicker's "tap an untapped …
+// you control").
+export function tappable(state: State, world: World, a: Actor, kind: string) {
+  return retainersOf(state, a.id).filter((x) => x.boundUntil === undefined && creatureOf(state, world, x.id) === kind);
 }
 
 export function castBlocked(state: State, world: World, a: Actor, spellId: string, targetId: string, kick: boolean, t: number): string | null {
@@ -51,7 +51,7 @@ export function castBlocked(state: State, world: World, a: Actor, spellId: strin
   if (!planPayment(manaAvailable(state, world, a, t), s.cost))
     return `마나가 모자라다 (${s.costText}, 지금 ${formatMana(manaAvailable(state, world, a, t))}).`;
   if (kick && !s.kicker) return '추가 비용이 없는 주문이다.';
-  if (kick && !tappable(state, a, s.kicker!.tap).length) return '추가 비용으로 탭할 것이 없다.';
+  if (kick && !tappable(state, world, a, s.kicker!.tap).length) return '추가 비용으로 탭할 것이 없다.';
   return null;
 }
 
@@ -62,7 +62,7 @@ export function castSpell(state: State, world: World, a: Actor, spellId: string,
   payMana(state, world, a, s.cost, t);
   let kicked = false;
   if (kick && s.kicker) {
-    const tapped = tappable(state, a, s.kicker.tap)[0];
+    const tapped = tappable(state, world, a, s.kicker.tap)[0];
     if (tapped) {
       tapped.boundUntil = untapTime(t);
       kicked = true;

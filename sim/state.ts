@@ -46,6 +46,8 @@ export type Actor = {
   wounds?: { day: number; amount: number };
   // Who they'll attack on sight this turn (they were attacked, or turned hostile).
   foes?: { day: number; ids: string[] };
+  // Whom they serve: they are that one's retainer (sim/retainers.ts).
+  master?: string;
   // Spells they know (world/entities/spells).
   spells?: string[];
   // What they think of others, latest impression each (sim/relations.ts).
@@ -131,7 +133,8 @@ export type State = {
   // The player character died: their life is over.
   over?: { at: number; cause: string };
   actors: Record<string, Actor>;
-  // Characters born in play (tokens), who have no entity file.
+  // Characters born in play (MTG tokens, e.g. Kalitas's risen vampires), who have no entity
+  // file: what they live by.
   tokens?: Record<string, NpcDef>;
   // Saves from before GM-driven beings were actors: their mana and tap, moved onto the
   // actor by syncWorld.
@@ -231,6 +234,11 @@ export function syncWorld(state: State, world: World) {
     state.actors[npc.id].needs = [...npc.needs];
     state.actors[npc.id].pt = [...npc.pt];
   }
+  // Saves from when a risen one's master was kept on its definition.
+  for (const [id, def] of Object.entries(state.tokens ?? {})) {
+    const old = (def as { master?: string }).master;
+    if (old && state.actors[id] && !state.actors[id].master) state.actors[id].master = old;
+  }
   for (const b of world.beings) {
     const old = state.beings?.[b.id];
     const a = (state.actors[b.id] ??= { ...beingActor(b), manaSpent: old?.manaSpent, boundUntil: old?.boundUntil });
@@ -268,12 +276,12 @@ export function landUnusable(state: State, regionId: string): string | null {
   return rs?.conditions.find((c) => c.tapped)?.label ?? null;
 }
 
-// The definition an NPC lives by: from world/entities, or a token born in play.
+// The definition an NPC lives by: from world/entities, or one born in play (state.tokens).
 export function npcDef(state: State, world: World, id: string): NpcDef | undefined {
   return world.npcs.find((n) => n.id === id) ?? state.tokens?.[id];
 }
 
-// Anyone the player can talk to or fight: an NPC, a token or a GM-driven being.
+// Anyone the player can talk to or fight: an NPC (from a file or born in play) or a GM-driven being.
 export function speakerDef(state: State, world: World, id: string): Speaker | undefined {
   const b = world.beings.find((x) => x.id === id);
   if (!b) return npcDef(state, world, id);

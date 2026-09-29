@@ -82,7 +82,8 @@ export function useAbility(state: State, world: World, beingId: string, abilityI
   return null;
 }
 
-// A token: a new character born in play from `from`, with its power/toughness.
+// Someone risen in play (an MTG token) from `from`, with its power/toughness: a new character
+// who serves `master`.
 function raiseToken(state: State, world: World, from: Actor, creature: string, faction: string | undefined, master: string) {
   const kind = world.lore.find((l) => l.id === creature);
   const masterName = shortName(world.beings.find((b) => b.id === master)?.name ?? master);
@@ -103,8 +104,7 @@ function raiseToken(state: State, world: World, from: Actor, creature: string, f
     abilities: [],
     needs: ['energy'],
     creature,
-    master,
-    routine: [{ start: 0, end: 1440, regionId: from.region, kind: 'leisure', activity: `${masterName}의 부름을 기다림`, emoji: '🦇' }],
+    routine: [{ start: 0, end: 1440, regionId: from.region, kind: 'leisure', activity: `${masterName} 곁에서 부름을 기다림`, emoji: '🦇' }],
   };
   const def = state.tokens[id];
   state.actors[id] = {
@@ -117,6 +117,7 @@ function raiseToken(state: State, world: World, from: Actor, creature: string, f
     pace: 'normal',
     abilities: [],
     needs: ['energy'],
+    master,
   };
   addLog(state, {
     kind: 'event',

@@ -22,6 +22,7 @@ import { addLog, alive, landUnusable, needsOf, npcDef, present, ptOf, random } f
 import { dealDamage, hostileNpcs } from './combat.ts';
 import { bondBlocked, bondLand, useAbility } from './abilities.ts';
 import { learnSpell } from './spells.ts';
+import { masterOf } from './retainers.ts';
 import { payMana } from './mana.ts';
 import type { Actor, GmPlan, State, Task } from './state.ts';
 import { josa, shortName, toward } from './text.ts';
@@ -327,8 +328,11 @@ function actorHour(state: State, world: World, a: Actor, t: number) {
 function npcTask(state: State, world: World, a: Actor, t: number): Task | undefined {
   const block = a.schedule && currentBlock(a.schedule.blocks, minuteOfDay(t));
   if (!block) return a.task;
-  if (block.regionId !== a.region && !travelBlocked(state, world, a, block.regionId)) {
-    startTravel(state, world, a, block.regionId, t);
+  // A retainer lives its day at its master's side.
+  const m = masterOf(state, a);
+  const where = m ? (m.travel?.to ?? m.region) : block.regionId;
+  if (where !== a.region && !travelBlocked(state, world, a, where)) {
+    startTravel(state, world, a, where, t);
     return a.task;
   }
   // Can't get there (or already there): do it here. Nothing can be worked on a destroyed or

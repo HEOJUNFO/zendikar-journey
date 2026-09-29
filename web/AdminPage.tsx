@@ -114,7 +114,7 @@ function ActorDetail({ world, state, a, onRegion }: { world: World; state: State
     <section className="card">
       <h2>
         {a.dead ? '✝ ' : ''}
-        {a.name} <small>{KIND_LABELS[a.kind]}{token ? ' · 토큰' : ''} · {fighting(a, t)}</small>
+        {a.name} <small>{KIND_LABELS[a.kind]}{token ? ' · 게임 중 생김' : ''}{a.master ? ` · ${name(a.master)}의 권속` : ''} · {fighting(a, t)}</small>
       </h2>
       <p className="muted admin-id">{a.id}</p>
       {(def?.summary || being?.summary) && <p>{def?.summary ?? being?.summary}</p>}

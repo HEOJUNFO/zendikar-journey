@@ -107,6 +107,8 @@ export const CharacterSimSchema = z.strictObject({
   beast: z.boolean().default(false),
   // Landfall: when they bond with a land, they get +P/+T (and trample) until the turn ends.
   landfall: z.strictObject({ pt: z.tuple([z.number().int(), z.number().int()]), trample: z.boolean().default(false) }).optional(),
+  // The creature kind a character is (e.g. cre-vampire). A creature entity's sim is its own kind.
+  creature: z.string().optional(),
   routine: z.array(RoutineRow).min(1),
 });
 
@@ -132,7 +134,7 @@ export const GmBeingSimSchema = z.strictObject({
               // The target dies, whatever its toughness.
               z.strictObject({ type: z.literal('destroy') }),
               // If the target died this way, it rises as a new character of this creature kind,
-              // with its power/toughness, in this faction (a token).
+              // with its power/toughness, in this faction, as the being's retainer.
               z.strictObject({ type: z.literal('raise'), creature: z.string(), faction: z.string().optional() }),
             ]),
           )
@@ -283,9 +285,8 @@ export type NpcDef = {
   beast?: boolean;
   landfall?: { pt: [number, number]; trample: boolean };
   routine: ScheduleBlock[];
-  // Tokens: the creature kind they are and who controls them.
+  // The creature kind they are (e.g. cre-vampire), for "a Vampire you control".
   creature?: string;
-  master?: string;
 };
 
 export type SpellDef = {
@@ -427,6 +428,7 @@ export function buildWorld(entities: RawEntity[]): { world: World; errors: strin
         name: e.name,
         summary: e.summary ?? '',
         ...rest,
+        creature: e.kind === 'creature' ? e.id : rest.creature,
         routine: routine.map(([start, end, regionId, kind, activity, emoji]) => ({
           start: parseTimeOfDay(start),
           end: parseTimeOfDay(end),

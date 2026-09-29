@@ -9,12 +9,19 @@ import { region } from '../world.ts';
 import { chatCompletion, extractJson } from './chat.ts';
 import { loreText, playerText } from './context.ts';
 import { relationsText, relationTo } from '../relations.ts';
+import { swayBlocked } from '../retainers.ts';
 
-const ReplySchema = z.object({ say: z.string().min(1), attack: z.boolean().default(false), impression: z.string().optional() });
+const ReplySchema = z.object({
+  say: z.string().min(1),
+  attack: z.boolean().default(false),
+  follow: z.boolean().default(false),
+  impression: z.string().optional(),
+});
 
 export async function reply({ world, state, npc, say }: ReplyInput): Promise<Reply | null> {
   const p = player(state)!;
   const me = state.actors[npc.id];
+  const canFollow = !swayBlocked(state, world, me);
   const name = shortName(npc.name);
   // Their past exchanges, oldest first (the player's new line is already logged).
   const history = state.log
@@ -31,7 +38,7 @@ Who you are: ${npc.persona}
 Your goal: ${npc.goal}
 Your role: ${npc.role}
 Your power/toughness is ${ptOf(state.actors[npc.id]).join('/')}; theirs is ${ptOf(p).join('/')}. Fights here are deadly.
-Answer with JSON only: {"say": "<your spoken words in Korean, 1 to 3 sentences, no name prefix or narration>", "attack": <true only if, in character, you now attack them>, "impression": "<Korean, one short line: what you now think of them>"}`,
+${canFollow ? `You serve no one. If, in character and won over by what they say and who they are, you now pledge to follow and serve them as their retainer, set "follow": true. That is rare and a big step.\n` : ''}Answer with JSON only: {"say": "<your spoken words in Korean, 1 to 3 sentences, no name prefix or narration>", "attack": <true only if, in character, you now attack them>,${canFollow ? ' "follow": <true only if you now pledge to serve them>,' : ''} "impression": "<Korean, one short line: what you now think of them>"}`,
       },
       {
         role: 'user',
@@ -57,7 +64,9 @@ Reply as ${name} to: ${say}`,
     return null;
   }
   const text = parsed.data.say.trim().replace(/^["“”']+|["“”']+$/g, '').replace(new RegExp(`^${name}\\s*:\\s*`), '');
-  return text ? { say: text, attack: parsed.data.attack, impression: parsed.data.impression?.trim() || undefined } : null;
+  return text
+    ? { say: text, attack: parsed.data.attack, follow: canFollow && parsed.data.follow, impression: parsed.data.impression?.trim() || undefined }
+    : null;
 }
 
 // Attacked by someone who can't fly: take to the air, or stand and fight?

@@ -12,7 +12,7 @@ rarity: mythic
 artist: "Todd Lockwood"
 scryfall: https://scryfall.com/card/zen/99/kalitas-bloodchief-of-ghet
 added: 2026-09-29
-entities: [chr-kalitas, cre-vampire, fac-ghet, law-mana-colors, loc-guul-draz, loc-ghet-estate]
+entities: [chr-kalitas, cre-vampire, fac-ghet, law-mana-colors, loc-guul-draz, loc-ghet-estate, law-retainers]
 ---
 
 ## 카드 원문
@@ -42,14 +42,14 @@ entities: [chr-kalitas, cre-vampire, fac-ghet, law-mana-colors, loc-guul-draz, l
 ## 반영 내역
 
 - `chr-kalitas`: 새 인물. `sim: { gm: true, pt: [5, 5], mana: { B: 7 } }`. 능력 "죽여서 혈족으로 들이기"({B}{B}{B}, {T}: 파괴, 죽으면 흡혈귀로 되살림)를 GM이 쓴다. 능력 이름은 [가공].
-- `cre-vampire`: 새 생물종. 칼리타스에게 죽은 자가 흡혈귀 토큰(새 NPC)이 된다.
+- `cre-vampire`: 새 생물종. 칼리타스에게 죽은 자가 흡혈귀(새 NPC)로 되살아나 그의 권속이 된다.
 - `fac-ghet`: 새 세력. 게트 혈족.
 - `law-mana-colors`: 흑색과 마나 규칙을 더했다.
 - 2026-09-29 결정:
   - 마나는 두 갈래다. 카드 존재는 카드의 마나 값과 색을 품고, 플레이어는 땅과 유대를 맺어 얻는다.
   - 상륙은 "땅과 유대 맺기"로 바꿨다 (하루에 한 땅). 용암공 함정도 이 뜻을 따른다.
   - 로르토스의 {8}과 이오나의 역량(백 9)을 함께 반영했다.
-  - 토큰은 게임 안에서 생기는 새 인물이다.
+  - 토큰은 게임 안에서 생기는 새 인물이다. (2026-09-29 이후: 만든 이의 권속, `law-retainers`)
 - 2026-09-29 결정 (보강): 칼리타스와 로르토스를 지도에 올린다.
   - `loc-guul-draz`: 새 지역 굴 드라즈 (34, 58), 새 지형 늪(`swamp`, 흑색 땅). 칼리타스의 거처, 게트 혈족의 거점.
   - GM이 움직이는 존재는 거처(`home`)에 머무는 인물이 된다. 칼리타스는 굴 드라즈, 로르토스는 심해의 영역.

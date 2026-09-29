@@ -192,6 +192,7 @@ export function PeopleList({ world, state, all }: { world: World; state: State; 
       {people.map((a) => (
         <div key={a.id} className="person">
           <b>{shortName(a.name)}</b> <small className="muted">{fighting(a, state.minutes)}</small>
+          {a.master && state.actors[a.master] && <small className="muted"> · {shortName(state.actors[a.master].name)}의 권속</small>}
           <p className="muted">{status(world, a)}</p>
           {!p && (
             <>
@@ -233,6 +234,13 @@ export function PlayerCard({ world, state }: { world: World; state: State }) {
       </p>
       <p className="muted">
         유대를 맺은 땅: {p.bonds?.length ? p.bonds.map((id) => region(world, id).name).join(', ') : '없음'}
+      </p>
+      <p className="muted">
+        권속:{' '}
+        {Object.values(state.actors)
+          .filter((x) => !x.dead && x.master === p.id)
+          .map((x) => shortName(x.name))
+          .join(', ') || '없음'}
       </p>
       <p className="muted">
         아는 주문:{' '}

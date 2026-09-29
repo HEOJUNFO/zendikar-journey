@@ -11,7 +11,7 @@ rarity: rare
 artist: "Alex Horley-Orlandelli"
 scryfall: https://scryfall.com/card/zen/81/blood-tribute
 added: 2026-09-29
-entities: [spl-blood-tribute, loc-malakir, cre-vampire, law-life]
+entities: [spl-blood-tribute, loc-malakir, cre-vampire, law-life, law-retainers]
 ---
 
 ## 카드 원문
@@ -37,11 +37,12 @@ entities: [spl-blood-tribute, loc-malakir, cre-vampire, law-life]
 ## 반영 내역
 
 - `spl-blood-tribute`: 새 요소 종류 "주문"(`spells/`, `spl-`)의 첫 주문.
-- 엔진: 주문 체계 (`sim/spells.ts`). 배우는 곳(`learn_at`)에서 "배우기" 행동으로 익히고, "주문 쓰기"로 같은 곳의 한 사람에게 마나를 치러 건다. 킥커는 시전자가 부리는 그 종류의 생물을 탭한다 (토큰에 주인과 종류를 기록).
+- 엔진: 주문 체계 (`sim/spells.ts`). 배우는 곳(`learn_at`)에서 "배우기" 행동으로 익히고, "주문 쓰기"로 같은 곳의 한 사람에게 마나를 치러 건다. 킥커는 시전자의 권속 중 그 종류의 생물을 탭한다.
 - `loc-malakir`, `cre-vampire`, `law-life`: 이었다. 이 주문의 킥커는 세계의 첫 "생명을 얻는" 효과다.
 - 2026-09-29 결정:
   - 이 주문은 플레이어가 배워서 쓴다 (NPC는 아직 안 씀).
   - 주문은 새 요소 종류로 기록한다.
   - 말라키르에서 배운다 (4시간은 [가공]).
   - 대상은 같은 곳에 있는 이.
-- 게임에 아직 없는 것: 플레이어가 부리는 흡혈귀(그래서 킥커는 아직 못 씀). 여섯 번째 땅(그래서 아직 시전할 마나가 안 모임).
+- 2026-09-29 결정 (이어서): "당신이 통제하는 생물" = 권속 (`law-retainers`). 플레이어는 대화로 설득해 권속을 얻는다.
+- 게임에 아직 없는 것: 플레이어가 흡혈귀 권속을 얻을 현실적인 길 (지금 흡혈귀는 모두 칼리타스의 권속). 여섯 번째 땅(그래서 아직 시전할 마나가 안 모임).

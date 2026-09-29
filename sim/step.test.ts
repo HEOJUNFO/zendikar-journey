@@ -12,6 +12,7 @@ import { gainLife } from './life.ts';
 import { newState, PLAYER_ID, ptOf, syncWorld } from './state.ts';
 import { bondBlocked, bondLand } from './abilities.ts';
 import { DEPLETED_LABEL } from './rules.ts';
+import { swayBlocked } from './retainers.ts';
 import type { State } from './state.ts';
 import { affectedRegions, buildWorld, travelHours } from './world.ts';
 import type { RawEntity } from './world.ts';
@@ -264,7 +265,7 @@ const kalitas = being('chr-k', {
   ],
 });
 
-test('a GM-driven being pays mana and taps to destroy someone, who rises as a token', async () => {
+test('a GM-driven being pays mana and taps to destroy someone, who rises as its retainer', async () => {
   const world = fixture([kalitas, lore('cre-v', 'creature'), lore('fac-g', 'faction'), npc('chr-x', npcSim('loc-a', 'work', [2, 3]))]);
   const state = newState(world, { seed: 1, mode: 'observer' });
   const gmDay: Llm['gmDay'] = async ({ day, hour, abilities }) => ({
@@ -277,13 +278,16 @@ test('a GM-driven being pays mana and taps to destroy someone, who rises as a to
   assert.ok(state.actors['chr-x'].dead);
   const token = Object.values(state.actors).find((a) => a.id.startsWith('tok-'))!;
   assert.deepEqual(token.pt, [2, 3]);
-  assert.equal(token.region, 'loc-a');
+  // It rose where the victim fell (loc-a) and went to its master's side.
+  assert.ok(texts(state).some((t) => t.includes('되살아났다')));
+  assert.equal(token.master, 'chr-k');
+  assert.equal(token.region, 'loc-c');
   assert.match(state.tokens![token.id].role, /fac-g/);
   const bs = state.actors['chr-k'];
   assert.equal(formatClock(bs.boundUntil!), '2일차 00:00');
   assert.deepEqual(manaAvailable(state, world, bs, state.minutes), { B: 4 });
   assert.deepEqual(usableAbilities(state, world, state.minutes), []); // tapped
-  // The token lives a day like any NPC.
+  // It lives a day like any NPC.
   await advance(state, world, 24, { gmDay: async ({ day }) => ({ day, source: 'llm', fires: [] }) });
   assert.equal(state.actors[token.id].schedule?.day, 1);
 });
@@ -577,13 +581,37 @@ test('kicker: tapping a vampire you control drains the life lost into you', asyn
   p.stats.energy = 30;
   state.actors['chr-x'].stats.energy = 80;
   assert.match((await act(state, world, { type: 'cast', spell: 'spl-t', to: 'chr-x', kick: true })).error ?? '', /탭할 것이 없다/);
-  // A vampire token that answers to the player.
-  state.tokens = { 'tok-1': { ...world.npcs[0], id: 'tok-1', name: '흡혈귀', creature: 'cre-v', master: PLAYER_ID } };
-  state.actors['tok-1'] = { ...state.actors['chr-x'], id: 'tok-1', name: '흡혈귀', relations: undefined };
+  // A vampire who serves the player.
+  state.tokens = { 'tok-1': { ...world.npcs[0], id: 'tok-1', name: '흡혈귀', creature: 'cre-v' } };
+  state.actors['tok-1'] = { ...state.actors['chr-x'], id: 'tok-1', name: '흡혈귀', relations: undefined, master: PLAYER_ID };
   await act(state, world, { type: 'cast', spell: 'spl-t', to: 'chr-x', kick: true });
   assert.ok(state.actors['tok-1'].boundUntil !== undefined);
   assert.ok(p.stats.energy >= 60); // 30 + 40, less the hour's wear
   assert.equal(p.lifeGained, 0);
+});
+
+test('a persuaded NPC becomes the player\'s retainer: follows them and joins their fights', async () => {
+  const world = fixture([npc('chr-x', npcSim('loc-a', 'social', [2, 2])), npc('chr-y', npcSim('loc-b', 'social', [1, 1]))]);
+  const state = character(world, 'loc-a');
+  const p = state.actors[PLAYER_ID];
+  await act(state, world, { type: 'talk', to: 'chr-x', say: '함께 가자' }, { reply: async () => ({ say: '따르겠소.', attack: false, follow: true }) });
+  const x = state.actors['chr-x'];
+  assert.equal(x.master, PLAYER_ID);
+  assert.ok(texts(state).some((t) => t.includes('권속이 되었다')));
+  // Can't be won twice.
+  assert.match(swayBlocked(state, world, x) ?? '', /이미/);
+  // Follows the player to the forest.
+  await act(state, world, { type: 'move', to: 'loc-b' });
+  await act(state, world, { type: 'wait', hours: 6 });
+  assert.equal(x.region, 'loc-b');
+  // Joins the player's fight (the player's foe is theirs), and the player's death frees them.
+  p.foes = { day: 0, ids: ['chr-y'] };
+  p.stats.energy = 80;
+  await act(state, world, { type: 'wait', hours: 1 });
+  assert.ok(state.log.some((e) => e.kind === 'combat' && e.actors[0] === 'chr-x'));
+  x.master = PLAYER_ID;
+  (await import('./combat.ts')).die(state, p, state.minutes, '시험');
+  assert.equal(x.master, undefined);
 });
 
 test('NPCs socialising in the same region meet once a day', async () => {

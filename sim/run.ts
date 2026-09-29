@@ -10,6 +10,7 @@ import { eligibleGmEvents, step } from './step.ts';
 import { addFoe, clash } from './combat.ts';
 import { relationsText, remember } from './relations.ts';
 import { castSpell } from './spells.ts';
+import { bindRetainer, swayBlocked } from './retainers.ts';
 import { manaAvailable, planPayment } from './mana.ts';
 import { josa, shortName } from './text.ts';
 import type { ScheduleBlock } from './types.ts';
@@ -29,8 +30,9 @@ export type GmDayInput = {
 export type NarrateInput = { world: World; state: State; entries: LogEntry[] };
 export type InterpretInput = { world: World; state: State; text: string };
 export type ReplyInput = { world: World; state: State; npc: Speaker; say: string };
-// What the NPC says, whether they now attack the player, and what they now think of them.
-export type Reply = { say: string; attack: boolean; impression?: string };
+// What the NPC says, whether they now attack the player or pledge to serve them (become their
+// retainer), and what they now think of them.
+export type Reply = { say: string; attack: boolean; follow?: boolean; impression?: string };
 export type EvadeInput = { world: World; state: State; npc: Speaker; attacker: Actor };
 export type ConverseInput = { world: World; state: State; a: Speaker; b: Speaker };
 // Two NPCs' exchange: the lines, what each now thinks of the other (by id), and who, if
@@ -172,6 +174,8 @@ async function talk(state: State, world: World, p: Actor, npcId: string, say: st
     actors: [npc.id, p.id],
   });
   if (reply?.impression) remember(state.actors[npc.id], p, reply.impression, state.minutes);
+  if (reply?.follow && !reply.attack && !swayBlocked(state, world, state.actors[npc.id]))
+    bindRetainer(state, state.actors[npc.id], p, state.minutes, '설득');
   if (reply?.attack) {
     addFoe(state.actors[npc.id], p.id, state.minutes);
     addLog(state, { kind: 'combat', text: `${josa(name, '이', '가')} 적의를 드러냈다.`, regions: [p.region], actors: [npc.id, p.id] });

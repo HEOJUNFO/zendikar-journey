@@ -5,6 +5,7 @@
 // knocked out for a few hours and the fight is over.
 import { formatClock, gameDay, STEP_MINUTES } from './clock.ts';
 import { remember } from './relations.ts';
+import { masterOf, releaseRetainer, retainersOf } from './retainers.ts';
 import { HUNT_HUNGER, KILL_FEED, KO_ACTIVITY, KO_HOURS } from './rules.ts';
 import { addLog, needsOf, npcDef, present, ptOf, random } from './state.ts';
 import type { Actor, State } from './state.ts';
@@ -40,6 +41,7 @@ export function dealDamage(state: State, a: Actor, amount: number, t: number, ca
 
 export function die(state: State, a: Actor, t: number, cause: string) {
   a.dead = { at: t, cause };
+  for (const r of retainersOf(state, a.id)) releaseRetainer(state, r, `${shortName(a.name)}의 죽음`);
   a.task = undefined;
   a.forced = undefined;
   a.travel = undefined;
@@ -104,6 +106,9 @@ export function clash(state: State, attacker: Actor, defender: Actor, t: number)
   defender.lastClash = t;
   addFoe(defender, attacker.id, t);
   addFoe(attacker, defender.id, t);
+  // Struck by one's own master (or striking them): the bond is broken.
+  if (defender.master === attacker.id) releaseRetainer(state, defender, '주인에게 공격당함');
+  if (attacker.master === defender.id) releaseRetainer(state, attacker, '주인에게 덤빔');
   remember(defender, attacker, `나를 공격했다 (${formatClock(t)})`, t);
   remember(attacker, defender, `내가 공격했다 (${formatClock(t)})`, t);
   // To the death only if the player is in it.
@@ -155,7 +160,10 @@ export function hostileNpcs(state: State, world: World, t: number) {
     if (a.kind === 'player' || a.dead || a.travel || a.boundUntil !== undefined) continue;
     if (a.forced && a.forced.kind !== 'fight') continue; // collapsed
     if (a.lastClash === t) continue; // already fought this hour
-    let foe = present(state, a.region).find((b) => foesOf(a, t).includes(b.id) && !down(b));
+    // Their own foes, and (a retainer) whoever their master is fighting right here.
+    const m = masterOf(state, a);
+    const theirs = [...foesOf(a, t), ...(m && m.region === a.region && !m.travel ? foesOf(m, t) : [])];
+    let foe = present(state, a.region).find((b) => theirs.includes(b.id) && b.id !== a.master && !down(b));
     const hunted = !foe && prey(state, world, a, t);
     if (hunted) {
       foe = hunted;
