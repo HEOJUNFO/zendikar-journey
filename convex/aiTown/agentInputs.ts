@@ -9,6 +9,7 @@ import { Descriptions } from '../../data/characters';
 import { AgentDescription } from './agentDescription';
 import { Agent } from './agent';
 import { scheduleBlock } from '../life/types';
+import { PLACES_BY_ID } from '../../data/places';
 
 export const agentInputs = {
   finishRememberConversation: inputHandler({
@@ -154,6 +155,8 @@ export const agentInputs = {
         description.name,
         description.character,
         description.identity,
+        undefined,
+        description.life && PLACES_BY_ID.get(description.life.home)?.spots,
       );
       const agentId = game.allocId('agents');
       game.world.agents.set(

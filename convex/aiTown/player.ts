@@ -172,6 +172,8 @@ export class Player {
     character: string,
     description: string,
     tokenIdentifier?: string,
+    // Preferred free tiles to spawn on (e.g. an NPC's home), since islands aren't connected.
+    spawnCandidates?: Point[],
   ) {
     if (tokenIdentifier) {
       let numHumans = 0;
@@ -188,8 +190,9 @@ export class Player {
       }
     }
     // The plane is mostly sea, so random probing rarely lands on ground: pick among free tiles.
-    const free = [];
-    for (let x = 0; x < game.worldMap.width; x++) {
+    const preferred = (spawnCandidates ?? []).filter((p) => !blocked(game, now, p));
+    const free = [...preferred];
+    for (let x = 0; !preferred.length && x < game.worldMap.width; x++) {
       for (let y = 0; y < game.worldMap.height; y++) {
         if (!blocked(game, now, { x, y })) free.push({ x, y });
       }
