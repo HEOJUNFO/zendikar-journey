@@ -70,6 +70,7 @@ ${regionList}
 
 Rules:
 - Blocks are in minutes of the day (0 = 00:00, 1440 = 24:00), sorted, non-overlapping, start < end.
+- The world moves in whole hours: start and end are multiples of 60.
 - Cover the whole day from 0 to 1440, including sleep.
 - kind is one of: ${LIFE_KINDS.join(', ')}. Use "social" only when they would seek out other people.
 - Travel between regions takes hours; only change region when there is a reason.

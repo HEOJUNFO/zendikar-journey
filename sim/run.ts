@@ -60,8 +60,11 @@ export async function act(state: State, world: World, input: Action | string, ll
     await prepareDay(state, world, llm);
     const before = state.nextLogId;
     step(state, world);
-    // Something happened right here: stop and let the player decide.
-    const alarm = state.log.some((e) => e.id >= before && e.seen && (e.kind === 'omen' || e.kind === 'event'));
+    // Something is happening right here: stop and let the player decide. News from afar
+    // (world-scope events elsewhere) doesn't interrupt.
+    const alarm = state.log.some(
+      (e) => e.id >= before && (e.kind === 'omen' || e.kind === 'event') && e.regions.includes(p.region),
+    );
     if (alarm && p.task && !p.travel && !p.forced && p.boundUntil === undefined) {
       p.task = undefined;
       addLog(state, { kind: 'system', text: '하던 일을 멈췄다.', regions: [p.region], actors: [p.id] });
