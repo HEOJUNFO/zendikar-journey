@@ -1,6 +1,6 @@
 import type { Actor, State } from '../sim/state.ts';
 import { shortName } from '../sim/text.ts';
-import { MAP_HEIGHT, MAP_WIDTH, region, TERRAINS, travelHours } from '../sim/world.ts';
+import { MAP_HEIGHT, MAP_WIDTH, region, spellColors, TERRAINS, travelHours } from '../sim/world.ts';
 import type { World } from '../sim/world.ts';
 import { isTrap, nodeAt, trapStatus, visibleActors } from './view.ts';
 
@@ -12,10 +12,11 @@ type Props = {
   onSelect: (id: string) => void;
   // Show everyone, even in character mode (the world page).
   all?: boolean;
-  // The admin map: people and traps are drawn named and can be picked (`picked` = their id).
+  // The admin map: people, traps and spells are drawn named and can be picked (`picked` = their id).
   picked?: string | null;
   onPickActor?: (id: string) => void;
   onPickTrap?: (id: string) => void;
+  onPickSpell?: (id: string) => void;
 };
 
 const TRAP_GAP = 2.4;
@@ -41,9 +42,10 @@ function position(world: World, state: State, a: Actor) {
   return { x: from.x + (to.x - from.x) * done, y: from.y + (to.y - from.y) * done, travelling: true };
 }
 
-export function MapView({ world, state, selected, onSelect, all, picked, onPickActor, onPickTrap }: Props) {
+export function MapView({ world, state, selected, onSelect, all, picked, onPickActor, onPickTrap, onPickSpell }: Props) {
   const actors = state ? visibleActors(state, all) : [];
   const traps = onPickTrap ? world.events.filter(isTrap) : [];
+  const spells = onPickSpell ? world.spells : [];
   // Spread actors standing in the same region around its node.
   const slots = new Map<string, number>();
   return (
@@ -133,6 +135,27 @@ export function MapView({ world, state, selected, onSelect, all, picked, onPickA
             <path d={`M${x} ${y - s}L${x + s} ${y}L${x} ${y + s}L${x - s} ${y}Z`} />
             <text x={x} y={y + 0.55} className="map-trap-mark">!</text>
             {picked === ev.id && <circle cx={x} cy={y} r={s + 0.9} className="map-picked" />}
+          </g>
+        );
+      })}
+      {spells.map((sp, i) => {
+        const r = region(world, sp.learnAt);
+        const node = nodeAt(world, r);
+        const n = spells.slice(0, i).filter((x) => x.learnAt === sp.learnAt).length;
+        // Where it is learned: above-left of a region's node; below an area's, after its traps.
+        const [x, y] = r.parent
+          ? [node.x + TRAP_GAP * (traps.filter((ev) => ev.region === r.id).length + n), node.y + TRAP_GAP * 1.4]
+          : [node.x - TRAP_GAP * (n + 1.4), node.y - TRAP_GAP * 1.2];
+        const colors = spellColors(sp);
+        const s = 1.2;
+        return (
+          <g key={sp.id} className={`map-spell map-spell-${colors.length === 1 ? colors[0] : colors.length ? 'multi' : 'C'} map-pick`}
+            {...pickable(() => onPickSpell!(sp.id))}>
+            <title>{`주문: ${sp.name} (${sp.costText})`}</title>
+            <circle cx={x} cy={y} r={s + 1} className="map-hit" />
+            <circle cx={x} cy={y} r={s} />
+            <text x={x} y={y + 0.5} className="map-spell-mark">✦</text>
+            {picked === sp.id && <circle cx={x} cy={y} r={s + 0.9} className="map-picked" />}
           </g>
         );
       })}

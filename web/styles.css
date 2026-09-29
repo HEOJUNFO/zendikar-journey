@@ -681,6 +681,52 @@ header h1 {
   text-anchor: middle;
   pointer-events: none;
 }
+/* A spell, where it is learned, in its mana color. */
+.map-spell circle:not(.map-hit):not(.map-picked) {
+  stroke: #1a1408;
+  stroke-width: 0.25;
+}
+.map-spell-W circle:not(.map-hit):not(.map-picked),
+.spell-W {
+  fill: #f3ecd0;
+  background: #f3ecd0;
+}
+.map-spell-U circle:not(.map-hit):not(.map-picked),
+.spell-U {
+  fill: #5b9bd5;
+  background: #5b9bd5;
+}
+.map-spell-B circle:not(.map-hit):not(.map-picked),
+.spell-B {
+  fill: #9a7bb8;
+  background: #9a7bb8;
+}
+.map-spell-R circle:not(.map-hit):not(.map-picked),
+.spell-R {
+  fill: #e0715a;
+  background: #e0715a;
+}
+.map-spell-G circle:not(.map-hit):not(.map-picked),
+.spell-G {
+  fill: #6bab5c;
+  background: #6bab5c;
+}
+.map-spell-multi circle:not(.map-hit):not(.map-picked),
+.spell-multi {
+  fill: #d9a441;
+  background: #d9a441;
+}
+.map-spell-C circle:not(.map-hit):not(.map-picked),
+.spell-C {
+  fill: #b9b9c4;
+  background: #b9b9c4;
+}
+.map-spell-mark {
+  font: 800 1.5px var(--sans);
+  fill: #1a1408;
+  text-anchor: middle;
+  pointer-events: none;
+}
 .admin-legend {
   display: flex;
   flex-wrap: wrap;
@@ -689,14 +735,19 @@ header h1 {
   margin: 0;
 }
 .dot,
-.diamond {
+.diamond,
+.spell-dot {
   display: inline-block;
   width: 9px;
   height: 9px;
   flex: none;
 }
-.dot {
+.dot,
+.spell-dot {
   border-radius: 50%;
+}
+.spell-dot {
+  border: 1px solid #1a1408;
 }
 .dot-npc {
   background: #f4ecd8;

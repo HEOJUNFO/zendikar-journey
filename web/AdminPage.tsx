@@ -1,22 +1,22 @@
-// The operator's map (#/admin): everyone and every trap on the map, whatever the mode. Click a
-// person, a trap or a land to see all of its state.
+// The operator's map (#/admin): everyone, every trap and every spell on the map, whatever the
+// mode. Click a person, a trap, a spell or a land to see all of its state.
 import { useState } from 'react';
 import { PACE_LABELS } from '../sim/actions.ts';
 import { formatClock, formatTimeOfDay, gameDay, minuteOfDay } from '../sim/clock.ts';
 import { foesOf } from '../sim/combat.ts';
-import { formatMana, manaAvailable, manaCapacity } from '../sim/mana.ts';
+import { COLOR_LABELS, formatMana, manaAvailable, manaCapacity } from '../sim/mana.ts';
 import { needsOf, npcDef } from '../sim/state.ts';
 import type { Actor, LogEntry, State } from '../sim/state.ts';
 import { josa, shortName } from '../sim/text.ts';
 import { currentBlock } from '../sim/types.ts';
-import { ABILITY_LABELS, placeName, region } from '../sim/world.ts';
-import type { Effect, EventDef, World } from '../sim/world.ts';
+import { ABILITY_LABELS, placeName, region, spellColors } from '../sim/world.ts';
+import type { Effect, EventDef, SpellDef, SpellEffect, World } from '../sim/world.ts';
 import { MapView } from './MapView.tsx';
 import { Bar, fighting, ObserverControls, RegionCard, status } from './panels.tsx';
 import { isTrap, trapStatus } from './view.ts';
 import type { TrapStatus } from './view.ts';
 
-type Pick = { kind: 'actor' | 'trap' | 'region'; id: string };
+type Pick = { kind: 'actor' | 'trap' | 'spell' | 'region'; id: string };
 
 type Props = {
   world: World;
@@ -40,10 +40,12 @@ export function AdminPage({ world, state, busy, error, onAdvance }: Props) {
     <main className="admin-layout">
       <section className="pane admin-map-pane">
         <MapView world={world} state={state} selected={regionId} onSelect={(id) => setPick({ kind: 'region', id })} all
-          picked={picked} onPickActor={(id) => setPick({ kind: 'actor', id })} onPickTrap={(id) => setPick({ kind: 'trap', id })} />
+          picked={picked} onPickActor={(id) => setPick({ kind: 'actor', id })} onPickTrap={(id) => setPick({ kind: 'trap', id })}
+          onPickSpell={(id) => setPick({ kind: 'spell', id })} />
         <p className="muted admin-legend">
           <span className="dot dot-npc" /> NPC <span className="dot dot-being" /> GM 존재 <span className="dot dot-player" /> 플레이어
           <span className="diamond diamond-armed" /> 함정 (대기) <span className="diamond diamond-omen" /> 전조 <span className="diamond diamond-cooldown" /> 재발동 대기
+          <span className="spell-dot spell-multi" /> 주문 (배우는 곳, 마나 색)
         </p>
         {error && <p className="error">{error}</p>}
         {busy && <p className="muted working">시간이 흐르는 중…</p>}
@@ -58,8 +60,12 @@ export function AdminPage({ world, state, busy, error, onAdvance }: Props) {
           <TrapDetail world={world} state={state} ev={traps.find((e) => e.id === pick.id)!}
             onRegion={(id) => setPick({ kind: 'region', id })} onActor={(id) => setPick({ kind: 'actor', id })} />
         )}
+        {pick?.kind === 'spell' && world.spells.some((s) => s.id === pick.id) && (
+          <SpellDetail world={world} state={state} sp={world.spells.find((s) => s.id === pick.id)!}
+            onRegion={(id) => setPick({ kind: 'region', id })} onActor={(id) => setPick({ kind: 'actor', id })} />
+        )}
         {regionId && <RegionCard world={world} state={state} regionId={regionId} all />}
-        {!pick && <p className="muted">지도에서 인물, 함정(◆), 땅을 누르면 여기에 자세히 나온다.</p>}
+        {!pick && <p className="muted">지도에서 인물, 함정(◆), 주문(✦), 땅을 누르면 여기에 자세히 나온다.</p>}
         <section className="card">
           <h2>함정 <small>{traps.length}</small></h2>
           {traps.length === 0 && <p className="muted">아직 함정이 없다.</p>}
@@ -70,6 +76,21 @@ export function AdminPage({ world, state, busy, error, onAdvance }: Props) {
                   <span className={`diamond diamond-${trapStatus(state, ev).kind}`} />
                   {ev.name}
                   <small className="muted"> · {placeName(world, region(world, ev.region))} · {statusText(trapStatus(state, ev))}</small>
+                </button>
+              </li>
+            ))}
+          </ul>
+        </section>
+        <section className="card">
+          <h2>주문 <small>{world.spells.length}</small></h2>
+          {world.spells.length === 0 && <p className="muted">아직 주문이 없다.</p>}
+          <ul className="region-list">
+            {world.spells.map((sp) => (
+              <li key={sp.id}>
+                <button className={`ghost${picked === sp.id ? ' on' : ''}`} onClick={() => setPick({ kind: 'spell', id: sp.id })}>
+                  <span className={`spell-dot spell-${spellClass(sp)}`} />
+                  {sp.name}
+                  <small className="muted"> · {sp.costText} · {placeName(world, region(world, sp.learnAt))}</small>
                 </button>
               </li>
             ))}
@@ -310,6 +331,89 @@ function TrapDetail(props: { world: World; state: State | null; ev: EventDef; on
       {state && <RecentLog entries={state.log.filter((e) => (e.kind === 'omen' && e.text === ev.omen) || (e.kind === 'event' && e.text === ev.text))} title="발동 기록" />}
     </section>
   );
+}
+
+// --- a spell -----------------------------------------------------------------------------
+
+function SpellDetail(props: { world: World; state: State | null; sp: SpellDef; onRegion: (id: string) => void; onActor: (id: string) => void }) {
+  const { world, state, sp, onRegion, onActor } = props;
+  const actors = state ? Object.values(state.actors) : [];
+  const knowers = actors.filter((a) => !a.dead && a.spells?.includes(sp.id));
+  const forgot = actors.filter((a) => !a.dead && a.graveyard?.includes(sp.id));
+  const bearers = actors.filter((a) => !a.dead && a.auras?.some((x) => x.spell === sp.id));
+  const people = (list: typeof actors) =>
+    list.map((a, i) => (
+      <span key={a.id}>
+        {i > 0 && ', '}
+        <button className="link" onClick={() => onActor(a.id)}>{shortName(a.name)}</button>
+      </span>
+    ));
+
+  return (
+    <section className="card">
+      <h2>
+        ✦ {sp.name} <small>주문 · {spellColors(sp).map((c) => `${COLOR_LABELS[c]}`).join('')}{spellColors(sp).length ? '' : '무색'}</small>
+      </h2>
+      <p className="muted admin-id">{sp.id}</p>
+      {sp.summary && <p>{sp.summary}</p>}
+      <button className="ghost admin-goto" onClick={() => onRegion(sp.learnAt)}>
+        {placeName(world, region(world, sp.learnAt))} 보기
+      </button>
+      <dl className="admin-facts">
+        <dt>비용</dt>
+        <dd>{sp.costText}</dd>
+        <dt>속도</dt>
+        <dd>{sp.speed === 'instant' ? '순간마법 (언제든)' : '집중마법 (할 일이 없을 때만)'}</dd>
+        <dt>대상</dt>
+        <dd>{sp.target === 'any_here' ? '같은 곳의 누구든 (자신도)' : '같은 곳의 다른 한 사람'}</dd>
+        <dt>배우기</dt>
+        <dd>{placeName(world, region(world, sp.learnAt))}에서 {sp.learnHours}시간</dd>
+        {sp.kicker && (
+          <>
+            <dt>킥커</dt>
+            <dd>권속 {world.lore.find((x) => x.id === sp.kicker!.tap)?.name ?? sp.kicker.tap} 하나를 탭</dd>
+          </>
+        )}
+        <dt>효과</dt>
+        <dd>{sp.effects.map(spellEffectText).join(' · ')}</dd>
+        {state && (
+          <>
+            <dt>아는 이</dt>
+            <dd>{knowers.length ? people(knowers) : '없음'}</dd>
+          </>
+        )}
+        {forgot.length > 0 && (
+          <>
+            <dt>무덤</dt>
+            <dd>{people(forgot)}</dd>
+          </>
+        )}
+        {bearers.length > 0 && (
+          <>
+            <dt>걸린 이</dt>
+            <dd>{people(bearers)}</dd>
+          </>
+        )}
+      </dl>
+      {state && <RecentLog entries={state.log.filter((e) => e.text.includes(sp.name))} />}
+    </section>
+  );
+}
+
+function spellClass(sp: SpellDef) {
+  const colors = spellColors(sp);
+  return colors.length === 1 ? colors[0] : colors.length ? 'multi' : 'C';
+}
+
+function spellEffectText(e: SpellEffect) {
+  switch (e.type) {
+    case 'lose_half_life':
+      return '대상이 생명의 절반(올림)을 잃음';
+    case 'gain_life_lost':
+      return `잃은 만큼 시전자가 생명을 얻음${e.if_kicked ? ' (킥커 시)' : ''}`;
+    case 'aura':
+      return `오라: ${signed(e.pt[0])}/${signed(e.pt[1])}${e.double_life_on_hit ? ', 전투 피해를 주면 조종자의 생명 두 배' : ''}`;
+  }
 }
 
 function RecentLog({ entries, title = '최근 기록' }: { entries: LogEntry[]; title?: string }) {
