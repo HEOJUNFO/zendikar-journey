@@ -61,7 +61,7 @@ export function manaCapacity(state: State, world: World, a: Holder, t?: number):
   for (const id of a.bonds ?? []) {
     const r = world.regions.find((x) => x.id === id);
     const rs = state.regions[id];
-    if (!r || rs?.destroyed || rs?.conditions.some((c) => c.tapped)) continue;
+    if (!r || r.noMana || rs?.destroyed || rs?.conditions.some((c) => c.tapped)) continue;
     if (r.entersTapped && t !== undefined && a.landfalls?.day === gameDay(t) && a.landfalls.regions.includes(id)) continue;
     const sym: ManaSymbol = r.color ?? 'C';
     out[sym] = (out[sym] ?? 0) + 1;

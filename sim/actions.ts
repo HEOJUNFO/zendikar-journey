@@ -6,11 +6,12 @@ import { BOND_HOURS, KIND_EFFECTS } from './rules.ts';
 import { addLog, isPerson, landUnusable, player } from './state.ts';
 import type { State, Task } from './state.ts';
 import { startTravel, travelBlocked } from './step.ts';
-import { bondBlocked } from './abilities.ts';
+import { bondBlocked, fetchBlocked } from './abilities.ts';
 import { CLAIM_HOURS, claimBlocked, itemDef } from './items.ts';
 import { castBlocked, learnBlocked, spellDef } from './spells.ts';
-import { josa, shortName } from './text.ts';
+import { josa, shortName, toward } from './text.ts';
 import { PACES } from './types.ts';
+import { region } from './world.ts';
 import type { World } from './world.ts';
 
 export const ActionSchema = z.discriminatedUnion('type', [
@@ -28,6 +29,8 @@ export const ActionSchema = z.discriminatedUnion('type', [
   z.object({ type: z.literal('cast'), spell: z.string(), to: z.string(), kick: z.boolean().default(false) }),
   // Tame an item that stands here: pay its cost and it becomes yours.
   z.object({ type: z.literal('claim'), item: z.string() }),
+  // Give up a fetch land you hold to seek out a land of its types, from wherever you are.
+  z.object({ type: z.literal('fetch'), from: z.string(), to: z.string() }),
 ]);
 export type Action = z.infer<typeof ActionSchema>;
 
@@ -114,6 +117,14 @@ export function startAction(state: State, world: World, action: Action): string 
       const x = itemDef(world, action.item)!;
       task = { kind: 'claim', activity: `${x.name} 길들이기`, emoji: '🏺', until: until(CLAIM_HOURS), item: x.id };
       text = `${josa(x.name, '을', '를')} 길들인다 (${x.costText}).`;
+      break;
+    }
+    case 'fetch': {
+      const why = fetchBlocked(state, world, p, action.from, action.to);
+      if (why) return why;
+      const [from, to] = [region(world, action.from), region(world, action.to)];
+      task = { kind: 'fetch', activity: `${from.name}에서 길 찾기`, emoji: '🧭', until: until(1), from: from.id, land: to.id };
+      text = `${josa(from.name, '을', '를')} 내어 주고 ${toward(to.name)} 이어지는 길을 찾는다 (생명 ${from.fetch!.life}).`;
       break;
     }
     case 'talk': {

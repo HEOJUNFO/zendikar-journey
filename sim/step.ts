@@ -21,7 +21,7 @@ import {
 import { gainedLifeToday, loseLife } from './life.ts';
 import { addLog, alive, landUnusable, needsOf, npcDef, present, ptOf, random } from './state.ts';
 import { addFoe, dealDamage, hostileNpcs } from './combat.ts';
-import { bondBlocked, bondLand, spawnWild, useAbility } from './abilities.ts';
+import { bondBlocked, bondLand, fetchLand, spawnWild, useAbility } from './abilities.ts';
 import { CLAIM_HOURS, claimBlocked, claimItem, itemsAt } from './items.ts';
 import { learnSpell } from './spells.ts';
 import { masterOf } from './retainers.ts';
@@ -47,6 +47,7 @@ export function step(state: State, world: World) {
       if (a.task!.kind === 'bond') bondLand(state, world, a, t + STEP_MINUTES);
       if (a.task!.kind === 'learn' && a.task!.spell) learnSpell(state, world, a, a.task!.spell, t + STEP_MINUTES);
       if (a.task!.kind === 'claim' && a.task!.item) claimItem(state, world, a, a.task!.item, t + STEP_MINUTES);
+      if (a.task!.kind === 'fetch' && a.task!.from && a.task!.land) fetchLand(state, world, a, a.task!.from, a.task!.land, t + STEP_MINUTES);
       a.task = undefined;
     }
   }
@@ -109,12 +110,17 @@ function gmLayer(state: State, world: World, t: number) {
   }
 
   // Landfall: someone bonded with the region (it came under their control) as this hour began,
-  // and it is at least their Nth land this turn (a land is a region, a turn is a game day).
+  // standing there or from afar (a fetch land), and it is at least their Nth land this turn (a
+  // land is a region, a turn is a game day).
   for (const ev of world.events) {
     if (ev.trigger !== 'landfall' || onCooldown(state, ev, t)) continue;
     if (state.pending.some((p) => p.eventId === ev.id)) continue;
-    const by = present(state, ev.region).filter(
-      (a) => a.landfallAt === t && a.landfalls?.day === gameDay(t) && a.landfalls.regions.length >= (ev.landfalls ?? 1),
+    const by = alive(state).filter(
+      (a) =>
+        a.landfallAt === t &&
+        a.landfalls?.day === gameDay(t) &&
+        a.landfalls.regions.at(-1) === ev.region &&
+        a.landfalls.regions.length >= (ev.landfalls ?? 1),
     );
     if (!by.length) continue;
     // Their lands this turn, latest first: what a land-destroying effect hits.
@@ -328,7 +334,7 @@ function actorHour(state: State, world: World, a: Actor, t: number) {
   const effect =
     task.kind === 'explore' ? EXPLORE_EFFECT
     : task.kind === 'fight' ? FIGHT_EFFECT
-    : KIND_EFFECTS[task.kind === 'travel' || task.kind === 'learn' || task.kind === 'cast' ? 'leisure' : task.kind];
+    : KIND_EFFECTS[task.kind === 'travel' || task.kind === 'learn' || task.kind === 'cast' || task.kind === 'fetch' ? 'leisure' : task.kind];
   applyEffect(a.stats, effect, 60, needs);
   if (needs.includes('hunger') && a.stats.hunger >= STARVING) applyEffect(a.stats, { energy: STARVING_ENERGY }, 60, needs);
   // A beast feeding hunts the land out: it will have to move on.

@@ -12,7 +12,7 @@ import { MAX_TALKS_PER_DAY, usableAbilities } from './run.ts';
 import { eligibleGmEvents, travelBlocked } from './step.ts';
 import { gainLife } from './life.ts';
 import { newState, PLAYER_ID, ptOf, syncWorld } from './state.ts';
-import { bondBlocked, bondLand, useAbility } from './abilities.ts';
+import { bondBlocked, bondLand, fetchTargets, useAbility } from './abilities.ts';
 import { DEPLETED_LABEL } from './rules.ts';
 import { swayBlocked } from './retainers.ts';
 import type { State } from './state.ts';
@@ -907,4 +907,42 @@ test('a refuge: enters tapped (no mana the day it is bonded), gives life on bond
   assert.deepEqual(planPayment({ 'B/R': 1, R: 1 }, cost('{B}{R}')), { R: 1, 'B/R': 1 });
   assert.equal(planPayment({ 'B/R': 1 }, cost('{B}{R}')), null);
   assert.deepEqual(planPayment({ 'B/R': 1, G: 1 }, cost('{1}')), { G: 1 }); // two-color mana kept for last
+});
+
+const mesa: RawEntity = {
+  id: 'loc-mesa',
+  kind: 'location',
+  name: '메사',
+  status: 'canon',
+  map: { x: 12, y: 12, terrain: 'rocky' },
+  sim: { nonbasic: true, no_mana: true, fetch: { types: ['mountain', 'plains'], life: 1 } },
+};
+
+test('a fetch land gives no mana; given up with 1 life, it bonds a mountain or plains from afar as a second landfall', async () => {
+  const world = fixture([mesa]);
+  const state = character(world, 'loc-mesa');
+  const p = state.actors[PLAYER_ID];
+  await act(state, world, { type: 'bond' });
+  assert.deepEqual(manaCapacity(state, world, p, state.minutes), {});
+  // loc-a is grassland (plains), loc-c rocky (mountain); loc-b is a forest, and the mesa itself is no mountain.
+  assert.deepEqual(fetchTargets(state, world, p, 'loc-mesa').map((r) => r.id), ['loc-a', 'loc-c']);
+  assert.match((await act(state, world, { type: 'fetch', from: 'loc-mesa', to: 'loc-b' })).error!, /평원/);
+  p.stats.energy = 50;
+  await act(state, world, { type: 'fetch', from: 'loc-mesa', to: 'loc-c' });
+  assert.equal(p.region, 'loc-mesa'); // never went there
+  assert.deepEqual(p.bonds, ['loc-c']);
+  assert.deepEqual(p.landfalls?.regions, ['loc-mesa', 'loc-c']); // the day's second landfall
+  assert.deepEqual(p.fetched, ['loc-c']);
+  assert.equal(p.stats.energy, 39); // -10 for the life, -1 for the hour
+  assert.deepEqual(manaCapacity(state, world, p, state.minutes), { R: 1 });
+  assert.match((await act(state, world, { type: 'fetch', from: 'loc-mesa', to: 'loc-a' })).error!, /유대를 맺고 있어야/);
+});
+
+test('a landfall trap answers a land bonded from afar', async () => {
+  const world = fixture([mesa, { ...trap, sim: { ...(trap.sim as object), region: 'loc-c' } }]);
+  const state = character(world, 'loc-mesa');
+  await act(state, world, { type: 'bond' });
+  await act(state, world, { type: 'fetch', from: 'loc-mesa', to: 'loc-c' });
+  await act(state, world, { type: 'wait', hours: 2 });
+  assert.ok(texts(state).includes('땅이 울린다.')); // the second landfall of the day, on loc-c
 });

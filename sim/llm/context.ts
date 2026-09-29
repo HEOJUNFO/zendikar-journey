@@ -21,7 +21,7 @@ export function whereaboutsText(world: World, state: State) {
         ...(state.regions[r.id]?.destroyed ? ['부서진 땅'] : []),
         ...(state.regions[r.id]?.conditions.map((c) => c.label) ?? []),
       ];
-      const land = `${r.color ? `${manaLabel(r.color)}색` : '무색'} 땅${r.entersTapped ? ', 유대 맺은 날은 마나 없음' : ''}${r.onBond.map((x) => `, 유대 맺으면 생명 ${x.amount}`).join('')}`;
+      const land = `${r.noMana ? '마나 없는' : r.color ? `${manaLabel(r.color)}색` : '무색'} 땅${r.entersTapped ? ', 유대 맺은 날은 마나 없음' : ''}${r.onBond.map((x) => `, 유대 맺으면 생명 ${x.amount}`).join('')}`;
       return `- ${r.id} ${placeName(world, r)} (${land}): ${r.summary}${conds.length ? ` [${conds.join(', ')}]` : ''}${here.length ? ` — ${here.join(', ')}` : ''}`;
     })
     .join('\n');

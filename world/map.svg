@@ -11,4 +11,7 @@
   <g><circle cx="760" cy="340" r="26" fill="#b5462c" stroke="#f4ecd8" stroke-width="3"/>
     <text x="760" y="388" text-anchor="middle" class="name">아쿰</text>
     <text x="760" y="406" text-anchor="middle" class="terrain">화산 지대</text></g>
+  <g><circle cx="620" cy="400" r="26" fill="#8a8173" stroke="#f4ecd8" stroke-width="3"/>
+    <text x="620" y="448" text-anchor="middle" class="name">메마른 메사</text>
+    <text x="620" y="466" text-anchor="middle" class="terrain">바위 지대</text></g>
 </svg>

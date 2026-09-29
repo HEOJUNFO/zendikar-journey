@@ -6,16 +6,16 @@ import { formatClock, formatTimeOfDay, gameDay, minuteOfDay } from '../sim/clock
 import { isPerson, needsOf, player, present, ptOf } from '../sim/state.ts';
 import { woundsOf } from '../sim/combat.ts';
 import { formatMana, manaAvailable, manaCapacity, manaLabel } from '../sim/mana.ts';
-import { bondBlocked } from '../sim/abilities.ts';
+import { bondBlocked, fetchTargets } from '../sim/abilities.ts';
 import { BOND_HOURS } from '../sim/actions.ts';
 import { CLAIM_HOURS, claimBlocked, itemsAt, itemsOf } from '../sim/items.ts';
 import { castBlocked, harmful, learnBlocked, spellsTaughtAt } from '../sim/spells.ts';
 import type { Actor, LogEntry, State } from '../sim/state.ts';
 import { travelBlocked } from '../sim/step.ts';
-import { shortName } from '../sim/text.ts';
+import { josa, shortName } from '../sim/text.ts';
 import { PACES } from '../sim/types.ts';
 import type { Pace } from '../sim/types.ts';
-import { areasOf, canStay, hasPowers, placeName, region, TERRAINS, travelHours } from '../sim/world.ts';
+import { areasOf, canStay, hasPowers, LAND_TYPE_LABELS, placeName, region, TERRAINS, travelHours } from '../sim/world.ts';
 import type { World } from '../sim/world.ts';
 import type { NewGameInput } from './api.ts';
 import { visibleActors, visibleLog } from './view.ts';
@@ -133,13 +133,17 @@ export function RegionCard(props: {
   return (
     <section className="card">
       <h2>
-        {r.name} <small>{t.label}{t.sea ? '' : ` · ${r.color ? `${manaLabel(r.color)}색` : '무색'} 땅`}</small>
+        {r.name} <small>{t.label}{t.sea ? '' : ` · ${r.noMana ? '마나 없는' : r.color ? `${manaLabel(r.color)}색` : '무색'} 땅`}</small>
       </h2>
       {parent && <p className="muted">{parent.name} 안의 구역</p>}
       <p>{r.summary}</p>
-      {(r.entersTapped || r.onBond.length > 0) && (
+      {(r.entersTapped || r.onBond.length > 0 || r.fetch) && (
         <p className="muted">
-          {[r.entersTapped && '유대를 맺은 날은 마나를 내지 않음', ...r.onBond.map((x) => `유대를 맺으면 생명 ${x.amount}`)].filter(Boolean).join(' · ')}
+          {[
+            r.entersTapped && '유대를 맺은 날은 마나를 내지 않음',
+            ...r.onBond.map((x) => `유대를 맺으면 생명 ${x.amount}`),
+            r.fetch && `내어 주면 ${r.fetch.types.map((x) => LAND_TYPE_LABELS[x]).join('·')} 땅 하나와 멀리서 유대 (생명 ${r.fetch.life})`,
+          ].filter(Boolean).join(' · ')}
         </p>
       )}
       {areas.length > 0 && (
@@ -409,6 +413,19 @@ export function CharacterControls(props: {
           기다리기
         </button>
       </div>
+      {world.regions
+        .filter((r) => r.fetch && p.bonds?.includes(r.id))
+        .map((r) => (
+          <div key={r.id} className="row">
+            <span className="muted">🧭 {josa(r.name, '을', '를')} 내어 주고 (생명 {r.fetch!.life}):</span>
+            {fetchTargets(state, world, p, r.id).map((to) => (
+              <button key={to.id} disabled={busy || !!stuck} onClick={() => onAct({ type: 'fetch', from: r.id, to: to.id })}>
+                {placeName(world, to)}
+              </button>
+            ))}
+            {fetchTargets(state, world, p, r.id).length === 0 && <span className="muted">찾을 땅이 없다</span>}
+          </div>
+        ))}
       {people.length > 0 && (
         <form
           className="row"

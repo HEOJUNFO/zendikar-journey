@@ -37,16 +37,22 @@ type TerrainInfo = {
   sea?: boolean;
   // Needed to get in or out (no ships, bridges or lifts yet).
   requires?: Ability;
+  // The basic land type a land of this terrain has (MTG's Plains, Mountain...), unless it is a
+  // named land card of its own (`sim.nonbasic`).
+  type?: LandType;
 };
+export const LAND_TYPES = ['plains', 'island', 'swamp', 'mountain', 'forest'] as const;
+export type LandType = (typeof LAND_TYPES)[number];
+export const LAND_TYPE_LABELS: Record<LandType, string> = { plains: '평원', island: '섬', swamp: '늪', mountain: '산', forest: '숲' };
 export const TERRAINS: Record<Terrain, TerrainInfo> = {
-  grassland: { label: '초원', color: '#8fb35a', mana: 'W' },
-  forest: { label: '숲', color: '#3f7a3a', mana: 'G' },
-  rocky: { label: '바위 지대', color: '#8a8173', mana: 'R' },
-  beach: { label: '해변', color: '#d9c38a', mana: 'U' },
+  grassland: { label: '초원', color: '#8fb35a', mana: 'W', type: 'plains' },
+  forest: { label: '숲', color: '#3f7a3a', mana: 'G', type: 'forest' },
+  rocky: { label: '바위 지대', color: '#8a8173', mana: 'R', type: 'mountain' },
+  beach: { label: '해변', color: '#d9c38a', mana: 'U', type: 'island' },
   settlement: { label: '정착지', color: '#b08850', mana: null },
   sky: { label: '공중섬', color: '#b9c8ea', mana: 'W', requires: 'fly' },
-  volcanic: { label: '화산 지대', color: '#b5462c', mana: 'R' },
-  swamp: { label: '늪', color: '#4f4a5e', mana: 'B' },
+  volcanic: { label: '화산 지대', color: '#b5462c', mana: 'R', type: 'mountain' },
+  swamp: { label: '늪', color: '#4f4a5e', mana: 'B', type: 'swamp' },
   deepsea: { label: '심해', color: '#1d3b66', mana: 'U', sea: true },
 };
 
@@ -59,7 +65,15 @@ const LandColor = z.union([z.enum([...COLORS, 'C']), z.tuple([z.enum(COLORS), z.
 // What a land does of its own (a location's `sim`): "enters tapped" (bonded with, it gives no
 // mana that day) and what bonding with it brings ("When this land enters, you gain 1 life").
 export const LandSimSchema = z.strictObject({
+  // A named land card: no basic land type, whatever its terrain.
+  nonbasic: z.boolean().default(false),
+  // It gives no mana at all (e.g. a fetch land).
+  no_mana: z.boolean().default(false),
   enters_tapped: z.boolean().default(false),
+  // "{T}, Pay N life, Sacrifice this land: Search your library for a <type> or <type> card, put
+  // it onto the battlefield": whoever holds it gives it up and N life, and bonds with a land of
+  // one of these types they don't hold yet, from wherever they are.
+  fetch: z.strictObject({ types: z.array(z.enum(LAND_TYPES)).min(1), life: z.number().int().min(0).default(0) }).optional(),
   on_bond: z.array(z.discriminatedUnion('type', [z.strictObject({ type: z.literal('gain_life'), amount: z.number().int().positive() })])).default([]),
 });
 export type BondEffect = z.infer<typeof LandSimSchema>['on_bond'][number];
@@ -317,6 +331,9 @@ export type Region = {
   entersTapped: boolean;
   // What bonding with it brings.
   onBond: BondEffect[];
+  nonbasic: boolean;
+  noMana: boolean;
+  fetch?: { types: LandType[]; life: number };
   // An area inside this region (its x, y are the region's). Areas are lands of their own:
   // people meet, bond, and get hit by events there, but an event on the region reaches them.
   parent?: string;
@@ -445,6 +462,9 @@ export function buildWorld(entities: RawEntity[]): { world: World; errors: strin
           color: c === 'C' ? null : Array.isArray(c) ? (`${c[0]}/${c[1]}` as Hybrid) : (c ?? TERRAINS[map.data.terrain].mana),
           entersTapped: land.data?.enters_tapped ?? false,
           onBond: land.data?.on_bond ?? [],
+          nonbasic: land.data?.nonbasic ?? false,
+          noMana: land.data?.no_mana ?? false,
+          fetch: land.data?.fetch,
         });
       }
     }
@@ -602,6 +622,12 @@ export function travelHours(a: Region, b: Region) {
   if (home(a) === home(b)) return 1;
   const road = Math.max(1, Math.ceil(distance(a, b) / TRAVEL_UNITS_PER_HOUR));
   return road + (a.parent ? 1 : 0) + (b.parent ? 1 : 0);
+}
+
+// A land's basic land types (none for a named land card, or a sea).
+export function landTypes(r: Region): LandType[] {
+  const type = TERRAINS[r.terrain].type;
+  return r.nonbasic || !type ? [] : [type];
 }
 
 // Whether someone with these abilities can be in a region at all. The sea is for those who

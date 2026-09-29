@@ -12,6 +12,7 @@ links:
   - { to: law-life, rel: 들어서면 생명 }
 map: { in: loc-akoum, terrain: settlement, color: [B, R] }
 sim:
+  nonbasic: true                          # 이름 있는 대지: 기본 대지 종류가 없다
   enters_tapped: true                     # [카드] 탭된 채 들어온다
   on_bond:
     - { type: gain_life, amount: 1 }      # [카드] 들어올 때 생명 1

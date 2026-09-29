@@ -7,7 +7,7 @@ import { spellColors } from './world.ts';
 import type { Ability, NpcDef, Pt, Speaker, World } from './world.ts';
 import type { Mana } from './mana.ts';
 
-export type TaskKind = LifeKind | 'explore' | 'travel' | 'fight' | 'bond' | 'learn' | 'cast';
+export type TaskKind = LifeKind | 'explore' | 'travel' | 'fight' | 'bond' | 'learn' | 'cast' | 'fetch';
 
 export type Task = {
   kind: TaskKind;
@@ -19,6 +19,9 @@ export type Task = {
   spell?: string;
   // claim: the item being tamed.
   item?: string;
+  // fetch: the land given up, and the land sought.
+  from?: string;
+  land?: string;
 };
 
 export type Actor = {
@@ -52,6 +55,9 @@ export type Actor = {
   foes?: { day: number; ids: string[] };
   // Whom they serve: they are that one's retainer (sim/retainers.ts).
   master?: string;
+  // Lands they sought out with a fetch land: gone from their "library". Kept for when
+  // exploring can turn things up (fewer empty searches, as MTG's deck thinning).
+  fetched?: string[];
   // Spells they know (world/entities/spells): their hand.
   spells?: string[];
   // Spells they let go of (discarded): their graveyard.

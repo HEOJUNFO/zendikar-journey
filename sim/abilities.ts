@@ -3,13 +3,13 @@ import { gameDay, untapTime } from './clock.ts';
 import { dealDamage, die, leavePlane } from './combat.ts';
 import { manaAvailable, payMana, planPayment } from './mana.ts';
 import { itemsOnLandfall } from './items.ts';
-import { gainLife } from './life.ts';
+import { gainLife, loseLife } from './life.ts';
 import { DEPLETED_LABEL } from './rules.ts';
 import { castSpell, spellDef } from './spells.ts';
 import { addLog, npcDef, present, ptOf, random } from './state.ts';
 import type { Actor, State } from './state.ts';
-import { josa, shortName } from './text.ts';
-import { region, spellColors } from './world.ts';
+import { josa, shortName, toward } from './text.ts';
+import { LAND_TYPE_LABELS, landTypes, region, spellColors } from './world.ts';
 import type { ActivatedAbility, World } from './world.ts';
 
 // Why `a` can't bond with the land they stand on now, or null. One land per turn, as one
@@ -24,9 +24,10 @@ export function bondBlocked(state: State, world: World, a: Actor, t: number): st
   return null;
 }
 
-// Landfall: the land comes under their control.
-export function bondLand(state: State, world: World, a: Actor, t: number) {
-  const r = region(world, a.region);
+// Landfall: the land comes under their control (the one they stand on, or one sought out from
+// afar with a fetch land).
+export function bondLand(state: State, world: World, a: Actor, t: number, regionId = a.region) {
+  const r = region(world, regionId);
   const def = npcDef(state, world, a.id);
   // A beast holds only its latest hunting ground.
   a.bonds = def?.beast ? [r.id] : [...(a.bonds ?? []), r.id];
@@ -57,6 +58,50 @@ export function bondLand(state: State, world: World, a: Actor, t: number) {
     addLog(state, { kind: 'status', text: `${josa(r.name, '은', '는')} 탭된 채 들어왔다. 오늘은 마나를 내지 않는다.`, regions: [r.id], actors: [a.id], t });
   for (const eff of r.onBond) if (eff.type === 'gain_life') gainLife(state, a, eff.amount, t, r.name);
   itemsOnLandfall(state, world, a, t);
+}
+
+// Lands `a` could seek out with the fetch land `fromId`: of its types, not held, not destroyed.
+export function fetchTargets(state: State, world: World, a: Actor, fromId: string) {
+  const from = world.regions.find((r) => r.id === fromId);
+  if (!from?.fetch) return [];
+  return world.regions.filter(
+    (r) => r.id !== from.id && !a.bonds?.includes(r.id) && !state.regions[r.id]?.destroyed && landTypes(r).some((x) => from.fetch!.types.includes(x)),
+  );
+}
+
+// Why `a` can't give up `fromId` to seek out `toId` now, or null.
+export function fetchBlocked(state: State, world: World, a: Actor, fromId: string, toId: string): string | null {
+  const from = world.regions.find((r) => r.id === fromId);
+  if (!from?.fetch) return '그런 땅은 없다.';
+  if (!a.bonds?.includes(from.id)) return `${josa(from.name, '과', '와')} 유대를 맺고 있어야 한다.`;
+  const rs = state.regions[from.id];
+  if (rs?.destroyed || rs?.conditions.some((c) => c.tapped)) return `${josa(from.name, '은', '는')} 지금 쓸 수 없다.`;
+  if (!fetchTargets(state, world, a, from.id).some((r) => r.id === toId))
+    return `${from.fetch.types.map((x) => LAND_TYPE_LABELS[x]).join('이나 ')} 가운데 아직 유대가 없는 땅이어야 한다.`;
+  return null;
+}
+
+// "{T}, Pay N life, Sacrifice this land: Search your library for a <type> card, put it onto
+// the battlefield": they lose N life and their bond with the fetch land, and bond with the
+// land sought from wherever they are. Not their land for the day: a landfall of its own.
+export function fetchLand(state: State, world: World, a: Actor, fromId: string, toId: string, t: number) {
+  const why = fetchBlocked(state, world, a, fromId, toId);
+  if (why) {
+    addLog(state, { kind: 'status', text: `${josa(shortName(a.name), '은', '는')} 길을 찾지 못했다: ${why}`, regions: [a.region], actors: [a.id], t });
+    return;
+  }
+  const from = region(world, fromId);
+  if (from.fetch!.life) loseLife(state, a, from.fetch!.life, from.name);
+  a.bonds = a.bonds!.filter((id) => id !== from.id);
+  addLog(state, {
+    kind: 'status',
+    text: `${josa(shortName(a.name), '이', '가')} ${josa(from.name, '을', '를')} 내어 주고 ${toward(region(world, toId).name)} 이어지는 길을 찾았다.`,
+    regions: [a.region, toId],
+    actors: [a.id],
+    t,
+  });
+  a.fetched = [...(a.fetched ?? []), toId];
+  bondLand(state, world, a, t, toId);
 }
 
 // Why they can't use this ability now (loyalty, tap, mana), or null. The target is checked
