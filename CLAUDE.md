@@ -19,7 +19,7 @@ Node 24 가 `.ts` 를 바로 실행한다 (type stripping). 그래서 import 에
 
 1. 카드 원문을 `world/cards/<세트>-<번호>.md` 에 기록 (`world/_templates/card.md`).
 2. 해석과 반영 계획을 사용자에게 먼저 보여주고 확인받는다. 게임에서 어떻게 움직일지(`map`, `sim`)도 계획에 넣는다. 해석 항목마다 출처([카드]/[그림]/[배경]/[가공])를 붙인다. 일러스트는 `_queue.json` 의 `image` 를 받아 직접 본다.
-3. 확인되면 `world/entities/` 에 요소를 만들거나 보강하고, 카드의 `entities` 와 요소의 `sources` 를 서로 연결한다.
+3. 확인되면 `world/entities/` 에 요소를 만들거나 보강하고, 카드의 `entities` 와 요소의 `sources` 를 서로 연결한다. `world/card-effects.md`(카드 효과 ↔ 게임 구현 비교)에 그 카드의 절을 더한다.
 4. 지역이 생겼으면 `npm run world:map`. 그리고 `npm run world:check` 통과시킨다.
 5. 기존 설정과 연결되는 점, 부딪히는 점을 짚는다.
 6. 카드 하나당 커밋 하나를 만들고 (`카드 ZEN-xxx: <이름>`) 곧바로 `origin main` 으로 푸시한다.
