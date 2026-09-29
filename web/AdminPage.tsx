@@ -164,6 +164,20 @@ function ActorDetail({ world, state, a, onRegion }: { world: World; state: State
             <dd>{def.goal}</dd>
           </>
         )}
+        {a.relations && Object.keys(a.relations).length > 0 && (
+          <>
+            <dt>아는 이</dt>
+            <dd>
+              {Object.values(a.relations)
+                .sort((x, y) => y.t - x.t)
+                .map((r) => (
+                  <div key={r.name + r.t}>
+                    <b>{r.name}</b>: {r.text} <small className="muted">({formatClock(r.t)})</small>
+                  </div>
+                ))}
+            </dd>
+          </>
+        )}
         {a.background && (
           <>
             <dt>배경</dt>

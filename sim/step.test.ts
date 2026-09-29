@@ -4,9 +4,9 @@ import { formatClock } from './clock.ts';
 import { loadWorld } from './load.ts';
 import { act, advance } from './run.ts';
 import type { Llm } from './run.ts';
-import { woundsOf } from './combat.ts';
+import { knockedOut, woundsOf } from './combat.ts';
 import { manaAvailable, manaCapacity } from './mana.ts';
-import { usableAbilities } from './run.ts';
+import { MAX_TALKS_PER_DAY, usableAbilities } from './run.ts';
 import { eligibleGmEvents } from './step.ts';
 import { gainLife } from './life.ts';
 import { newState, PLAYER_ID, ptOf, syncWorld } from './state.ts';
@@ -473,9 +473,11 @@ test('a hungry beast hunts the weakest one with it, feeds on a kill, and trample
   assert.ok(state.actors[PLAYER_ID].dead); // the weakest: 1/1
   assert.ok(texts(state).some((t) => t.includes('먹어치웠다')));
   assert.ok(b.stats.hunger < 30);
-  // 8 power against 1 toughness: 7 more runs on into the only other one there (1/3).
+  // 8 power against 1 toughness: 7 more runs on into the only other one there (1/3), an NPC,
+  // who is knocked out rather than killed (no player between them).
   assert.ok(texts(state).some((t) => t.includes('돌진이')));
-  assert.ok(state.actors['chr-x'].dead);
+  assert.equal(state.actors['chr-x'].dead, undefined);
+  assert.ok(knockedOut(state.actors['chr-x']));
 });
 
 test('a beast only growls when spoken to', async () => {
@@ -484,6 +486,53 @@ test('a beast only growls when spoken to', async () => {
   await act(state, world, { type: 'talk', to: 'cre-b', say: '안녕' }, { reply: async () => ({ say: '말한다', attack: false }) });
   assert.ok(texts(state).some((t) => t.includes('으르렁')));
   assert.ok(!texts(state).some((t) => t.includes('말한다')));
+});
+
+test('NPCs who meet talk, remember each other, and may fall out; their fight knocks out, not kills', async () => {
+  const world = fixture([npc('chr-x', npcSim('loc-a', 'social', [3, 3])), npc('chr-y', npcSim('loc-a', 'social', [1, 2]))]);
+  const state = newState(world, { seed: 3, mode: 'observer' });
+  let calls = 0;
+  const converse: Llm['converse'] = async ({ a, b }) => {
+    calls++;
+    return {
+      lines: [
+        { by: a.id, say: '비켜라.' },
+        { by: b.id, say: '싫다.' },
+      ],
+      impressions: { [a.id]: '건방지다', [b.id]: '거칠다' },
+      attacker: a.id,
+    };
+  };
+  await advance(state, world, 3, { converse });
+  assert.equal(calls, 1); // they meet once a day
+  assert.ok(texts(state).some((t) => t.includes('“비켜라.”')));
+  const [x, y] = [state.actors['chr-x'], state.actors['chr-y']];
+  assert.ok(x.relations?.['chr-y'] && y.relations?.['chr-x']);
+  assert.ok(texts(state).some((t) => t.includes('적의를 드러냈다')));
+  assert.equal(y.dead, undefined);
+  assert.ok(knockedOut(y));
+  assert.ok(texts(state).some((t) => t.includes('기절했다')));
+  assert.match(y.relations!['chr-x'].text, /나를 공격했다/);
+  // The fight is over once one is down.
+  const fights = state.log.filter((e) => e.kind === 'combat' && e.text.includes('공격했다')).length;
+  await advance(state, world, 2, { converse });
+  assert.equal(state.log.filter((e) => e.kind === 'combat' && e.text.includes('공격했다')).length, fights);
+});
+
+test('NPC conversations are capped per day', async () => {
+  const people = ['a', 'b', 'c', 'd', 'e', 'f'].map((s) => npc(`chr-${s}`, npcSim('loc-a')));
+  const world = fixture(people);
+  const state = newState(world, { seed: 3, mode: 'observer' });
+  let calls = 0;
+  await advance(state, world, 1, { converse: async () => (calls++, null) });
+  assert.equal(calls, MAX_TALKS_PER_DAY);
+});
+
+test('an NPC remembers what it thinks of the player', async () => {
+  const world = fixture([npc('chr-x', npcSim('loc-a'))]);
+  const state = character(world, 'loc-a');
+  await act(state, world, { type: 'talk', to: 'chr-x', say: '안녕' }, { reply: async () => ({ say: '반갑소.', attack: false, impression: '예의 바른 떠돌이' }) });
+  assert.equal(state.actors['chr-x'].relations?.[PLAYER_ID]?.text, '예의 바른 떠돌이');
 });
 
 test('NPCs socialising in the same region meet once a day', async () => {

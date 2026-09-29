@@ -5,9 +5,10 @@ import { gmDay } from './gm.ts';
 import { interpret } from './interpret.ts';
 import { narrate } from './narrate.ts';
 import { planDay } from './planner.ts';
+import { converse } from './converse.ts';
 import { evade, reply } from './reply.ts';
 
 export function createLlm(): Required<Llm> {
   getHostedChat(); // fail early on a missing key
-  return { planDay, gmDay, narrate, interpret, reply, evade };
+  return { planDay, gmDay, narrate, interpret, reply, evade, converse };
 }

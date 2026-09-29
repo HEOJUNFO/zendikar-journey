@@ -8,8 +8,9 @@ import { shortName } from '../text.ts';
 import { region } from '../world.ts';
 import { chatCompletion, extractJson } from './chat.ts';
 import { loreText, playerText } from './context.ts';
+import { relationsText, relationTo } from '../relations.ts';
 
-const ReplySchema = z.object({ say: z.string().min(1), attack: z.boolean().default(false) });
+const ReplySchema = z.object({ say: z.string().min(1), attack: z.boolean().default(false), impression: z.string().optional() });
 
 export async function reply({ world, state, npc, say }: ReplyInput): Promise<Reply | null> {
   const p = player(state)!;
@@ -30,7 +31,7 @@ Who you are: ${npc.persona}
 Your goal: ${npc.goal}
 Your role: ${npc.role}
 Your power/toughness is ${ptOf(state.actors[npc.id]).join('/')}; theirs is ${ptOf(p).join('/')}. Fights here are deadly.
-Answer with JSON only: {"say": "<your spoken words in Korean, 1 to 3 sentences, no name prefix or narration>", "attack": <true only if, in character, you now attack them>}`,
+Answer with JSON only: {"say": "<your spoken words in Korean, 1 to 3 sentences, no name prefix or narration>", "attack": <true only if, in character, you now attack them>, "impression": "<Korean, one short line: what you now think of them>"}`,
       },
       {
         role: 'user',
@@ -40,7 +41,8 @@ ${loreText(world)}
 Now: ${formatClock(state.minutes)}, in ${region(world, me.region).name}. You are doing: ${me.task?.activity ?? '(nothing)'}.
 ${news.length ? `Lately:\n${news.map((n) => `- ${n}`).join('\n')}\n` : ''}
 The one speaking to you: ${playerText(state)}
-
+What you think of them: ${relationTo(me, p.id) ?? '(you have not met before)'}
+${relationsText(me).length ? `Others you know:\n${relationsText(me).join('\n')}\n` : ''}
 Conversation so far:
 ${history.join('\n')}
 
@@ -55,7 +57,7 @@ Reply as ${name} to: ${say}`,
     return null;
   }
   const text = parsed.data.say.trim().replace(/^["“”']+|["“”']+$/g, '').replace(new RegExp(`^${name}\\s*:\\s*`), '');
-  return text ? { say: text, attack: parsed.data.attack } : null;
+  return text ? { say: text, attack: parsed.data.attack, impression: parsed.data.impression?.trim() || undefined } : null;
 }
 
 // Attacked by someone who can't fly: take to the air, or stand and fight?

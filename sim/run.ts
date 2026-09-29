@@ -8,6 +8,7 @@ import { addLog, npcDef, player, speakerDef } from './state.ts';
 import type { Actor, GmPlan, LogEntry, State } from './state.ts';
 import { eligibleGmEvents, step } from './step.ts';
 import { addFoe, clash } from './combat.ts';
+import { relationsText, remember } from './relations.ts';
 import { manaAvailable, planPayment } from './mana.ts';
 import { josa, shortName } from './text.ts';
 import type { ScheduleBlock } from './types.ts';
@@ -27,9 +28,13 @@ export type GmDayInput = {
 export type NarrateInput = { world: World; state: State; entries: LogEntry[] };
 export type InterpretInput = { world: World; state: State; text: string };
 export type ReplyInput = { world: World; state: State; npc: Speaker; say: string };
-// What the NPC says, and whether they now attack the player.
-export type Reply = { say: string; attack: boolean };
+// What the NPC says, whether they now attack the player, and what they now think of them.
+export type Reply = { say: string; attack: boolean; impression?: string };
 export type EvadeInput = { world: World; state: State; npc: Speaker; attacker: Actor };
+export type ConverseInput = { world: World; state: State; a: Speaker; b: Speaker };
+// Two NPCs' exchange: the lines, what each now thinks of the other (by id), and who, if
+// anyone, now attacks the other.
+export type Conversation = { lines: { by: string; say: string }[]; impressions: Record<string, string>; attacker: string | null };
 
 export type Llm = {
   planDay?: (input: PlanDayInput) => Promise<ScheduleBlock[] | null>;
@@ -39,7 +44,11 @@ export type Llm = {
   reply?: (input: ReplyInput) => Promise<Reply | null>;
   // A flyer attacked by someone who can't fly: fly off (true) or stand and fight.
   evade?: (input: EvadeInput) => Promise<boolean>;
+  converse?: (input: ConverseInput) => Promise<Conversation | null>;
 };
+
+// NPC conversations written per game day at most (each is one LLM call).
+export const MAX_TALKS_PER_DAY = 6;
 
 // Longest a single player action may run before control comes back.
 const MAX_ACT_HOURS = 48;
@@ -50,7 +59,9 @@ export async function advance(state: State, world: World, hours: number, llm: Ll
   const firstId = state.nextLogId;
   for (let i = 0; i < hours; i++) {
     await prepareDay(state, world, llm);
+    const before = state.nextLogId;
     step(state, world);
+    await conversations(state, world, before, llm);
   }
   await narrate(state, world, firstId, llm);
   return { entries: state.log.filter((e) => e.id >= firstId) };
@@ -76,6 +87,7 @@ export async function act(state: State, world: World, input: Action | string, ll
     await prepareDay(state, world, llm);
     const before = state.nextLogId;
     step(state, world);
+    await conversations(state, world, before, llm);
     // Something is happening right here: stop and let the player decide. News from afar
     // (world-scope events elsewhere) doesn't interrupt.
     const alarm = state.log.some(
@@ -88,6 +100,46 @@ export async function act(state: State, world: World, input: Action | string, ll
   }
   await narrate(state, world, firstId, llm);
   return { entries: state.log.filter((e) => e.id >= firstId) };
+}
+
+// NPCs who met this hour talk (step.ts logs the meeting; the words need the LLM). What they
+// think of each other is remembered, and one may turn on the other: they fight next hour.
+async function conversations(state: State, world: World, since: number, llm: Llm) {
+  if (!llm.converse) return;
+  const day = gameDay(state.minutes);
+  const met = state.log.filter((e) => e.id >= since && e.kind === 'meet' && e.actors.length === 2);
+  for (const m of met) {
+    if (state.talks?.day !== day) state.talks = { day, count: 0 };
+    if (state.talks.count >= MAX_TALKS_PER_DAY) return;
+    const [x, y] = m.actors.map((id) => state.actors[id]);
+    if (!x || !y || x.dead || y.dead || npcDef(state, world, x.id)?.beast || npcDef(state, world, y.id)?.beast) continue;
+    const [a, b] = [speakerDef(state, world, x.id), speakerDef(state, world, y.id)];
+    if (!a || !b) continue;
+    state.talks.count++;
+    let talk: Conversation | null = null;
+    try {
+      talk = await llm.converse({ world, state, a, b });
+    } catch (e) {
+      console.warn(`converse ${x.id}/${y.id} failed:`, e);
+    }
+    if (!talk) continue;
+    for (const l of talk.lines) {
+      const by = l.by === x.id ? x : y;
+      addLog(state, { kind: 'speech', text: `${shortName(by.name)}: “${l.say}”`, regions: [x.region], actors: [x.id, y.id] });
+    }
+    if (talk.impressions[x.id]) remember(x, y, talk.impressions[x.id], state.minutes);
+    if (talk.impressions[y.id]) remember(y, x, talk.impressions[y.id], state.minutes);
+    if (talk.attacker === x.id || talk.attacker === y.id) {
+      const [from, to] = talk.attacker === x.id ? [x, y] : [y, x];
+      addFoe(from, to.id, state.minutes);
+      addLog(state, {
+        kind: 'combat',
+        text: `${josa(shortName(from.name), '이', '가')} ${shortName(to.name)}에게 적의를 드러냈다.`,
+        regions: [x.region],
+        actors: [from.id, to.id],
+      });
+    }
+  }
 }
 
 function busy(p: Actor) {
@@ -117,6 +169,7 @@ async function talk(state: State, world: World, p: Actor, npcId: string, say: st
     regions: [p.region],
     actors: [npc.id, p.id],
   });
+  if (reply?.impression) remember(state.actors[npc.id], p, reply.impression, state.minutes);
   if (reply?.attack) {
     addFoe(state.actors[npc.id], p.id, state.minutes);
     addLog(state, { kind: 'combat', text: `${josa(name, '이', '가')} 적의를 드러냈다.`, regions: [p.region], actors: [npc.id, p.id] });
@@ -175,6 +228,7 @@ async function prepareDay(state: State, world: World, llm: Llm) {
             stats: a.stats,
             needs: npc.needs,
             routine: npc.routine,
+            relations: relationsText(a),
             regions: world.regions.filter((r) => canStay(r, npc.abilities)).map((r) => ({ ...r, name: placeName(world, r) })),
             news,
           });

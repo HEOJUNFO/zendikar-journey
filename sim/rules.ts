@@ -38,6 +38,10 @@ export const KILL_FEED = 60;
 export const DEPLETED_HOURS = 72;
 export const DEPLETED_LABEL = '사냥감이 바닥남';
 
+// A fight with no player in it doesn't kill: whoever goes down is knocked out this long.
+export const KO_HOURS = 4;
+export const KO_ACTIVITY = '기절';
+
 // Hours of forced sleep when energy hits 0.
 export const COLLAPSE_HOURS = 6;
 

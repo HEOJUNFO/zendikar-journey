@@ -44,6 +44,8 @@ export type Actor = {
   wounds?: { day: number; amount: number };
   // Who they'll attack on sight this turn (they were attacked, or turned hostile).
   foes?: { day: number; ids: string[] };
+  // What they think of others, latest impression each (sim/relations.ts).
+  relations?: Record<string, { name: string; text: string; t: number }>;
   dead?: { at: number; cause: string };
   // Hour of their last combat exchange (one per hour).
   lastClash?: number;
@@ -138,6 +140,8 @@ export type State = {
   // Last day whose plans (LLM or routine) were made.
   preparedDay: number;
   met: { day: number; pairs: string[] };
+  // NPC conversations held today (the LLM writes them; capped per day).
+  talks?: { day: number; count: number };
   nextLogId: number;
   log: LogEntry[];
 };

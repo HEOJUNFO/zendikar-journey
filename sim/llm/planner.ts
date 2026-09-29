@@ -28,10 +28,10 @@ export type PlanDayInput = {
   regions: { id: string; name: string; summary: string }[];
   // Today's news the character would know about (conditions, recent events).
   news: string[];
+  // What they think of the people they know ("- 이오나 (…): …").
+  relations?: string[];
 };
 
-// Asks the chat model for today's schedule. Returns null when the answer isn't a
-// usable schedule; the caller then keeps the routine.
 // Kinds of blocks they may plan: no meals without hunger, bonding only if their routine bonds.
 function kindsFor(input: Pick<PlanDayInput, "needs" | "routine">) {
   return LIFE_KINDS.filter(
@@ -39,6 +39,8 @@ function kindsFor(input: Pick<PlanDayInput, "needs" | "routine">) {
   );
 }
 
+// Asks the chat model for today's schedule. Returns null when the answer isn't a
+// usable schedule; the caller then keeps the routine.
 export async function planDay(input: PlanDayInput): Promise<ScheduleBlock[] | null> {
   const kinds = new Set<string>(kindsFor(input));
   const content = await chatCompletion(
@@ -59,7 +61,7 @@ The character lives by their role, personality and goals, and takes care of thei
 Answer with JSON only, no prose.`;
 
 function userPrompt(input: PlanDayInput) {
-  const { day, name, persona, goal, role, home, stats, needs, routine, regions, news } = input;
+  const { day, name, persona, goal, role, home, stats, needs, routine, regions, news, relations = [] } = input;
   const kinds = kindsFor(input);
   const state = [
     needs.includes('energy') && `energy ${Math.round(stats.energy)}/100 (low = tired)`,
@@ -77,7 +79,9 @@ Goal: ${goal}
 Role: ${role}
 Home: ${home}
 Current state: ${state.join(', ')}${needs.includes('hunger') ? '' : ' (does not need food)'}
-${news.length ? `\nWhat they know happened lately:\n${news.map((n) => `- ${n}`).join('\n')}\n` : ''}
+${news.length ? `\nWhat they know happened lately:\n${news.map((n) => `- ${n}`).join('\n')}\n` : ''}${
+    relations.length ? `\nPeople they know, and what they think of them:\n${relations.join('\n')}\n` : ''
+  }
 Usual day:
 ${usual}
 
