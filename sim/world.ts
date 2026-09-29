@@ -4,8 +4,8 @@
 import { z } from 'zod';
 import { parseTimeOfDay } from './clock.ts';
 import { TRAVEL_UNITS_PER_HOUR } from './rules.ts';
-import { LIFE_KINDS } from './types.ts';
-import type { ScheduleBlock } from './types.ts';
+import { LIFE_KINDS, NEEDS } from './types.ts';
+import type { Need, ScheduleBlock } from './types.ts';
 
 export const MAP_WIDTH = 96;
 export const MAP_HEIGHT = 72;
@@ -69,6 +69,9 @@ export const CharacterSimSchema = z.strictObject({
   persona: z.string().min(1),
   goal: z.string().min(1),
   abilities: z.array(z.enum(ABILITIES)).default([]),
+  // Stats this being lives by (default: all). Without hunger they never eat; without coin
+  // work earns nothing.
+  needs: z.array(z.enum(NEEDS)).min(1).default([...NEEDS]),
   routine: z.array(RoutineRow).min(1),
 });
 
@@ -135,6 +138,7 @@ export type NpcDef = {
   persona: string;
   goal: string;
   abilities: Ability[];
+  needs: Need[];
   routine: ScheduleBlock[];
 };
 
@@ -257,6 +261,9 @@ export function buildWorld(entities: RawEntity[]): { world: World; errors: strin
       const r = regionOk(npc.id, id, 'sim 의 지역');
       if (r && !canStay(r, npc.abilities)) err(npc.id, `${id} 에 머물 수 없음 (${TERRAINS[r.terrain].label})`);
     }
+    if (!npc.needs.includes('hunger') && npc.routine.some((b) => b.kind === 'eat'))
+      err(npc.id, 'needs 에 hunger 가 없으면 sim.routine 에 eat 을 쓸 수 없음');
+    if (npc.routine.some((b) => b.start % 60 || b.end % 60)) err(npc.id, 'sim.routine 은 정시 단위로 나눠야 함 (세계는 1시간 단위로 돈다)');
     const blocks = [...npc.routine].sort((a, b) => a.start - b.start);
     if (blocks[0].start !== 0 || blocks.at(-1)!.end !== 1440 || blocks.some((b, i) => b.start >= b.end || (i > 0 && blocks[i - 1].end !== b.start)))
       err(npc.id, 'sim.routine 은 00:00 부터 24:00 까지 빈틈 없이 이어져야 함');

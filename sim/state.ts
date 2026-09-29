@@ -1,7 +1,8 @@
 // Everything that changes while the world runs. Plain JSON so it saves as-is.
 import { START_MINUTES } from './clock.ts';
 import { INITIAL_STATS } from './rules.ts';
-import type { LifeKind, Pace, Schedule, Stats } from './types.ts';
+import { NEEDS } from './types.ts';
+import type { LifeKind, Need, Pace, Schedule, Stats } from './types.ts';
 import type { Ability, World } from './world.ts';
 
 export type TaskKind = LifeKind | 'explore' | 'travel';
@@ -24,6 +25,8 @@ export type Actor = {
   stats: Stats;
   pace: Pace;
   abilities: Ability[];
+  // Stats they live by; missing in saves from before needs existed (= all).
+  needs?: Need[];
   task?: Task;
   // Overrides the schedule or the player's task (e.g. collapsed from exhaustion).
   forced?: Task;
@@ -126,6 +129,7 @@ export function newState(world: World, opts: NewGame): State {
       stats: { ...INITIAL_STATS },
       pace: 'normal',
       abilities: [...npc.abilities],
+      needs: [...npc.needs],
     };
   }
   if (opts.mode === 'character') {
@@ -139,6 +143,7 @@ export function newState(world: World, opts: NewGame): State {
       stats: { ...INITIAL_STATS },
       pace: 'normal',
       abilities: [],
+      needs: [...NEEDS],
       background: opts.player.background,
     };
   }
@@ -161,7 +166,12 @@ export function syncWorld(state: State, world: World) {
       abilities: [...npc.abilities],
     };
     state.actors[npc.id].abilities = [...npc.abilities];
+    state.actors[npc.id].needs = [...npc.needs];
   }
+}
+
+export function needsOf(a: Actor): readonly Need[] {
+  return a.needs ?? NEEDS;
 }
 
 export function player(state: State) {

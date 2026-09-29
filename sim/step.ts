@@ -14,7 +14,7 @@ import {
   STARVING_ENERGY,
   TRAVEL_EFFECT,
 } from './rules.ts';
-import { addLog, present, random } from './state.ts';
+import { addLog, needsOf, present, random } from './state.ts';
 import type { Actor, GmPlan, State, Task } from './state.ts';
 import { josa, shortName, toward } from './text.ts';
 import { currentBlock } from './types.ts';
@@ -114,7 +114,7 @@ function fire(state: State, world: World, ev: EventDef, t: number, omened: boole
           addLog(state, { kind: 'effect', text: `${josa(name, '은', '는')} 전조를 알아채고 몸을 피했다.`, regions: [a.region], actors: [a.id] });
           continue;
         }
-        applyEffect(a.stats, eff);
+        applyEffect(a.stats, eff, 60, needsOf(a));
         addLog(state, { kind: 'effect', text: `${josa(name, '이', '가')} 휘말렸다 (${describeStat(eff)}).`, regions: [a.region], actors: [a.id] });
       }
     } else if (eff.type === 'bind') {
@@ -203,7 +203,7 @@ function actorHour(state: State, world: World, a: Actor, t: number) {
   const name = shortName(a.name);
   if (a.boundUntil !== undefined) {
     if (t < a.boundUntil) {
-      applyEffect(a.stats, KIND_EFFECTS.leisure);
+      applyEffect(a.stats, KIND_EFFECTS.leisure, 60, needsOf(a));
       return;
     }
     delete a.boundUntil;
@@ -212,7 +212,7 @@ function actorHour(state: State, world: World, a: Actor, t: number) {
   if (a.travel) return travelHour(state, world, a, t);
 
   if (a.forced && a.forced.until !== undefined && a.forced.until <= t) delete a.forced;
-  if (!a.forced && a.stats.energy <= 0) {
+  if (!a.forced && needsOf(a).includes('energy') && a.stats.energy <= 0) {
     a.forced = { kind: 'sleep', activity: '지쳐 쓰러짐', emoji: '💤', until: t + COLLAPSE_HOURS * 60 };
     if (a.kind === 'player') a.task = undefined;
     addLog(state, { kind: 'status', text: `${josa(name, '이', '가')} 지쳐 쓰러졌다.`, regions: [a.region], actors: [a.id] });
@@ -221,11 +221,12 @@ function actorHour(state: State, world: World, a: Actor, t: number) {
   const task = a.forced ?? (a.kind === 'npc' ? npcTask(state, world, a, t) : a.task);
   if (a.travel) return travelHour(state, world, a, t);
   if (!task) {
-    applyEffect(a.stats, KIND_EFFECTS.leisure);
+    applyEffect(a.stats, KIND_EFFECTS.leisure, 60, needsOf(a));
     return;
   }
-  applyEffect(a.stats, task.kind === 'explore' ? EXPLORE_EFFECT : KIND_EFFECTS[task.kind === 'travel' ? 'leisure' : task.kind]);
-  if (a.stats.hunger >= STARVING) applyEffect(a.stats, { energy: STARVING_ENERGY });
+  const needs = needsOf(a);
+  applyEffect(a.stats, task.kind === 'explore' ? EXPLORE_EFFECT : KIND_EFFECTS[task.kind === 'travel' ? 'leisure' : task.kind], 60, needs);
+  if (needs.includes('hunger') && a.stats.hunger >= STARVING) applyEffect(a.stats, { energy: STARVING_ENERGY }, 60, needs);
 }
 
 // The NPC's schedule block for this hour. Starts travel when the block is elsewhere.
@@ -251,7 +252,7 @@ function npcTask(state: State, world: World, a: Actor, t: number): Task | undefi
 }
 
 function travelHour(state: State, world: World, a: Actor, t: number) {
-  applyEffect(a.stats, TRAVEL_EFFECT);
+  applyEffect(a.stats, TRAVEL_EFFECT, 60, needsOf(a));
   if (!a.travel || t + STEP_MINUTES < a.travel.arrive) return;
   a.region = a.travel.to;
   delete a.travel;

@@ -23,6 +23,10 @@ export function currentBlock(blocks: ScheduleBlock[], minute: number) {
   return blocks.find((b) => b.start <= minute && minute < b.end);
 }
 
+// Which stats a being lives by. People have all three; an angel may only tire.
+export const NEEDS = ['energy', 'hunger', 'coin'] as const;
+export type Need = (typeof NEEDS)[number];
+
 export type Stats = {
   energy: number; // 0 exhausted .. 100 rested
   hunger: number; // 0 full .. 100 starving

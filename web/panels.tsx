@@ -3,7 +3,7 @@ import type { ReactNode } from 'react';
 import type { Action } from '../sim/actions.ts';
 import { PACE_LABELS } from '../sim/actions.ts';
 import { formatClock, formatTimeOfDay, gameDay, minuteOfDay } from '../sim/clock.ts';
-import { player, present } from '../sim/state.ts';
+import { needsOf, player, present } from '../sim/state.ts';
 import type { Actor, LogEntry, State } from '../sim/state.ts';
 import { travelBlocked } from '../sim/step.ts';
 import { shortName } from '../sim/text.ts';
@@ -133,8 +133,8 @@ export function PeopleList({ world, state }: { world: World; state: State }) {
           <p className="muted">{status(world, a)}</p>
           {!p && (
             <>
-              <Bar label="기력" value={a.stats.energy} />
-              <Bar label="배고픔" value={a.stats.hunger} bad />
+              {needsOf(a).includes('energy') && <Bar label="기력" value={a.stats.energy} />}
+              {needsOf(a).includes('hunger') && <Bar label="배고픔" value={a.stats.hunger} bad />}
             </>
           )}
         </div>

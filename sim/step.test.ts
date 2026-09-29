@@ -79,6 +79,8 @@ test('the real world loads and Iona keeps her routine in Emeria', async () => {
   assert.equal(iona.region, 'loc-emeria');
   assert.ok(texts(state).some((t) => t.includes('하늘 순찰')));
   assert.ok(iona.stats.energy > 0 && iona.stats.energy <= 100);
+  // An angel lives by energy alone: no hunger, no pay.
+  assert.deepEqual([iona.stats.hunger, iona.stats.coin], [20, 20]);
 });
 
 test('sky and sea regions cannot be reached without the means', async () => {
@@ -173,10 +175,14 @@ test('buildWorld reports bad game data', () => {
     npc('chr-gap', { ...npcSim('loc-a'), routine: [['00:00', '12:00', 'loc-a', 'work', '일', '🔨']] }),
     npc('chr-nowhere', npcSim('loc-moon')),
     npc('chr-grounded', npcSim('loc-sky')),
+    npc('chr-fasting', { ...npcSim('loc-a', 'eat'), needs: ['energy'] }),
+    npc('chr-halfhour', { ...npcSim('loc-a'), routine: [['00:00', '00:30', 'loc-a', 'work', '일', '🔨'], ['00:30', '24:00', 'loc-a', 'sleep', '잠', '💤']] }),
   ]);
   const has = (id: string) => errors.some((e) => e.startsWith(`${id}:`));
   assert.ok(has('loc-bad'));
   assert.ok(has('chr-gap'));
   assert.ok(has('chr-nowhere'));
   assert.ok(has('chr-grounded'));
+  assert.ok(has('chr-fasting'));
+  assert.ok(has('chr-halfhour'));
 });

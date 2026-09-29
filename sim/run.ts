@@ -123,6 +123,7 @@ async function prepareDay(state: State, world: World, llm: Llm) {
             role: npc.role,
             home: npc.home,
             stats: a.stats,
+            needs: npc.needs,
             routine: npc.routine,
             regions: world.regions.filter((r) => canStay(r, npc.abilities)),
             news,

@@ -1,4 +1,5 @@
-import type { LifeKind, Pace, Stats } from './types.ts';
+import { NEEDS } from './types.ts';
+import type { LifeKind, Need, Pace, Stats } from './types.ts';
 
 type Effect = Stats;
 
@@ -31,9 +32,10 @@ export const COLLAPSE_HOURS = 6;
 
 const clamp = (x: number, lo: number, hi: number) => Math.min(hi, Math.max(lo, x));
 
-export function applyEffect(stats: Stats, effect: Partial<Effect>, gameMinutes = 60) {
+// Stats outside `needs` stay as they are.
+export function applyEffect(stats: Stats, effect: Partial<Effect>, gameMinutes = 60, needs: readonly Need[] = NEEDS) {
   const hours = gameMinutes / 60;
-  stats.energy = clamp(stats.energy + (effect.energy ?? 0) * hours, 0, 100);
-  stats.hunger = clamp(stats.hunger + (effect.hunger ?? 0) * hours, 0, 100);
-  stats.coin = Math.max(0, stats.coin + (effect.coin ?? 0) * hours);
+  if (needs.includes('energy')) stats.energy = clamp(stats.energy + (effect.energy ?? 0) * hours, 0, 100);
+  if (needs.includes('hunger')) stats.hunger = clamp(stats.hunger + (effect.hunger ?? 0) * hours, 0, 100);
+  if (needs.includes('coin')) stats.coin = Math.max(0, stats.coin + (effect.coin ?? 0) * hours);
 }
