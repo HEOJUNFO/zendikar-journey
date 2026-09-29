@@ -20,9 +20,9 @@ export function clock(state: State) {
   return formatClock(state.minutes);
 }
 
-// Where a land's node is drawn. A region holding areas is a large circle: its own node sits in
-// the upper part, its areas as small circles across the lower part. (The engine puts areas at
-// their region's place; this is only how they are drawn.)
+// Where a land's node is drawn. A region holding areas is itself a large circle, with its areas
+// as small circles across the lower part; the upper part is where its own people and marks go.
+// (The engine puts areas at their region's place; this is only how they are drawn.)
 const AREA_RING = 3.4;
 const OWN_LIFT = 3;
 function areaAngle(world: World, r: Region) {

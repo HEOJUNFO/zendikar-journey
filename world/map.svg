@@ -17,16 +17,16 @@
     <text x="580" y="492" text-anchor="middle" class="area">메마른 메사</text></g>
   <g><circle cx="480" cy="164" r="16" fill="#b9c8ea" stroke="#f4ecd8" stroke-width="2"/>
     <text x="480" y="222" text-anchor="middle" class="area">에메리아</text></g>
-  <g><circle cx="470" cy="480" r="22" fill="#d9c38a" stroke="#f4ecd8" stroke-width="3"/>
+  <g>
     <text x="470" y="412" text-anchor="middle" class="name">아게딤</text>
     <text x="470" y="430" text-anchor="middle" class="terrain">해변</text></g>
-  <g><circle cx="760" cy="310" r="22" fill="#b5462c" stroke="#f4ecd8" stroke-width="3"/>
+  <g>
     <text x="760" y="242" text-anchor="middle" class="name">아쿰</text>
     <text x="760" y="260" text-anchor="middle" class="terrain">화산 지대</text></g>
-  <g><circle cx="580" cy="370" r="22" fill="#8fb35a" stroke="#f4ecd8" stroke-width="3"/>
+  <g>
     <text x="580" y="302" text-anchor="middle" class="name">온두</text>
     <text x="580" y="320" text-anchor="middle" class="terrain">초원</text></g>
-  <g><circle cx="480" cy="100" r="22" fill="#d9c38a" stroke="#f4ecd8" stroke-width="3"/>
+  <g>
     <text x="480" y="32" text-anchor="middle" class="name">타짐</text>
     <text x="480" y="50" text-anchor="middle" class="terrain">해변</text></g>
 </svg>

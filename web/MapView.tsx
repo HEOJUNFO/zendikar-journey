@@ -88,7 +88,6 @@ export function MapView({ world, state, selected, onSelect, all, picked, onPickA
               onKeyDown={(e) => (e.key === 'Enter' || e.key === ' ') && onSelect(r.id)}>
               <title>{`${r.name} (${t.label})`}</title>
               <circle cx={r.x} cy={r.y} r={R} fill={t.color} className="map-container" />
-              <circle cx={own.x} cy={own.y} r={2.2} fill={t.color} className="map-node" />
               {isSel && <circle cx={r.x} cy={r.y} r={R + 0.8} className="map-selected" />}
               {destroyed && <text x={own.x} y={own.y + 0.9} className="map-destroyed">✕</text>}
               {conds.length > 0 && <text x={own.x + 2.4} y={own.y - 1.8} className="map-alert">⚠</text>}
