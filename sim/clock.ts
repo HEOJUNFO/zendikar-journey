@@ -14,9 +14,10 @@ export function minuteOfDay(minutes: number) {
   return ((minutes % DAY_MINUTES) + DAY_MINUTES) % DAY_MINUTES;
 }
 
-// 06:00 of the day after `minutes`.
-export function nextMorning(minutes: number) {
-  return (gameDay(minutes) + 1) * DAY_MINUTES + START_MINUTES;
+// When tapped things untap: the start of a turn (00:00). `skip` = they miss the next untap
+// and wait for the one after.
+export function untapTime(minutes: number, skip = false) {
+  return (gameDay(minutes) + (skip ? 2 : 1)) * DAY_MINUTES;
 }
 
 export function formatTimeOfDay(minuteInDay: number) {

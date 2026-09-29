@@ -162,6 +162,7 @@ export function recentNews(state: State, world: World) {
     .map((e) => `${formatClock(e.t)} ${e.text}`);
   for (const [id, rs] of Object.entries(state.regions)) {
     const r = world.regions.find((x) => x.id === id);
+    if (r && rs.destroyed) lines.push(`${r.name}: 땅이 부서져 있다 (${formatClock(rs.destroyed.at)}부터)`);
     for (const c of rs.conditions) if (r) lines.push(`지금 ${r.name}: ${c.label} (${formatClock(c.until)}까지)`);
   }
   return lines.slice(-20);

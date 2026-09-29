@@ -1,7 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { applyEffect, KIND_EFFECTS } from './rules.ts';
-import { formatClock, nextMorning, parseTimeOfDay, START_MINUTES } from './clock.ts';
+import { formatClock, parseTimeOfDay, START_MINUTES, untapTime } from './clock.ts';
 import { parsePlan } from './llm/planner.ts';
 
 const block = (start: number, end: number, regionId = 'loc-a') => ({
@@ -43,6 +43,7 @@ test('stats change per game hour and stay in range', () => {
 
 test('clock', () => {
   assert.equal(formatClock(START_MINUTES), '1일차 06:00');
-  assert.equal(formatClock(nextMorning(START_MINUTES + 600)), '2일차 06:00');
+  assert.equal(formatClock(untapTime(START_MINUTES + 600)), '2일차 00:00');
+  assert.equal(formatClock(untapTime(START_MINUTES + 600, true)), '3일차 00:00');
   assert.equal(parseTimeOfDay('24:00'), 1440);
 });

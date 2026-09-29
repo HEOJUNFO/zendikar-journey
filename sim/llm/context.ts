@@ -15,7 +15,10 @@ export function whereaboutsText(world: World, state: State) {
       const here = Object.values(state.actors)
         .filter((a) => a.region === r.id && !a.travel)
         .map((a) => (a.kind === 'player' ? `${shortName(a.name)}(플레이어)` : shortName(a.name)));
-      const conds = state.regions[r.id]?.conditions.map((c) => c.label) ?? [];
+      const conds = [
+        ...(state.regions[r.id]?.destroyed ? ['부서진 땅'] : []),
+        ...(state.regions[r.id]?.conditions.map((c) => c.label) ?? []),
+      ];
       return `- ${r.id} ${r.name}: ${r.summary}${conds.length ? ` [${conds.join(', ')}]` : ''}${here.length ? ` — ${here.join(', ')}` : ''}`;
     })
     .join('\n');

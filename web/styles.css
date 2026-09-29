@@ -221,6 +221,12 @@ header h1 {
   font-size: 2.6px;
   fill: var(--danger);
 }
+.map-destroyed {
+  font: 700 3.4px var(--sans);
+  fill: var(--danger);
+  text-anchor: middle;
+  pointer-events: none;
+}
 .map-road {
   stroke: var(--accent);
   stroke-width: 0.35;

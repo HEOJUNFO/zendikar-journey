@@ -3,7 +3,7 @@
 // keep their routine and the GM raises nothing that day.
 //
 // Order within an hour: GM events -> factions -> regions -> characters -> meetings.
-import { gameDay, minuteOfDay, nextMorning, STEP_MINUTES } from './clock.ts';
+import { formatClock, gameDay, minuteOfDay, STEP_MINUTES, untapTime } from './clock.ts';
 import {
   applyEffect,
   COLLAPSE_HOURS,
@@ -13,7 +13,7 @@ import {
   STARVING_ENERGY,
   TRAVEL_EFFECT,
 } from './rules.ts';
-import { addLog, isBarren, needsOf, present, random } from './state.ts';
+import { addLog, landUnusable, needsOf, present, random } from './state.ts';
 import type { Actor, GmPlan, State, Task } from './state.ts';
 import { josa, shortName, toward } from './text.ts';
 import { currentBlock } from './types.ts';
@@ -124,28 +124,36 @@ function fire(state: State, world: World, ev: EventDef, t: number, omened: boole
         applyEffect(a.stats, eff, 60, needsOf(a));
         addLog(state, { kind: 'effect', text: `${josa(name, '이', '가')} 휘말렸다 (${describeStat(eff)}).`, regions: [a.region], actors: [a.id] });
       }
-    } else if (eff.type === 'bind') {
-      const pool = targets.filter((a) => a.boundUntil === undefined);
-      for (let i = pool.length - 1; i > 0; i--) {
+    } else if (eff.type === 'tap') {
+      const until = untapTime(t, eff.skip_untap);
+      const people = targets.filter((a) => a.boundUntil === undefined);
+      for (let i = people.length - 1; i > 0; i--) {
         const j = Math.floor(random(state) * (i + 1));
-        [pool[i], pool[j]] = [pool[j], pool[i]];
+        [people[i], people[j]] = [people[j], people[i]];
       }
-      for (const a of pool.slice(0, eff.max)) {
-        a.boundUntil = nextMorning(t);
+      const tappedPeople = people.slice(0, eff.max);
+      for (const a of tappedPeople) {
+        a.boundUntil = until;
         a.task = undefined;
         a.forced = undefined;
         addLog(state, {
           kind: 'effect',
-          text: `${josa(shortName(a.name), '이', '가')} 붙잡혔다. 다음 날 아침까지 움직일 수 없다.`,
+          text: `${josa(shortName(a.name), '이', '가')} 묶였다. ${formatClock(until)}까지 움직일 수 없다.`,
           regions: [a.region],
           actors: [a.id],
         });
       }
+      for (const id of regions.slice(0, eff.max - tappedPeople.length)) {
+        state.regions[id] ??= { conditions: [] };
+        state.regions[id].conditions.push({ label: eff.land_label, until, blocksTravel: false, tapped: true, source: ev.id });
+        addLog(state, { kind: 'condition', text: `${region(world, id).name}: ${eff.land_label} (${formatClock(until)}까지 쓸 수 없다)`, regions: [id], scope: ev.scope });
+      }
     } else if (eff.type === 'destroy_lands') {
       for (const id of (cause.lands ?? []).slice(0, eff.count)) {
         state.regions[id] ??= { conditions: [] };
-        state.regions[id].conditions.push({ label: '황폐해진 땅', until: t + eff.hours * 60, blocksTravel: false, barren: true, source: ev.id });
-        addLog(state, { kind: 'condition', text: `${region(world, id).name}: 땅이 부서져 황폐해졌다.`, regions: [id], scope: ev.scope });
+        if (state.regions[id].destroyed) continue;
+        state.regions[id].destroyed = { at: t, source: ev.id };
+        addLog(state, { kind: 'condition', text: `${region(world, id).name}: 땅이 부서졌다. 이제 이곳에서는 아무것도 얻을 수 없다.`, regions: [id], scope: ev.scope });
       }
     } else {
       for (const id of regions) {
@@ -171,7 +179,7 @@ function regionLayer(state: State, world: World, t: number) {
   for (const [id, rs] of Object.entries(state.regions)) {
     const r = world.regions.find((x) => x.id === id);
     for (const c of rs.conditions.filter((c) => c.until <= t)) {
-      if (r) addLog(state, { kind: 'condition', text: c.barren ? `${r.name}: 황폐했던 땅이 되살아났다.` : `${r.name}: ${josa(c.label, '이', '가')} 걷혔다.`, regions: [id] });
+      if (r) addLog(state, { kind: 'condition', text: c.tapped ? `${r.name}: 다시 쓸 수 있게 되었다 (${c.label} 풀림).` : `${r.name}: ${josa(c.label, '이', '가')} 걷혔다.`, regions: [id] });
     }
     rs.conditions = rs.conditions.filter((c) => c.until > t);
   }
@@ -250,10 +258,11 @@ function npcTask(state: State, world: World, a: Actor, t: number): Task | undefi
     startTravel(state, world, a, block.regionId, t);
     return a.task;
   }
-  // Can't get there (or already there): do it here. Nothing can be worked on barren land.
+  // Can't get there (or already there): do it here. Nothing can be worked on a destroyed or
+  // tapped land.
   const task: Task =
-    block.kind === 'work' && isBarren(state, a.region)
-      ? { kind: 'leisure', activity: `${block.activity} (땅이 황폐해 손을 놓음)`, emoji: '🥀' }
+    block.kind === 'work' && landUnusable(state, a.region)
+      ? { kind: 'leisure', activity: `${block.activity} (${landUnusable(state, a.region)}, 손을 놓음)`, emoji: '🥀' }
       : { kind: block.kind, activity: block.activity, emoji: block.emoji };
   if (a.task?.activity !== task.activity || a.task?.kind !== task.kind) {
     addLog(state, {

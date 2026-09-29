@@ -3,7 +3,7 @@
 import { z } from 'zod';
 import { STEP_MINUTES } from './clock.ts';
 import { KIND_EFFECTS } from './rules.ts';
-import { addLog, isBarren, player } from './state.ts';
+import { addLog, landUnusable, player } from './state.ts';
 import type { State, Task } from './state.ts';
 import { startTravel, travelBlocked } from './step.ts';
 import { josa, shortName } from './text.ts';
@@ -30,7 +30,7 @@ export function startAction(state: State, world: World, action: Action): string 
   const t = state.minutes;
   if (p.travel) return '이동 중이다.';
   if (action.type !== 'wait') {
-    if (p.boundUntil !== undefined) return '붙잡혀 있어 움직일 수 없다. 기다릴 수만 있다.';
+    if (p.boundUntil !== undefined) return '묶여 있어 움직일 수 없다. 기다릴 수만 있다.';
     if (p.forced) return '지쳐 쓰러져 있다. 기다릴 수만 있다.';
   }
   const until = (hours: number) => t + hours * STEP_MINUTES;
@@ -49,7 +49,8 @@ export function startAction(state: State, world: World, action: Action): string 
       text = `${action.hours}시간 쉬기로 한다.`;
       break;
     case 'explore':
-      if (isBarren(state, p.region)) return '땅이 황폐해져 탐색할 것이 없다.';
+      const unusable = landUnusable(state, p.region);
+      if (unusable) return `이 땅은 쓸 수 없다: ${unusable}.`;
       task = { kind: 'explore', activity: `${PACE_LABELS[action.pace]} 탐색`, emoji: '🧭', until: until(action.hours) };
       text = `${action.hours}시간 동안 ${PACE_LABELS[action.pace]} 주변을 탐색한다.`;
       break;
@@ -67,7 +68,7 @@ export function startAction(state: State, world: World, action: Action): string 
       if (!npc || npc.kind !== 'npc') return '그런 인물은 없다.';
       const name = shortName(npc.name);
       if (npc.travel || npc.region !== p.region) return `${josa(name, '은', '는')} 여기 없다.`;
-      if (npc.boundUntil !== undefined) return `${josa(name, '은', '는')} 붙잡혀 있다.`;
+      if (npc.boundUntil !== undefined) return `${josa(name, '은', '는')} 묶여 있다.`;
       task = { kind: 'social', activity: `${josa(name, '과', '와')} 대화`, emoji: '💬', until: until(1) };
       text = `${name}에게 말을 건다.`;
       break;

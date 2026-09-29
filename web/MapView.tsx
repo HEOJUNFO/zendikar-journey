@@ -38,6 +38,7 @@ export function MapView({ world, state, selected, onSelect }: Props) {
       {world.regions.map((r) => {
         const t = TERRAINS[r.terrain];
         const conds = state.regions[r.id]?.conditions ?? [];
+        const destroyed = !!state.regions[r.id]?.destroyed;
         const isSel = selected === r.id;
         return (
           <g key={r.id} className="map-region" onClick={() => onSelect(r.id)} tabIndex={0}
@@ -52,6 +53,7 @@ export function MapView({ world, state, selected, onSelect }: Props) {
               <circle cx={r.x} cy={r.y} r={3.2} fill={t.color} className="map-node" />
             )}
             {isSel && <circle cx={r.x} cy={r.y} r={t.sea ? 8.2 : 4.6} className="map-selected" />}
+            {destroyed && <text x={r.x} y={r.y + 1.1} className="map-destroyed">✕</text>}
             {conds.length > 0 && (
               <text x={r.x + 3.4} y={r.y - 2.6} className="map-alert">⚠</text>
             )}

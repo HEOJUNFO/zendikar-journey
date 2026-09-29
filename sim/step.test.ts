@@ -46,7 +46,7 @@ const trap: RawEntity = {
     text: '함정이 터졌다.',
     effects: [
       { type: 'stat', energy: -40 },
-      { type: 'destroy_lands', count: 2, hours: 48 },
+      { type: 'destroy_lands', count: 2 },
     ],
   },
 };
@@ -64,8 +64,7 @@ const tide: RawEntity = {
     scope: 'world',
     text: '조수가 덮쳤다.',
     effects: [
-      { type: 'bind', max: 8, until: 'next-morning' },
-      { type: 'condition', label: '잠긴 해안', hours: 12, blocks_travel: true },
+      { type: 'tap', max: 2, skip_untap: true, land_label: '잠긴 해안' },
     ],
   },
 };
@@ -134,9 +133,13 @@ test('the trap hurts those there and lays waste to the lands the intruder came t
   await act(state, world, { type: 'wait', hours: 1 }); // the trap
   assert.ok(texts(state).includes('함정이 터졌다.'));
   assert.ok(state.actors[PLAYER_ID].stats.energy <= before - 40 + 1);
-  for (const id of ['loc-a', 'loc-b']) assert.ok(state.regions[id].conditions.some((c) => c.barren));
-  assert.ok(!state.regions['loc-c'].conditions.length);
-  assert.match((await act(state, world, { type: 'explore', hours: 1, pace: 'normal' })).error!, /황폐/);
+  for (const id of ['loc-a', 'loc-b']) assert.ok(state.regions[id].destroyed);
+  assert.ok(!state.regions['loc-c'].destroyed);
+  assert.match((await act(state, world, { type: 'explore', hours: 1, pace: 'normal' })).error!, /부서/);
+  // Destroyed for good: still so days later.
+  await act(state, world, { type: 'wait', hours: 24 });
+  await act(state, world, { type: 'wait', hours: 24 });
+  assert.ok(state.regions['loc-b'].destroyed);
 });
 
 test('the careful dodge an omened trap', async () => {
@@ -147,7 +150,7 @@ test('the careful dodge an omened trap', async () => {
   assert.ok(texts(state).some((t) => t.includes('몸을 피했다')));
 });
 
-test('the tide binds those on the coast until the next morning and floods it', async () => {
+test('the tide taps people first, then coastal lands, and they skip the next untap', async () => {
   const world = fixture([tide]);
   const state = character(world, 'loc-a');
   const gmDay: Llm['gmDay'] = async ({ day, hour, eligible }) => ({
@@ -158,9 +161,14 @@ test('the tide binds those on the coast until the next morning and floods it', a
   await act(state, world, { type: 'wait', hours: 24 }, { gmDay });
   const me = state.actors[PLAYER_ID];
   assert.ok(texts(state).includes('조수가 덮쳤다.'));
+  // Tapped on day 1: misses day 2's untap, freed at the start of day 3.
+  assert.ok(texts(state).some((t) => t.includes('묶였다. 3일차 00:00까지')));
   assert.ok(texts(state).some((t) => t.includes('풀려났다')));
   assert.equal(me.boundUntil, undefined);
-  assert.equal(formatClock(state.minutes).startsWith('2일차'), true);
+  assert.ok(formatClock(state.minutes).startsWith('3일차'));
+  // max 2: the player and one coastal land (loc-a), not the second (loc-c).
+  assert.ok(texts(state).some((t) => t.startsWith('loc-a: 잠긴 해안')));
+  assert.ok(!texts(state).some((t) => t.startsWith('loc-c: 잠긴 해안')));
 });
 
 test('NPCs socialising in the same region meet once a day', async () => {

@@ -61,6 +61,7 @@ export function RegionCard(props: { world: World; state: State; regionId: string
   const r = region(world, regionId);
   const t = TERRAINS[r.terrain];
   const conds = state.regions[r.id]?.conditions ?? [];
+  const destroyed = state.regions[r.id]?.destroyed;
   const here = visibleActors(state).filter((a) => a.region === r.id && !a.travel);
   const p = player(state);
   let travel: ReactNode = null;
@@ -83,9 +84,10 @@ export function RegionCard(props: { world: World; state: State; regionId: string
         {r.name} <small>{t.label}</small>
       </h2>
       <p>{r.summary}</p>
+      {destroyed && <p className="cond">✕ 부서진 땅 <small>({formatClock(destroyed.at)}부터, 쓸 수 없음)</small></p>}
       {conds.map((c) => (
         <p key={c.label + c.until} className="cond">
-          ⚠ {c.label} <small>({formatClock(c.until)}까지{c.blocksTravel ? ', 오갈 수 없음' : ''})</small>
+          ⚠ {c.label} <small>({formatClock(c.until)}까지{c.blocksTravel ? ', 오갈 수 없음' : ''}{c.tapped ? ', 쓸 수 없음' : ''})</small>
         </p>
       ))}
       {here.length > 0 && (
@@ -114,7 +116,7 @@ function Bar({ label, value, max = 100, bad = false }: { label: string; value: n
 }
 
 function status(world: World, a: Actor) {
-  if (a.boundUntil !== undefined) return `붙잡힘 (${formatClock(a.boundUntil)}까지)`;
+  if (a.boundUntil !== undefined) return `묶임 (${formatClock(a.boundUntil)}까지)`;
   const task = a.forced ?? a.task;
   const where = a.travel ? `${region(world, a.region).name} → ${region(world, a.travel.to).name}` : region(world, a.region).name;
   return `${where} · ${task ? `${task.emoji} ${task.activity}` : '쉬는 중'}`;

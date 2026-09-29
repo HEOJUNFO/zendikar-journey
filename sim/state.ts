@@ -34,6 +34,7 @@ export type Actor = {
   task?: Task;
   // Overrides the schedule or the player's task (e.g. collapsed from exhaustion).
   forced?: Task;
+  // Tapped: can't move or act until then (an untap).
   boundUntil?: number;
   schedule?: Schedule; // npc
   background?: string; // player
@@ -43,9 +44,15 @@ export type Condition = {
   label: string;
   until: number;
   blocksTravel: boolean;
-  // A destroyed land: nothing can be explored or worked there.
-  barren?: boolean;
+  // A tapped land: nothing can be explored or worked there until it untaps (`until`).
+  tapped?: boolean;
   source: string;
+};
+
+export type RegionState = {
+  conditions: Condition[];
+  // Destroyed land, for good (until a card brings it back).
+  destroyed?: { at: number; source: string };
 };
 
 export type LogKind =
@@ -92,7 +99,7 @@ export type State = {
   mode: Mode;
   playerId?: string;
   actors: Record<string, Actor>;
-  regions: Record<string, { conditions: Condition[] }>;
+  regions: Record<string, RegionState>;
   events: Record<string, { lastFired?: number }>;
   // Omened events that go off at `at`, with who set them off.
   pending: { eventId: string; at: number; by: string[] }[];
@@ -185,8 +192,11 @@ export function needsOf(a: Actor): readonly Need[] {
   return a.needs ?? NEEDS;
 }
 
-export function isBarren(state: State, regionId: string) {
-  return !!state.regions[regionId]?.conditions.some((c) => c.barren);
+// Why the land can't be used (explored, worked) now, or null.
+export function landUnusable(state: State, regionId: string): string | null {
+  const rs = state.regions[regionId];
+  if (rs?.destroyed) return '땅이 부서졌다';
+  return rs?.conditions.find((c) => c.tapped)?.label ?? null;
 }
 
 export function player(state: State) {

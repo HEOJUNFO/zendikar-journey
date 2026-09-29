@@ -83,11 +83,15 @@ const EffectSchema = z.discriminatedUnion('type', [
     hunger: z.number().optional(),
     coin: z.number().optional(),
   }),
-  // Up to `max` of those present can't move or act until 06:00 the next day.
+  // Tap up to `max` permanents in the affected regions: characters first (they can't move or
+  // act), then the lands themselves (nothing can be explored or worked there). They untap when
+  // a turn (game day) starts; with skip_untap they miss the next untap and wait for the one after.
   z.strictObject({
-    type: z.literal('bind'),
+    type: z.literal('tap'),
     max: z.number().int().positive(),
-    until: z.literal('next-morning'),
+    skip_untap: z.boolean().default(false),
+    // How a tapped land shows (e.g. "조수에 잠긴 해안").
+    land_label: z.string().min(1).default('묶인 땅'),
   }),
   // A lasting state on the affected regions.
   z.strictObject({
@@ -97,11 +101,11 @@ const EffectSchema = z.discriminatedUnion('type', [
     blocks_travel: z.boolean().default(false),
   }),
   // Land destruction (a land is a region): the lands whoever set it off made landfall on this
-  // turn, latest first, lie barren — nothing can be explored or worked there. Landfall events only.
+  // turn, latest first, are destroyed for good — nothing can be explored or worked there until
+  // some card brings them back. Landfall events only.
   z.strictObject({
     type: z.literal('destroy_lands'),
     count: z.number().int().positive(),
-    hours: z.number().positive(),
   }),
 ]);
 export type Effect = z.infer<typeof EffectSchema>;
