@@ -105,6 +105,30 @@ export function fetchLand(state: State, world: World, a: Actor, fromId: string, 
   bondLand(state, world, a, t, toId);
 }
 
+// At a turn's start (00:00): whoever holds a land like Emeria and enough plains gets back the
+// last retainer who died serving them ("return target creature card from your graveyard to
+// the battlefield"), at their side and theirs again.
+export function upkeepRevive(state: State, world: World, t: number) {
+  for (const holder of Object.values(state.actors)) {
+    if (holder.dead) continue;
+    const held = (holder.bonds ?? []).map((id) => world.regions.find((r) => r.id === id)).filter((r) => r && !state.regions[r.id]?.destroyed);
+    const plains = held.filter((r) => landTypes(r!).includes('plains')).length;
+    const land = held.find((r) => r!.upkeepRevive && plains >= r!.upkeepRevive.plains);
+    const back = [...(holder.fallen ?? [])].reverse().map((id) => state.actors[id]).find((x) => x?.dead && !x.left);
+    if (!land || !back) continue;
+    delete back.dead;
+    Object.assign(back, { region: holder.region, master: holder.id, travel: undefined, task: undefined, forced: undefined, wounds: undefined, schedule: undefined });
+    holder.fallen = holder.fallen!.filter((id) => id !== back.id);
+    addLog(state, {
+      kind: 'event',
+      text: `${land!.name}의 힘으로 ${josa(shortName(back.name), '이', '가')} 되살아나 다시 ${shortName(holder.name)} 곁에 섰다.`,
+      regions: [holder.region],
+      actors: [back.id, holder.id],
+      t,
+    });
+  }
+}
+
 // Why they can't use this ability now (loyalty, tap, mana), or null. The target is checked
 // by useAbility.
 export function abilityBlocked(state: State, world: World, beingId: string, ability: ActivatedAbility, t: number): string | null {

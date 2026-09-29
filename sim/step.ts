@@ -21,7 +21,7 @@ import {
 import { gainedLifeToday, loseLife } from './life.ts';
 import { addLog, alive, landUnusable, needsOf, npcDef, present, ptOf, random } from './state.ts';
 import { addFoe, dealDamage, hostileNpcs } from './combat.ts';
-import { bondBlocked, bondLand, fetchLand, spawnWild, useAbility } from './abilities.ts';
+import { bondBlocked, bondLand, fetchLand, spawnWild, upkeepRevive, useAbility } from './abilities.ts';
 import { CLAIM_HOURS, claimBlocked, claimItem, itemsAt } from './items.ts';
 import { learnSpell } from './spells.ts';
 import { masterOf } from './retainers.ts';
@@ -60,6 +60,8 @@ export function step(state: State, world: World) {
 
 function startDay(state: State, world: World, t: number) {
   const day = gameDay(t);
+  // The upkeep: at a turn's start.
+  if (minuteOfDay(t) === 0) upkeepRevive(state, world, t);
   if (state.gm.day !== day) state.gm = { day, source: 'none', fires: [] };
   if (state.met.day !== day) state.met = { day, pairs: [] };
   // "Until end of turn" wears off.
@@ -278,7 +280,7 @@ export function travelBlocked(state: State, world: World, a: Actor, to: string):
   const from = region(world, a.region);
   for (const r of [from, dest]) {
     const need = TERRAINS[r.terrain].requires;
-    if (need && !a.abilities.includes(need))
+    if (need && !a.abilities.includes(need) && !r.climbHours)
       return `${r.name}(${TERRAINS[r.terrain].label})에 오가려면 ${josa(ABILITY_LABELS[need], '이', '가')} 필요하다.`;
   }
   for (const r of [from, dest]) {
@@ -291,7 +293,7 @@ export function travelBlocked(state: State, world: World, a: Actor, to: string):
 export function startTravel(state: State, world: World, a: Actor, to: string, t: number) {
   const from = region(world, a.region);
   const dest = region(world, to);
-  const hours = travelHours(from, dest);
+  const hours = travelHours(from, dest, a.abilities);
   a.travel = { to, arrive: t + hours * 60 };
   a.task = { kind: 'travel', activity: `${toward(dest.name)} 이동`, emoji: '🧭', until: a.travel.arrive };
   addLog(state, {

@@ -125,7 +125,7 @@ export function RegionCard(props: {
         <p className="muted">갈 수 없다: {why}</p>
       ) : (
         <button disabled={busy} onClick={() => onAct({ type: 'move', to: r.id })}>
-          이곳으로 이동 ({travelHours(region(world, p.region), r)}시간)
+          이곳으로 이동 ({travelHours(region(world, p.region), r, p.abilities)}시간)
         </button>
       );
     }

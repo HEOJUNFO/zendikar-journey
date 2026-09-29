@@ -16,7 +16,7 @@ import { bondBlocked, bondLand, fetchTargets, useAbility } from './abilities.ts'
 import { DEPLETED_LABEL } from './rules.ts';
 import { swayBlocked } from './retainers.ts';
 import type { State } from './state.ts';
-import { affectedRegions, buildWorld, travelHours } from './world.ts';
+import { affectedRegions, buildWorld, region, travelHours } from './world.ts';
 import type { RawEntity } from './world.ts';
 
 const loc = (id: string, x: number, y: number, terrain: string): RawEntity => ({
@@ -984,4 +984,46 @@ test('a save whose map changed: characters gone from the world leave it, and tho
   assert.equal(state.actors['chr-y'], undefined);
   assert.equal(state.actors['chr-x'].region, 'loc-b');
   assert.equal(state.actors[PLAYER_ID].region, 'loc-a');
+});
+
+const skyRuin: RawEntity = {
+  id: 'loc-ruin',
+  kind: 'location',
+  name: '하늘 폐허',
+  status: 'canon',
+  map: { in: 'loc-a', terrain: 'sky' },
+  sim: { nonbasic: true, climb_hours: 6, upkeep_revive: { plains: 2 } },
+};
+
+test('a sky ruin that can be climbed: those who cannot fly get there by rope, six hours more', async () => {
+  const world = fixture([skyRuin]);
+  const state = character(world, 'loc-a');
+  const [a, ruin] = [region(world, 'loc-a'), region(world, 'loc-ruin')];
+  assert.equal(travelHours(a, ruin, []), 7);
+  assert.equal(travelHours(a, ruin, ['fly']), 1);
+  assert.equal(travelBlocked(state, world, state.actors[PLAYER_ID], 'loc-ruin'), null);
+  assert.match(travelBlocked(state, world, state.actors[PLAYER_ID], 'loc-sky')!, /비행/); // a sky island with no ropes
+  await act(state, world, { type: 'move', to: 'loc-ruin' });
+  assert.equal(state.actors[PLAYER_ID].region, 'loc-ruin');
+  assert.equal(formatClock(state.minutes), '1일차 13:00');
+});
+
+test('at dawn, one holding the ruin and enough plains gets back the last retainer who died serving them', async () => {
+  const world = fixture([skyRuin, loc('loc-p', 20, 20, 'grassland'), npc('chr-x', npcSim('loc-a')), npc('chr-y', npcSim('loc-a'))]);
+  const state = character(world, 'loc-a');
+  const p = state.actors[PLAYER_ID];
+  p.bonds = ['loc-ruin', 'loc-a'];
+  for (const id of ['chr-x', 'chr-y']) {
+    state.actors[id].master = PLAYER_ID;
+    die(state, state.actors[id], state.minutes, '시험');
+  }
+  await act(state, world, { type: 'wait', hours: 20 }); // past midnight: one plains only
+  assert.ok(state.actors['chr-y'].dead);
+  p.bonds.push('loc-p');
+  await act(state, world, { type: 'wait', hours: 24 });
+  const y = state.actors['chr-y'];
+  assert.equal(y.dead, undefined);
+  assert.equal(y.master, PLAYER_ID);
+  assert.ok(state.actors['chr-x'].dead); // one a day
+  assert.deepEqual(p.fallen, ['chr-x']);
 });

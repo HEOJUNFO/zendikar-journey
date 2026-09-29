@@ -38,7 +38,7 @@ function position(world: World, state: State, a: Actor) {
   if (!a.travel) return { ...from, travelling: false };
   const toR = region(world, a.travel.to);
   const to = nodeAt(world, toR);
-  const total = travelHours(fromR, toR) * 60;
+  const total = travelHours(fromR, toR, a.abilities) * 60;
   const done = Math.min(1, Math.max(0, 1 - (a.travel.arrive - state.minutes) / total));
   return { x: from.x + (to.x - from.x) * done, y: from.y + (to.y - from.y) * done, travelling: true };
 }

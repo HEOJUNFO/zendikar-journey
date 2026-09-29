@@ -28,7 +28,7 @@ export async function interpret({ world, state, text }: InterpretInput): Promise
     .filter((r) => r.id !== p.region && !TERRAINS[r.terrain].sea)
     .map((r) => {
       const why = travelBlocked(state, world, p, r.id);
-      return `- ${r.id}: ${placeName(world, r)} (${r.summary}) — ${why ? `갈 수 없음: ${why}` : `${travelHours(here, r)}시간`}`;
+      return `- ${r.id}: ${placeName(world, r)} (${r.summary}) — ${why ? `갈 수 없음: ${why}` : `${travelHours(here, r, p.abilities)}시간`}`;
     });
   const taught = spellsTaughtAt(world, p.region).filter((s) => !p.spells?.includes(s.id));
   const known = world.spells.filter((s) => p.spells?.includes(s.id));

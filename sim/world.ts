@@ -80,6 +80,13 @@ export const LandSimSchema = z.strictObject({
   // that color who died serving whoever holds the land (their fallen retainers), one mana of
   // it, less the cost; never less than the land's one mana.
   fallen_mana: z.strictObject({ color: z.enum(COLORS), cost: z.number().int().min(0) }).optional(),
+  // Those without the ability its terrain asks for (flying, for a sky island) can still climb
+  // up or down, taking this many hours more each way.
+  climb_hours: z.number().int().positive().optional(),
+  // "At the beginning of your upkeep, if you control N or more Plains, you may return target
+  // creature card from your graveyard to the battlefield": at 00:00, whoever holds it with N
+  // plains or more gets back the last retainer who died serving them.
+  upkeep_revive: z.strictObject({ plains: z.number().int().positive() }).optional(),
   on_bond: z.array(z.discriminatedUnion('type', [z.strictObject({ type: z.literal('gain_life'), amount: z.number().int().positive() })])).default([]),
 });
 export type BondEffect = z.infer<typeof LandSimSchema>['on_bond'][number];
@@ -344,6 +351,8 @@ export type Region = {
   noMana: boolean;
   fetch?: { types: LandType[]; life: number };
   fallenMana?: { color: Color; cost: number };
+  climbHours?: number;
+  upkeepRevive?: { plains: number };
   // An area inside this region (its x, y are the region's). Areas are lands of their own:
   // people meet, bond, and get hit by events there, but an event on the region reaches them.
   parent?: string;
@@ -478,6 +487,8 @@ export function buildWorld(entities: RawEntity[]): { world: World; errors: strin
           noMana: land.data?.no_mana ?? false,
           fetch: land.data?.fetch,
           fallenMana: land.data?.fallen_mana,
+          climbHours: land.data?.climb_hours,
+          upkeepRevive: land.data?.upkeep_revive,
         });
       }
     }
@@ -629,12 +640,17 @@ export function distance(a: { x: number; y: number }, b: { x: number; y: number 
 }
 
 // Within a region (its open ground and its areas) any move is an hour. Between regions it is
-// the distance, plus an hour to get out of or into an area through its region.
-export function travelHours(a: Region, b: Region) {
+// the distance, plus an hour to get out of or into an area through its region. One without the
+// ability a land asks for (e.g. flying to a sky ruin) climbs instead, if it can be climbed.
+export function travelHours(a: Region, b: Region, abilities: readonly Ability[] = []) {
+  const climb = (r: Region) => {
+    const need = TERRAINS[r.terrain].requires;
+    return need && !abilities.includes(need) ? (r.climbHours ?? 0) : 0;
+  };
   const home = (r: Region) => r.parent ?? r.id;
-  if (home(a) === home(b)) return 1;
+  if (home(a) === home(b)) return 1 + climb(a) + climb(b);
   const road = Math.max(1, Math.ceil(distance(a, b) / TRAVEL_UNITS_PER_HOUR));
-  return road + (a.parent ? 1 : 0) + (b.parent ? 1 : 0);
+  return road + (a.parent ? 1 : 0) + (b.parent ? 1 : 0) + climb(a) + climb(b);
 }
 
 // A land's basic land types (none for a named land card, or a sea).
@@ -648,7 +664,7 @@ export function landTypes(r: Region): LandType[] {
 export function canStay(r: Region, abilities: readonly Ability[]) {
   const t = TERRAINS[r.terrain];
   if (abilities.includes('aquatic')) return !!t.sea;
-  return !t.sea && (!t.requires || abilities.includes(t.requires));
+  return !t.sea && (!t.requires || abilities.includes(t.requires) || !!r.climbHours);
 }
 
 // Land regions an event reaches: those within range, with their areas. An event in an area
