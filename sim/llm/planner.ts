@@ -30,12 +30,18 @@ export type PlanDayInput = {
   news: string[];
   // What they think of the people they know ("- 이오나 (…): …").
   relations?: string[];
+  // Items no one holds that they could tame today ("- itm-… in loc-…: …").
+  items?: string[];
 };
 
-// Kinds of blocks they may plan: no meals without hunger, bonding only if their routine bonds.
-function kindsFor(input: Pick<PlanDayInput, "needs" | "routine">) {
+// Kinds of blocks they may plan: no meals without hunger, bonding only if their routine bonds,
+// taming only if there is an item for them to tame.
+function kindsFor(input: Pick<PlanDayInput, 'needs' | 'routine' | 'items'>) {
   return LIFE_KINDS.filter(
-    (k) => (k !== 'eat' || input.needs.includes('hunger')) && (k !== 'bond' || input.routine.some((b) => b.kind === 'bond')),
+    (k) =>
+      (k !== 'eat' || input.needs.includes('hunger')) &&
+      (k !== 'bond' || input.routine.some((b) => b.kind === 'bond')) &&
+      (k !== 'claim' || !!input.items?.length),
   );
 }
 
@@ -61,7 +67,7 @@ The character lives by their role, personality and goals, and takes care of thei
 Answer with JSON only, no prose.`;
 
 function userPrompt(input: PlanDayInput) {
-  const { day, name, persona, goal, role, home, stats, needs, routine, regions, news, relations = [] } = input;
+  const { day, name, persona, goal, role, home, stats, needs, routine, regions, news, relations = [], items = [] } = input;
   const kinds = kindsFor(input);
   const state = [
     needs.includes('energy') && `energy ${Math.round(stats.energy)}/100 (low = tired)`,
@@ -95,6 +101,10 @@ Rules:
 - kind is one of: ${kinds.join(', ')}. Use "social" only when they would seek out other people.${
     kinds.includes('bond')
       ? '\n- "bond" takes 4 hours in one region: they make that land theirs (at most one land a day; not one already theirs or hunted out).'
+      : ''
+  }${
+    kinds.includes('claim')
+      ? `\n- "claim" takes 1 hour where an item stands: they pay its mana and it becomes theirs (only if they would want it). Items no one holds:\n${items.join('\n')}`
       : ''
   }
 - Travel between regions takes hours; only change region when there is a reason.

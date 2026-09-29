@@ -2,6 +2,7 @@
 import { gameDay, untapTime } from './clock.ts';
 import { dealDamage, die, leavePlane } from './combat.ts';
 import { manaAvailable, payMana, planPayment } from './mana.ts';
+import { itemsOnLandfall } from './items.ts';
 import { DEPLETED_LABEL } from './rules.ts';
 import { castSpell, spellDef } from './spells.ts';
 import { addLog, npcDef, present, ptOf, random } from './state.ts';
@@ -50,6 +51,7 @@ export function bondLand(state: State, world: World, a: Actor, t: number) {
       t,
     });
   }
+  itemsOnLandfall(state, world, a, t);
 }
 
 // Why a being can't use this ability now (loyalty, tap, mana), or null. The target is checked

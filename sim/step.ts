@@ -21,6 +21,7 @@ import { gainedLifeToday, loseLife } from './life.ts';
 import { addLog, alive, landUnusable, needsOf, npcDef, present, ptOf, random } from './state.ts';
 import { addFoe, dealDamage, hostileNpcs } from './combat.ts';
 import { bondBlocked, bondLand, spawnWild, useAbility } from './abilities.ts';
+import { CLAIM_HOURS, claimBlocked, claimItem, itemsAt } from './items.ts';
 import { learnSpell } from './spells.ts';
 import { masterOf } from './retainers.ts';
 import { payMana } from './mana.ts';
@@ -39,11 +40,12 @@ export function step(state: State, world: World) {
   hostileNpcs(state, world, t);
   for (const a of alive(state)) {
     actorHour(state, world, a, t);
-    // A timed task done: the player's action, or an NPC's bonding.
+    // A timed task done: the player's action, or an NPC's bonding or taming.
     const done = a.task?.until !== undefined && a.task.until <= t + STEP_MINUTES && !a.travel;
-    if (done && (a.kind === 'player' || a.task!.kind === 'bond')) {
+    if (done && (a.kind === 'player' || a.task!.kind === 'bond' || a.task!.kind === 'claim')) {
       if (a.task!.kind === 'bond') bondLand(state, world, a, t + STEP_MINUTES);
       if (a.task!.kind === 'learn' && a.task!.spell) learnSpell(state, world, a, a.task!.spell, t + STEP_MINUTES);
+      if (a.task!.kind === 'claim' && a.task!.item) claimItem(state, world, a, a.task!.item, t + STEP_MINUTES);
       a.task = undefined;
     }
   }
@@ -352,17 +354,23 @@ function npcTask(state: State, world: World, a: Actor, t: number): Task | undefi
     return a.task;
   }
   // Can't get there (or already there): do it here. Nothing can be worked on a destroyed or
-  // tapped land. Bonding takes BOND_HOURS and carries on until done (step).
-  const noBond = block.kind === 'bond' ? bondBlocked(state, world, a, t) : null;
-  if (block.kind === 'bond' && !noBond && a.task?.kind === 'bond') return a.task;
+  // tapped land. Bonding takes BOND_HOURS and taming CLAIM_HOURS; both carry on until done (step).
+  const item = block.kind === 'claim' ? itemsAt(world, a.region).find((x) => !claimBlocked(state, world, a, x.id, t)) : undefined;
+  const cannot =
+    block.kind === 'bond' ? bondBlocked(state, world, a, t)
+    : block.kind === 'claim' && !item ? (itemsAt(world, a.region).map((x) => claimBlocked(state, world, a, x.id, t))[0] ?? '길들일 것이 없다.')
+    : null;
+  if (!cannot && (block.kind === 'bond' || block.kind === 'claim') && a.task?.kind === block.kind) return a.task;
   const task: Task =
     block.kind === 'work' && landUnusable(state, a.region)
       ? { kind: 'leisure', activity: `${block.activity} (${landUnusable(state, a.region)}, 손을 놓음)`, emoji: '🥀' }
-      : noBond
-        ? { kind: 'leisure', activity: `${block.activity} (${noBond.replace(/\.$/, '')})`, emoji: block.emoji }
+      : cannot
+        ? { kind: 'leisure', activity: `${block.activity} (${cannot.replace(/\.$/, '')})`, emoji: block.emoji }
         : block.kind === 'bond'
           ? { kind: 'bond', activity: block.activity, emoji: block.emoji, until: t + BOND_HOURS * 60 }
-          : { kind: block.kind, activity: block.activity, emoji: block.emoji };
+          : item
+            ? { kind: 'claim', activity: block.activity, emoji: block.emoji, until: t + CLAIM_HOURS * 60, item: item.id }
+            : { kind: block.kind, activity: block.activity, emoji: block.emoji };
   if (a.task?.activity !== task.activity || a.task?.kind !== task.kind) {
     addLog(state, {
       kind: 'activity',

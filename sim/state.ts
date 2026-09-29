@@ -17,6 +17,8 @@ export type Task = {
   until?: number;
   // learn: the spell being learned.
   spell?: string;
+  // claim: the item being tamed.
+  item?: string;
 };
 
 export type Actor = {
@@ -159,6 +161,8 @@ export type State = {
   met: { day: number; pairs: string[] };
   // NPC conversations held today (the LLM writes them; capped per day).
   talks?: { day: number; count: number };
+  // Items (sim/items.ts): who holds each, and the charge counters on it.
+  items?: Record<string, { name: string; owner?: string; counters: number }>;
   nextLogId: number;
   log: LogEntry[];
 };

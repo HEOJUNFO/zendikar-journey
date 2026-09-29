@@ -7,6 +7,7 @@ import { addLog, isPerson, landUnusable, player } from './state.ts';
 import type { State, Task } from './state.ts';
 import { startTravel, travelBlocked } from './step.ts';
 import { bondBlocked } from './abilities.ts';
+import { CLAIM_HOURS, claimBlocked, itemDef } from './items.ts';
 import { castBlocked, learnBlocked, spellDef } from './spells.ts';
 import { josa, shortName } from './text.ts';
 import { PACES } from './types.ts';
@@ -25,6 +26,8 @@ export const ActionSchema = z.discriminatedUnion('type', [
   // Learn a spell taught here; cast a known one on someone here (kick: pay its kicker too).
   z.object({ type: z.literal('learn'), spell: z.string() }),
   z.object({ type: z.literal('cast'), spell: z.string(), to: z.string(), kick: z.boolean().default(false) }),
+  // Tame an item that stands here: pay its cost and it becomes yours.
+  z.object({ type: z.literal('claim'), item: z.string() }),
 ]);
 export type Action = z.infer<typeof ActionSchema>;
 
@@ -103,6 +106,14 @@ export function startAction(state: State, world: World, action: Action): string 
       const s = spellDef(world, action.spell)!;
       task = { kind: 'cast', activity: `${s.name} 시전`, emoji: '✨', until: until(1) };
       text = `${shortName(state.actors[action.to].name)}에게 ${josa(s.name, '을', '를')} 건다.`;
+      break;
+    }
+    case 'claim': {
+      const why = claimBlocked(state, world, p, action.item, t);
+      if (why) return why;
+      const x = itemDef(world, action.item)!;
+      task = { kind: 'claim', activity: `${x.name} 길들이기`, emoji: '🏺', until: until(CLAIM_HOURS), item: x.id };
+      text = `${josa(x.name, '을', '를')} 길들인다 (${x.costText}).`;
       break;
     }
     case 'talk': {

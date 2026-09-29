@@ -6,6 +6,7 @@
 import { formatClock, gameDay, STEP_MINUTES } from './clock.ts';
 import { remember } from './relations.ts';
 import { masterOf, releaseRetainer, retainersOf } from './retainers.ts';
+import { releaseItems } from './items.ts';
 import { doubleLife } from './life.ts';
 import { HUNT_HUNGER, KILL_FEED, KO_ACTIVITY, KO_HOURS } from './rules.ts';
 import { addLog, needsOf, npcDef, present, ptOf, random } from './state.ts';
@@ -50,6 +51,7 @@ export function dealDamage(state: State, a: Actor, amount: number, t: number, ca
 export function die(state: State, a: Actor, t: number, cause: string) {
   a.dead = { at: t, cause };
   for (const r of retainersOf(state, a.id)) releaseRetainer(state, r, `${shortName(a.name)}의 죽음`);
+  releaseItems(state, a, t);
   a.task = undefined;
   a.forced = undefined;
   a.travel = undefined;
@@ -71,6 +73,7 @@ export function leavePlane(state: State, a: Actor, t: number, cause: string) {
   a.forced = undefined;
   delete a.boundUntil;
   for (const r of retainersOf(state, a.id)) releaseRetainer(state, r, `${shortName(a.name)}이(가) 떠남`);
+  releaseItems(state, a, t);
   addLog(state, { kind: 'death', text: `${josa(shortName(a.name), '이', '가')} 이 차원을 떠났다 (${cause}).`, regions: [a.region], actors: [a.id] });
 }
 

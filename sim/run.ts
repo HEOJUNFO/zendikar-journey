@@ -9,6 +9,7 @@ import type { Actor, GmPlan, LogEntry, State } from './state.ts';
 import { eligibleGmEvents, step } from './step.ts';
 import { addFoe, clash } from './combat.ts';
 import { relationsText, remember } from './relations.ts';
+import { claimableItems } from './items.ts';
 import { castSpell } from './spells.ts';
 import { abilityBlocked } from './abilities.ts';
 import { bindRetainer, swayBlocked } from './retainers.ts';
@@ -235,6 +236,7 @@ async function prepareDay(state: State, world: World, llm: Llm) {
             needs: npc.needs,
             routine: npc.routine,
             relations: relationsText(a),
+            items: claimableItems(state, world, a, state.minutes).map((x) => `  - ${x.id} in ${x.at}: ${x.name} (${x.summary}), costs ${x.costText}`),
             regions: world.regions.filter((r) => canStay(r, npc.abilities)).map((r) => ({ ...r, name: placeName(world, r) })),
             news,
           });

@@ -5,6 +5,9 @@
     .area { font: 600 14px sans-serif; fill: #f4ecd8; }
   </style>
   <rect width="100%" height="100%" fill="#16324f"/>
+  <g><line x1="480" y1="130" x2="552.4444369716801" y2="110.58857161731095" stroke="#f4ecd8" stroke-width="2" stroke-dasharray="5 5"/>
+    <circle cx="552.4444369716801" cy="110.58857161731095" r="16" fill="#b9c8ea" stroke="#f4ecd8" stroke-width="2"/>
+    <text x="576.4444369716801" y="115.58857161731095" class="area">에메리아</text></g>
   <g><line x1="340" y1="580" x2="412.44443697168015" y2="560.5885716173109" stroke="#f4ecd8" stroke-width="2" stroke-dasharray="5 5"/>
     <circle cx="412.44443697168015" cy="560.5885716173109" r="16" fill="#4f4a5e" stroke="#f4ecd8" stroke-width="2"/>
     <text x="436.44443697168015" y="565.5885716173109" class="area">게트 혈족의 영지</text></g>
@@ -14,9 +17,6 @@
   <g><circle cx="180" cy="380" r="70" fill="#1d3b66" opacity="0.75"/><circle cx="180" cy="380" r="30" fill="none" stroke="#9fc4ff" stroke-width="2" stroke-dasharray="6 6"/>
     <text x="180" y="472" text-anchor="middle" class="name">심해의 영역</text>
     <text x="180" y="490" text-anchor="middle" class="terrain">심해</text></g>
-  <g><circle cx="480" cy="130" r="26" fill="#b9c8ea" stroke="#f4ecd8" stroke-width="3"/>
-    <text x="480" y="178" text-anchor="middle" class="name">에메리아</text>
-    <text x="480" y="196" text-anchor="middle" class="terrain">공중섬</text></g>
   <g><circle cx="340" cy="580" r="26" fill="#4f4a5e" stroke="#f4ecd8" stroke-width="3"/>
     <text x="340" y="628" text-anchor="middle" class="name">굴 드라즈</text>
     <text x="340" y="646" text-anchor="middle" class="terrain">늪</text></g>
@@ -26,4 +26,7 @@
   <g><circle cx="560" cy="320" r="26" fill="#3f7a3a" stroke="#f4ecd8" stroke-width="3"/>
     <text x="560" y="368" text-anchor="middle" class="name">우거진 밀림</text>
     <text x="560" y="386" text-anchor="middle" class="terrain">숲</text></g>
+  <g><circle cx="480" cy="130" r="26" fill="#8fb35a" stroke="#f4ecd8" stroke-width="3"/>
+    <text x="480" y="178" text-anchor="middle" class="name">타짐</text>
+    <text x="480" y="196" text-anchor="middle" class="terrain">초원</text></g>
 </svg>

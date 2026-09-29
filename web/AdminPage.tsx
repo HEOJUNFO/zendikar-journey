@@ -182,6 +182,12 @@ function ActorDetail({ world, state, a, onRegion }: { world: World; state: State
         ) : null}
         <dt>유대</dt>
         <dd>{a.bonds?.length ? a.bonds.map((id) => region(world, id).name).join(', ') : '없음'}</dd>
+        {Object.values(state.items ?? {}).some((x) => x.owner === a.id) && (
+          <>
+            <dt>길들인 것</dt>
+            <dd>{Object.values(state.items ?? {}).filter((x) => x.owner === a.id).map((x) => `${x.name} (담긴 생명 ${x.counters})`).join(', ')}</dd>
+          </>
+        )}
         {landfalls.length > 0 && (
           <>
             <dt>오늘 상륙</dt>

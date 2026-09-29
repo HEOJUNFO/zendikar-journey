@@ -8,6 +8,7 @@ import { woundsOf } from '../sim/combat.ts';
 import { COLOR_LABELS, formatMana, manaAvailable, manaCapacity } from '../sim/mana.ts';
 import { bondBlocked } from '../sim/abilities.ts';
 import { BOND_HOURS } from '../sim/actions.ts';
+import { CLAIM_HOURS, claimBlocked, itemsAt, itemsOf } from '../sim/items.ts';
 import { castBlocked, harmful, learnBlocked, spellsTaughtAt } from '../sim/spells.ts';
 import type { Actor, LogEntry, State } from '../sim/state.ts';
 import { travelBlocked } from '../sim/step.ts';
@@ -103,6 +104,18 @@ export function RegionCard(props: {
               </p>
             );
           })}
+          {itemsAt(world, r.id)
+            .filter((x) => !state.items?.[x.id]?.owner)
+            .map((x) => {
+              const no = claimBlocked(state, world, p, x.id, state.minutes);
+              return (
+                <p key={x.id}>
+                  <button disabled={busy || !!no || !!p.forced || p.boundUntil !== undefined} title={no ?? x.summary} onClick={() => onAct({ type: 'claim', item: x.id })}>
+                    🏺 {x.name} 길들이기 ({x.costText}, {CLAIM_HOURS}시간)
+                  </button>
+                </p>
+              );
+            })}
         </>
       );
     }
@@ -142,6 +155,16 @@ export function RegionCard(props: {
           ⚠ {c.label} <small>({formatClock(c.until)}까지{c.blocksTravel ? ', 오갈 수 없음' : ''}{c.tapped ? ', 쓸 수 없음' : ''})</small>
         </p>
       ))}
+      {itemsAt(world, r.id).map((x) => {
+        const held = state?.items?.[x.id];
+        const owner = held?.owner && state?.actors[held.owner];
+        return (
+          <p key={x.id} className="muted" title={x.summary}>
+            🏺 {x.name}{' '}
+            <small>{owner ? `· ${shortName(owner.name)}의 것${held.counters ? `, 담긴 생명 ${held.counters}` : ''}` : '· 주인 없음'}</small>
+          </p>
+        );
+      })}
       {here.length > 0 && (
         <p className="muted">
           여기 있는 이: {here.map((a) => (a.kind === 'player' ? `${shortName(a.name)}(나)` : shortName(a.name))).join(', ')}
@@ -245,6 +268,12 @@ export function PlayerCard({ world, state }: { world: World; state: State }) {
       <p className="muted">
         아는 주문:{' '}
         {p.spells?.length ? world.spells.filter((s) => p.spells!.includes(s.id)).map((s) => `${s.name} ${s.costText}`).join(', ') : '없음'}
+      </p>
+      <p className="muted">
+        길들인 것:{' '}
+        {itemsOf(state, world, p.id)
+          .map((x) => `${x.name} (담긴 생명 ${state.items![x.id].counters})`)
+          .join(', ') || '없음'}
       </p>
     </section>
   );

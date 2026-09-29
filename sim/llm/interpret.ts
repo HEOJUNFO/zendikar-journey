@@ -7,6 +7,7 @@ import type { InterpretInput } from '../run.ts';
 import { travelBlocked } from '../step.ts';
 import { shortName } from '../text.ts';
 import { placeName, region, TERRAINS, travelHours } from '../world.ts';
+import { itemsAt, itemOwner } from '../items.ts';
 import { spellsTaughtAt } from '../spells.ts';
 import { chatCompletion, extractJson } from './chat.ts';
 import { playerText } from './context.ts';
@@ -30,6 +31,7 @@ export async function interpret({ world, state, text }: InterpretInput): Promise
     });
   const taught = spellsTaughtAt(world, p.region).filter((s) => !p.spells?.includes(s.id));
   const known = world.spells.filter((s) => p.spells?.includes(s.id));
+  const items = itemsAt(world, p.region).filter((x) => !itemOwner(state, x.id));
   const people = present(state, p.region)
     .filter(isPerson)
     .map((a) => `- ${a.id}: ${shortName(a.name)} (power/toughness ${ptOf(a).join('/')})`);
@@ -60,7 +62,7 @@ ${taught.length ? taught.map((s) => `- {"type":"learn","spell":"${s.id}"}  (lear
           known.length
             ? known.map((s) => `- {"type":"cast","spell":"${s.id}","to":"<person id${s.target === 'any_here' ? ` or ${p.id} for themselves` : ''}>","kick":false}  (cast ${s.name} ${s.costText} on someone here: ${s.summary})`).join('\n') + '\n'
             : ''
-        }
+        }${items.map((x) => `- {"type":"claim","item":"${x.id}"}  (tame ${x.name} ${x.costText}, making it theirs: ${x.summary})`).join('\n')}
 Player typed: ${text}
 
 Answer: {"action": {...}}`,

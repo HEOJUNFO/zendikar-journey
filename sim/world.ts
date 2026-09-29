@@ -276,6 +276,25 @@ export const SpellSimSchema = z.strictObject({
 });
 export type SpellEffect = z.infer<typeof SpellSimSchema>['effects'][number];
 
+// An item (an MTG artifact, world/entities/items): it stands in one place and becomes the
+// possession of whoever pays its cost there (tames it).
+export const ItemSimSchema = z.strictObject({
+  cost: CostSchema,
+  at: z.string(),
+  effects: z
+    .array(
+      z.discriminatedUnion('type', [
+        // "Enters with X charge counters, where X is your life total": when tamed.
+        z.strictObject({ type: z.literal('charge_life') }),
+        // "Landfall — you may have your life total become the number of charge counters": when
+        // its owner bonds with a land, if that raises their life.
+        z.strictObject({ type: z.literal('landfall_set_life') }),
+      ]),
+    )
+    .min(1),
+});
+export type ItemEffect = z.infer<typeof ItemSimSchema>['effects'][number];
+
 export const EventSimSchema = z.discriminatedUnion('trigger', [
   // The GM decides each morning whether it happens today. `chance` is the share of days it
   // usually happens on, a guide for the GM.
@@ -341,6 +360,16 @@ export type SpellDef = {
   effects: SpellEffect[];
 };
 
+export type ItemDef = {
+  id: string;
+  name: string;
+  summary: string;
+  cost: ManaCost;
+  costText: string;
+  at: string;
+  effects: ItemEffect[];
+};
+
 // Who answers when spoken to.
 export type Speaker = Pick<NpcDef, 'id' | 'name' | 'persona' | 'goal' | 'role'>;
 
@@ -386,6 +415,7 @@ export type World = {
   beings: BeingDef[];
   events: EventDef[];
   spells: SpellDef[];
+  items: ItemDef[];
   lore: Lore[];
 };
 
@@ -409,7 +439,7 @@ function issues(error: z.ZodError) {
 // throwing so world-check can list them all.
 export function buildWorld(entities: RawEntity[]): { world: World; errors: string[] } {
   const errors: string[] = [];
-  const world: World = { regions: [], npcs: [], beings: [], events: [], spells: [], lore: [] };
+  const world: World = { regions: [], npcs: [], beings: [], events: [], spells: [], items: [], lore: [] };
   const err = (id: string, msg: string) => errors.push(`${id}: ${msg}`);
 
   for (const e of entities) {
@@ -521,8 +551,16 @@ export function buildWorld(entities: RawEntity[]): { world: World; errors: strin
         kicker: d.kicker,
         effects: d.effects,
       });
+    } else if (e.kind === 'item') {
+      const sim = ItemSimSchema.safeParse(e.sim);
+      if (!sim.success) {
+        err(e.id, `sim 오류: ${issues(sim.error)}`);
+        continue;
+      }
+      const d = sim.data;
+      world.items.push({ id: e.id, name: e.name, summary: e.summary ?? '', cost: parseManaCost(d.cost)!, costText: d.cost, at: d.at, effects: d.effects });
     } else {
-      err(e.id, `sim 은 character, creature, event, spell 에만 쓸 수 있음 (${e.kind})`);
+      err(e.id, `sim 은 character, creature, event, spell, item 에만 쓸 수 있음 (${e.kind})`);
     }
   }
 
@@ -556,6 +594,10 @@ export function buildWorld(entities: RawEntity[]): { world: World; errors: strin
     const r = regionOk(s.id, s.learnAt, 'sim.learn_at');
     if (r && TERRAINS[r.terrain].sea) err(s.id, `sim.learn_at ${s.learnAt} 은 바다라 아무도 머물 수 없음`);
     if (s.kicker && !ids.has(s.kicker.tap)) err(s.id, `sim.kicker.tap ${s.kicker.tap} 가 없음`);
+  }
+  for (const x of world.items) {
+    const r = regionOk(x.id, x.at, 'sim.at');
+    if (r && TERRAINS[r.terrain].sea) err(x.id, `sim.at ${x.at} 은 바다라 아무도 머물 수 없음`);
   }
   for (const b of world.beings) {
     regionOk(b.id, b.home, 'sim.home');

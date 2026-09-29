@@ -4,7 +4,7 @@ import { formatClock } from './clock.ts';
 import { loadWorld } from './load.ts';
 import { act, advance } from './run.ts';
 import type { Llm } from './run.ts';
-import { knockedOut, woundsOf } from './combat.ts';
+import { die, knockedOut, woundsOf } from './combat.ts';
 import { manaAvailable, manaCapacity } from './mana.ts';
 import { MAX_TALKS_PER_DAY, usableAbilities } from './run.ts';
 import { eligibleGmEvents } from './step.ts';
@@ -772,4 +772,59 @@ test('buildWorld reports bad game data', () => {
   assert.ok(has('chr-fasting'));
   assert.ok(has('chr-halfhour'));
   assert.ok(has('spl-lost'));
+});
+
+const vessel: RawEntity = {
+  id: 'itm-v',
+  kind: 'item',
+  name: '그릇',
+  status: 'canon',
+  sim: { cost: '{1}', at: 'loc-a', effects: [{ type: 'charge_life' }, { type: 'landfall_set_life' }] },
+};
+
+test('an item is tamed with mana where it stands; it holds its owner\'s life and gives it back on landfall', async () => {
+  const world = fixture([vessel]);
+  const state = character(world, 'loc-a');
+  const p = state.actors[PLAYER_ID];
+  assert.match((await act(state, world, { type: 'claim', item: 'itm-v' })).error!, /마나가 모자라다/);
+  await act(state, world, { type: 'bond' });
+  p.stats.energy = 70;
+  await act(state, world, { type: 'claim', item: 'itm-v' });
+  assert.deepEqual(state.items?.['itm-v'], { name: '그릇', owner: PLAYER_ID, counters: 7 }); // 69 energy: life 6.9
+  assert.match((await act(state, world, { type: 'claim', item: 'itm-v' })).error!, /이미 그릇을 길들였다/);
+  // Worn down, then a new land the next day: life becomes what the vessel holds.
+  await act(state, world, { type: 'wait', hours: 24 });
+  p.stats.energy = 20;
+  await act(state, world, { type: 'move', to: 'loc-c' });
+  await act(state, world, { type: 'bond' });
+  assert.equal(p.stats.energy, 70);
+  assert.equal(p.lifeGained, 1);
+  assert.ok(texts(state).some((t) => t.includes('그릇으로 생명')));
+  // Never lowered: full of energy, the vessel leaves it be.
+  await act(state, world, { type: 'wait', hours: 24 });
+  p.stats.energy = 95;
+  await act(state, world, { type: 'move', to: 'loc-b' });
+  const before = p.stats.energy;
+  await act(state, world, { type: 'bond' });
+  assert.ok(p.stats.energy < before);
+});
+
+test('an NPC tames an item by a claim block, and lets go of it when they die', async () => {
+  const world = fixture([vessel, npc('chr-x', { ...npcSim('loc-a', 'claim'), mana: { W: 1 } }), npc('chr-y', { ...npcSim('loc-a', 'claim'), mana: { W: 1 } })]);
+  const state = newState(world, { seed: 1, mode: 'observer' });
+  await advance(state, world, 2);
+  const owner = state.items?.['itm-v']?.owner;
+  assert.ok(owner === 'chr-x' || owner === 'chr-y');
+  const other = owner === 'chr-x' ? 'chr-y' : 'chr-x';
+  assert.equal(state.actors[other].task?.kind, 'leisure'); // already someone's
+  die(state, state.actors[owner!], state.minutes, '시험');
+  assert.equal(state.items?.['itm-v']?.owner, undefined);
+  await advance(state, world, 2);
+  assert.equal(state.items?.['itm-v']?.owner, other);
+});
+
+test('the real world: Emeria is an area of Tazeem, where the Eternity Vessel stands', () => {
+  const world = loadWorld();
+  assert.equal(world.regions.find((r) => r.id === 'loc-emeria')?.parent, 'loc-tazeem');
+  assert.equal(world.items.find((x) => x.id === 'itm-eternity-vessel')?.at, 'loc-tazeem');
 });

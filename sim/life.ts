@@ -6,7 +6,7 @@ import { gameDay } from './clock.ts';
 import { applyEffect } from './rules.ts';
 import { addLog, needsOf } from './state.ts';
 import type { Actor, State } from './state.ts';
-import { josa, shortName } from './text.ts';
+import { josa, shortName, toward } from './text.ts';
 
 export const LIFE_ENERGY = 10;
 
@@ -27,7 +27,7 @@ export function gainLife(state: State, a: Actor, amount: number, t: number, caus
   applyEffect(a.stats, { energy: amount * LIFE_ENERGY }, 60, needsOf(a));
   addLog(state, {
     kind: 'effect',
-    text: `${josa(shortName(a.name), '이', '가')} ${cause}로 생명 ${amount}을 얻었다 (기력 +${amount * LIFE_ENERGY}).`,
+    text: `${josa(shortName(a.name), '이', '가')} ${toward(cause)} 생명 ${amount}을 얻었다 (기력 +${amount * LIFE_ENERGY}).`,
     regions: [a.region],
     actors: [a.id],
   });

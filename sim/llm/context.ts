@@ -31,7 +31,8 @@ export function playerText(state: State) {
   const p = player(state);
   if (!p) return '';
   const s = p.stats;
-  return `${p.name}. ${p.background ?? ''} (공격력/방어력 ${ptOf(p).join('/')}, 기력 ${Math.round(s.energy)}/100, 배고픔 ${Math.round(s.hunger)}/100, 돈 ${Math.round(s.coin)})`;
+  const items = Object.values(state.items ?? {}).filter((x) => x.owner === p.id).map((x) => x.name);
+  return `${p.name}. ${p.background ?? ''} (공격력/방어력 ${ptOf(p).join('/')}, 기력 ${Math.round(s.energy)}/100, 배고픔 ${Math.round(s.hunger)}/100, 돈 ${Math.round(s.coin)}${items.length ? `, 길들인 것: ${items.join(', ')}` : ''})`;
 }
 
 export function clockText(state: State) {
