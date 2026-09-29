@@ -4,7 +4,11 @@ import { readdirSync, readFileSync, existsSync } from 'node:fs';
 import { join, basename } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { parse } from 'yaml';
-import { MAP_HEIGHT, MAP_WIDTH, TERRAINS } from './build-map.mjs';
+
+// Kept in step with the old tile map until the region-node map replaces it.
+const MAP_WIDTH = 96;
+const MAP_HEIGHT = 72;
+const TERRAINS = { grassland: {}, forest: {}, rocky: {}, beach: {}, settlement: {}, sky: {}, volcanic: {}, deepsea: { sea: true } };
 
 const root = join(fileURLToPath(new URL('.', import.meta.url)), '..', 'world');
 
@@ -82,7 +86,6 @@ for (const [kind, { prefix, dir }] of Object.entries(KINDS)) {
 }
 
 // Map blocks (see world/README.md: 맵)
-const mapped = [];
 for (const [id, { rel, fm }] of entities) {
   if (!fm.map) continue;
   if (fm.kind !== 'location') {
@@ -95,16 +98,7 @@ for (const [id, { rel, fm }] of entities) {
     err(rel, `map.x/y 는 0..${MAP_WIDTH - 1} / 0..${MAP_HEIGHT - 1} 범위의 숫자: ${x}, ${y}`);
   if (!num(w) || !num(h) || w < 4 || h < 4) err(rel, `map.w/h 는 4 이상의 숫자: ${w}, ${h}`);
   if (!(terrain in TERRAINS)) err(rel, `map.terrain 은 ${Object.keys(TERRAINS).join('|')} 중 하나: ${terrain}`);
-  // Sea features are painted on the map but are not places.
-  else if (!TERRAINS[terrain].sea) mapped.push(id);
 }
-const placesFile = join(root, '..', 'data', 'places.ts');
-const built = existsSync(placesFile)
-  ? [...readFileSync(placesFile, 'utf8').matchAll(/"id": "([^"]+)"/g)].map((m) => m[1])
-  : [];
-if (mapped.sort().join() !== built.sort().join())
-  warn('data/places.ts', '맵이 세계관과 다름. npm run world:map 실행 필요');
-
 // Cross-references
 for (const [id, { rel, fm }] of entities) {
   for (const src of fm.sources ?? []) {

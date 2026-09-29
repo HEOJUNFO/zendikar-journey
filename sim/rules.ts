@@ -1,0 +1,39 @@
+import type { LifeKind, Pace, Stats } from './types.ts';
+
+type Effect = Stats;
+
+// Change per game hour while doing a block of that kind.
+export const KIND_EFFECTS: Record<LifeKind, Effect> = {
+  sleep: { energy: 12, hunger: 2, coin: 0 },
+  eat: { energy: 2, hunger: -45, coin: -3 },
+  work: { energy: -6, hunger: 5, coin: 4 },
+  social: { energy: -2, hunger: 3, coin: 0 },
+  leisure: { energy: -1, hunger: 3, coin: 0 },
+};
+// Change per game hour while travelling between regions.
+export const TRAVEL_EFFECT: Effect = { energy: -3, hunger: 4, coin: 0 };
+// Exploring a region: tiring, no pay.
+export const EXPLORE_EFFECT: Effect = { energy: -6, hunger: 5, coin: 0 };
+// Extra energy loss per hour when starving (hunger >= STARVING).
+export const STARVING = 90;
+export const STARVING_ENERGY = -3;
+
+export const INITIAL_STATS: Stats = { energy: 80, hunger: 20, coin: 20 };
+
+// Map units covered per game hour of travel (the map is 96×72 units).
+export const TRAVEL_UNITS_PER_HOUR = 4;
+
+// Chance multiplier for `enter` events per pace of those present (law-ruin-traps).
+export const PACE_TRIGGER: Record<Pace, number> = { careful: 0.5, normal: 1, hasty: 2 };
+
+// Hours of forced sleep when energy hits 0.
+export const COLLAPSE_HOURS = 6;
+
+const clamp = (x: number, lo: number, hi: number) => Math.min(hi, Math.max(lo, x));
+
+export function applyEffect(stats: Stats, effect: Partial<Effect>, gameMinutes = 60) {
+  const hours = gameMinutes / 60;
+  stats.energy = clamp(stats.energy + (effect.energy ?? 0) * hours, 0, 100);
+  stats.hunger = clamp(stats.hunger + (effect.hunger ?? 0) * hours, 0, 100);
+  stats.coin = Math.max(0, stats.coin + (effect.coin ?? 0) * hours);
+}
