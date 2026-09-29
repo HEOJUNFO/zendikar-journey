@@ -205,7 +205,7 @@ test('a land\'s destroyed-trap answers when that land is laid waste: wild snakes
     kind: 'event',
     name: '뱀 함정',
     status: 'canon',
-    sim: { region: 'loc-a', trigger: 'destroyed', text: '뱀이 쏟아졌다.', effects: [{ type: 'create', creature: 'cre-s', count: 4, pt: [1, 1] }] },
+    sim: { region: 'loc-a', trigger: 'destroyed', text: '뱀이 쏟아졌다.', effects: [{ type: 'create', creature: 'cre-s', count: 4, pt: [1, 1], colors: ['G'] }] },
   };
   const world = fixture([trap, snakeTrap, lore('cre-s', 'creature')]);
   const state = await twoLandfalls(world);
@@ -217,6 +217,7 @@ test('a land\'s destroyed-trap answers when that land is laid waste: wild snakes
   const snakes = Object.values(state.actors).filter((a) => state.tokens?.[a.id]?.creature === 'cre-s');
   assert.equal(snakes.length, 4);
   assert.ok(snakes.every((s) => s.region === 'loc-a' && !s.master && s.foes?.ids.includes(PLAYER_ID)));
+  assert.ok(snakes.every((s) => state.tokens![s.id].colors?.join() === 'G')); // green Snakes
 });
 
 test('4 damage kills an ordinary 1/1 person and ends their life', async () => {
@@ -311,7 +312,7 @@ const kalitas = being('chr-k', {
       name: '혈족으로 들이기',
       cost: '{B}{B}{B}',
       tap: true,
-      effects: [{ type: 'destroy' }, { type: 'raise', creature: 'cre-v', faction: 'fac-g' }],
+      effects: [{ type: 'destroy' }, { type: 'raise', creature: 'cre-v', faction: 'fac-g', colors: ['B'] }],
     },
   ],
 });
@@ -335,6 +336,7 @@ test('a character of legend pays mana and taps to destroy someone, who rises as 
   assert.equal(token.region, 'loc-c');
   assert.match(state.tokens![token.id].role, /fac-g/);
   assert.equal(token.schedule?.day, 0); // planned the hour it rose
+  assert.deepEqual(state.tokens![token.id].colors, ['B']); // a black Vampire
   const bs = state.actors['chr-k'];
   assert.equal(formatClock(bs.boundUntil!), '2일차 00:00');
   assert.deepEqual(manaAvailable(state, world, bs, state.minutes), { B: 4 });
@@ -821,6 +823,7 @@ test('buildWorld reports bad game data', () => {
     npc('chr-nowhere', npcSim('loc-moon')),
     npc('chr-grounded', npcSim('loc-sky')),
     npc('chr-fish', { ...npcSim('loc-a'), abilities: ['aquatic'] }),
+    { id: 'evt-colorless', kind: 'event', name: 'x', status: 'canon', sim: { region: 'loc-a', trigger: 'gm', chance: 0.1, text: 't', effects: [{ type: 'create', creature: 'loc-a', count: 1, pt: [1, 1] }] } },
     { ...tribute('loc-moon'), id: 'spl-lost' },
   ]);
   const has = (id: string) => errors.some((e) => e.startsWith(`${id}:`));
@@ -830,6 +833,7 @@ test('buildWorld reports bad game data', () => {
   assert.ok(has('chr-nowhere'));
   assert.ok(has('chr-grounded'));
   assert.ok(has('chr-fish'));
+  assert.ok(has('evt-colorless')); // a token's colors must be written, [] if colorless
   assert.ok(has('spl-lost'));
 });
 

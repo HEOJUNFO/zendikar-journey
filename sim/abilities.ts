@@ -2,6 +2,7 @@
 import { gameDay, untapTime } from './clock.ts';
 import { dealDamage, die, leavePlane } from './combat.ts';
 import { manaAvailable, payMana, planPayment } from './mana.ts';
+import type { Color } from './mana.ts';
 import { itemsOnLandfall } from './items.ts';
 import { gainLife, loseLife } from './life.ts';
 import { DEPLETED_LABEL } from './rules.ts';
@@ -151,7 +152,7 @@ export function useAbility(state: State, world: World, beingId: string, abilityI
       die(state, target, t, cause);
       died = true;
     } else if (eff.type === 'raise' && died && target) {
-      raiseToken(state, world, target, eff.creature, eff.faction, being.id);
+      raiseToken(state, world, target, eff.creature, eff.faction, eff.colors, being.id);
     } else if (eff.type === 'discard_spell') {
       const gone = discardSpell(state, world, bs, t);
       if (gone && spellColors(gone).includes(eff.if_color) && target) dealDamage(state, target, eff.damage, t, cause);
@@ -201,7 +202,7 @@ function wheel(state: State, world: World, a: Actor, draw: number) {
 
 // Someone risen in play (an MTG token) from `from`, with its power/toughness: a new character
 // who serves `master`.
-function raiseToken(state: State, world: World, from: Actor, creature: string, faction: string | undefined, master: string) {
+function raiseToken(state: State, world: World, from: Actor, creature: string, faction: string | undefined, colors: Color[], master: string) {
   const kind = world.lore.find((l) => l.id === creature);
   const masterName = shortName(npcDef(state, world, master)?.name ?? master);
   const factionName = faction ? world.lore.find((l) => l.id === faction)?.name : undefined;
@@ -221,6 +222,7 @@ function raiseToken(state: State, world: World, from: Actor, creature: string, f
     abilities: [],
     needs: ['energy'],
     creature,
+    colors: [...colors],
   };
   const def = state.tokens[id];
   state.actors[id] = {
@@ -245,7 +247,7 @@ function raiseToken(state: State, world: World, from: Actor, creature: string, f
 
 // New creatures of a kind (MTG tokens) come into being in `regionId` with no master: beasts
 // that don't talk and keep to that land. Returns them.
-export function spawnWild(state: State, world: World, creature: string, pt: [number, number], count: number, regionId: string) {
+export function spawnWild(state: State, world: World, creature: string, pt: [number, number], count: number, regionId: string, colors: Color[]) {
   const kind = world.lore.find((l) => l.id === creature);
   const kindName = kind?.name ?? creature;
   const out: Actor[] = [];
@@ -265,6 +267,7 @@ export function spawnWild(state: State, world: World, creature: string, pt: [num
       needs: ['energy'],
       beast: true,
       creature,
+      colors: [...colors],
     };
     state.actors[id] = {
       id,

@@ -232,7 +232,7 @@ function fire(state: State, world: World, ev: EventDef, t: number, omened: boole
         permanentDestroyed(state, world, id, cause.by ?? [], t);
       }
     } else if (eff.type === 'create') {
-      const born = spawnWild(state, world, eff.creature, eff.pt, eff.count, ev.region);
+      const born = spawnWild(state, world, eff.creature, eff.pt, eff.count, ev.region, eff.colors);
       const kind = world.lore.find((l) => l.id === eff.creature)?.name ?? eff.creature;
       addLog(state, { kind: 'event', text: `${kind} ${eff.count}마리가 쏟아져 나왔다 (${eff.pt.join('/')}).`, regions: [ev.region], actors: born.map((b) => b.id) });
       // They turn on whoever set it off, for the rest of the day.

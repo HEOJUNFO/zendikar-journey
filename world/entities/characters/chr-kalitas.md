@@ -31,7 +31,7 @@ sim:
       tap: true
       effects:
         - { type: destroy }
-        - { type: raise, creature: cre-vampire, faction: fac-ghet }
+        - { type: raise, creature: cre-vampire, faction: fac-ghet, colors: [B] }   # [카드] 흑색 흡혈귀 토큰
 ---
 
 ## 설정

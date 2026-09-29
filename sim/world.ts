@@ -115,7 +115,8 @@ const AbilityEffectSchema = z.discriminatedUnion('type', [
   z.strictObject({ type: z.literal('destroy') }),
   // If the target died this way, it rises as a new character of this creature kind,
   // with its power/toughness, in this faction, as the user's retainer.
-  z.strictObject({ type: z.literal('raise'), creature: z.string(), faction: z.string().optional() }),
+  // Its colors come from the card ("a black Vampire token"): [] for a colorless one.
+  z.strictObject({ type: z.literal('raise'), creature: z.string(), faction: z.string().optional(), colors: z.array(z.enum(COLORS)) }),
   // "Discard a card. If a <color> card is discarded this way, deal N damage to any target":
   // they let go of a spell they hold (their hand); if it was of that color, N damage.
   z.strictObject({ type: z.literal('discard_spell'), if_color: z.enum(COLORS), damage: z.number().int().positive() }),
@@ -232,6 +233,8 @@ const EffectSchema = z.discriminatedUnion('type', [
     creature: z.string(),
     count: z.number().int().positive(),
     pt: z.tuple([z.number().int().min(0), z.number().int().min(1)]),
+    // Their colors, from the card ("1/1 green Snake tokens"): [] for colorless ones.
+    colors: z.array(z.enum(COLORS)),
   }),
 ]);
 export type Effect = z.infer<typeof EffectSchema>;

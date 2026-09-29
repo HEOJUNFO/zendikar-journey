@@ -17,7 +17,7 @@ sim:
   trigger: destroyed      # [결정] 밀림에 있는 지속물이 남의 손에 부서질 때
   text: 부서진 밀림의 폐허 깊은 곳에서, 항아리들 사이로 코브라들이 고개를 쳐들었다.
   effects:
-    - { type: create, creature: cre-snake, count: 4, pt: [1, 1] }
+    - { type: create, creature: cre-snake, count: 4, pt: [1, 1], colors: [G] }   # [카드] 1/1 녹색 뱀 토큰
 ---
 
 ## 설정

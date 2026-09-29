@@ -4,7 +4,7 @@ import { useState } from 'react';
 import { PACE_LABELS } from '../sim/actions.ts';
 import { formatClock, formatTimeOfDay, gameDay, minuteOfDay } from '../sim/clock.ts';
 import { foesOf } from '../sim/combat.ts';
-import { COLOR_LABELS, formatMana, manaAvailable, manaCapacity } from '../sim/mana.ts';
+import { COLOR_LABELS, creatureColors, formatMana, manaAvailable, manaCapacity } from '../sim/mana.ts';
 import { needsOf, npcDef } from '../sim/state.ts';
 import type { Actor, LogEntry, State } from '../sim/state.ts';
 import { josa, shortName } from '../sim/text.ts';
@@ -161,6 +161,12 @@ function ActorDetail({ world, state, a, onRegion }: { world: World; state: State
         <dd>{PACE_LABELS[a.pace]}</dd>
         <dt>능력</dt>
         <dd>{a.abilities.length ? a.abilities.map((x) => ABILITY_LABELS[x]).join(', ') : '없음'}</dd>
+        {def && (
+          <>
+            <dt>색</dt>
+            <dd>{creatureColors(def).map((c) => COLOR_LABELS[c]).join('') || '무색'}</dd>
+          </>
+        )}
         <dt>마나</dt>
         <dd>
           {formatMana(manaAvailable(state, world, a, t))} <small className="muted">/ 하루 {formatMana(manaCapacity(state, world, a, t))}</small>
