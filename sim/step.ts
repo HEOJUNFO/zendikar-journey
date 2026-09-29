@@ -21,6 +21,7 @@ import { gainedLifeToday, loseLife } from './life.ts';
 import { addLog, alive, landUnusable, needsOf, npcDef, present, ptOf, random } from './state.ts';
 import { dealDamage, hostileNpcs } from './combat.ts';
 import { bondBlocked, bondLand, useAbility } from './abilities.ts';
+import { learnSpell } from './spells.ts';
 import { payMana } from './mana.ts';
 import type { Actor, GmPlan, State, Task } from './state.ts';
 import { josa, shortName, toward } from './text.ts';
@@ -41,6 +42,7 @@ export function step(state: State, world: World) {
     const done = a.task?.until !== undefined && a.task.until <= t + STEP_MINUTES && !a.travel;
     if (done && (a.kind === 'player' || a.task!.kind === 'bond')) {
       if (a.task!.kind === 'bond') bondLand(state, world, a, t + STEP_MINUTES);
+      if (a.task!.kind === 'learn' && a.task!.spell) learnSpell(state, world, a, a.task!.spell, t + STEP_MINUTES);
       a.task = undefined;
     }
   }
@@ -308,7 +310,7 @@ function actorHour(state: State, world: World, a: Actor, t: number) {
   const effect =
     task.kind === 'explore' ? EXPLORE_EFFECT
     : task.kind === 'fight' ? FIGHT_EFFECT
-    : KIND_EFFECTS[task.kind === 'travel' ? 'leisure' : task.kind];
+    : KIND_EFFECTS[task.kind === 'travel' || task.kind === 'learn' || task.kind === 'cast' ? 'leisure' : task.kind];
   applyEffect(a.stats, effect, 60, needs);
   if (needs.includes('hunger') && a.stats.hunger >= STARVING) applyEffect(a.stats, { energy: STARVING_ENERGY }, 60, needs);
   // A beast feeding hunts the land out: it will have to move on.

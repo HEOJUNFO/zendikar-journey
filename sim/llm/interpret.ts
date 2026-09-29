@@ -7,6 +7,7 @@ import type { InterpretInput } from '../run.ts';
 import { travelBlocked } from '../step.ts';
 import { shortName } from '../text.ts';
 import { placeName, region, TERRAINS, travelHours } from '../world.ts';
+import { spellsTaughtAt } from '../spells.ts';
 import { chatCompletion, extractJson } from './chat.ts';
 import { playerText } from './context.ts';
 
@@ -27,6 +28,8 @@ export async function interpret({ world, state, text }: InterpretInput): Promise
       const why = travelBlocked(state, world, p, r.id);
       return `- ${r.id}: ${placeName(world, r)} (${r.summary}) — ${why ? `갈 수 없음: ${why}` : `${travelHours(here, r)}시간`}`;
     });
+  const taught = spellsTaughtAt(world, p.region).filter((s) => !p.spells?.includes(s.id));
+  const known = world.spells.filter((s) => p.spells?.includes(s.id));
   const people = present(state, p.region)
     .filter(isPerson)
     .map((a) => `- ${a.id}: ${shortName(a.name)} (power/toughness ${ptOf(a).join('/')})`);
@@ -53,7 +56,11 @@ Actions:
 - {"type":"talk","to":"<person id>","say":"<what they say>"}
 - {"type":"attack","to":"<person id>"}  (only when they clearly mean to fight; fights can be deadly)
 - {"type":"bond"}  (bond with the land here, taking it as their own; 4 hours, one land a day)
-
+${taught.length ? taught.map((s) => `- {"type":"learn","spell":"${s.id}"}  (learn ${s.name} here: ${s.summary}; ${s.learnHours} hours)`).join('\n') + '\n' : ''}${
+          known.length
+            ? known.map((s) => `- {"type":"cast","spell":"${s.id}","to":"<person id>","kick":false}  (cast ${s.name} ${s.costText} on someone here: ${s.summary})`).join('\n') + '\n'
+            : ''
+        }
 Player typed: ${text}
 
 Answer: {"action": {...}}`,

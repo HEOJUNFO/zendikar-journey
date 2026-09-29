@@ -9,6 +9,7 @@ import type { Actor, GmPlan, LogEntry, State } from './state.ts';
 import { eligibleGmEvents, step } from './step.ts';
 import { addFoe, clash } from './combat.ts';
 import { relationsText, remember } from './relations.ts';
+import { castSpell } from './spells.ts';
 import { manaAvailable, planPayment } from './mana.ts';
 import { josa, shortName } from './text.ts';
 import type { ScheduleBlock } from './types.ts';
@@ -82,6 +83,7 @@ export async function act(state: State, world: World, input: Action | string, ll
   if (error) return { error, entries: [] };
   if (action.type === 'talk') await talk(state, world, p, action.to, action.say, llm);
   if (action.type === 'attack') await attack(state, world, p, action.to, llm);
+  if (action.type === 'cast') castSpell(state, world, p, action.spell, action.to, action.kick, state.minutes);
 
   for (let n = 0; busy(p) && !state.over && n < MAX_ACT_HOURS; n++) {
     await prepareDay(state, world, llm);

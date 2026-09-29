@@ -102,6 +102,8 @@ function raiseToken(state: State, world: World, from: Actor, creature: string, f
     pt: [...ptOf(from)],
     abilities: [],
     needs: ['energy'],
+    creature,
+    master,
     routine: [{ start: 0, end: 1440, regionId: from.region, kind: 'leisure', activity: `${masterName}의 부름을 기다림`, emoji: '🦇' }],
   };
   const def = state.tokens[id];

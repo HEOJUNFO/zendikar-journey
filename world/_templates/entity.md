@@ -1,6 +1,6 @@
 ---
 id: loc-example        # <접두사>-<영문 슬러그>, 파일 이름과 같게
-kind: location         # location | creature | character | faction | item | event | law
+kind: location         # location | creature | character | faction | item | event | law | spell
 name: ""               # 한국어 이름
 name_en: ""
 summary: ""            # 한 줄 요약. LLM 프롬프트(GM, 하루 계획, 서술)에 그대로 들어감

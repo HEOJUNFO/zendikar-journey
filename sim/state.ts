@@ -6,7 +6,7 @@ import type { LifeKind, Need, Pace, Schedule, Stats } from './types.ts';
 import type { Ability, BeingDef, NpcDef, Pt, Speaker, World } from './world.ts';
 import type { Mana } from './mana.ts';
 
-export type TaskKind = LifeKind | 'explore' | 'travel' | 'fight' | 'bond';
+export type TaskKind = LifeKind | 'explore' | 'travel' | 'fight' | 'bond' | 'learn' | 'cast';
 
 export type Task = {
   kind: TaskKind;
@@ -14,6 +14,8 @@ export type Task = {
   emoji: string;
   // Player tasks and forced tasks end here; NPC tasks follow the schedule.
   until?: number;
+  // learn: the spell being learned.
+  spell?: string;
 };
 
 export type Actor = {
@@ -44,6 +46,8 @@ export type Actor = {
   wounds?: { day: number; amount: number };
   // Who they'll attack on sight this turn (they were attacked, or turned hostile).
   foes?: { day: number; ids: string[] };
+  // Spells they know (world/entities/spells).
+  spells?: string[];
   // What they think of others, latest impression each (sim/relations.ts).
   relations?: Record<string, { name: string; text: string; t: number }>;
   dead?: { at: number; cause: string };

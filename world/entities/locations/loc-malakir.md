@@ -5,12 +5,13 @@ name: 말라키르
 name_en: Malakir
 summary: 굴 드라즈의 흡혈귀 도시. 도시 둘레에 피를 빠는 함정이 깔려 있다
 status: canon
-sources: [ZEN-105]
+sources: [ZEN-105, ZEN-81]
 tags: [흡혈귀, 도시, 흑색, 구역]
 links:
   - { to: loc-guul-draz, rel: 속한 지역 }
   - { to: evt-needlebite-trap, rel: 둘레의 함정 }
   - { to: cre-vampire, rel: 사는 이들 }
+  - { to: spl-blood-tribute, rel: 가르치는 주문 }
 map: { in: loc-guul-draz, terrain: settlement, color: B }
 ---
 
@@ -23,6 +24,7 @@ map: { in: loc-guul-draz, terrain: settlement, color: B }
 - 굴 드라즈 안의 구역이다 (`map.in`). 도시라 지형은 정착지지만, 흡혈귀의 땅이라 흑색 땅이다 (`map.color: B`, [가공]). 굴 드라즈 바깥에서 1시간.
 - 들어오는 길에 바늘이빨 함정(`evt-needlebite-trap`)이 있다. 그날 생명을 얻은 이가 들어오면 문다.
 - 이 땅과 유대를 맺으면 흑 마나 1을 얻는다.
+- 흡혈귀의 주문 피의 공물(`spl-blood-tribute`)을 배울 수 있다 ("배우기", 4시간).
 
 ## 미정/질문
 

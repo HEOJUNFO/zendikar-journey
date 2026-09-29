@@ -7,6 +7,7 @@ import { addLog, isPerson, landUnusable, player } from './state.ts';
 import type { State, Task } from './state.ts';
 import { startTravel, travelBlocked } from './step.ts';
 import { bondBlocked } from './abilities.ts';
+import { castBlocked, learnBlocked, spellDef } from './spells.ts';
 import { josa, shortName } from './text.ts';
 import { PACES } from './types.ts';
 import type { World } from './world.ts';
@@ -21,6 +22,9 @@ export const ActionSchema = z.discriminatedUnion('type', [
   z.object({ type: z.literal('attack'), to: z.string() }),
   // Bond with the land here: it comes under your control (landfall) and gives its mana each turn.
   z.object({ type: z.literal('bond') }),
+  // Learn a spell taught here; cast a known one on someone here (kick: pay its kicker too).
+  z.object({ type: z.literal('learn'), spell: z.string() }),
+  z.object({ type: z.literal('cast'), spell: z.string(), to: z.string(), kick: z.boolean().default(false) }),
 ]);
 export type Action = z.infer<typeof ActionSchema>;
 
@@ -83,6 +87,22 @@ export function startAction(state: State, world: World, action: Action): string 
       if (npc.travel || npc.region !== p.region) return `${josa(name, '은', '는')} 여기 없다.`;
       task = { kind: 'fight', activity: `${josa(name, '과', '와')} 싸움`, emoji: '⚔️', until: until(1) };
       text = `${name}에게 덤벼든다.`;
+      break;
+    }
+    case 'learn': {
+      const why = learnBlocked(world, p, action.spell);
+      if (why) return why;
+      const s = spellDef(world, action.spell)!;
+      task = { kind: 'learn', activity: `${s.name} 배우기`, emoji: '📖', until: until(s.learnHours), spell: s.id };
+      text = `${s.learnHours}시간 동안 ${josa(s.name, '을', '를')} 배운다.`;
+      break;
+    }
+    case 'cast': {
+      const why = castBlocked(state, world, p, action.spell, action.to, action.kick, t);
+      if (why) return why;
+      const s = spellDef(world, action.spell)!;
+      task = { kind: 'cast', activity: `${s.name} 시전`, emoji: '✨', until: until(1) };
+      text = `${shortName(state.actors[action.to].name)}에게 ${josa(s.name, '을', '를')} 건다.`;
       break;
     }
     case 'talk': {

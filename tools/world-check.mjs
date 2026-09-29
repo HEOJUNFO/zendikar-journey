@@ -17,6 +17,7 @@ const KINDS = {
   item: { prefix: 'itm', dir: 'items' },
   event: { prefix: 'evt', dir: 'events' },
   law: { prefix: 'law', dir: 'laws' },
+  spell: { prefix: 'spl', dir: 'spells' },
 };
 const STATUSES = ['draft', 'canon'];
 const CARD_ID = /^[A-Z0-9]+-\d+[a-z]?$/;

@@ -8,6 +8,7 @@ import { woundsOf } from '../sim/combat.ts';
 import { COLOR_LABELS, formatMana, manaAvailable, manaCapacity } from '../sim/mana.ts';
 import { bondBlocked } from '../sim/abilities.ts';
 import { BOND_HOURS } from '../sim/actions.ts';
+import { castBlocked, learnBlocked, spellsTaughtAt } from '../sim/spells.ts';
 import type { Actor, LogEntry, State } from '../sim/state.ts';
 import { travelBlocked } from '../sim/step.ts';
 import { shortName } from '../sim/text.ts';
@@ -92,6 +93,16 @@ export function RegionCard(props: {
               이 땅과 유대 맺기 ({BOND_HOURS}시간)
             </button>
           )}
+          {spellsTaughtAt(world, r.id).map((s) => {
+            const no = learnBlocked(world, p, s.id);
+            return (
+              <p key={s.id}>
+                <button disabled={busy || !!no || !!p.forced || p.boundUntil !== undefined} title={no ?? s.summary} onClick={() => onAct({ type: 'learn', spell: s.id })}>
+                  📖 {s.name} 배우기 ({s.learnHours}시간)
+                </button>
+              </p>
+            );
+          })}
         </>
       );
     }
@@ -223,6 +234,10 @@ export function PlayerCard({ world, state }: { world: World; state: State }) {
       <p className="muted">
         유대를 맺은 땅: {p.bonds?.length ? p.bonds.map((id) => region(world, id).name).join(', ') : '없음'}
       </p>
+      <p className="muted">
+        아는 주문:{' '}
+        {p.spells?.length ? world.spells.filter((s) => p.spells!.includes(s.id)).map((s) => `${s.name} ${s.costText}`).join(', ') : '없음'}
+      </p>
     </section>
   );
 }
@@ -278,8 +293,9 @@ export function CharacterControls(props: {
   onAct: (a: Action) => void;
   onSay: (text: string) => void;
 }) {
-  const { state, busy, onAct, onSay } = props;
+  const { world, state, busy, onAct, onSay } = props;
   const p = player(state)!;
+  const known = world.spells.filter((s) => p.spells?.includes(s.id));
   const [text, setText] = useState('');
   const [hours, setHours] = useState(2);
   const [pace, setPace] = useState<Pace>('careful');
@@ -376,6 +392,23 @@ export function CharacterControls(props: {
           >
             공격
           </button>
+          {target &&
+            known.map((s) => {
+              const kick = !!s.kicker && !castBlocked(state, world, p, s.id, target.id, true, state.minutes);
+              const why = castBlocked(state, world, p, s.id, target.id, false, state.minutes);
+              return (
+                <button
+                  key={s.id}
+                  type="button"
+                  className="danger"
+                  disabled={busy || !!stuck || !!why}
+                  title={why ?? `${shortName(target.name)}에게 ${s.name} ${s.costText}${kick ? ' (킥커 포함)' : ''}`}
+                  onClick={() => onAct({ type: 'cast', spell: s.id, to: target.id, kick })}
+                >
+                  ✨ {s.name}
+                </button>
+              );
+            })}
         </form>
       )}
       {stuck && <p className="muted">{p.travel ? '이동 중이다.' : '움직일 수 없다. 기다리는 수밖에 없다.'}</p>}

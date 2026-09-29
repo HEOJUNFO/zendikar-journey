@@ -535,6 +535,57 @@ test('an NPC remembers what it thinks of the player', async () => {
   assert.equal(state.actors['chr-x'].relations?.[PLAYER_ID]?.text, '예의 바른 떠돌이');
 });
 
+const tribute = (learnAt = 'loc-swamp'): RawEntity => ({
+  id: 'spl-t',
+  kind: 'spell',
+  name: '공물',
+  status: 'canon',
+  sim: {
+    cost: '{1}{B}',
+    learn_at: learnAt,
+    kicker: { tap: 'cre-v' },
+    effects: [{ type: 'lose_half_life' }, { type: 'gain_life_lost', if_kicked: true }],
+  },
+});
+
+test('a spell is learned where it is taught, then cast with mana on someone here', async () => {
+  const world = fixture([loc('loc-swamp', 12, 10, 'swamp'), tribute(), lore('cre-v', 'creature'), npc('chr-x', npcSim('loc-swamp'))]);
+  const state = character(world, 'loc-a');
+  const p = state.actors[PLAYER_ID];
+  assert.match((await act(state, world, { type: 'learn', spell: 'spl-t' })).error ?? '', /에서 배울 수 있다/);
+  await act(state, world, { type: 'move', to: 'loc-swamp' });
+  await act(state, world, { type: 'learn', spell: 'spl-t' });
+  assert.deepEqual(p.spells, ['spl-t']);
+  // No mana yet: two lands, one of them black.
+  assert.match((await act(state, world, { type: 'cast', spell: 'spl-t', to: 'chr-x', kick: false })).error ?? '', /마나가 모자라다/);
+  p.bonds = ['loc-swamp', 'loc-a'];
+  const x = state.actors['chr-x'];
+  x.stats.energy = 80; // life 8
+  await act(state, world, { type: 'cast', spell: 'spl-t', to: 'chr-x', kick: false });
+  assert.ok(texts(state).some((t) => t.includes('공물을 걸었다')));
+  assert.ok(x.stats.energy <= 40);
+  assert.ok(x.relations?.[PLAYER_ID]);
+  assert.equal(p.lifeGained, undefined); // not kicked
+});
+
+test('kicker: tapping a vampire you control drains the life lost into you', async () => {
+  const world = fixture([loc('loc-swamp', 12, 10, 'swamp'), tribute(), lore('cre-v', 'creature'), npc('chr-x', npcSim('loc-swamp'))]);
+  const state = character(world, 'loc-swamp');
+  const p = state.actors[PLAYER_ID];
+  p.spells = ['spl-t'];
+  p.bonds = ['loc-swamp', 'loc-a'];
+  p.stats.energy = 30;
+  state.actors['chr-x'].stats.energy = 80;
+  assert.match((await act(state, world, { type: 'cast', spell: 'spl-t', to: 'chr-x', kick: true })).error ?? '', /탭할 것이 없다/);
+  // A vampire token that answers to the player.
+  state.tokens = { 'tok-1': { ...world.npcs[0], id: 'tok-1', name: '흡혈귀', creature: 'cre-v', master: PLAYER_ID } };
+  state.actors['tok-1'] = { ...state.actors['chr-x'], id: 'tok-1', name: '흡혈귀', relations: undefined };
+  await act(state, world, { type: 'cast', spell: 'spl-t', to: 'chr-x', kick: true });
+  assert.ok(state.actors['tok-1'].boundUntil !== undefined);
+  assert.ok(p.stats.energy >= 60); // 30 + 40, less the hour's wear
+  assert.equal(p.lifeGained, 0);
+});
+
 test('NPCs socialising in the same region meet once a day', async () => {
   const world = fixture([npc('chr-x', npcSim('loc-a')), npc('chr-y', npcSim('loc-a'))]);
   const state = newState(world, { seed: 3, mode: 'observer' });
@@ -576,6 +627,7 @@ test('buildWorld reports bad game data', () => {
     npc('chr-nowhere', npcSim('loc-moon')),
     npc('chr-grounded', npcSim('loc-sky')),
     npc('chr-fasting', { ...npcSim('loc-a', 'eat'), needs: ['energy'] }),
+    { ...tribute('loc-moon'), id: 'spl-lost' },
     npc('chr-halfhour', { ...npcSim('loc-a'), routine: [['00:00', '00:30', 'loc-a', 'work', '일', '🔨'], ['00:30', '24:00', 'loc-a', 'sleep', '잠', '💤']] }),
   ]);
   const has = (id: string) => errors.some((e) => e.startsWith(`${id}:`));
@@ -585,4 +637,5 @@ test('buildWorld reports bad game data', () => {
   assert.ok(has('chr-grounded'));
   assert.ok(has('chr-fasting'));
   assert.ok(has('chr-halfhour'));
+  assert.ok(has('spl-lost'));
 });

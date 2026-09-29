@@ -11,7 +11,7 @@ import { josa, shortName } from './text.ts';
 export const LIFE_ENERGY = 10;
 
 export function loseLife(state: State, a: Actor, amount: number, cause: string) {
-  if (a.dead || !needsOf(a).includes('energy')) return;
+  if (a.dead || !needsOf(a).includes('energy') || amount <= 0) return;
   applyEffect(a.stats, { energy: -amount * LIFE_ENERGY }, 60, needsOf(a));
   addLog(state, {
     kind: 'effect',
@@ -31,6 +31,11 @@ export function gainLife(state: State, a: Actor, amount: number, t: number, caus
     regions: [a.region],
     actors: [a.id],
   });
+}
+
+// Life they have now (energy / LIFE_ENERGY), or null for those who live by no energy.
+export function lifeOf(a: Actor) {
+  return needsOf(a).includes('energy') ? a.stats.energy / LIFE_ENERGY : null;
 }
 
 export function gainedLifeToday(a: Actor, t: number) {

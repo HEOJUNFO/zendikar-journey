@@ -214,6 +214,31 @@ const EventCost = {
   cost: z.strictObject({ by: z.string(), mana: CostSchema }).optional(),
 };
 
+// A spell someone can learn and cast (world/entities/spells).
+export const SpellSimSchema = z.strictObject({
+  cost: CostSchema,
+  // sorcery: only when the caster is free to act; instant: any time (no difference yet).
+  speed: z.enum(['sorcery', 'instant']).default('sorcery'),
+  // Where it is learned, and how long that takes.
+  learn_at: z.string(),
+  learn_hours: z.number().int().min(1).default(4),
+  // Who it can target: someone else standing in the same place.
+  target: z.literal('other_here').default('other_here'),
+  // Kicker: tap an untapped creature of this kind that the caster controls, for more effect.
+  kicker: z.strictObject({ tap: z.string() }).optional(),
+  effects: z
+    .array(
+      z.discriminatedUnion('type', [
+        // The target loses half their life, rounded up.
+        z.strictObject({ type: z.literal('lose_half_life') }),
+        // The caster gains the life lost this way (only if kicked, with if_kicked).
+        z.strictObject({ type: z.literal('gain_life_lost'), if_kicked: z.boolean().default(false) }),
+      ]),
+    )
+    .min(1),
+});
+export type SpellEffect = z.infer<typeof SpellSimSchema>['effects'][number];
+
 export const EventSimSchema = z.discriminatedUnion('trigger', [
   // The GM decides each morning whether it happens today. `chance` is the share of days it
   // usually happens on, a guide for the GM.
@@ -258,6 +283,22 @@ export type NpcDef = {
   beast?: boolean;
   landfall?: { pt: [number, number]; trample: boolean };
   routine: ScheduleBlock[];
+  // Tokens: the creature kind they are and who controls them.
+  creature?: string;
+  master?: string;
+};
+
+export type SpellDef = {
+  id: string;
+  name: string;
+  summary: string;
+  cost: ManaCost;
+  costText: string;
+  speed: 'sorcery' | 'instant';
+  learnAt: string;
+  learnHours: number;
+  kicker?: { tap: string };
+  effects: SpellEffect[];
 };
 
 // Who answers when spoken to.
@@ -302,6 +343,7 @@ export type World = {
   // GM-driven characters: no routine; they stay at home on the map.
   beings: BeingDef[];
   events: EventDef[];
+  spells: SpellDef[];
   lore: Lore[];
 };
 
@@ -325,7 +367,7 @@ function issues(error: z.ZodError) {
 // throwing so world-check can list them all.
 export function buildWorld(entities: RawEntity[]): { world: World; errors: string[] } {
   const errors: string[] = [];
-  const world: World = { regions: [], npcs: [], beings: [], events: [], lore: [] };
+  const world: World = { regions: [], npcs: [], beings: [], events: [], spells: [], lore: [] };
   const err = (id: string, msg: string) => errors.push(`${id}: ${msg}`);
 
   for (const e of entities) {
@@ -414,8 +456,27 @@ export function buildWorld(entities: RawEntity[]): { world: World; errors: strin
         effects,
         ...(cost ? { cost: { by: cost.by, mana: parseManaCost(cost.mana)!, text: cost.mana } } : {}),
       });
+    } else if (e.kind === 'spell') {
+      const sim = SpellSimSchema.safeParse(e.sim);
+      if (!sim.success) {
+        err(e.id, `sim 오류: ${issues(sim.error)}`);
+        continue;
+      }
+      const d = sim.data;
+      world.spells.push({
+        id: e.id,
+        name: e.name,
+        summary: e.summary ?? '',
+        cost: parseManaCost(d.cost)!,
+        costText: d.cost,
+        speed: d.speed,
+        learnAt: d.learn_at,
+        learnHours: d.learn_hours,
+        kicker: d.kicker,
+        effects: d.effects,
+      });
     } else {
-      err(e.id, `sim 은 character, creature, event 에만 쓸 수 있음 (${e.kind})`);
+      err(e.id, `sim 은 character, creature, event, spell 에만 쓸 수 있음 (${e.kind})`);
     }
   }
 
@@ -443,6 +504,11 @@ export function buildWorld(entities: RawEntity[]): { world: World; errors: strin
       err(ev.id, `sim.cost.by ${ev.cost.by} 가 sim 을 가진 인물이 아님`);
   }
   const ids = new Set(entities.map((e) => e.id));
+  for (const s of world.spells) {
+    const r = regionOk(s.id, s.learnAt, 'sim.learn_at');
+    if (r && !canStay(r, [])) err(s.id, `sim.learn_at ${s.learnAt} 에는 사람이 머물 수 없음`);
+    if (s.kicker && !ids.has(s.kicker.tap)) err(s.id, `sim.kicker.tap ${s.kicker.tap} 가 없음`);
+  }
   for (const b of world.beings) {
     regionOk(b.id, b.home, 'sim.home');
     for (const x of b.activated)
