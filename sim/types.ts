@@ -1,6 +1,7 @@
 // What a character is doing in a schedule block. Drives stat effects (rules.ts) and
 // whether characters in the same region meet (step.ts).
-export const LIFE_KINDS = ['sleep', 'eat', 'work', 'social', 'leisure'] as const;
+// bond: bonding with the land they stand on (landfall), for those whose routine does it.
+export const LIFE_KINDS = ['sleep', 'eat', 'work', 'social', 'leisure', 'bond'] as const;
 export type LifeKind = (typeof LIFE_KINDS)[number];
 
 // start/end are minutes of the game day, 0..1440, end exclusive.

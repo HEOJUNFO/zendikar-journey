@@ -10,6 +10,7 @@ export const KIND_EFFECTS: Record<LifeKind, Effect> = {
   work: { energy: -6, hunger: 5, coin: 4 },
   social: { energy: -2, hunger: 3, coin: 0 },
   leisure: { energy: -1, hunger: 3, coin: 0 },
+  bond: { energy: -1, hunger: 3, coin: 0 },
 };
 // Change per game hour while travelling between regions.
 export const TRAVEL_EFFECT: Effect = { energy: -3, hunger: 4, coin: 0 };
@@ -25,6 +26,17 @@ export const INITIAL_STATS: Stats = { energy: 80, hunger: 20, coin: 20 };
 
 // Map units covered per game hour of travel (the map is 96×72 units).
 export const TRAVEL_UNITS_PER_HOUR = 4;
+
+// Bonding with a land (landfall) takes this long.
+export const BOND_HOURS = 4;
+
+// A beast this hungry hunts whoever stands with it.
+export const HUNT_HUNGER = 60;
+// A beast that fed on someone: this much hunger gone.
+export const KILL_FEED = 60;
+// How long a land stays hunted out after a beast fed there.
+export const DEPLETED_HOURS = 72;
+export const DEPLETED_LABEL = '사냥감이 바닥남';
 
 // Hours of forced sleep when energy hits 0.
 export const COLLAPSE_HOURS = 6;

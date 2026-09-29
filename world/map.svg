@@ -23,4 +23,7 @@
   <g><circle cx="700" cy="480" r="26" fill="#b5462c" stroke="#f4ecd8" stroke-width="3"/>
     <text x="700" y="528" text-anchor="middle" class="name">용암 협곡</text>
     <text x="700" y="546" text-anchor="middle" class="terrain">화산 지대</text></g>
+  <g><circle cx="560" cy="320" r="26" fill="#3f7a3a" stroke="#f4ecd8" stroke-width="3"/>
+    <text x="560" y="368" text-anchor="middle" class="name">우거진 밀림</text>
+    <text x="560" y="386" text-anchor="middle" class="terrain">숲</text></g>
 </svg>

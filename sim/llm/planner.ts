@@ -32,8 +32,15 @@ export type PlanDayInput = {
 
 // Asks the chat model for today's schedule. Returns null when the answer isn't a
 // usable schedule; the caller then keeps the routine.
+// Kinds of blocks they may plan: no meals without hunger, bonding only if their routine bonds.
+function kindsFor(input: Pick<PlanDayInput, "needs" | "routine">) {
+  return LIFE_KINDS.filter(
+    (k) => (k !== 'eat' || input.needs.includes('hunger')) && (k !== 'bond' || input.routine.some((b) => b.kind === 'bond')),
+  );
+}
+
 export async function planDay(input: PlanDayInput): Promise<ScheduleBlock[] | null> {
-  const kinds = new Set<string>(LIFE_KINDS.filter((k) => k !== 'eat' || input.needs.includes('hunger')));
+  const kinds = new Set<string>(kindsFor(input));
   const content = await chatCompletion(
     [
       { role: 'system', content: SYSTEM_PROMPT },
@@ -53,7 +60,7 @@ Answer with JSON only, no prose.`;
 
 function userPrompt(input: PlanDayInput) {
   const { day, name, persona, goal, role, home, stats, needs, routine, regions, news } = input;
-  const kinds = LIFE_KINDS.filter((k) => k !== 'eat' || needs.includes('hunger'));
+  const kinds = kindsFor(input);
   const state = [
     needs.includes('energy') && `energy ${Math.round(stats.energy)}/100 (low = tired)`,
     needs.includes('hunger') && `hunger ${Math.round(stats.hunger)}/100 (high = hungry)`,
@@ -81,7 +88,11 @@ Rules:
 - Blocks are in minutes of the day (0 = 00:00, 1440 = 24:00), sorted, non-overlapping, start < end.
 - The world moves in whole hours: start and end are multiples of 60.
 - Cover the whole day from 0 to 1440, including sleep.
-- kind is one of: ${kinds.join(', ')}. Use "social" only when they would seek out other people.
+- kind is one of: ${kinds.join(', ')}. Use "social" only when they would seek out other people.${
+    kinds.includes('bond')
+      ? '\n- "bond" takes 4 hours in one region: they make that land theirs (at most one land a day; not one already theirs or hunted out).'
+      : ''
+  }
 - Travel between regions takes hours; only change region when there is a reason.
 - Vary the usual day a little to fit today's state, news and goal; don't copy it blindly.
 - activity is a short Korean phrase shown on screen (e.g. "폐허 순찰"); emoji is a single emoji.

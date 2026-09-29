@@ -2,7 +2,8 @@
 import { gameDay, untapTime } from './clock.ts';
 import { die } from './combat.ts';
 import { payMana } from './mana.ts';
-import { addLog, ptOf } from './state.ts';
+import { DEPLETED_LABEL } from './rules.ts';
+import { addLog, npcDef, ptOf } from './state.ts';
 import type { Actor, State } from './state.ts';
 import { josa, shortName } from './text.ts';
 import { region } from './world.ts';
@@ -12,8 +13,10 @@ import type { World } from './world.ts';
 // land drop per turn in MTG.
 export function bondBlocked(state: State, world: World, a: Actor, t: number): string | null {
   const r = region(world, a.region);
-  if (a.bonds?.includes(r.id)) return `이미 ${r.name}과 유대를 맺었다.`;
+  if (a.bonds?.includes(r.id)) return `이미 ${josa(r.name, '과', '와')} 유대를 맺었다.`;
   if (state.regions[r.id]?.destroyed) return '부서진 땅과는 유대를 맺을 수 없다.';
+  if (npcDef(state, world, a.id)?.beast && state.regions[r.id]?.conditions.some((c) => c.label === DEPLETED_LABEL))
+    return '사냥감이 바닥난 땅이다.';
   if (a.landfalls?.day === gameDay(t) && a.landfalls.regions.length >= 1) return '오늘은 이미 한 땅과 유대를 맺었다. 땅은 하루에 하나.';
   return null;
 }
@@ -21,7 +24,9 @@ export function bondBlocked(state: State, world: World, a: Actor, t: number): st
 // Landfall: the land comes under their control.
 export function bondLand(state: State, world: World, a: Actor, t: number) {
   const r = region(world, a.region);
-  a.bonds = [...(a.bonds ?? []), r.id];
+  const def = npcDef(state, world, a.id);
+  // A beast holds only its latest hunting ground.
+  a.bonds = def?.beast ? [r.id] : [...(a.bonds ?? []), r.id];
   const day = gameDay(t);
   if (a.landfalls?.day !== day) a.landfalls = { day, regions: [] };
   a.landfalls.regions.push(r.id);
@@ -33,6 +38,17 @@ export function bondLand(state: State, world: World, a: Actor, t: number) {
     actors: [a.id],
     t,
   });
+  // "Landfall — … gets +N/+N (and trample) until end of turn."
+  if (def?.landfall) {
+    a.boost = { until: untapTime(t), pt: [...def.landfall.pt], trample: def.landfall.trample };
+    addLog(state, {
+      kind: 'status',
+      text: `${shortName(a.name)}의 힘이 치솟았다 (${ptOf(a).join('/')}${def.landfall.trample ? ', 돌진' : ''}, 자정까지).`,
+      regions: [r.id],
+      actors: [a.id],
+      t,
+    });
+  }
 }
 
 // A GM-driven being uses an activated ability on a living character. Returns why not, or null.

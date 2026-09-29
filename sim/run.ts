@@ -4,7 +4,7 @@
 import { formatClock, gameDay } from './clock.ts';
 import { startAction } from './actions.ts';
 import type { Action } from './actions.ts';
-import { addLog, player, speakerDef } from './state.ts';
+import { addLog, npcDef, player, speakerDef } from './state.ts';
 import type { Actor, GmPlan, LogEntry, State } from './state.ts';
 import { eligibleGmEvents, step } from './step.ts';
 import { addFoe, clash } from './combat.ts';
@@ -99,6 +99,11 @@ async function talk(state: State, world: World, p: Actor, npcId: string, say: st
   const name = shortName(npc.name);
   addLog(state, { kind: 'speech', text: `${shortName(p.name)}: “${say}”`, regions: [p.region], actors: [p.id, npc.id] });
   let reply: Reply | null = null;
+  // A beast has no words.
+  if (npcDef(state, world, npcId)?.beast) {
+    addLog(state, { kind: 'speech', text: `${josa(name, '은', '는')} 대꾸 없이 낮게 으르렁거린다.`, regions: [p.region], actors: [npcId, p.id] });
+    return;
+  }
   if (llm.reply) {
     try {
       reply = await llm.reply({ world, state, npc, say });

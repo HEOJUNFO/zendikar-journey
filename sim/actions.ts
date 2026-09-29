@@ -2,7 +2,7 @@
 // the GM LLM (sim/llm/interpret.ts); the UI buttons send them directly.
 import { z } from 'zod';
 import { STEP_MINUTES } from './clock.ts';
-import { KIND_EFFECTS } from './rules.ts';
+import { BOND_HOURS, KIND_EFFECTS } from './rules.ts';
 import { addLog, isPerson, landUnusable, player } from './state.ts';
 import type { State, Task } from './state.ts';
 import { startTravel, travelBlocked } from './step.ts';
@@ -26,8 +26,7 @@ export type Action = z.infer<typeof ActionSchema>;
 
 export const PACE_LABELS = { careful: '조심스럽게', normal: '평소대로', hasty: '서둘러' } as const;
 const MEAL_COST = -KIND_EFFECTS.eat.coin;
-// Hours it takes to bond with a land.
-export const BOND_HOURS = 4;
+export { BOND_HOURS };
 
 // Starts the action for the player. Returns why it can't be done now, or null.
 export function startAction(state: State, world: World, action: Action): string | null {

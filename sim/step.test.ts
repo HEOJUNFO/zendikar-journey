@@ -9,7 +9,9 @@ import { manaAvailable, manaCapacity } from './mana.ts';
 import { usableAbilities } from './run.ts';
 import { eligibleGmEvents } from './step.ts';
 import { gainLife } from './life.ts';
-import { newState, PLAYER_ID, syncWorld } from './state.ts';
+import { newState, PLAYER_ID, ptOf, syncWorld } from './state.ts';
+import { bondBlocked, bondLand } from './abilities.ts';
+import { DEPLETED_LABEL } from './rules.ts';
 import type { State } from './state.ts';
 import { affectedRegions, buildWorld, travelHours } from './world.ts';
 import type { RawEntity } from './world.ts';
@@ -414,6 +416,74 @@ test('an enter trap bites only those who gained life today, and drains energy', 
   assert.ok(q.stats.energy < 50);
   assert.equal(q.dead, undefined); // life loss isn't damage
   assert.ok(p.stats.energy > q.stats.energy);
+});
+
+const beast = (routine: unknown[][], extra: object = {}): RawEntity => ({
+  id: 'cre-b',
+  kind: 'creature',
+  name: '짐승',
+  status: 'canon',
+  sim: {
+    pt: [4, 4],
+    role: 'r',
+    home: 'loc-a',
+    persona: 'p',
+    goal: 'g',
+    needs: ['energy', 'hunger'],
+    beast: true,
+    landfall: { pt: [4, 4], trample: true },
+    routine,
+    ...extra,
+  },
+});
+const beastDay = [
+  ['00:00', '06:00', 'loc-a', 'sleep', '잠', '💤'],
+  ['06:00', '10:00', 'loc-a', 'bond', '사냥터 차지', '🐾'],
+  ['10:00', '12:00', 'loc-a', 'eat', '사냥', '🍖'],
+  ['12:00', '24:00', 'loc-a', 'leisure', '어슬렁', '🌳'],
+];
+
+test('a beast bonds by routine, surges until midnight, hunts the land out and cannot claim it again', async () => {
+  const world = fixture([beast(beastDay)]);
+  const state = newState(world, { seed: 1, mode: 'observer' });
+  const b = state.actors['cre-b'];
+  await advance(state, world, 4); // 06:00 -> 10:00
+  assert.deepEqual(b.bonds, ['loc-a']);
+  assert.deepEqual(ptOf(b), [8, 8]);
+  assert.ok(texts(state).some((t) => t.includes('힘이 치솟았다')));
+  await advance(state, world, 2);
+  assert.ok(state.regions['loc-a'].conditions.some((c) => c.label === DEPLETED_LABEL));
+  await advance(state, world, 14); // past midnight
+  assert.deepEqual(ptOf(b), [4, 4]);
+  assert.match(bondBlocked(state, world, b, state.minutes) ?? '', /이미|바닥/);
+  // A new land replaces the old hunting ground.
+  b.region = 'loc-c';
+  bondLand(state, world, b, state.minutes);
+  assert.deepEqual(b.bonds, ['loc-c']);
+});
+
+test('a hungry beast hunts the weakest one with it, feeds on a kill, and tramples on', async () => {
+  const world = fixture([beast([['00:00', '24:00', 'loc-a', 'leisure', '어슬렁', '🌳']]), npc('chr-x', npcSim('loc-a', 'social', [1, 3]))]);
+  const state = character(world, 'loc-a');
+  const b = state.actors['cre-b'];
+  b.stats.hunger = 80;
+  b.boost = { until: 1440, pt: [4, 4], trample: true };
+  await act(state, world, { type: 'wait', hours: 1 }, {});
+  assert.ok(texts(state).some((t) => t.includes('덮쳤다')));
+  assert.ok(state.actors[PLAYER_ID].dead); // the weakest: 1/1
+  assert.ok(texts(state).some((t) => t.includes('먹어치웠다')));
+  assert.ok(b.stats.hunger < 30);
+  // 8 power against 1 toughness: 7 more runs on into the only other one there (1/3).
+  assert.ok(texts(state).some((t) => t.includes('돌진이')));
+  assert.ok(state.actors['chr-x'].dead);
+});
+
+test('a beast only growls when spoken to', async () => {
+  const world = fixture([beast([['00:00', '24:00', 'loc-a', 'leisure', '어슬렁', '🌳']])]);
+  const state = character(world, 'loc-a');
+  await act(state, world, { type: 'talk', to: 'cre-b', say: '안녕' }, { reply: async () => ({ say: '말한다', attack: false }) });
+  assert.ok(texts(state).some((t) => t.includes('으르렁')));
+  assert.ok(!texts(state).some((t) => t.includes('말한다')));
 });
 
 test('NPCs socialising in the same region meet once a day', async () => {

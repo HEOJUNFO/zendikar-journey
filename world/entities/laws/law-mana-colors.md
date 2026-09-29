@@ -5,13 +5,14 @@ name: 다섯 색의 마법
 name_en: Five Colors of Magic
 summary: 이 세계의 마법은 백, 청, 흑, 적, 녹 다섯 색으로 나뉜다
 status: canon
-sources: [ZEN-13, ZEN-135, ZEN-53, ZEN-99]
+sources: [ZEN-13, ZEN-135, ZEN-53, ZEN-99, ZEN-157]
 tags: [마법, 마나]
 links:
   - { to: chr-iona, rel: 한 색을 봉인할 수 있는 존재 }
   - { to: evt-lavaball-trap, rel: 적색 마법 }
   - { to: chr-lorthos, rel: 청색의 존재 }
   - { to: chr-kalitas, rel: 흑색의 존재 }
+  - { to: cre-baloth, rel: 녹색의 존재 }
 ---
 
 ## 설정
@@ -24,6 +25,7 @@ links:
 - 적색: 불, 용암, 파괴. 용암공 함정 (ZEN-135).
 - 청색: 물, 바다, 조수, 속박. 조수를 부리는 로르토스 (ZEN-53).
 - 흑색: 죽음과 되살림. 죽인 자를 흡혈귀로 되살리는 칼리타스 (ZEN-99).
+- 녹색: 짐승, 밀림, 굶주림과 성장. 새 땅에서 힘이 치솟는 발로스 (ZEN-157).
 
 마법에는 마나가 든다. 칼리타스는 흑색 마력을 모아 치러야 능력을 쓸 수 있다 (ZEN-99의 {B}{B}{B}).
 

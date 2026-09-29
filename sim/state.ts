@@ -38,6 +38,8 @@ export type Actor = {
   stats: Stats;
   // Power / toughness (the player starts at 1/1; missing in old saves = 1/1).
   pt?: Pt;
+  // "+N/+N and trample until end of turn": gone at `until` (00:00).
+  boost?: { until: number; pt: Pt; trample: boolean };
   // Combat damage taken this turn; it wears off when the turn ends (00:00).
   wounds?: { day: number; amount: number };
   // Who they'll attack on sight this turn (they were attacked, or turned hostile).
@@ -287,8 +289,10 @@ export function present(state: State, regionId: string) {
   return alive(state).filter((a) => a.region === regionId && !a.travel);
 }
 
+// Power / toughness now, with this turn's boost.
 export function ptOf(a: Actor): Pt {
-  return a.pt ?? PLAYER_PT;
+  const [p, t] = a.pt ?? PLAYER_PT;
+  return a.boost ? [p + a.boost.pt[0], t + a.boost.pt[1]] : [p, t];
 }
 
 export function addLog(

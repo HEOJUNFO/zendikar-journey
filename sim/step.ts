@@ -6,18 +6,21 @@
 import { formatClock, gameDay, minuteOfDay, STEP_MINUTES, untapTime } from './clock.ts';
 import {
   applyEffect,
+  BOND_HOURS,
   COLLAPSE_HOURS,
   EXPLORE_EFFECT,
   FIGHT_EFFECT,
+  DEPLETED_HOURS,
+  DEPLETED_LABEL,
   KIND_EFFECTS,
   STARVING,
   STARVING_ENERGY,
   TRAVEL_EFFECT,
 } from './rules.ts';
 import { gainedLifeToday, loseLife } from './life.ts';
-import { addLog, alive, landUnusable, needsOf, present, random } from './state.ts';
+import { addLog, alive, landUnusable, needsOf, npcDef, present, ptOf, random } from './state.ts';
 import { dealDamage, hostileNpcs } from './combat.ts';
-import { bondLand, useAbility } from './abilities.ts';
+import { bondBlocked, bondLand, useAbility } from './abilities.ts';
 import { payMana } from './mana.ts';
 import type { Actor, GmPlan, State, Task } from './state.ts';
 import { josa, shortName, toward } from './text.ts';
@@ -31,11 +34,13 @@ export function step(state: State, world: World) {
   gmLayer(state, world, t);
   // Factions: none yet (world/entities/factions is empty).
   regionLayer(state, world, t);
-  hostileNpcs(state, t);
+  hostileNpcs(state, world, t);
   for (const a of alive(state)) {
     actorHour(state, world, a, t);
-    if (a.kind === 'player' && a.task?.until !== undefined && a.task.until <= t + STEP_MINUTES && !a.travel) {
-      if (a.task.kind === 'bond') bondLand(state, world, a, t + STEP_MINUTES);
+    // A timed task done: the player's action, or an NPC's bonding.
+    const done = a.task?.until !== undefined && a.task.until <= t + STEP_MINUTES && !a.travel;
+    if (done && (a.kind === 'player' || a.task!.kind === 'bond')) {
+      if (a.task!.kind === 'bond') bondLand(state, world, a, t + STEP_MINUTES);
       a.task = undefined;
     }
   }
@@ -54,6 +59,12 @@ function startDay(state: State, world: World, t: number) {
   }
   if (state.gm.day !== day) state.gm = { day, source: 'none', fires: [] };
   if (state.met.day !== day) state.met = { day, pairs: [] };
+  // "Until end of turn" wears off.
+  for (const a of alive(state)) {
+    if (!a.boost || a.boost.until > t) continue;
+    delete a.boost;
+    addLog(state, { kind: 'status', text: `${shortName(a.name)}의 기세가 가라앉았다 (${ptOf(a).join('/')}).`, regions: [a.region], actors: [a.id] });
+  }
 }
 
 function onCooldown(state: State, ev: EventDef, t: number) {
@@ -297,9 +308,17 @@ function actorHour(state: State, world: World, a: Actor, t: number) {
   const effect =
     task.kind === 'explore' ? EXPLORE_EFFECT
     : task.kind === 'fight' ? FIGHT_EFFECT
-    : KIND_EFFECTS[task.kind === 'travel' || task.kind === 'bond' ? 'leisure' : task.kind];
+    : KIND_EFFECTS[task.kind === 'travel' ? 'leisure' : task.kind];
   applyEffect(a.stats, effect, 60, needs);
   if (needs.includes('hunger') && a.stats.hunger >= STARVING) applyEffect(a.stats, { energy: STARVING_ENERGY }, 60, needs);
+  // A beast feeding hunts the land out: it will have to move on.
+  if (task.kind === 'eat' && a.kind === 'npc' && npcDef(state, world, a.id)?.beast) {
+    const rs = (state.regions[a.region] ??= { conditions: [] });
+    if (!rs.conditions.some((c) => c.label === DEPLETED_LABEL)) {
+      rs.conditions.push({ label: DEPLETED_LABEL, until: t + DEPLETED_HOURS * 60, blocksTravel: false, source: a.id });
+      addLog(state, { kind: 'condition', text: `${region(world, a.region).name}: ${DEPLETED_LABEL} (${shortName(a.name)}의 사냥)`, regions: [a.region] });
+    }
+  }
 }
 
 // The NPC's schedule block for this hour. Starts travel when the block is elsewhere.
@@ -311,11 +330,17 @@ function npcTask(state: State, world: World, a: Actor, t: number): Task | undefi
     return a.task;
   }
   // Can't get there (or already there): do it here. Nothing can be worked on a destroyed or
-  // tapped land.
+  // tapped land. Bonding takes BOND_HOURS and carries on until done (step).
+  const noBond = block.kind === 'bond' ? bondBlocked(state, world, a, t) : null;
+  if (block.kind === 'bond' && !noBond && a.task?.kind === 'bond') return a.task;
   const task: Task =
     block.kind === 'work' && landUnusable(state, a.region)
       ? { kind: 'leisure', activity: `${block.activity} (${landUnusable(state, a.region)}, 손을 놓음)`, emoji: '🥀' }
-      : { kind: block.kind, activity: block.activity, emoji: block.emoji };
+      : noBond
+        ? { kind: 'leisure', activity: `${block.activity} (${noBond.replace(/\.$/, '')})`, emoji: block.emoji }
+        : block.kind === 'bond'
+          ? { kind: 'bond', activity: block.activity, emoji: block.emoji, until: t + BOND_HOURS * 60 }
+          : { kind: block.kind, activity: block.activity, emoji: block.emoji };
   if (a.task?.activity !== task.activity || a.task?.kind !== task.kind) {
     addLog(state, {
       kind: 'activity',

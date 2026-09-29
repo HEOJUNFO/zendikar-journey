@@ -102,6 +102,11 @@ export const CharacterSimSchema = z.strictObject({
   // Stats this being lives by (default: all). Without hunger they never eat; without coin
   // work earns nothing.
   needs: z.array(z.enum(NEEDS)).min(1).default([...NEEDS]),
+  // A beast: doesn't talk, hunts whoever stands with it when hungry, hunts a land out, and
+  // holds only the hunting ground it last bonded with.
+  beast: z.boolean().default(false),
+  // Landfall: when they bond with a land, they get +P/+T (and trample) until the turn ends.
+  landfall: z.strictObject({ pt: z.tuple([z.number().int(), z.number().int()]), trample: z.boolean().default(false) }).optional(),
   routine: z.array(RoutineRow).min(1),
 });
 
@@ -250,6 +255,8 @@ export type NpcDef = {
   mana?: Mana;
   abilities: Ability[];
   needs: Need[];
+  beast?: boolean;
+  landfall?: { pt: [number, number]; trample: boolean };
   routine: ScheduleBlock[];
 };
 
@@ -365,7 +372,8 @@ export function buildWorld(entities: RawEntity[]): { world: World; errors: strin
           abilities: sim.data.abilities,
           activated: sim.data.activated.map((x) => ({ ...x, cost: parseManaCost(x.cost)!, costText: x.cost })),
         });
-    } else if (e.kind === 'character') {
+    } else if (e.kind === 'character' || e.kind === 'creature') {
+      // A creature's sim is one of its kind, living in the world (e.g. a roaming baloth).
       const sim = CharacterSimSchema.safeParse(e.sim);
       if (!sim.success) {
         err(e.id, `sim 오류: ${issues(sim.error)}`);
@@ -407,7 +415,7 @@ export function buildWorld(entities: RawEntity[]): { world: World; errors: strin
         ...(cost ? { cost: { by: cost.by, mana: parseManaCost(cost.mana)!, text: cost.mana } } : {}),
       });
     } else {
-      err(e.id, `sim 은 character, event 에만 쓸 수 있음 (${e.kind})`);
+      err(e.id, `sim 은 character, creature, event 에만 쓸 수 있음 (${e.kind})`);
     }
   }
 
