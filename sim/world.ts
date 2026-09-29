@@ -100,7 +100,8 @@ export const EventSimSchema = z.strictObject({
   // Where it starts. Affects land regions within `range` map units of it (0 = only there).
   region: z.string(),
   range: z.number().min(0).default(0),
-  // gm: the GM may raise it once a day (`chance` per day without the LLM).
+  // gm: the GM decides each morning whether it happens today; `chance` is the usual share of
+  // days it happens on, a guide for the GM.
   // enter: may go off each hour someone is in `region` (`chance` per hour, scaled by pace).
   trigger: z.enum(['gm', 'enter']),
   chance: z.number().min(0).max(1),

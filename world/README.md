@@ -58,7 +58,7 @@ sim:
     - ["06:00", "12:00", loc-emeria, work, 하늘 순찰, 🛡️]   # [시작, 끝, 지역, 종류, 활동, 이모지]
 ```
 
-종류는 `sleep`(잠), `eat`(식사), `work`(일), `social`(사람 만나기), `leisure`(여가)다. 스탯 변화는 `sim/rules.ts` 에 있다. 시간은 따옴표로 감싼다. LLM이 켜져 있으면 하루마다 이 일과를 바탕으로 그날 계획을 새로 짠다.
+종류는 `sleep`(잠), `eat`(식사), `work`(일), `social`(사람 만나기), `leisure`(여가)다. 스탯 변화는 `sim/rules.ts` 에 있다. 시간은 따옴표로 감싸고, 세계가 1시간 단위로 돌아가므로 정시로 나눈다. LLM이 하루마다 이 일과를 바탕으로 그날 계획을 새로 짠다.
 
 **사건** (`event`): GM이 일으키거나 누군가 지역에 머물 때 일어나는 일.
 
@@ -66,8 +66,8 @@ sim:
 sim:
   region: loc-lava-chasm      # 일어나는 곳
   range: 0                    # 이 거리 안의 땅이 영향을 받는다 (0 = 그 지역만)
-  trigger: enter              # gm: GM이 하루 한 번 정함 / enter: 머무는 1시간마다
-  chance: 0.02                # gm: 하루 확률 (LLM 없을 때) / enter: 시간당 확률
+  trigger: enter              # gm: GM(LLM)이 아침마다 정함 / enter: 머무는 1시간마다 굴림
+  chance: 0.02                # gm: GM이 참고하는 빈도 (며칠에 한 번꼴) / enter: 시간당 확률
   cooldown_hours: 72          # 한 번 일어난 뒤 쉬는 시간
   scope: region               # region: 그곳에 있는 이만 앎 / world: 모두가 앎
   omen: 땅이 울린다.           # 선택. 1시간 전에 오는 전조. 조심스러운 이는 피해를 피한다

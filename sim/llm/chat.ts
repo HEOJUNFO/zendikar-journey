@@ -1,6 +1,5 @@
 // Chat completions on a hosted OpenAI-compatible API (GPT for production, Gemini for testing),
-// selected by CHAT_PROVIDER. Without CHAT_PROVIDER (or with SIM_LLM=off) the simulation runs
-// on rules alone.
+// selected by CHAT_PROVIDER. The game needs it; there is no rules-only mode.
 
 export type HostedChat = {
   provider: 'openai' | 'gemini';
@@ -16,10 +15,6 @@ export type ChatMessage = { role: 'system' | 'user' | 'assistant'; content: stri
 // prompt for length.
 const MIN_MAX_TOKENS = 2048;
 const MAX_RETRIES = 3;
-
-export function llmEnabled() {
-  return !!process.env.CHAT_PROVIDER && process.env.SIM_LLM !== 'off';
-}
 
 export function getHostedChat(): HostedChat {
   const provider = process.env.CHAT_PROVIDER;
@@ -46,7 +41,7 @@ export function getHostedChat(): HostedChat {
       reasoningEffort,
     };
   }
-  throw new Error(`Unknown CHAT_PROVIDER ${provider}. Use 'openai' or 'gemini'.`);
+  throw new Error(`.env 에 CHAT_PROVIDER=openai 또는 gemini 가 필요하다 (지금: ${provider ?? '없음'}).`);
 }
 
 export function toHostedBody(hosted: HostedChat, messages: ChatMessage[], maxTokens = 0) {

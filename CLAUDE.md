@@ -42,10 +42,9 @@ npm run world:check
   - `CHAT_PROVIDER=gemini` + `GEMINI_API_KEY` (+ 선택 `GEMINI_CHAT_MODEL`, 기본 `gemini-2.5-flash`)
   - `CHAT_PROVIDER=openai` + `OPENAI_API_KEY` (+ 선택 `OPENAI_CHAT_MODEL`, 기본 `gpt-5-mini`)
   - 선택 `CHAT_REASONING_EFFORT` (low 등). 추론 모델용이며, 설정하지 않으면 보내지 않는다.
-  - `SIM_LLM=off` 면 키가 있어도 LLM 없이 돌린다.
   - 기본 모델명은 추정값이다. 키를 넣은 뒤 실제 사용 가능한 모델명인지 확인할 것.
-- `CHAT_PROVIDER` 가 없으면 규칙만으로 돌아간다. 일과는 평소대로, 사건은 확률로 일어나고, 로그는 엔진 문장 그대로 나온다. 자유 입력과 NPC 대답만 쓸 수 없다.
-- LLM이 맡는 일 (`sim/llm/`): 모든 답은 zod로 검증하고, 실패하면 규칙으로 되돌아간다. **상태를 바꾸는 결정은 엔진(코드)이 한다.** LLM은 정의된 선택지 안에서 고르거나 글을 쓸 뿐이다.
+- **LLM은 필수다.** LLM 없이 플레이하는 모드는 만들지 않는다 (사용자 결정). 설정이 없으면 서버가 뜨지 않는다. 테스트만 가짜 훅으로 엔진을 돌린다.
+- LLM이 맡는 일 (`sim/llm/`): 모든 답은 zod로 검증한다. 호출이 실패하면 NPC는 평소 일과대로 지내고, 그날은 GM 사건이 없다. **상태를 바꾸는 결정은 엔진(코드)이 한다.** LLM은 정의된 선택지 안에서 고르거나 글을 쓸 뿐이다.
   - `gm.ts`: 아침마다 오늘 일어날 사건을 고른다. `world/` 에 정의된 사건만 고를 수 있다.
   - `planner.ts`: NPC마다 하루 일정을 짠다 (게임 하루에 NPC당 1번 호출).
   - `narrate.ts`: 턴에서 일어난 일을 서술한다. 인물 모드는 2인칭, 관찰자 모드는 연대기 문체다.

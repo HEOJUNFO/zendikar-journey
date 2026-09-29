@@ -20,7 +20,7 @@ export async function gmDay(input: GmDayInput): Promise<GmPlan | null> {
     1500,
   );
   const plan = parseGmPlan(content, input);
-  if (!plan) console.warn('Unusable GM plan, using the rules:', content);
+  if (!plan) console.warn('Unusable GM plan, no events today:', content);
   return plan;
 }
 

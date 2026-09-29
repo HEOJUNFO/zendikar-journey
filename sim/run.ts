@@ -1,6 +1,6 @@
 // Turn driver. Time only moves here: the observer advances N hours, the player acts and the
-// world runs until the action is done. The LLM hooks are optional; without them the world
-// runs on routines and dice, and the log stays as the engine wrote it.
+// world runs until the action is done. The game passes every LLM hook (sim/llm/index.ts);
+// tests pass fakes or none.
 import { formatClock, gameDay } from './clock.ts';
 import { startAction } from './actions.ts';
 import type { Action } from './actions.ts';
@@ -46,7 +46,7 @@ export async function act(state: State, world: World, input: Action | string, ll
   if (!p) return { error: '관찰자 모드에서는 행동할 수 없다.', entries: [] };
   let action: Action | null;
   if (typeof input === 'string') {
-    if (!llm.interpret) return { error: '자유 입력에는 LLM 이 필요하다 (.env 의 CHAT_PROVIDER). 버튼으로 행동할 수 있다.', entries: [] };
+    if (!llm.interpret) throw new Error('free text needs llm.interpret');
     action = await llm.interpret({ world, state, text: input });
     if (!action) return { error: '무슨 행동인지 알아듣지 못했다. 다르게 말해 보자.', entries: [] };
   } else action = input;
@@ -99,7 +99,7 @@ async function talk(state: State, world: World, p: Actor, npcId: string, say: st
 }
 
 // Plans for the day, made once when the day starts: each NPC's schedule and the GM's
-// events. Failures keep the routine and the rules (step.ts).
+// events. If a call fails the NPC keeps their routine / the GM raises nothing (step.ts).
 async function prepareDay(state: State, world: World, llm: Llm) {
   const day = gameDay(state.minutes);
   if (state.preparedDay >= day) return;
@@ -139,13 +139,13 @@ async function prepareDay(state: State, world: World, llm: Llm) {
     jobs.push(
       (async () => {
         const eligible = eligibleGmEvents(state, world, state.minutes);
-        if (!eligible.length) return;
+        if (!eligible.length) return void (state.gm = { day, source: 'llm', fires: [] });
         try {
           const hour = Math.floor((state.minutes % 1440) / 60);
           const plan = await gmDay({ day, hour, world, state, eligible, news });
           if (plan) state.gm = plan;
         } catch (e) {
-          console.warn('gmDay failed, using the rules:', e);
+          console.warn('gmDay failed, no events today:', e);
         }
       })(),
     );

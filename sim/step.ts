@@ -1,5 +1,6 @@
-// One game hour of the world, rules only (no LLM, no I/O). The LLM prepares plans ahead of
-// time (sim/run.ts); this applies them, or falls back to routines and dice.
+// One game hour of the world, rules only (no LLM, no I/O). The LLM prepares the day's plans
+// ahead of time (sim/run.ts); this applies them. If a plan is missing (the LLM failed), NPCs
+// keep their routine and the GM raises nothing that day.
 //
 // Order within an hour: GM events -> factions -> regions -> characters -> meetings.
 import { gameDay, minuteOfDay, nextMorning, STEP_MINUTES } from './clock.ts';
@@ -43,7 +44,7 @@ function startDay(state: State, world: World, t: number) {
     const a = state.actors[npc.id];
     if (a && a.schedule?.day !== day) a.schedule = { day, source: 'routine', blocks: npc.routine };
   }
-  if (state.gm.day !== day) state.gm = rulesGmPlan(state, world, t);
+  if (state.gm.day !== day) state.gm = { day, source: 'none', fires: [] };
   if (state.met.day !== day) state.met = { day, pairs: [] };
 }
 
@@ -57,17 +58,6 @@ export function eligibleGmEvents(state: State, world: World, t: number) {
   return world.events.filter(
     (e) => e.trigger === 'gm' && !onCooldown(state, e, t) && !state.pending.some((p) => p.eventId === e.id),
   );
-}
-
-// Without the LLM, each GM event rolls its daily chance and picks an hour left in the day.
-function rulesGmPlan(state: State, world: World, t: number): GmPlan {
-  const firstHour = Math.floor(minuteOfDay(t) / 60);
-  const fires = [];
-  for (const ev of eligibleGmEvents(state, world, t)) {
-    if (random(state) < ev.chance)
-      fires.push({ eventId: ev.id, hour: firstHour + Math.floor(random(state) * (24 - firstHour)) });
-  }
-  return { day: gameDay(t), source: 'rules', fires };
 }
 
 // --- GM events ---------------------------------------------------------------------------

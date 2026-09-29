@@ -63,7 +63,7 @@ export type LogEntry = {
 
 export type GmPlan = {
   day: number;
-  source: 'rules' | 'llm';
+  source: 'none' | 'llm';
   fires: { eventId: string; hour: number }[];
   note?: string;
 };
@@ -111,7 +111,7 @@ export function newState(world: World, opts: NewGame): State {
     regions: Object.fromEntries(world.regions.map((r) => [r.id, { conditions: [] }])),
     events: Object.fromEntries(world.events.map((e) => [e.id, {}])),
     pending: [],
-    gm: { day: -1, source: 'rules', fires: [] },
+    gm: { day: -1, source: 'none', fires: [] },
     preparedDay: -1,
     met: { day: -1, pairs: [] },
     nextLogId: 0,

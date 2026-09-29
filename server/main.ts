@@ -6,25 +6,23 @@ import { fileURLToPath } from 'node:url';
 import react from '@vitejs/plugin-react';
 import { createServer as createVite } from 'vite';
 import { z } from 'zod';
-import { llmEnabled } from '../sim/llm/chat.ts';
 import { createLlm } from '../sim/llm/index.ts';
-import type { Llm } from '../sim/run.ts';
 import { ActSchema, AdvanceSchema, Game, NewGameSchema, UserError } from './game.ts';
 
 try {
   process.loadEnvFile();
 } catch {
-  // no .env: the world runs on rules alone
+  // no .env: createLlm says what's missing
 }
 
-let llm: Llm = {};
+let llm;
 try {
   llm = createLlm();
 } catch (e) {
-  console.warn(`LLM 꺼짐: ${(e as Error).message}`);
+  console.error(`LLM 설정 오류: ${(e as Error).message}`);
+  process.exit(1);
 }
 const game = new Game(llm);
-const llmOn = Object.keys(llm).length > 0;
 
 async function body(req: IncomingMessage) {
   const chunks: Buffer[] = [];
@@ -38,7 +36,7 @@ function send(res: ServerResponse, status: number, data: unknown) {
 }
 
 async function api(req: IncomingMessage, res: ServerResponse, path: string) {
-  const view = () => ({ world: game.world, state: game.state, llm: llmOn });
+  const view = () => ({ world: game.world, state: game.state });
   try {
     if (req.method === 'GET' && path === '/api/game') {
       game.reloadWorld();
@@ -80,5 +78,5 @@ createServer((req, res) => {
   if (path.startsWith('/api/')) void api(req, res, path);
   else vite.middlewares(req, res);
 }).listen(port, () => {
-  console.log(`젠디카르: http://localhost:${port}  (LLM ${llmOn ? `켜짐: ${process.env.CHAT_PROVIDER}` : llmEnabled() ? '오류' : '꺼짐'})`);
+  console.log(`젠디카르: http://localhost:${port}  (LLM: ${process.env.CHAT_PROVIDER})`);
 });

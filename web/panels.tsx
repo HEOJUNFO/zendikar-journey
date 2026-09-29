@@ -184,12 +184,11 @@ export function ObserverControls({ busy, onAdvance }: { busy: boolean; onAdvance
 export function CharacterControls(props: {
   world: World;
   state: State;
-  llm: boolean;
   busy: boolean;
   onAct: (a: Action) => void;
   onSay: (text: string) => void;
 }) {
-  const { state, llm, busy, onAct, onSay } = props;
+  const { state, busy, onAct, onSay } = props;
   const p = player(state)!;
   const [text, setText] = useState('');
   const [hours, setHours] = useState(2);
@@ -214,11 +213,11 @@ export function CharacterControls(props: {
         <input
           value={text}
           onChange={(e) => setText(e.target.value)}
-          disabled={busy || !llm}
-          placeholder={llm ? '무엇을 할까? (예: 조심스럽게 협곡 아래를 살핀다)' : '자유 입력은 LLM이 켜져 있어야 한다. 아래 버튼을 쓰자.'}
+          disabled={busy}
+          placeholder="무엇을 할까? (예: 조심스럽게 협곡 아래를 살핀다)"
           aria-label="행동 입력"
         />
-        <button disabled={busy || !llm || !text.trim()}>하기</button>
+        <button disabled={busy || !text.trim()}>하기</button>
       </form>
       <div className="row">
         <label>

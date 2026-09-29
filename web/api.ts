@@ -2,7 +2,7 @@ import type { Action } from '../sim/actions.ts';
 import type { Mode, State } from '../sim/state.ts';
 import type { World } from '../sim/world.ts';
 
-export type GameView = { world: World; state: State | null; llm: boolean; error?: string };
+export type GameView = { world: World; state: State | null; error?: string };
 
 export type NewGameInput = {
   mode: Mode;

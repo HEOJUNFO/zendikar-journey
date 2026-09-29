@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import { formatClock } from './clock.ts';
 import { loadWorld } from './load.ts';
 import { act, advance } from './run.ts';
+import type { Llm } from './run.ts';
 import { newState, PLAYER_ID } from './state.ts';
 import type { State } from './state.ts';
 import { buildWorld } from './world.ts';
@@ -119,7 +120,12 @@ test('an omened trap stops the player; the careful dodge it, the hasty do not', 
 test('the tide binds those on the coast until the next morning and floods it', async () => {
   const world = fixture([tide]);
   const state = character(world, 'loc-a');
-  await act(state, world, { type: 'wait', hours: 24 });
+  const gmDay: Llm['gmDay'] = async ({ day, hour, eligible }) => ({
+    day,
+    source: 'llm',
+    fires: eligible.map((e) => ({ eventId: e.id, hour })),
+  });
+  await act(state, world, { type: 'wait', hours: 24 }, { gmDay });
   const me = state.actors[PLAYER_ID];
   assert.ok(texts(state).includes('조수가 덮쳤다.'));
   assert.ok(texts(state).some((t) => t.includes('풀려났다')));
@@ -147,7 +153,6 @@ test('LLM hooks: plans move NPCs, free text becomes an action, narration is logg
   assert.equal(state.actors['chr-x'].schedule!.source, 'llm');
   assert.equal(state.actors[PLAYER_ID].region, 'loc-b');
   assert.equal(r.entries.at(-1)!.kind, 'narration');
-  assert.match((await act(state, world, '숲으로 간다')).error!, /LLM/);
 });
 
 test('a saved state replays the same way', async () => {

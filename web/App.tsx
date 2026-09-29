@@ -35,7 +35,7 @@ export function App() {
   }
 
   if (!game) return <div className="loading">{error ?? '젠디카르를 불러오는 중…'}</div>;
-  const { world, state, llm } = game;
+  const { world, state } = game;
 
   if (!state || starting) {
     return (
@@ -69,9 +69,6 @@ export function App() {
         <h1>젠디카르 여정</h1>
         <span className="clock">{clock(state)}</span>
         <span className="badge">{p ? `인물: ${p.name}` : '지켜보기'}</span>
-        <span className={`badge ${llm ? 'on' : ''}`} title={llm ? 'GM·서술·대화에 LLM을 쓴다' : '규칙만으로 돌아간다 (.env 의 CHAT_PROVIDER)'}>
-          LLM {llm ? '켜짐' : '꺼짐'}
-        </span>
         <button className="ghost" onClick={() => setStarting(true)} disabled={busy}>
           새 게임
         </button>
@@ -86,7 +83,7 @@ export function App() {
           {error && <p className="error">{error}</p>}
           {busy && <p className="muted working">시간이 흐르는 중…</p>}
           {p ? (
-            <CharacterControls world={world} state={state} llm={llm} busy={busy} onAct={act} onSay={(t) => run(() => api.say(t))} />
+            <CharacterControls world={world} state={state} busy={busy} onAct={act} onSay={(t) => run(() => api.say(t))} />
           ) : (
             <ObserverControls busy={busy} onAdvance={(h) => run(() => api.advance(h))} />
           )}
