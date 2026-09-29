@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import type { Action } from '../sim/actions.ts';
 import { player } from '../sim/state.ts';
 import { TERRAINS } from '../sim/world.ts';
+import { AdminPage } from './AdminPage.tsx';
 import { api } from './api.ts';
 import type { GameView } from './api.ts';
 import { FullMap } from './FullMap.tsx';
@@ -10,10 +11,11 @@ import { BeingsList, CharacterControls, LogView, NewGame, ObserverControls, Peop
 import { clock } from './view.ts';
 import { WorldPage } from './WorldPage.tsx';
 
-// Pages: the journey (#/, start screen or play), the whole world (#/world) and the
-// full-screen map (#/map).
-type Page = 'journey' | 'world' | 'map';
-const pageOf = (): Page => (location.hash === '#/world' ? 'world' : location.hash === '#/map' ? 'map' : 'journey');
+// Pages: the journey (#/, start screen or play), the whole world (#/world), the
+// full-screen map (#/map) and the operator's map (#/admin).
+type Page = 'journey' | 'world' | 'map' | 'admin';
+const PAGES: Record<string, Page> = { '#/world': 'world', '#/map': 'map', '#/admin': 'admin' };
+const pageOf = (): Page => PAGES[location.hash] ?? 'journey';
 
 function Nav({ page }: { page: Page }) {
   return (
@@ -21,6 +23,7 @@ function Nav({ page }: { page: Page }) {
       <a href="#/" className={page === 'journey' ? 'on' : ''}>여정</a>
       <a href="#/world" className={page === 'world' ? 'on' : ''}>세계 흐름</a>
       <a href="#/map" className={page === 'map' ? 'on' : ''}>전체 지도</a>
+      <a href="#/admin" className={page === 'admin' ? 'on' : ''}>운영자</a>
     </nav>
   );
 }
@@ -62,6 +65,23 @@ export function App() {
     return (
       <FullMap world={world} state={state} busy={busy} error={error} nav={<Nav page={page} />}
         onAdvance={(h) => run(() => api.advance(h))} />
+    );
+  }
+
+  if (page === 'admin') {
+    return (
+      <div className="app">
+        <header>
+          <h1>운영자 지도</h1>
+          <Nav page={page} />
+          {state && <span className="clock">{clock(state)}</span>}
+          {state && <span className="badge">{state.mode === 'observer' ? '지켜보기' : '인물 모드'}</span>}
+          <button className="ghost" onClick={() => run(api.get)} disabled={busy}>
+            새로고침
+          </button>
+        </header>
+        <AdminPage world={world} state={state} busy={busy} error={error} onAdvance={(h) => run(() => api.advance(h))} />
+      </div>
     );
   }
 

@@ -182,6 +182,12 @@ const EffectSchema = z.discriminatedUnion('type', [
     type: z.literal('destroy_lands'),
     count: z.number().int().positive(),
   }),
+  // Life loss for whoever set it off (life rides on energy: sim/life.ts). Not damage, so
+  // nothing dodges it. Landfall and enter events only.
+  z.strictObject({
+    type: z.literal('lose_life'),
+    amount: z.number().int().positive(),
+  }),
 ]);
 export type Effect = z.infer<typeof EffectSchema>;
 
@@ -210,6 +216,9 @@ export const EventSimSchema = z.discriminatedUnion('trigger', [
   // Goes off when someone makes landfall on `region` (arrives there) and it is at least their
   // `landfalls`-th landfall this turn (game day).
   z.strictObject({ ...EventBase, ...EventCost, trigger: z.literal('landfall'), landfalls: z.number().int().min(1).default(1) }),
+  // Goes off when someone arrives in `region` (exactly there: an area is entered on its own).
+  // With gained_life, only for those who gained life this turn (game day).
+  z.strictObject({ ...EventBase, ...EventCost, trigger: z.literal('enter'), gained_life: z.boolean().default(false) }),
 ]);
 
 // --- built world -----------------------------------------------------------------------
@@ -265,9 +274,10 @@ export type EventDef = {
   summary: string;
   region: string;
   range: number;
-  trigger: 'gm' | 'landfall';
+  trigger: 'gm' | 'landfall' | 'enter';
   chance?: number; // gm
   landfalls?: number; // landfall
+  gained_life?: boolean; // enter
   cooldownHours: number;
   scope: 'region' | 'world';
   omen?: string;
@@ -385,6 +395,8 @@ export function buildWorld(entities: RawEntity[]): { world: World; errors: strin
       const { cooldown_hours, effects, cost, ...rest } = sim.data;
       if (rest.trigger !== 'landfall' && effects.some((x) => x.type === 'destroy_lands'))
         err(e.id, 'destroy_lands 는 trigger: landfall 사건에만 쓸 수 있음 (누가 상륙한 땅인지 알아야 함)');
+      if (rest.trigger === 'gm' && effects.some((x) => x.type === 'lose_life'))
+        err(e.id, 'lose_life 는 trigger: landfall, enter 사건에만 쓸 수 있음 (누가 일으켰는지 알아야 함)');
       world.events.push({
         id: e.id,
         name: e.name,

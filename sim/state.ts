@@ -31,6 +31,10 @@ export type Actor = {
   // When their latest landfall happened (a landfall event may answer it at that hour).
   landfallAt?: number;
   manaSpent?: { day: number; spent: Mana };
+  // When they last arrived somewhere (an enter event may answer it at that hour).
+  arrivedAt?: number;
+  // Game day they last gained life (sim/life.ts).
+  lifeGained?: number;
   stats: Stats;
   // Power / toughness (the player starts at 1/1; missing in old saves = 1/1).
   pt?: Pt;

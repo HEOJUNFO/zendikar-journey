@@ -2,7 +2,7 @@ import type { Actor, State } from '../sim/state.ts';
 import { shortName } from '../sim/text.ts';
 import { MAP_HEIGHT, MAP_WIDTH, region, TERRAINS, travelHours } from '../sim/world.ts';
 import type { World } from '../sim/world.ts';
-import { nodeAt, visibleActors } from './view.ts';
+import { isTrap, nodeAt, trapStatus, visibleActors } from './view.ts';
 
 type Props = {
   world: World;
@@ -12,7 +12,22 @@ type Props = {
   onSelect: (id: string) => void;
   // Show everyone, even in character mode (the world page).
   all?: boolean;
+  // The admin map: people and traps are drawn named and can be picked (`picked` = their id).
+  picked?: string | null;
+  onPickActor?: (id: string) => void;
+  onPickTrap?: (id: string) => void;
 };
+
+const TRAP_GAP = 2.4;
+
+// Keyboard access for a clickable map mark.
+function pickable(onPick: () => void) {
+  return {
+    tabIndex: 0,
+    onClick: onPick,
+    onKeyDown: (e: { key: string }) => (e.key === 'Enter' || e.key === ' ') && onPick(),
+  };
+}
 
 // Where an actor is drawn: at their region, or partway along the road.
 function position(world: World, state: State, a: Actor) {
@@ -26,8 +41,9 @@ function position(world: World, state: State, a: Actor) {
   return { x: from.x + (to.x - from.x) * done, y: from.y + (to.y - from.y) * done, travelling: true };
 }
 
-export function MapView({ world, state, selected, onSelect, all }: Props) {
+export function MapView({ world, state, selected, onSelect, all, picked, onPickActor, onPickTrap }: Props) {
   const actors = state ? visibleActors(state, all) : [];
+  const traps = onPickTrap ? world.events.filter(isTrap) : [];
   // Spread actors standing in the same region around its node.
   const slots = new Map<string, number>();
   return (
@@ -89,10 +105,30 @@ export function MapView({ world, state, selected, onSelect, all }: Props) {
         const angle = -Math.PI / 2 + slot * 0.9;
         const ring = region(world, a.region).parent ? 2 : 3.2;
         const [x, y] = p.travelling ? [p.x, p.y] : [p.x + Math.cos(angle) * ring, p.y + Math.sin(angle) * ring];
+        const r = a.kind === 'npc' ? 1 : a.kind === 'being' ? 1.5 : 1.3;
         return (
-          <g key={a.id} className={`map-${a.kind}`}>
+          <g key={a.id} className={`map-${a.kind}${onPickActor ? ' map-pick' : ''}`}
+            {...(onPickActor ? pickable(() => onPickActor(a.id)) : {})}>
             <title>{shortName(a.name)}</title>
-            <circle cx={x} cy={y} r={a.kind === 'npc' ? 1 : a.kind === 'being' ? 1.5 : 1.3} />
+            {onPickActor && <circle cx={x} cy={y} r={r + 1} className="map-hit" />}
+            <circle cx={x} cy={y} r={r} />
+            {picked === a.id && <circle cx={x} cy={y} r={r + 0.9} className="map-picked" />}
+            {onPickActor && <text x={x} y={y - r - 0.6} className="map-actor-label">{shortName(a.name)}</text>}
+          </g>
+        );
+      })}
+      {traps.map((ev, i) => {
+        const node = nodeAt(world, region(world, ev.region));
+        const n = traps.slice(0, i).filter((x) => x.region === ev.region).length;
+        const [x, y] = [node.x - TRAP_GAP * (n + 1.4), node.y + TRAP_GAP * 1.2];
+        const s = 1.3;
+        return (
+          <g key={ev.id} className={`map-trap map-trap-${trapStatus(state, ev).kind} map-pick`} {...pickable(() => onPickTrap!(ev.id))}>
+            <title>{`함정: ${ev.name}`}</title>
+            <circle cx={x} cy={y} r={s + 1} className="map-hit" />
+            <path d={`M${x} ${y - s}L${x + s} ${y}L${x} ${y + s}L${x - s} ${y}Z`} />
+            <text x={x} y={y + 0.55} className="map-trap-mark">!</text>
+            {picked === ev.id && <circle cx={x} cy={y} r={s + 0.9} className="map-picked" />}
           </g>
         );
       })}

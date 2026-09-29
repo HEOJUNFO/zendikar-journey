@@ -14,6 +14,7 @@ import {
   STARVING_ENERGY,
   TRAVEL_EFFECT,
 } from './rules.ts';
+import { gainedLifeToday, loseLife } from './life.ts';
 import { addLog, alive, landUnusable, needsOf, present, random } from './state.ts';
 import { dealDamage, hostileNpcs } from './combat.ts';
 import { bondLand, useAbility } from './abilities.ts';
@@ -38,6 +39,7 @@ export function step(state: State, world: World) {
       a.task = undefined;
     }
   }
+  enterEvents(state, world, t + STEP_MINUTES);
   meetings(state, world);
   state.minutes = t + STEP_MINUTES;
 }
@@ -105,6 +107,17 @@ function gmLayer(state: State, world: World, t: number) {
     // Their lands this turn, latest first: what a land-destroying effect hits.
     const lands = [...new Set(by.flatMap((a) => [...a.landfalls!.regions].reverse()))];
     trigger(state, world, ev, t, { by: by.map((a) => a.id), lands });
+  }
+}
+
+// Enter: someone arrived in the region at `at` (the end of this hour). Checked right after
+// the characters move, so a traveller is met at the gate, not an hour later.
+function enterEvents(state: State, world: World, at: number) {
+  for (const ev of world.events) {
+    if (ev.trigger !== 'enter' || onCooldown(state, ev, at)) continue;
+    if (state.pending.some((p) => p.eventId === ev.id)) continue;
+    const by = present(state, ev.region).filter((a) => a.arrivedAt === at && (!ev.gained_life || gainedLifeToday(a, at)));
+    if (by.length) trigger(state, world, ev, at, { by: by.map((a) => a.id), lands: [] });
   }
 }
 
@@ -176,6 +189,11 @@ function fire(state: State, world: World, ev: EventDef, t: number, omened: boole
         state.regions[id] ??= { conditions: [] };
         state.regions[id].conditions.push({ label: eff.land_label, until, blocksTravel: false, tapped: true, source: ev.id });
         addLog(state, { kind: 'condition', text: `${region(world, id).name}: ${eff.land_label} (${formatClock(until)}까지 쓸 수 없다)`, regions: [id], scope: ev.scope });
+      }
+    } else if (eff.type === 'lose_life') {
+      for (const id of cause.by ?? []) {
+        const a = state.actors[id];
+        if (a && regions.includes(a.region) && !a.travel) loseLife(state, a, eff.amount, ev.name);
       }
     } else if (eff.type === 'destroy_lands') {
       for (const id of (cause.lands ?? []).slice(0, eff.count)) {
@@ -314,6 +332,7 @@ function travelHour(state: State, world: World, a: Actor, t: number) {
   applyEffect(a.stats, TRAVEL_EFFECT, 60, needsOf(a));
   if (!a.travel || t + STEP_MINUTES < a.travel.arrive) return;
   a.region = a.travel.to;
+  a.arrivedAt = t + STEP_MINUTES;
   delete a.travel;
   a.task = undefined;
   addLog(state, {

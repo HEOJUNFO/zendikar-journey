@@ -612,3 +612,153 @@ header h1 {
 .map-area-mark {
   font-size: 2px;
 }
+
+/* --- operator's map --- */
+
+.admin-layout {
+  flex: 1;
+  min-height: 0;
+  display: grid;
+  grid-template-columns: minmax(0, 1.8fr) minmax(300px, 1fr);
+  gap: 12px;
+  padding: 12px 16px 16px;
+}
+.admin-map-pane {
+  overflow-y: auto;
+}
+@media (max-width: 900px) {
+  .admin-layout {
+    grid-template-columns: 1fr;
+    overflow-y: auto;
+  }
+}
+.map-pick {
+  cursor: pointer;
+}
+.map-pick:focus {
+  outline: none;
+}
+.map-hit {
+  fill: transparent;
+  stroke: none;
+}
+.map-pick:hover circle:not(.map-hit):not(.map-picked),
+.map-pick:focus circle:not(.map-hit):not(.map-picked),
+.map-pick:hover path,
+.map-pick:focus path {
+  stroke: var(--accent);
+}
+.map-picked {
+  fill: none;
+  stroke: var(--accent);
+  stroke-width: 0.4;
+}
+.map-actor-label {
+  font: 600 1.5px var(--sans);
+  fill: var(--ink);
+  text-anchor: middle;
+  paint-order: stroke;
+  stroke: var(--sea);
+  stroke-width: 0.45px;
+  pointer-events: none;
+}
+.map-trap path {
+  stroke: #1a1408;
+  stroke-width: 0.25;
+}
+.map-trap-armed path {
+  fill: #e8a33d;
+}
+.map-trap-omen path {
+  fill: var(--danger);
+}
+.map-trap-cooldown path {
+  fill: #6b6f76;
+}
+.map-trap-mark {
+  font: 800 1.6px var(--sans);
+  fill: #1a1408;
+  text-anchor: middle;
+  pointer-events: none;
+}
+.admin-legend {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 6px;
+  margin: 0;
+}
+.dot,
+.diamond {
+  display: inline-block;
+  width: 9px;
+  height: 9px;
+  flex: none;
+}
+.dot {
+  border-radius: 50%;
+}
+.dot-npc {
+  background: #f4ecd8;
+}
+.dot-being {
+  background: #2a1f33;
+  border: 1px solid #e0c9ff;
+}
+.dot-player {
+  background: var(--accent);
+}
+.diamond {
+  transform: rotate(45deg) scale(0.85);
+}
+.diamond-armed {
+  background: #e8a33d;
+}
+.diamond-omen {
+  background: var(--danger);
+}
+.diamond-cooldown {
+  background: #6b6f76;
+}
+.admin-id {
+  font-family: ui-monospace, monospace;
+  font-size: 11px;
+}
+.admin-facts {
+  display: grid;
+  grid-template-columns: 64px 1fr;
+  gap: 2px 10px;
+  margin: 8px 0;
+  font-size: 13px;
+}
+.admin-facts dt {
+  color: var(--muted);
+}
+.admin-facts dd {
+  margin: 0;
+}
+.admin-sub {
+  font: 600 13px var(--sans);
+  margin: 10px 0 4px;
+}
+.admin-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  font-size: 13px;
+}
+.admin-list li.on {
+  color: var(--accent);
+}
+.admin-list time {
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+}
+button.link {
+  border: 0;
+  background: none;
+  padding: 0;
+  color: var(--accent);
+  font: inherit;
+  cursor: pointer;
+}

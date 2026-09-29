@@ -143,7 +143,7 @@ export function RegionCard(props: {
 
 // --- people ----------------------------------------------------------------------------
 
-function Bar({ label, value, max = 100, bad = false }: { label: string; value: number; max?: number; bad?: boolean }) {
+export function Bar({ label, value, max = 100, bad = false }: { label: string; value: number; max?: number; bad?: boolean }) {
   const pct = Math.max(0, Math.min(100, (value / max) * 100));
   return (
     <div className="bar">
@@ -156,13 +156,13 @@ function Bar({ label, value, max = 100, bad = false }: { label: string; value: n
   );
 }
 
-function fighting(a: Actor, t: number) {
+export function fighting(a: Actor, t: number) {
   const [p, tough] = ptOf(a);
   const w = woundsOf(a, t);
   return `${p}/${tough}${w ? ` · 피해 ${w}` : ''}`;
 }
 
-function status(world: World, a: Actor) {
+export function status(world: World, a: Actor) {
   if (a.dead) return `죽음 (${a.dead.cause})`;
   if (a.boundUntil !== undefined) return `묶임 (${formatClock(a.boundUntil)}까지)`;
   const task = a.forced ?? a.task;

@@ -8,6 +8,9 @@
   <g><line x1="340" y1="580" x2="412.44443697168015" y2="560.5885716173109" stroke="#f4ecd8" stroke-width="2" stroke-dasharray="5 5"/>
     <circle cx="412.44443697168015" cy="560.5885716173109" r="16" fill="#4f4a5e" stroke="#f4ecd8" stroke-width="2"/>
     <text x="436.44443697168015" y="565.5885716173109" class="area">게트 혈족의 영지</text></g>
+  <g><line x1="340" y1="580" x2="404.9519052838329" y2="617.5" stroke="#f4ecd8" stroke-width="2" stroke-dasharray="5 5"/>
+    <circle cx="404.9519052838329" cy="617.5" r="16" fill="#b08850" stroke="#f4ecd8" stroke-width="2"/>
+    <text x="428.9519052838329" y="622.5" class="area">말라키르</text></g>
   <g><circle cx="180" cy="380" r="70" fill="#1d3b66" opacity="0.75"/><circle cx="180" cy="380" r="30" fill="none" stroke="#9fc4ff" stroke-width="2" stroke-dasharray="6 6"/>
     <text x="180" y="472" text-anchor="middle" class="name">심해의 영역</text>
     <text x="180" y="490" text-anchor="middle" class="terrain">심해</text></g>

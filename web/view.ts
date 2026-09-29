@@ -3,7 +3,7 @@
 import { formatClock } from '../sim/clock.ts';
 import { player } from '../sim/state.ts';
 import type { Actor, State } from '../sim/state.ts';
-import type { Region, World } from '../sim/world.ts';
+import type { EventDef, Region, World } from '../sim/world.ts';
 
 export function visibleActors(state: State, all = false): Actor[] {
   const alive = Object.values(state.actors).filter((a) => !a.dead || a.kind === 'player');
@@ -28,4 +28,22 @@ export function nodeAt(world: World, r: Region) {
   const i = world.regions.filter((x) => x.parent === r.parent).indexOf(r);
   const angle = -Math.PI / 12 + i * (Math.PI / 4);
   return { x: r.x + Math.cos(angle) * AREA_GAP, y: r.y + Math.sin(angle) * AREA_GAP };
+}
+
+// Traps: events the land sets off by itself when someone comes (law-ruin-traps), unlike
+// the GM's events.
+export function isTrap(ev: EventDef) {
+  return ev.trigger !== 'gm';
+}
+
+export type TrapStatus = { kind: 'armed' } | { kind: 'omen'; at: number } | { kind: 'cooldown'; until: number };
+
+// Whether a trap would answer now: waiting, about to go off (omened), or spent for a while.
+export function trapStatus(state: State | null, ev: EventDef): TrapStatus {
+  const t = state?.minutes ?? 0;
+  const pending = state?.pending.find((p) => p.eventId === ev.id);
+  if (pending) return { kind: 'omen', at: pending.at };
+  const last = state?.events[ev.id]?.lastFired;
+  if (last !== undefined && t - last < ev.cooldownHours * 60) return { kind: 'cooldown', until: last + ev.cooldownHours * 60 };
+  return { kind: 'armed' };
 }

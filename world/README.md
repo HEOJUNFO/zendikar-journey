@@ -47,6 +47,9 @@
 | 전투 | 1시간에 한 합. 양쪽이 동시에 공격력만큼 피해를 준다. 탭된(묶인) 쪽은 반격하지 못한다. 공격받은 NPC는 그날 공격자를 적으로 삼아 계속 싸운다 |
 | 비행 | 비행하지 못하는 자에게 공격받으면 날아올라 피할 수 있다 (피할지는 그 인물이 정한다) |
 | 공격 ("attacks") | 인물: 플레이어의 공격 행동, 또는 대화 중 NPC가 적의를 드러냄. 일과 없는 존재: GM 사건 |
+| 생명 ("loses/gains N life") | 기력에 얹는다. 생명 1 = 기력 10 (`sim/life.ts`). 잃어도 죽지 않고, 기력이 0이면 쓰러진다. 피해가 아니라서 조심해도 못 피한다 |
+| "이번 턴에 생명을 얻었으면" | 그날 생명을 주는 효과를 받았으면. 잠과 식사로 차는 기력은 생명이 아니다 |
+| 함정의 대체 비용 조건 ("If …, you may pay {B} rather than …") | 함정 사건의 발동 조건. 조건이 맞으면 반드시 발동하고, 온전한 값을 치를 주인은 없다 |
 | 생물이 전장에 들어올 때 ("As ~ enters") | 그 인물이 전투에 돌입할 때 (전투 시스템이 생기면) |
 | 주문, 마법 | 아직 없음. 마법 카드가 나올 때 정한다 (마나는 있다) |
 | 색 | 마법의 다섯 색 (`law-mana-colors`) |
@@ -121,8 +124,9 @@ sim:
 sim:
   region: loc-lava-chasm      # 일어나는 곳
   range: 0                    # 이 거리 안의 땅이 영향을 받는다 (0 = 그 지역만)
-  trigger: landfall           # gm | landfall
+  trigger: landfall           # gm | landfall | enter
   landfalls: 2                # landfall: 누군가 이 땅과 유대를 맺었고, 그것이 그날 N번째(이상) 상륙일 때 발동
+  # gained_life: true         # enter: 누군가 이 지역(구역이면 그 구역)에 들어올 때 발동. true면 그날 생명을 얻은 이만
   # cost: { by: chr-lorthos, mana: "{8}" }  # 선택. 그가 이 마나를 치러야 효과가 난다
   # chance: 0.03              # gm: GM이 참고하는 빈도 (며칠에 한 번꼴)
   cooldown_hours: 72          # 한 번 일어난 뒤 쉬는 시간
@@ -135,6 +139,7 @@ sim:
     - { type: tap, max: 8, skip_untap: true, land_label: 조수에 잠긴 해안 }  # 인물 먼저, 남으면 땅까지 최대 N개 탭
     - { type: condition, label: 무너진 길, hours: 48, blocks_travel: true }  # 지역에 남는 상태
     - { type: destroy_lands, count: 2 }                            # 대지 파괴(영구): 발동시킨 이가 그날 상륙한 땅 최근 N곳 (landfall 사건만)
+    - { type: lose_life, amount: 5 }                               # 발동시킨 이만 생명 N을 잃는다 (landfall, enter 사건만)
 ```
 
 효과 종류가 모자라면 카드에 맞춰 `sim/world.ts`(스키마)와 `sim/step.ts`(적용)에 더한다.

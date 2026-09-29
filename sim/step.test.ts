@@ -8,6 +8,7 @@ import { woundsOf } from './combat.ts';
 import { manaAvailable, manaCapacity } from './mana.ts';
 import { usableAbilities } from './run.ts';
 import { eligibleGmEvents } from './step.ts';
+import { gainLife } from './life.ts';
 import { newState, PLAYER_ID, syncWorld } from './state.ts';
 import type { State } from './state.ts';
 import { affectedRegions, buildWorld, travelHours } from './world.ts';
@@ -386,6 +387,33 @@ test('buildWorld rejects areas in nowhere, in areas, or at sea', () => {
   assert.ok(has('loc-nowhere'));
   assert.ok(has('loc-nested'));
   assert.ok(has('loc-wet'));
+});
+
+const needle: RawEntity = {
+  id: 'evt-needle',
+  kind: 'event',
+  name: '바늘 함정',
+  status: 'canon',
+  sim: { region: 'loc-b', trigger: 'enter', gained_life: true, text: '가시가 물었다.', effects: [{ type: 'lose_life', amount: 5 }] },
+};
+
+test('an enter trap bites only those who gained life today, and drains energy', async () => {
+  const world = fixture([needle]);
+  const fed = character(world, 'loc-a');
+  const p = fed.actors[PLAYER_ID];
+  // Food and sleep don't count as gaining life.
+  await act(fed, world, { type: 'move', to: 'loc-b' }, {});
+  assert.ok(!texts(fed).some((t) => t.includes('가시가 물었다')));
+
+  const drained = character(world, 'loc-a');
+  const q = drained.actors[PLAYER_ID];
+  gainLife(drained, q, 1, drained.minutes, '시험');
+  assert.equal(q.stats.energy, 90);
+  await act(drained, world, { type: 'move', to: 'loc-b' }, {});
+  assert.ok(texts(drained).some((t) => t.includes('생명 5을 잃었다')));
+  assert.ok(q.stats.energy < 50);
+  assert.equal(q.dead, undefined); // life loss isn't damage
+  assert.ok(p.stats.energy > q.stats.energy);
 });
 
 test('NPCs socialising in the same region meet once a day', async () => {

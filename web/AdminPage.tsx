@@ -1,0 +1,344 @@
+// The operator's map (#/admin): everyone and every trap on the map, whatever the mode. Click a
+// person, a trap or a land to see all of its state.
+import { useState } from 'react';
+import { PACE_LABELS } from '../sim/actions.ts';
+import { formatClock, formatTimeOfDay, gameDay, minuteOfDay } from '../sim/clock.ts';
+import { foesOf } from '../sim/combat.ts';
+import { formatMana, manaAvailable, manaCapacity } from '../sim/mana.ts';
+import { needsOf, npcDef } from '../sim/state.ts';
+import type { Actor, LogEntry, State } from '../sim/state.ts';
+import { shortName } from '../sim/text.ts';
+import { currentBlock } from '../sim/types.ts';
+import { ABILITY_LABELS, placeName, region } from '../sim/world.ts';
+import type { Effect, EventDef, World } from '../sim/world.ts';
+import { MapView } from './MapView.tsx';
+import { Bar, fighting, ObserverControls, RegionCard, status } from './panels.tsx';
+import { isTrap, trapStatus } from './view.ts';
+import type { TrapStatus } from './view.ts';
+
+type Pick = { kind: 'actor' | 'trap' | 'region'; id: string };
+
+type Props = {
+  world: World;
+  state: State | null;
+  busy: boolean;
+  error: string | null;
+  onAdvance: (hours: number) => void;
+};
+
+const KIND_LABELS: Record<Actor['kind'], string> = { npc: 'NPC', being: 'GM 존재', player: '플레이어' };
+const RECENT_LOG = 10;
+
+export function AdminPage({ world, state, busy, error, onAdvance }: Props) {
+  const [pick, setPick] = useState<Pick | null>(null);
+  const traps = world.events.filter(isTrap);
+  const actors = state ? Object.values(state.actors) : [];
+  const picked = pick && pick.kind !== 'region' ? pick.id : null;
+  const regionId = pick?.kind === 'region' ? pick.id : null;
+
+  return (
+    <main className="admin-layout">
+      <section className="pane admin-map-pane">
+        <MapView world={world} state={state} selected={regionId} onSelect={(id) => setPick({ kind: 'region', id })} all
+          picked={picked} onPickActor={(id) => setPick({ kind: 'actor', id })} onPickTrap={(id) => setPick({ kind: 'trap', id })} />
+        <p className="muted admin-legend">
+          <span className="dot dot-npc" /> NPC <span className="dot dot-being" /> GM 존재 <span className="dot dot-player" /> 플레이어
+          <span className="diamond diamond-armed" /> 함정 (대기) <span className="diamond diamond-omen" /> 전조 <span className="diamond diamond-cooldown" /> 재발동 대기
+        </p>
+        {error && <p className="error">{error}</p>}
+        {busy && <p className="muted working">시간이 흐르는 중…</p>}
+        {state?.mode === 'observer' && <ObserverControls busy={busy} onAdvance={onAdvance} />}
+        {!state && <p className="muted">아직 게임이 없다. 함정과 땅만 보인다.</p>}
+      </section>
+      <aside className="pane side-pane">
+        {pick?.kind === 'actor' && state?.actors[pick.id] && (
+          <ActorDetail world={world} state={state} a={state.actors[pick.id]} onRegion={(id) => setPick({ kind: 'region', id })} />
+        )}
+        {pick?.kind === 'trap' && traps.some((e) => e.id === pick.id) && (
+          <TrapDetail world={world} state={state} ev={traps.find((e) => e.id === pick.id)!}
+            onRegion={(id) => setPick({ kind: 'region', id })} onActor={(id) => setPick({ kind: 'actor', id })} />
+        )}
+        {regionId && <RegionCard world={world} state={state} regionId={regionId} all />}
+        {!pick && <p className="muted">지도에서 인물, 함정(◆), 땅을 누르면 여기에 자세히 나온다.</p>}
+        <section className="card">
+          <h2>함정 <small>{traps.length}</small></h2>
+          {traps.length === 0 && <p className="muted">아직 함정이 없다.</p>}
+          <ul className="region-list">
+            {traps.map((ev) => (
+              <li key={ev.id}>
+                <button className={`ghost${picked === ev.id ? ' on' : ''}`} onClick={() => setPick({ kind: 'trap', id: ev.id })}>
+                  <span className={`diamond diamond-${trapStatus(state, ev).kind}`} />
+                  {ev.name}
+                  <small className="muted"> · {placeName(world, region(world, ev.region))} · {statusText(trapStatus(state, ev))}</small>
+                </button>
+              </li>
+            ))}
+          </ul>
+        </section>
+        {state && (
+          <section className="card">
+            <h2>인물 <small>{actors.filter((a) => !a.dead).length}명 살아 있음</small></h2>
+            <ul className="region-list">
+              {actors.map((a) => (
+                <li key={a.id}>
+                  <button className={`ghost${picked === a.id ? ' on' : ''}`} onClick={() => setPick({ kind: 'actor', id: a.id })}>
+                    <span className={`dot dot-${a.kind}`} />
+                    {a.dead ? '✝ ' : ''}
+                    {shortName(a.name)}
+                    <small className="muted"> · {a.dead ? '죽음' : region(world, a.travel?.to ?? a.region).name}</small>
+                  </button>
+                </li>
+              ))}
+            </ul>
+          </section>
+        )}
+      </aside>
+    </main>
+  );
+}
+
+// --- a person ----------------------------------------------------------------------------
+
+function ActorDetail({ world, state, a, onRegion }: { world: World; state: State; a: Actor; onRegion: (id: string) => void }) {
+  const t = state.minutes;
+  const def = a.kind === 'npc' ? npcDef(state, world, a.id) : undefined;
+  const being = a.kind === 'being' ? world.beings.find((b) => b.id === a.id) : undefined;
+  const token = !!state.tokens?.[a.id];
+  const foes = foesOf(a, t);
+  const block = a.schedule?.day === gameDay(t) ? currentBlock(a.schedule.blocks, minuteOfDay(t)) : undefined;
+  const uses = state.gm.day === gameDay(t) ? (state.gm.uses ?? []).filter((u) => u.being === a.id) : [];
+  const landfalls = a.landfalls?.day === gameDay(t) ? a.landfalls.regions : [];
+  const name = (id: string) => shortName(state.actors[id]?.name ?? id);
+
+  return (
+    <section className="card">
+      <h2>
+        {a.dead ? '✝ ' : ''}
+        {a.name} <small>{KIND_LABELS[a.kind]}{token ? ' · 토큰' : ''} · {fighting(a, t)}</small>
+      </h2>
+      <p className="muted admin-id">{a.id}</p>
+      {(def?.summary || being?.summary) && <p>{def?.summary ?? being?.summary}</p>}
+      <p>{status(world, a)}</p>
+      <button className="ghost" onClick={() => onRegion(a.region)}>
+        {placeName(world, region(world, a.region))} 보기
+      </button>
+      {a.travel && <p className="muted">{formatClock(a.travel.arrive)} 도착 예정</p>}
+      {a.forced && <p className="cond">강제: {a.forced.emoji} {a.forced.activity}{a.forced.until ? ` (${formatClock(a.forced.until)}까지)` : ''}</p>}
+      {foes.length > 0 && <p className="cond">적: {foes.map(name).join(', ')}</p>}
+
+      {needsOf(a).includes('energy') && <Bar label="기력" value={a.stats.energy} />}
+      {needsOf(a).includes('hunger') && <Bar label="배고픔" value={a.stats.hunger} bad />}
+      {needsOf(a).includes('coin') && (
+        <div className="bar">
+          <span>돈</span>
+          <span />
+          <b>{Math.round(a.stats.coin)}</b>
+        </div>
+      )}
+      <dl className="admin-facts">
+        <dt>걸음</dt>
+        <dd>{PACE_LABELS[a.pace]}</dd>
+        <dt>능력</dt>
+        <dd>{a.abilities.length ? a.abilities.map((x) => ABILITY_LABELS[x]).join(', ') : '없음'}</dd>
+        <dt>마나</dt>
+        <dd>
+          {formatMana(manaAvailable(state, world, a, t))} <small className="muted">/ 하루 {formatMana(manaCapacity(state, world, a))}</small>
+        </dd>
+        <dt>유대</dt>
+        <dd>{a.bonds?.length ? a.bonds.map((id) => region(world, id).name).join(', ') : '없음'}</dd>
+        {landfalls.length > 0 && (
+          <>
+            <dt>오늘 상륙</dt>
+            <dd>{landfalls.map((id) => region(world, id).name).join(' → ')}</dd>
+          </>
+        )}
+        {def && (
+          <>
+            <dt>역할</dt>
+            <dd>{def.role}</dd>
+            <dt>거처</dt>
+            <dd>{placeName(world, region(world, def.home))}</dd>
+            <dt>성격</dt>
+            <dd>{def.persona}</dd>
+            <dt>목표</dt>
+            <dd>{def.goal}</dd>
+          </>
+        )}
+        {a.background && (
+          <>
+            <dt>배경</dt>
+            <dd>{a.background}</dd>
+          </>
+        )}
+        {a.dead && (
+          <>
+            <dt>죽음</dt>
+            <dd>{formatClock(a.dead.at)} · {a.dead.cause}</dd>
+          </>
+        )}
+      </dl>
+
+      {being && being.activated.length > 0 && (
+        <>
+          <h3 className="admin-sub">능력</h3>
+          <ul className="admin-list">
+            {being.activated.map((x) => (
+              <li key={x.id}>
+                {x.name} <small className="muted">{x.costText}{x.tap ? ', 탭' : ''}</small>
+              </li>
+            ))}
+          </ul>
+          {uses.length > 0 && (
+            <p className="muted">
+              오늘 GM 계획: {uses.map((u) => `${String(u.hour).padStart(2, '0')}시 ${being.activated.find((x) => x.id === u.ability)?.name ?? u.ability} → ${name(u.target)}`).join(', ')}
+            </p>
+          )}
+        </>
+      )}
+
+      {a.schedule && a.schedule.day === gameDay(t) && (
+        <>
+          <h3 className="admin-sub">오늘 일정 <small className="muted">{a.schedule.source === 'llm' ? 'LLM' : '평소 일과'}</small></h3>
+          <ul className="admin-list">
+            {a.schedule.blocks.map((b) => (
+              <li key={b.start} className={b === block ? 'on' : ''}>
+                <time>{formatTimeOfDay(b.start)}–{formatTimeOfDay(b.end)}</time> {b.emoji} {b.activity}{' '}
+                <small className="muted">{region(world, b.regionId).name}</small>
+              </li>
+            ))}
+          </ul>
+        </>
+      )}
+
+      <RecentLog entries={state.log.filter((e) => e.actors.includes(a.id))} />
+    </section>
+  );
+}
+
+// --- a trap ------------------------------------------------------------------------------
+
+function TrapDetail(props: { world: World; state: State | null; ev: EventDef; onRegion: (id: string) => void; onActor: (id: string) => void }) {
+  const { world, state, ev, onRegion, onActor } = props;
+  const s = trapStatus(state, ev);
+  const last = state?.events[ev.id]?.lastFired;
+  const pending = state?.pending.find((p) => p.eventId === ev.id);
+  const here = state ? Object.values(state.actors).filter((a) => !a.dead && !a.travel && a.region === ev.region) : [];
+
+  return (
+    <section className="card">
+      <h2>
+        ◆ {ev.name} <small>함정</small>
+      </h2>
+      <p className="muted admin-id">{ev.id}</p>
+      <p>{ev.summary}</p>
+      <p className={s.kind === 'armed' ? '' : 'cond'}>상태: {statusText(s)}</p>
+      <button className="ghost" onClick={() => onRegion(ev.region)}>
+        {placeName(world, region(world, ev.region))} 보기
+      </button>
+      <dl className="admin-facts">
+        <dt>발동</dt>
+        <dd>{triggerText(ev)}</dd>
+        <dt>범위</dt>
+        <dd>{ev.range ? `반경 ${ev.range}` : '그 땅만'} · 소식은 {ev.scope === 'world' ? '온 세상에' : '그 땅에만'}</dd>
+        <dt>재발동</dt>
+        <dd>{ev.cooldownHours ? `${ev.cooldownHours}시간 뒤` : '바로'}</dd>
+        <dt>마지막</dt>
+        <dd>{last !== undefined ? formatClock(last) : '발동한 적 없음'}</dd>
+        {pending && (
+          <>
+            <dt>일으킨 이</dt>
+            <dd>{pending.by.length ? pending.by.map((id) => shortName(state?.actors[id]?.name ?? id)).join(', ') : '(없음)'}</dd>
+          </>
+        )}
+        {ev.cost && (
+          <>
+            <dt>비용</dt>
+            <dd>{shortName(state?.actors[ev.cost.by]?.name ?? ev.cost.by)}가 {ev.cost.text}</dd>
+          </>
+        )}
+        <dt>효과</dt>
+        <dd>{ev.effects.map(effectText).join(' · ')}</dd>
+        {ev.omen && (
+          <>
+            <dt>전조</dt>
+            <dd>{ev.omen}</dd>
+          </>
+        )}
+        <dt>서술</dt>
+        <dd>{ev.text}</dd>
+      </dl>
+      {here.length > 0 && (
+        <p className="muted">
+          지금 그 땅에:{' '}
+          {here.map((a, i) => (
+            <span key={a.id}>
+              {i > 0 && ', '}
+              <button className="link" onClick={() => onActor(a.id)}>{shortName(a.name)}</button>
+            </span>
+          ))}
+        </p>
+      )}
+      {state && <RecentLog entries={state.log.filter((e) => (e.kind === 'omen' && e.text === ev.omen) || (e.kind === 'event' && e.text === ev.text))} title="발동 기록" />}
+    </section>
+  );
+}
+
+function RecentLog({ entries, title = '최근 기록' }: { entries: LogEntry[]; title?: string }) {
+  if (!entries.length) return null;
+  return (
+    <>
+      <h3 className="admin-sub">{title}</h3>
+      {entries.slice(-RECENT_LOG).map((e) => (
+        <div key={e.id} className={`log-line log-${e.kind}`}>
+          <time>{formatClock(e.t)}</time>
+          <span>{e.text}</span>
+        </div>
+      ))}
+    </>
+  );
+}
+
+function statusText(s: TrapStatus) {
+  if (s.kind === 'omen') return `전조 — ${formatClock(s.at)}에 터진다`;
+  if (s.kind === 'cooldown') return `재발동 대기 (${formatClock(s.until)}까지)`;
+  return '대기 중';
+}
+
+function triggerText(ev: EventDef) {
+  // `enter` traps arrive with ZEN-105; compared as text so this works before and after.
+  const trigger = ev.trigger as string;
+  if (trigger === 'landfall') return `그 땅과 유대를 맺을 때, 그날 ${ev.landfalls ?? 1}번째 이상의 상륙이면`;
+  if (trigger === 'enter') {
+    const gained = (ev as EventDef & { gained_life?: boolean }).gained_life;
+    return `누군가 그 땅에 들어오면${gained ? ' (그날 생명을 얻은 이만)' : ''}`;
+  }
+  return trigger;
+}
+
+function effectText(e: Effect) {
+  switch (e.type) {
+    case 'damage':
+      return `그곳 모두에게 피해 ${e.amount}`;
+    case 'stat':
+      return [
+        e.energy !== undefined && `기력 ${signed(e.energy)}`,
+        e.hunger !== undefined && `배고픔 ${signed(e.hunger)}`,
+        e.coin !== undefined && `돈 ${signed(e.coin)}`,
+      ].filter(Boolean).join(', ');
+    case 'tap':
+      return `최대 ${e.max}개 탭 (${e.land_label})${e.skip_untap ? ', 다음 언탭 건너뜀' : ''}`;
+    case 'condition':
+      return `상태 "${e.label}" ${e.hours}시간${e.blocks_travel ? ', 통행 막힘' : ''}`;
+    case 'destroy_lands':
+      return `일으킨 이가 오늘 상륙한 땅 ${e.count}개 파괴`;
+    default: {
+      const other = e as { type: string; amount?: number };
+      if (other.type === 'lose_life') return `일으킨 이가 생명 ${other.amount} 잃음`;
+      return other.type;
+    }
+  }
+}
+
+function signed(n: number) {
+  return n > 0 ? `+${n}` : String(n);
+}
