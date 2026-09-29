@@ -4,11 +4,10 @@ kind: event
 name: 용암공 함정
 name_en: Lavaball Trap
 summary: 침입자에게 반응해 거대한 용암 덩어리를 굴려 보내는 화산 지대의 고대 함정
-status: canon
+status: draft
 sources: [ZEN-135]
 tags: [함정, 적색, 화산]
 links:
-  - { to: loc-lava-chasm, rel: 도사린 곳 }
   - { to: law-ruin-traps, rel: 함정의 한 종류 }
   - { to: law-mana-colors, rel: 적색 마법 }
 sim:
@@ -31,6 +30,7 @@ sim:
 
 ## 게임에서의 역할
 
+- **배치 대기** (2026-09-30 지역 초기화): 지역을 비웠다. 예전 자리는 `loc-lava-chasm`였다. 대지 카드가 깔린 뒤 이 카드를 다시 놓을 때 새 자리를 정하고 canon 으로 되돌린다.
 frontmatter `sim` 으로 게임에 들어가 있다.
 
 - 발동 조건 (`trigger: landfall`, `landfalls: 2`): 누군가 용암 협곡과 유대를 맺었는데(상륙), 그것이 그날 두 번째 이상의 상륙이면 반드시 발동한다. 카드의 "이번 턴에 대지를 2개 이상 들였으면"을 옮긴 것이다 (대지 = 지역, 상륙 = 유대 맺기, 턴 = 게임 하루). 땅은 하루에 하나만 맺을 수 있어서, 땅을 더 들이는 효과가 생기기 전까지는 발동하지 않는다.

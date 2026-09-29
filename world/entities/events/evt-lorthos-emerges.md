@@ -4,12 +4,11 @@ kind: event
 name: 로르토스의 출현
 name_en: Lorthos Emerges
 summary: 로르토스가 심해에서 떠올라 조수를 뒤흔들고, 해안의 최대 여덟을 붙잡는다
-status: canon
+status: draft
 sources: [ZEN-53]
 tags: [바다, 조수, 청색]
 links:
   - { to: chr-lorthos, rel: 일으키는 존재 }
-  - { to: loc-deepwater-realm, rel: 떠오르는 곳 }
 sim:
   region: loc-deepwater-realm
   range: 20             # 심해에서 이 거리 안의 땅이 "해안"이다
@@ -30,6 +29,7 @@ sim:
 
 ## 게임에서의 역할
 
+- **배치 대기** (2026-09-30 지역 초기화): 지역을 비웠다. 예전 자리는 `loc-deepwater-realm`였다. 대지 카드가 깔린 뒤 이 카드를 다시 놓을 때 새 자리를 정하고 canon 으로 되돌린다.
 frontmatter `sim` 으로 게임에 들어가 있다.
 
 - 발동 (`trigger: gm`): 아침마다 LLM이 오늘 일으킬지 정한다. 한 달에 한 번꼴을 기준으로 삼는다. 한 번 일어나면 7일 동안은 다시 일어나지 않는다.

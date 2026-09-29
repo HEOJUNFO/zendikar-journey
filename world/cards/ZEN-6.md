@@ -11,7 +11,7 @@ rarity: rare
 artist: "Steve Argyle"
 scryfall: https://scryfall.com/card/zen/6/celestial-mantle
 added: 2026-09-29
-entities: [spl-celestial-mantle, loc-emeria, law-life, law-mana-colors, law-retainers]
+entities: [spl-celestial-mantle, law-life, law-mana-colors, law-retainers]
 ---
 
 ## 카드 원문

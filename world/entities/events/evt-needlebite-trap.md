@@ -4,11 +4,10 @@ kind: event
 name: 바늘이빨 함정
 name_en: Needlebite Trap
 summary: 말라키르 둘레에 깔린 함정. 막 생명을 얻은 침입자의 목에 가시를 박아 피를 빨아낸다
-status: canon
+status: draft
 sources: [ZEN-105]
 tags: [함정, 흑색, 흡혈귀]
 links:
-  - { to: loc-malakir, rel: 깔린 곳 }
   - { to: law-ruin-traps, rel: 함정의 한 종류 }
   - { to: law-life, rel: 생명을 빼앗음 }
   - { to: law-mana-colors, rel: 흑색 마법 }
@@ -27,6 +26,7 @@ sim:
 
 ## 게임에서의 역할
 
+- **배치 대기** (2026-09-30 지역 초기화): 지역을 비웠다. 예전 자리는 `loc-malakir`였다. 대지 카드가 깔린 뒤 이 카드를 다시 놓을 때 새 자리를 정하고 canon 으로 되돌린다.
 frontmatter `sim` 으로 게임에 들어가 있다.
 
 - 발동 조건 (`trigger: enter`, `gained_life: true`): 누군가 말라키르에 들어왔는데, 그가 그날 생명을 얻은 적이 있으면 반드시 발동한다. 카드의 "상대가 이번 턴에 생명을 얻었으면 {B}로"를 옮긴 것이다. 생명을 얻었다 = 생명을 주는 효과를 받았다 (`law-life`). 잠과 식사는 생명을 주지 않는다. 지금은 생명을 주는 효과가 없어서 함정은 잠들어 있다.

@@ -10,7 +10,6 @@ tags: [흡혈귀, 흑색, 혈족]
 links:
   - { to: chr-kalitas, rel: 우두머리 }
   - { to: cre-vampire, rel: 구성원 }
-  - { to: loc-ghet-estate, rel: 거점 }
 ---
 
 ## 설정

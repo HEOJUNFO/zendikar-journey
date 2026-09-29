@@ -4,11 +4,10 @@ kind: spell
 name: 피의 공물
 name_en: Blood Tribute
 summary: 눈앞의 상대에게서 생명의 절반을 빨아내는 흑색 주문. 부리는 흡혈귀가 힘을 보태면 빨아낸 생명이 시전자에게 온다
-status: canon
+status: draft
 sources: [ZEN-81]
 tags: [주문, 흑색, 흡혈귀, 집중마법]
 links:
-  - { to: loc-malakir, rel: 배우는 곳 }
   - { to: cre-vampire, rel: 킥커로 탭하는 생물 }
   - { to: law-retainers, rel: 킥커로 부리는 권속 }
   - { to: law-life, rel: 생명을 빼앗음 }
@@ -35,6 +34,7 @@ sim:
 
 ## 게임에서의 역할
 
+- **배치 대기** (2026-09-30 지역 초기화): 지역을 비웠다. 예전 자리는 `loc-malakir`였다. 대지 카드가 깔린 뒤 이 카드를 다시 놓을 때 새 자리를 정하고 canon 으로 되돌린다.
 첫 주문이다. 주문 체계는 `world/README.md` 의 주문 절.
 
 - **배우기** ([결정]): 말라키르에서 "배우기" 행동으로 4시간 들여 익힌다. 한 번 익히면 계속 안다. 지금은 플레이어만 배우고 쓴다.

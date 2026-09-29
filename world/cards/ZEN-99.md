@@ -12,7 +12,7 @@ rarity: mythic
 artist: "Todd Lockwood"
 scryfall: https://scryfall.com/card/zen/99/kalitas-bloodchief-of-ghet
 added: 2026-09-29
-entities: [chr-kalitas, cre-vampire, fac-ghet, law-mana-colors, loc-guul-draz, loc-ghet-estate, law-retainers]
+entities: [chr-kalitas, cre-vampire, fac-ghet, law-mana-colors, law-retainers]
 ---
 
 ## 카드 원문

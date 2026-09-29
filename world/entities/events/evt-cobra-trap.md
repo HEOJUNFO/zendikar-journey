@@ -4,11 +4,10 @@ kind: event
 name: 코브라 함정
 name_en: Cobra Trap
 summary: 우거진 밀림의 폐허에 도사린 함정. 이 땅이 누군가의 손에 부서지면 코브라 넷이 쏟아져 나와 부순 자를 덮친다
-status: canon
+status: draft
 sources: [ZEN-160]
 tags: [함정, 녹색, 뱀]
 links:
-  - { to: loc-overgrown-jungle, rel: 도사린 곳 }
   - { to: cre-snake, rel: 쏟아져 나오는 것 }
   - { to: law-ruin-traps, rel: 함정의 한 종류 }
   - { to: law-permanents, rel: 지속물이 부서질 때 }
@@ -27,6 +26,7 @@ sim:
 
 ## 게임에서의 역할
 
+- **배치 대기** (2026-09-30 지역 초기화): 지역을 비웠다. 예전 자리는 `loc-overgrown-jungle`였다. 대지 카드가 깔린 뒤 이 카드를 다시 놓을 때 새 자리를 정하고 canon 으로 되돌린다.
 - 발동 조건 (`trigger: destroyed`, [결정]): 우거진 밀림에 있는 지속물(`law-permanents`)이 남의 주문, 능력, 사건에 부서질 때 반드시 발동한다. 지금 부서질 수 있는 지속물은 밀림 땅 자체다. 부여마법, 마법물체가 생기면 그것도 든다.
 - 효과: 1/1 코브라 넷이 밀림에 생긴다 (`create`). 주인 없는 짐승이고, 그날은 땅을 부순 자를 적으로 삼아 덮친다 ([가공]).
 - 순간마법이라 전조가 없다. 온전한 값({4}{G}{G})을 치를 주인은 없다.

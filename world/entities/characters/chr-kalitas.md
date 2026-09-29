@@ -4,14 +4,13 @@ kind: character
 name: 칼리타스, 게트의 혈족장
 name_en: Kalitas, Bloodchief of Ghet
 summary: 게트 혈족을 이끄는 전설의 흡혈귀 전사. 죽인 자를 흡혈귀로 되살려 혈족을 늘린다
-status: canon
+status: draft
 sources: [ZEN-99]
 tags: [흡혈귀, 전설, 흑색, 전사]
 links:
   - { to: fac-ghet, rel: 우두머리 }
   - { to: cre-vampire, rel: 종족 }
   - { to: law-mana-colors, rel: 흑색의 존재 }
-  - { to: loc-ghet-estate, rel: 거처 }
   - { to: law-retainers, rel: 권속을 거느림 }
 sim:
   home: loc-ghet-estate # [결정] 2026-09-29, 굴 드라즈 안의 구역
@@ -43,6 +42,7 @@ sim:
 
 ## 게임에서의 역할
 
+- **배치 대기** (2026-09-30 지역 초기화): 지역을 비웠다. 예전 자리는 `loc-ghet-estate`였다. 대지 카드가 깔린 뒤 이 카드를 다시 놓을 때 새 자리를 정하고 canon 으로 되돌린다.
 - 5/5. 거처는 굴 드라즈 안의 게트 혈족의 영지(`loc-ghet-estate`)다. 거처는 카드에 없어 사용자 결정으로 정했다. 하루는 LLM이 그의 성격과 목표로 짠다 ([결정] 2026-09-30). 성격은 그림과 능력에서 읽고 나머지는 [가공].
 - 지도에 나온다. 같은 지역에 있으면 대화하고 싸울 수 있다. 공격받으면 그날 반격한다(능력을 써서 탭된 날은 맞서지 못한다). 죽으면 능력도 끝난다.
 - 마나: 흑 7 (카드의 마나 값과 색). 00:00에 다시 찬다.

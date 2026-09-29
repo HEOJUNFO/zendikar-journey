@@ -4,11 +4,10 @@ kind: spell
 name: 천상의 망토
 name_en: Celestial Mantle
 summary: 빛나는 수정 갑옷을 한 사람에게 입히는 백색 주문. 입은 이는 크게 강해지고, 그가 사람을 치면 그를 부리는 이의 생명이 두 배로 차오른다
-status: canon
+status: draft
 sources: [ZEN-6]
 tags: [주문, 백색, 오라, 갑옷]
 links:
-  - { to: loc-emeria, rel: 배우는 곳 }
   - { to: law-life, rel: 생명을 두 배로 }
   - { to: law-retainers, rel: 권속이 입으면 주인의 생명 }
   - { to: law-mana-colors, rel: 백색 마법 }
@@ -32,6 +31,7 @@ sim:
 
 ## 게임에서의 역할
 
+- **배치 대기** (2026-09-30 지역 초기화): 지역을 비웠다. 예전 자리는 `loc-emeria`였다. 대지 카드가 깔린 뒤 이 카드를 다시 놓을 때 새 자리를 정하고 canon 으로 되돌린다.
 주문 체계는 `world/README.md` 의 주문 절. 이 세계의 첫 **오라**(한 번 걸면 오래 남는 주문)다.
 
 - **배우기** ([결정]): 에메리아에서 4시간. 에메리아는 하늘에 떠 있어 비행해야 닿는다. 하늘로 오르는 길이 카드로 생기기 전까지 플레이어는 배울 수 없다.

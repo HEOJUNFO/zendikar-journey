@@ -10,7 +10,6 @@ tags: [흡혈귀, 흑색]
 links:
   - { to: chr-kalitas, rel: 혈족장 }
   - { to: fac-ghet, rel: 혈족 }
-  - { to: loc-malakir, rel: 도시 }
   - { to: spl-blood-tribute, rel: 흡혈귀의 주문 }
   - { to: law-retainers, rel: 칼리타스의 권속 }
 ---

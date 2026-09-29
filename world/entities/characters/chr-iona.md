@@ -4,11 +4,10 @@ kind: character
 name: 이오나, 에메리아의 방패
 name_en: Iona, Shield of Emeria
 summary: 하늘의 폐허 에메리아를 지키는 전설의 천사 수호자
-status: canon
+status: draft
 sources: [ZEN-13]
 tags: [천사, 전설, 백색]
 links:
-  - { to: loc-emeria, rel: 수호 }
   - { to: law-mana-colors, rel: 한 색을 봉인하는 힘 }
 sim:
   pt: [7, 7]
@@ -37,6 +36,7 @@ sim:
 
 ## 게임에서의 역할
 
+- **배치 대기** (2026-09-30 지역 초기화): 지역을 비웠다. 예전 자리는 `loc-emeria`였다. 대지 카드가 깔린 뒤 이 카드를 다시 놓을 때 새 자리를 정하고 canon 으로 되돌린다.
 - 첫 NPC. 하루는 LLM이 그녀의 성격과 목표로 짠다 (예: 에메리아에서 기도, 순찰, 수호, 휴식). 적어 둔 일과는 없다 ([결정] 2026-09-30).
 - 천사라서 먹지 않고 돈을 쓰지 않는다. 기력만 쓰고 쉬어서 채운다 (`needs: [energy]`).
 - 성격: 정의롭고 엄격함, 과묵함, 악에게는 단호함.

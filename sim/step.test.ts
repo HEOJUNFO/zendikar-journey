@@ -103,18 +103,23 @@ const character = (world: ReturnType<typeof fixture>, region = 'loc-a', seed = 1
   newState(world, { seed, mode: 'character', player: { name: '나', background: '떠돌이', region } });
 const texts = (s: State) => s.log.map((e) => e.text);
 
-test('the real world loads and Iona lives the day planned for her in Emeria', async () => {
+test('the real world loads and runs a day', async () => {
   const world = loadWorld();
-  assert.ok(world.npcs.some((n) => n.id === 'chr-iona' && n.abilities.includes('fly')));
+  const state = newState(world, { seed: 7, mode: 'observer' });
+  assert.equal((await advance(state, world, 24)).error, undefined);
+  assert.equal(formatClock(state.minutes), '2일차 06:00');
+});
+
+test('an angel flies to the sky island it keeps and lives by energy alone', async () => {
+  const world = fixture([npc('chr-angel', { ...npcSim('loc-sky', 'work', [7, 7]), abilities: ['fly'], needs: ['energy'] })]);
   const state = newState(world, { seed: 7, mode: 'observer' });
   await advance(state, world, 24);
-  assert.equal(formatClock(state.minutes), '2일차 06:00');
-  const iona = state.actors['chr-iona'];
-  assert.equal(iona.region, 'loc-emeria');
-  assert.equal(iona.schedule?.day, 1);
-  assert.ok(iona.stats.energy > 0 && iona.stats.energy <= 100);
-  // An angel lives by energy alone: no hunger, no pay.
-  assert.deepEqual([iona.stats.hunger, iona.stats.coin], [20, 20]);
+  const angel = state.actors['chr-angel'];
+  assert.equal(angel.region, 'loc-sky');
+  assert.equal(angel.schedule?.day, 1);
+  assert.ok(angel.stats.energy >= 0 && angel.stats.energy <= 100);
+  // No hunger, no pay.
+  assert.deepEqual([angel.stats.hunger, angel.stats.coin], [20, 20]);
 });
 
 test('sky and sea regions cannot be reached without the means', async () => {
@@ -875,10 +880,4 @@ test('an NPC tames an item by a claim block, and lets go of it when they die', a
   assert.equal(state.items?.['itm-v']?.owner, undefined);
   await advance(state, world, 2);
   assert.equal(state.items?.['itm-v']?.owner, other);
-});
-
-test('the real world: Emeria is an area of Tazeem, where the Eternity Vessel stands', () => {
-  const world = loadWorld();
-  assert.equal(world.regions.find((r) => r.id === 'loc-emeria')?.parent, 'loc-tazeem');
-  assert.equal(world.items.find((x) => x.id === 'itm-eternity-vessel')?.at, 'loc-tazeem');
 });

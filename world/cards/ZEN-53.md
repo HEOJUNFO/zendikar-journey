@@ -12,7 +12,7 @@ rarity: mythic
 artist: "Kekai Kotaki"
 scryfall: https://scryfall.com/card/zen/53/lorthos-the-tidemaker
 added: 2026-09-29
-entities: [chr-lorthos, evt-lorthos-emerges, loc-deepwater-realm, law-mana-colors]
+entities: [chr-lorthos, evt-lorthos-emerges, law-mana-colors]
 ---
 
 ## 카드 원문

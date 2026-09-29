@@ -11,7 +11,7 @@ rarity: rare
 artist: "Alex Horley-Orlandelli"
 scryfall: https://scryfall.com/card/zen/81/blood-tribute
 added: 2026-09-29
-entities: [spl-blood-tribute, loc-malakir, cre-vampire, law-life, law-retainers]
+entities: [spl-blood-tribute, cre-vampire, law-life, law-retainers]
 ---
 
 ## 카드 원문

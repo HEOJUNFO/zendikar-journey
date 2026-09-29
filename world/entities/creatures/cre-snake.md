@@ -9,7 +9,6 @@ sources: [ZEN-160]
 tags: [뱀, 녹색, 짐승]
 links:
   - { to: evt-cobra-trap, rel: 쏟아져 나오는 함정 }
-  - { to: loc-overgrown-jungle, rel: 사는 곳 }
 ---
 
 ## 설정

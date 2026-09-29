@@ -84,8 +84,9 @@ for (const [kind, { prefix, dir }] of Object.entries(KINDS)) {
 }
 
 // Game data: location `map` and character/event `sim` blocks (see world/README.md: 게임 데이터).
-// Drafts are checked too, though only canon entities enter the game.
-const { errors: simErrors } = buildWorld([...entities.values()].map((e) => e.fm));
+// Checked as the game loads them: canon only. A draft may wait for a place that doesn't exist
+// yet (e.g. after the map was reset); it is checked when it becomes canon.
+const { errors: simErrors } = buildWorld([...entities.values()].map((e) => e.fm).filter((fm) => fm.status === 'canon'));
 for (const msg of simErrors) {
   const id = msg.slice(0, msg.indexOf(':'));
   err(entities.get(id)?.rel ?? id, msg.slice(id.length + 2));

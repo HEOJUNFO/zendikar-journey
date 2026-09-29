@@ -1,7 +1,9 @@
 // Card intake from Scryfall, in the order of https://scryfall.com/sets/zen?order=cmc&dir=desc
 // (one entry per card, so basic lands with several arts appear once).
 //   npm run card:sync   fetch the set into world/cards/_queue.json
-//   npm run card:next   write the next card not yet in world/cards/ and print it
+//   npm run card:next   write the next card not yet in world/cards/ and print it. Nonbasic
+//                       lands come first (the world's places are laid before anything stands
+//                       on them), then the rest in order.
 import { existsSync, readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -55,7 +57,9 @@ function quote(text) {
 function next() {
   if (!existsSync(queueFile)) throw new Error('순서표가 없음. 먼저 npm run card:sync');
   const queue = JSON.parse(readFileSync(queueFile, 'utf8'));
-  const card = queue.find((c) => !existsSync(join(cardsDir, `${c.id}.md`)));
+  const nonbasicLand = (c) => /\bLand\b/.test(c.type_line) && !/\bBasic\b/.test(c.type_line);
+  const todo = (c) => !existsSync(join(cardsDir, `${c.id}.md`));
+  const card = queue.find((c) => nonbasicLand(c) && todo(c)) ?? queue.find(todo);
   if (!card) {
     console.log(`${queue.length}장 모두 반영됨`);
     return;

@@ -4,11 +4,10 @@ kind: creature
 name: 발로스
 name_en: Baloth
 summary: 끝없는 먹성으로 한 땅의 사냥감을 금세 바닥내고, 먹이를 찾아 땅을 옮겨 다니는 거대한 녹색 짐승
-status: canon
+status: draft
 sources: [ZEN-157]
 tags: [짐승, 녹색]
 links:
-  - { to: loc-overgrown-jungle, rel: 처음 사는 곳 }
   - { to: law-mana-colors, rel: 녹색의 존재 }
 sim:
   pt: [4, 4]
@@ -33,6 +32,7 @@ sim:
 
 ## 게임에서의 역할
 
+- **배치 대기** (2026-09-30 지역 초기화): 지역을 비웠다. 예전 자리는 `loc-overgrown-jungle`였다. 대지 카드가 깔린 뒤 이 카드를 다시 놓을 때 새 자리를 정하고 canon 으로 되돌린다.
 생물종이면서, `sim` 으로 게임 속에 한 마리가 산다 (발로스 숲파괴자).
 
 - 4/4, 마나 녹 6 (카드의 마나 값과 색). 기력과 배고픔을 쓴다. 짐승이라 말을 하지 않는다 (`beast: true`).
