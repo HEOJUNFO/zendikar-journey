@@ -969,3 +969,15 @@ test('a crypt gives one black mana, and more for each black retainer who died se
   assert.deepEqual(p.fallen, ['chr-v1', 'chr-v2', 'chr-v3', 'chr-v4', 'chr-g']);
   assert.deepEqual(manaCapacity(state, world, p), { B: 2 }); // four black fallen, less {2}; the green one doesn't count
 });
+
+test('a save whose map changed: characters gone from the world leave it, and those on a vanished land go home', () => {
+  const before = fixture([npc('chr-x', npcSim('loc-b')), npc('chr-y', npcSim('loc-a'))]);
+  const state = character(before, 'loc-c');
+  state.actors['chr-x'].region = 'loc-gone';
+  state.actors[PLAYER_ID].region = 'loc-gone';
+  const after = fixture([npc('chr-x', npcSim('loc-b'))]);
+  syncWorld(state, after);
+  assert.equal(state.actors['chr-y'], undefined);
+  assert.equal(state.actors['chr-x'].region, 'loc-b');
+  assert.equal(state.actors[PLAYER_ID].region, 'loc-a');
+});

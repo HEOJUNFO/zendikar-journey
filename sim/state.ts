@@ -3,7 +3,7 @@ import { START_MINUTES } from './clock.ts';
 import { INITIAL_STATS } from './rules.ts';
 import { NEEDS } from './types.ts';
 import type { LifeKind, Need, Pace, Schedule, Stats } from './types.ts';
-import { spellColors } from './world.ts';
+import { canStay, spellColors } from './world.ts';
 import type { Ability, NpcDef, Pt, Speaker, World } from './world.ts';
 import type { Mana } from './mana.ts';
 
@@ -246,6 +246,26 @@ export function syncWorld(state: State, world: World) {
   for (const [id, def] of Object.entries(state.tokens ?? {})) {
     const old = (def as { master?: string }).master;
     if (old && state.actors[id] && !state.actors[id].master) state.actors[id].master = old;
+  }
+  // The map changed under the save (a region gone, a character back to draft): characters no
+  // longer in the world leave the save; those standing where nothing is any more go home, or
+  // to the first land they can stay on.
+  const exists = (id: string) => world.regions.some((r) => r.id === id);
+  for (const a of Object.values(state.actors)) {
+    const def = world.npcs.find((n) => n.id === a.id) ?? state.tokens?.[a.id];
+    if (a.kind === 'npc' && !def) {
+      delete state.actors[a.id];
+      continue;
+    }
+    if (exists(a.region) && (!a.travel || exists(a.travel.to))) continue;
+    const home = def && exists(def.home) ? def.home : world.regions.find((r) => canStay(r, a.abilities))?.id;
+    if (!home) {
+      if (a.kind === 'npc') delete state.actors[a.id];
+      continue;
+    }
+    a.region = home;
+    a.travel = undefined;
+    a.schedule = undefined;
   }
 }
 
