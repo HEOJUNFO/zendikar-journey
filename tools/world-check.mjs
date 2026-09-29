@@ -5,10 +5,7 @@ import { join, basename } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { parse } from 'yaml';
 
-// Kept in step with the old tile map until the region-node map replaces it.
-const MAP_WIDTH = 96;
-const MAP_HEIGHT = 72;
-const TERRAINS = { grassland: {}, forest: {}, rocky: {}, beach: {}, settlement: {}, sky: {}, volcanic: {}, deepsea: { sea: true } };
+import { buildWorld } from '../sim/world.ts';
 
 const root = join(fileURLToPath(new URL('.', import.meta.url)), '..', 'world');
 
@@ -85,20 +82,14 @@ for (const [kind, { prefix, dir }] of Object.entries(KINDS)) {
   }
 }
 
-// Map blocks (see world/README.md: 맵)
-for (const [id, { rel, fm }] of entities) {
-  if (!fm.map) continue;
-  if (fm.kind !== 'location') {
-    err(rel, 'map 은 location 에만 쓸 수 있음');
-    continue;
-  }
-  const { x, y, w, h, terrain } = fm.map;
-  const num = (v) => typeof v === 'number' && Number.isFinite(v);
-  if (!num(x) || !num(y) || x < 0 || y < 0 || x >= MAP_WIDTH || y >= MAP_HEIGHT)
-    err(rel, `map.x/y 는 0..${MAP_WIDTH - 1} / 0..${MAP_HEIGHT - 1} 범위의 숫자: ${x}, ${y}`);
-  if (!num(w) || !num(h) || w < 4 || h < 4) err(rel, `map.w/h 는 4 이상의 숫자: ${w}, ${h}`);
-  if (!(terrain in TERRAINS)) err(rel, `map.terrain 은 ${Object.keys(TERRAINS).join('|')} 중 하나: ${terrain}`);
+// Game data: location `map` and character/event `sim` blocks (see world/README.md: 게임 데이터).
+// Drafts are checked too, though only canon entities enter the game.
+const { errors: simErrors } = buildWorld([...entities.values()].map((e) => e.fm));
+for (const msg of simErrors) {
+  const id = msg.slice(0, msg.indexOf(':'));
+  err(entities.get(id)?.rel ?? id, msg.slice(id.length + 2));
 }
+
 // Cross-references
 for (const [id, { rel, fm }] of entities) {
   for (const src of fm.sources ?? []) {

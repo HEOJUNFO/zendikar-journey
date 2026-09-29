@@ -9,7 +9,7 @@ sources: [ZEN-53]
 tags: [바다, 심해]
 links:
   - { to: chr-lorthos, rel: 주인 }
-map: { x: 18, y: 38, w: 24, h: 20, terrain: deepsea }
+map: { x: 18, y: 38, terrain: deepsea }
 ---
 
 ## 설정

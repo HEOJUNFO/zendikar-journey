@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 720" width="960" height="720">
+  <style>
+    .name { font: 600 18px sans-serif; fill: #f4ecd8; }
+    .terrain { font: 13px sans-serif; fill: #b9c3cf; }
+  </style>
+  <rect width="100%" height="100%" fill="#16324f"/>
+  <g><circle cx="180" cy="380" r="70" fill="#1d3b66" opacity="0.75"/><circle cx="180" cy="380" r="30" fill="none" stroke="#9fc4ff" stroke-width="2" stroke-dasharray="6 6"/>
+    <text x="180" y="472" text-anchor="middle" class="name">심해의 영역</text>
+    <text x="180" y="490" text-anchor="middle" class="terrain">심해</text></g>
+  <g><circle cx="480" cy="130" r="26" fill="#b9c8ea" stroke="#f4ecd8" stroke-width="3"/>
+    <text x="480" y="178" text-anchor="middle" class="name">에메리아</text>
+    <text x="480" y="196" text-anchor="middle" class="terrain">공중섬</text></g>
+  <g><circle cx="700" cy="480" r="26" fill="#b5462c" stroke="#f4ecd8" stroke-width="3"/>
+    <text x="700" y="528" text-anchor="middle" class="name">용암 협곡</text>
+    <text x="700" y="546" text-anchor="middle" class="terrain">화산 지대</text></g>
+</svg>

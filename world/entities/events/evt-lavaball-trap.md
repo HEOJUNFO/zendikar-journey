@@ -11,6 +11,16 @@ links:
   - { to: loc-lava-chasm, rel: 도사린 곳 }
   - { to: law-ruin-traps, rel: 함정의 한 종류 }
   - { to: law-mana-colors, rel: 적색 마법 }
+sim:
+  region: loc-lava-chasm
+  trigger: enter
+  chance: 0.02          # 머무는 1시간마다. 서두르면 2배, 조심하면 절반 (law-ruin-traps)
+  cooldown_hours: 72
+  omen: 협곡의 땅이 울리고, 위쪽에서 불씨가 날린다.
+  text: 협곡 위쪽에서 거대한 용암 덩어리가 떨어져, 땅을 부수며 굴러 내려왔다.
+  effects:
+    - { type: stat, energy: -40 }
+    - { type: condition, label: 무너진 협곡 두 구역, hours: 48 }
 ---
 
 ## 설정

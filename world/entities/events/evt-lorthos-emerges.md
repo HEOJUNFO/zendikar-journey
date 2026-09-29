@@ -10,6 +10,18 @@ tags: [바다, 조수, 청색]
 links:
   - { to: chr-lorthos, rel: 일으키는 존재 }
   - { to: loc-deepwater-realm, rel: 떠오르는 곳 }
+sim:
+  region: loc-deepwater-realm
+  range: 20             # 심해에서 이 거리 안의 땅이 "해안"이다
+  trigger: gm
+  chance: 0.03          # LLM 없이 굴릴 때 하루 확률
+  cooldown_hours: 168
+  scope: world
+  omen: 서쪽 하늘이 어두워지고, 바다가 이상하게 부풀어 오른다.
+  text: 로르토스가 심해에서 떠올랐다. 조수가 그의 뜻대로 해안을 덮친다.
+  effects:
+    - { type: bind, max: 8, until: next-morning }
+    - { type: condition, label: 조수에 잠긴 해안, hours: 12, blocks_travel: true }
 ---
 
 ## 설정

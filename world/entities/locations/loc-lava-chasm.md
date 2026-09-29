@@ -9,7 +9,7 @@ sources: [ZEN-135]
 tags: [화산, 협곡, 함정]
 links:
   - { to: evt-lavaball-trap, rel: 도사린 함정 }
-map: { x: 70, y: 48, w: 26, h: 12, terrain: volcanic }
+map: { x: 70, y: 48, terrain: volcanic }
 ---
 
 ## 설정

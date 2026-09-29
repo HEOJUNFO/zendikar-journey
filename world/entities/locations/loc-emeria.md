@@ -9,7 +9,7 @@ sources: [ZEN-13]
 tags: [하늘, 폐허, 천사]
 links:
   - { to: chr-iona, rel: 수호자 }
-map: { x: 48, y: 13, w: 22, h: 12, terrain: sky }
+map: { x: 48, y: 13, terrain: sky }
 ---
 
 ## 설정
