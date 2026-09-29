@@ -98,6 +98,8 @@ export const MapSchema = z.union([
     y: z.number().min(0).max(MAP_HEIGHT - 1),
     terrain: z.enum(TERRAIN_IDS),
     color: LandColor,
+    // How large it is drawn: a continent (e.g. Ondu), or a small island off one (Agadeem).
+    size: z.enum(['continent', 'island']).optional(),
   }),
   // An area inside a region: a land of its own at the region's place.
   z.strictObject({
@@ -356,6 +358,8 @@ export type Region = {
   // An area inside this region (its x, y are the region's). Areas are lands of their own:
   // people meet, bond, and get hit by events there, but an event on the region reaches them.
   parent?: string;
+  // How large a region is drawn (web/view.ts).
+  size?: 'continent' | 'island';
 };
 
 export type NpcDef = {
@@ -478,7 +482,7 @@ export function buildWorld(entities: RawEntity[]): { world: World; errors: strin
           name: e.name,
           nameEn: e.name_en ?? '',
           summary: e.summary ?? '',
-          ...('in' in map.data ? { x: 0, y: 0, parent: map.data.in } : { x: map.data.x, y: map.data.y }),
+          ...('in' in map.data ? { x: 0, y: 0, parent: map.data.in } : { x: map.data.x, y: map.data.y, size: map.data.size }),
           terrain: map.data.terrain,
           color: c === 'C' ? null : Array.isArray(c) ? (`${c[0]}/${c[1]}` as Hybrid) : (c ?? TERRAINS[map.data.terrain].mana),
           entersTapped: land.data?.enters_tapped ?? false,

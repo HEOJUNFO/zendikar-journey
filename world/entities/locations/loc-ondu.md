@@ -11,7 +11,7 @@ links:
   - { to: loc-arid-mesa, rel: 안의 구역 }
   - { to: loc-agadeem, rel: 붙어 있는 섬 }
   - { to: loc-akoum, rel: 동쪽의 대륙 }
-map: { x: 58, y: 40, terrain: grassland }
+map: { x: 58, y: 40, terrain: grassland, size: continent }
 ---
 
 ## 설정
@@ -22,7 +22,7 @@ map: { x: 58, y: 40, terrain: grassland }
 
 ## 게임에서의 역할
 
-- 아쿰 서쪽의 지역이다 (지형 `grassland`, 백색 땅, 평원) ([결정] 2026-09-30). 아쿰까지 약 5시간.
+- 아쿰 서쪽의 지역이다 (지형 `grassland`, 백색 땅, 평원) ([결정] 2026-09-30). 대륙이라 지도에 크게 그린다. 아쿰까지 약 6시간.
 - 평원이라 메마른 메사의 길 찾기로 찾아올 수 있다.
 - 안에 구역 메마른 메사(`loc-arid-mesa`)가 있다. 서남쪽의 아게딤 섬(`loc-agadeem`)은 따로 된 지역이다.
 

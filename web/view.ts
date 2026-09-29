@@ -20,33 +20,33 @@ export function clock(state: State) {
   return formatClock(state.minutes);
 }
 
-// Where a land's node is drawn. A region holding areas is itself a large circle, with its areas
-// as small circles across the lower part; the upper part is where its own people and marks go.
-// (The engine puts areas at their region's place; this is only how they are drawn.)
-const AREA_RING = 3.4;
-const OWN_LIFT = 3;
+// Where a land's node is drawn. A region holding areas, or one with a size (a continent, a
+// small island), is itself a circle of that size, with its areas as small circles across the
+// lower part; the upper part is where its own people and marks go. (The engine puts areas at
+// their region's place; this is only how they are drawn.)
+const SIZE_RADIUS = { continent: 11, island: 5 } as const;
 function areaAngle(world: World, r: Region) {
   const sibs = world.regions.filter((x) => x.parent === r.parent);
   const n = sibs.length;
   const spread = Math.min(2.4, (n - 1) * 1.4);
   return Math.PI / 2 + (n > 1 ? -spread / 2 + (spread * sibs.indexOf(r)) / (n - 1) : 0);
 }
-function ring(world: World, r: Region) {
-  return AREA_RING + Math.max(0, world.regions.filter((x) => x.parent === r.parent).length - 3) * 0.9;
-}
 
-// The large circle's radius for a region holding areas, 0 for one that holds none.
+// The circle's radius for a region drawn as one, 0 for a plain node.
 export function containerRadius(world: World, r: Region) {
+  if (r.parent) return 0;
   const n = world.regions.filter((x) => x.parent === r.id).length;
-  return n ? 7 + Math.max(0, n - 3) * 0.9 : 0;
+  const base = r.size ? SIZE_RADIUS[r.size] : n ? 7 : 0;
+  return base && base + Math.max(0, n - 3) * 0.9;
 }
 
 export function nodeAt(world: World, r: Region) {
   if (r.parent) {
+    const R = containerRadius(world, world.regions.find((x) => x.id === r.parent)!);
     const angle = areaAngle(world, r);
-    return { x: r.x + Math.cos(angle) * ring(world, r), y: r.y + Math.sin(angle) * ring(world, r) };
+    return { x: r.x + Math.cos(angle) * R * 0.5, y: r.y + Math.sin(angle) * R * 0.5 };
   }
-  return containerRadius(world, r) ? { x: r.x, y: r.y - OWN_LIFT } : { x: r.x, y: r.y };
+  return { x: r.x, y: r.y - containerRadius(world, r) * 0.45 };
 }
 
 // An area's name: just outside its region's circle, in the area's direction.

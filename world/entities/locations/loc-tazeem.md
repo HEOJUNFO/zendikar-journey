@@ -9,7 +9,7 @@ sources: [ZEN-213]
 tags: [대륙, 해안, 절벽, 청색]
 links:
   - { to: loc-emeria, rel: 하늘의 구역 }
-map: { x: 48, y: 13, terrain: beach }
+map: { x: 48, y: 16, terrain: beach, size: continent }
 ---
 
 ## 설정
@@ -20,7 +20,7 @@ map: { x: 48, y: 13, terrain: beach }
 
 ## 게임에서의 역할
 
-- 지도 북쪽 (48, 13)의 지역이다 (지형 `beach`, 청색 땅, 섬) ([결정] 2026-09-30).
+- 지도 북쪽 (48, 16)의 지역이다 (지형 `beach`, 청색 땅, 섬) ([결정] 2026-09-30). 대륙이라 지도에 크게 그린다 (`size: continent`).
 - 안에 구역 에메리아(`loc-emeria`)가 있다. 비행하지 못하는 이도 밧줄로 오를 수 있다.
 
 ## 미정/질문
