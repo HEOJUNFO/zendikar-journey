@@ -22,6 +22,10 @@ export type Actor = {
   // Where they are, or where they set out from while travelling.
   region: string;
   travel?: { to: string; arrive: number };
+  // Start of the first hour spent in `region` after travelling there.
+  arrivedAt?: number;
+  // Regions they made landfall on (arrived at) this turn = game day, in order.
+  landfalls?: { day: number; regions: string[] };
   stats: Stats;
   pace: Pace;
   abilities: Ability[];
@@ -35,7 +39,14 @@ export type Actor = {
   background?: string; // player
 };
 
-export type Condition = { label: string; until: number; blocksTravel: boolean; source: string };
+export type Condition = {
+  label: string;
+  until: number;
+  blocksTravel: boolean;
+  // A destroyed land: nothing can be explored or worked there.
+  barren?: boolean;
+  source: string;
+};
 
 export type LogKind =
   | 'omen'
@@ -83,8 +94,8 @@ export type State = {
   actors: Record<string, Actor>;
   regions: Record<string, { conditions: Condition[] }>;
   events: Record<string, { lastFired?: number }>;
-  // Omened events that go off at `at`.
-  pending: { eventId: string; at: number }[];
+  // Omened events that go off at `at`, with who set them off.
+  pending: { eventId: string; at: number; by: string[] }[];
   gm: GmPlan;
   // Last day whose plans (LLM or routine) were made.
   preparedDay: number;
@@ -172,6 +183,10 @@ export function syncWorld(state: State, world: World) {
 
 export function needsOf(a: Actor): readonly Need[] {
   return a.needs ?? NEEDS;
+}
+
+export function isBarren(state: State, regionId: string) {
+  return !!state.regions[regionId]?.conditions.some((c) => c.barren);
 }
 
 export function player(state: State) {

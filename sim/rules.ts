@@ -1,5 +1,5 @@
 import { NEEDS } from './types.ts';
-import type { LifeKind, Need, Pace, Stats } from './types.ts';
+import type { LifeKind, Need, Stats } from './types.ts';
 
 type Effect = Stats;
 
@@ -23,9 +23,6 @@ export const INITIAL_STATS: Stats = { energy: 80, hunger: 20, coin: 20 };
 
 // Map units covered per game hour of travel (the map is 96×72 units).
 export const TRAVEL_UNITS_PER_HOUR = 4;
-
-// Chance multiplier for `enter` events per pace of those present (law-ruin-traps).
-export const PACE_TRIGGER: Record<Pace, number> = { careful: 0.5, normal: 1, hasty: 2 };
 
 // Hours of forced sleep when energy hits 0.
 export const COLLAPSE_HOURS = 6;

@@ -23,6 +23,19 @@
 
 대응은 기본값일 뿐이다. 카드 한 장이 여러 요소를 만들거나 기존 요소를 보강만 할 수도 있다.
 
+## MTG 규칙 → 게임 대응
+
+카드의 규칙 텍스트를 게임으로 옮길 때 쓰는 기준. 새 개념이 나오면 사용자와 정하고 여기에 더한다.
+
+| MTG | 게임 |
+|---|---|
+| 대지 | 지역 (location 하나). 대지 카드 한 장이 지역 하나가 된다 |
+| 대지가 전장에 들어온다 (상륙) | 인물이 한 지역에 도착한다. 시작 지역은 치지 않는다 |
+| 턴 ("이번 턴에") | 게임 하루 (00:00~24:00) |
+| 대지 파괴 | 그 지역이 한동안 황폐해진다. 탐색도 일도 할 수 없다 |
+| 생물에게 피해 N | 기력 -N×10 |
+| 색 | 마법의 다섯 색 (`law-mana-colors`) |
+
 ## 지도
 
 젠디카르 행성은 **망망대해에서 시작**한다. 카드로 지역이 생길 때마다 그 location 에 `map` 을 달면 지도에 지역(노드)이 하나 생긴다.
@@ -61,22 +74,24 @@ sim:
 
 종류는 `sleep`(잠), `eat`(식사), `work`(일), `social`(사람 만나기), `leisure`(여가)다. `needs` 에 hunger 가 없으면 `eat` 은 쓸 수 없다. 스탯 변화는 `sim/rules.ts` 에 있다. 시간은 따옴표로 감싸고, 세계가 1시간 단위로 돌아가므로 정시로 나눈다. LLM이 하루마다 이 일과를 바탕으로 그날 계획을 새로 짠다.
 
-**사건** (`event`): GM이 일으키거나 누군가 지역에 머물 때 일어나는 일.
+**사건** (`event`): GM이 일으키거나, 누군가 어떤 땅에 상륙할 때 일어나는 일.
 
 ```yaml
 sim:
   region: loc-lava-chasm      # 일어나는 곳
   range: 0                    # 이 거리 안의 땅이 영향을 받는다 (0 = 그 지역만)
-  trigger: enter              # gm: GM(LLM)이 아침마다 정함 / enter: 머무는 1시간마다 굴림
-  chance: 0.02                # gm: GM이 참고하는 빈도 (며칠에 한 번꼴) / enter: 시간당 확률
+  trigger: landfall           # gm | landfall
+  landfalls: 2                # landfall: 그날 N번째(이상)로 상륙한 땅일 때 발동
+  # chance: 0.03              # gm: GM이 참고하는 빈도 (며칠에 한 번꼴)
   cooldown_hours: 72          # 한 번 일어난 뒤 쉬는 시간
   scope: region               # region: 그곳에 있는 이만 앎 / world: 모두가 앎
-  omen: 땅이 울린다.           # 선택. 1시간 전에 오는 전조. 조심스러운 이는 피해를 피한다
+  omen: 땅이 울린다.           # 선택. 1시간 전에 오는 전조. 조심스러운 이는 stat 피해를 피한다
   text: 용암 덩어리가 굴러 내려왔다.
   effects:
     - { type: stat, energy: -40 }                                  # 그곳에 있는 모두의 스탯 변화
     - { type: bind, max: 8, until: next-morning }                  # 최대 N명을 다음 날 06:00 까지 붙잡음
     - { type: condition, label: 무너진 길, hours: 48, blocks_travel: true }  # 지역에 남는 상태
+    - { type: destroy_lands, count: 2, hours: 48 }                 # 대지 파괴: 발동시킨 이가 그날 상륙한 땅 최근 N곳이 황폐 (landfall 사건만)
 ```
 
 효과 종류가 모자라면 카드에 맞춰 `sim/world.ts`(스키마)와 `sim/step.ts`(적용)에 더한다.

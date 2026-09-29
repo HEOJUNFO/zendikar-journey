@@ -9,12 +9,11 @@ import {
   COLLAPSE_HOURS,
   EXPLORE_EFFECT,
   KIND_EFFECTS,
-  PACE_TRIGGER,
   STARVING,
   STARVING_ENERGY,
   TRAVEL_EFFECT,
 } from './rules.ts';
-import { addLog, needsOf, present, random } from './state.ts';
+import { addLog, isBarren, needsOf, present, random } from './state.ts';
 import type { Actor, GmPlan, State, Task } from './state.ts';
 import { josa, shortName, toward } from './text.ts';
 import { currentBlock } from './types.ts';
@@ -67,36 +66,44 @@ function gmLayer(state: State, world: World, t: number) {
   state.pending = state.pending.filter((p) => p.at > t);
   for (const p of due) {
     const ev = world.events.find((e) => e.id === p.eventId);
-    if (ev) fire(state, world, ev, t, true);
+    if (ev) fire(state, world, ev, t, true, p);
   }
 
   const hour = Math.floor(minuteOfDay(t) / 60);
   if (state.gm.day === gameDay(t)) {
     for (const f of state.gm.fires) {
       const ev = world.events.find((e) => e.id === f.eventId);
-      if (ev && f.hour === hour) trigger(state, world, ev, t);
+      if (ev && f.hour === hour) trigger(state, world, ev, t, { by: [], lands: [] });
     }
   }
 
+  // Landfall: someone arrived in the region this hour, and it is at least their Nth land this
+  // turn (a land is a region, a turn is a game day).
   for (const ev of world.events) {
-    if (ev.trigger !== 'enter' || onCooldown(state, ev, t)) continue;
+    if (ev.trigger !== 'landfall' || onCooldown(state, ev, t)) continue;
     if (state.pending.some((p) => p.eventId === ev.id)) continue;
-    const here = present(state, ev.region).filter((a) => a.boundUntil === undefined);
-    if (!here.length) continue;
-    const miss = here.reduce((m, a) => m * (1 - Math.min(1, ev.chance * PACE_TRIGGER[a.pace])), 1);
-    if (random(state) < 1 - miss) trigger(state, world, ev, t);
+    const by = present(state, ev.region).filter(
+      (a) => a.arrivedAt === t && a.landfalls?.day === gameDay(t) && a.landfalls.regions.length >= (ev.landfalls ?? 1),
+    );
+    if (!by.length) continue;
+    // Their lands this turn, latest first: what a land-destroying effect hits.
+    const lands = [...new Set(by.flatMap((a) => [...a.landfalls!.regions].reverse()))];
+    trigger(state, world, ev, t, { by: by.map((a) => a.id), lands });
   }
 }
 
-function trigger(state: State, world: World, ev: EventDef, t: number) {
+// Who set an event off and the lands they made landfall on this turn (latest first).
+type Cause = { by: string[]; lands: string[] };
+
+function trigger(state: State, world: World, ev: EventDef, t: number, cause: Cause) {
   state.events[ev.id] = { lastFired: t };
-  if (!ev.omen) return fire(state, world, ev, t, false);
+  if (!ev.omen) return fire(state, world, ev, t, false, cause);
   const regions = affectedRegions(world, ev).map((r) => r.id);
   addLog(state, { kind: 'omen', text: ev.omen, regions: [ev.region, ...regions], scope: ev.scope });
-  state.pending.push({ eventId: ev.id, at: t + STEP_MINUTES });
+  state.pending.push({ eventId: ev.id, at: t + STEP_MINUTES, ...cause });
 }
 
-function fire(state: State, world: World, ev: EventDef, t: number, omened: boolean) {
+function fire(state: State, world: World, ev: EventDef, t: number, omened: boolean, cause: Partial<Cause>) {
   const regions = affectedRegions(world, ev).map((r) => r.id);
   const targets = Object.values(state.actors).filter((a) => !a.travel && regions.includes(a.region));
   addLog(state, {
@@ -134,6 +141,12 @@ function fire(state: State, world: World, ev: EventDef, t: number, omened: boole
           actors: [a.id],
         });
       }
+    } else if (eff.type === 'destroy_lands') {
+      for (const id of (cause.lands ?? []).slice(0, eff.count)) {
+        state.regions[id] ??= { conditions: [] };
+        state.regions[id].conditions.push({ label: '황폐해진 땅', until: t + eff.hours * 60, blocksTravel: false, barren: true, source: ev.id });
+        addLog(state, { kind: 'condition', text: `${region(world, id).name}: 땅이 부서져 황폐해졌다.`, regions: [id], scope: ev.scope });
+      }
     } else {
       for (const id of regions) {
         state.regions[id] ??= { conditions: [] };
@@ -158,7 +171,7 @@ function regionLayer(state: State, world: World, t: number) {
   for (const [id, rs] of Object.entries(state.regions)) {
     const r = world.regions.find((x) => x.id === id);
     for (const c of rs.conditions.filter((c) => c.until <= t)) {
-      if (r) addLog(state, { kind: 'condition', text: `${r.name}: ${josa(c.label, '이', '가')} 걷혔다.`, regions: [id] });
+      if (r) addLog(state, { kind: 'condition', text: c.barren ? `${r.name}: 황폐했던 땅이 되살아났다.` : `${r.name}: ${josa(c.label, '이', '가')} 걷혔다.`, regions: [id] });
     }
     rs.conditions = rs.conditions.filter((c) => c.until > t);
   }
@@ -237,8 +250,11 @@ function npcTask(state: State, world: World, a: Actor, t: number): Task | undefi
     startTravel(state, world, a, block.regionId, t);
     return a.task;
   }
-  // Can't get there (or already there): do it here.
-  const task: Task = { kind: block.kind, activity: block.activity, emoji: block.emoji };
+  // Can't get there (or already there): do it here. Nothing can be worked on barren land.
+  const task: Task =
+    block.kind === 'work' && isBarren(state, a.region)
+      ? { kind: 'leisure', activity: `${block.activity} (땅이 황폐해 손을 놓음)`, emoji: '🥀' }
+      : { kind: block.kind, activity: block.activity, emoji: block.emoji };
   if (a.task?.activity !== task.activity || a.task?.kind !== task.kind) {
     addLog(state, {
       kind: 'activity',
@@ -255,6 +271,10 @@ function travelHour(state: State, world: World, a: Actor, t: number) {
   applyEffect(a.stats, TRAVEL_EFFECT, 60, needsOf(a));
   if (!a.travel || t + STEP_MINUTES < a.travel.arrive) return;
   a.region = a.travel.to;
+  a.arrivedAt = t + STEP_MINUTES;
+  const day = gameDay(a.arrivedAt);
+  if (a.landfalls?.day !== day) a.landfalls = { day, regions: [] };
+  a.landfalls.regions.push(a.region);
   delete a.travel;
   a.task = undefined;
   addLog(state, {

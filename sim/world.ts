@@ -96,18 +96,20 @@ const EffectSchema = z.discriminatedUnion('type', [
     hours: z.number().positive(),
     blocks_travel: z.boolean().default(false),
   }),
+  // Land destruction (a land is a region): the lands whoever set it off made landfall on this
+  // turn, latest first, lie barren — nothing can be explored or worked there. Landfall events only.
+  z.strictObject({
+    type: z.literal('destroy_lands'),
+    count: z.number().int().positive(),
+    hours: z.number().positive(),
+  }),
 ]);
 export type Effect = z.infer<typeof EffectSchema>;
 
-export const EventSimSchema = z.strictObject({
-  // Where it starts. Affects land regions within `range` map units of it (0 = only there).
+const EventBase = {
+  // Where it happens. Affects land regions within `range` map units of it (0 = only there).
   region: z.string(),
   range: z.number().min(0).default(0),
-  // gm: the GM decides each morning whether it happens today; `chance` is the usual share of
-  // days it happens on, a guide for the GM.
-  // enter: may go off each hour someone is in `region` (`chance` per hour, scaled by pace).
-  trigger: z.enum(['gm', 'enter']),
-  chance: z.number().min(0).max(1),
   cooldown_hours: z.number().min(0).default(0),
   // Who hears of it: those in the affected regions, or the whole world.
   scope: z.enum(['region', 'world']).default('region'),
@@ -115,7 +117,16 @@ export const EventSimSchema = z.strictObject({
   omen: z.string().optional(),
   text: z.string().min(1),
   effects: z.array(EffectSchema).min(1),
-});
+};
+
+export const EventSimSchema = z.discriminatedUnion('trigger', [
+  // The GM decides each morning whether it happens today. `chance` is the share of days it
+  // usually happens on, a guide for the GM.
+  z.strictObject({ ...EventBase, trigger: z.literal('gm'), chance: z.number().min(0).max(1) }),
+  // Goes off when someone makes landfall on `region` (arrives there) and it is at least their
+  // `landfalls`-th landfall this turn (game day).
+  z.strictObject({ ...EventBase, trigger: z.literal('landfall'), landfalls: z.number().int().min(1).default(1) }),
+]);
 
 // --- built world -----------------------------------------------------------------------
 
@@ -148,8 +159,9 @@ export type EventDef = {
   summary: string;
   region: string;
   range: number;
-  trigger: 'gm' | 'enter';
-  chance: number;
+  trigger: 'gm' | 'landfall';
+  chance?: number; // gm
+  landfalls?: number; // landfall
   cooldownHours: number;
   scope: 'region' | 'world';
   omen?: string;
@@ -237,6 +249,8 @@ export function buildWorld(entities: RawEntity[]): { world: World; errors: strin
         continue;
       }
       const { cooldown_hours, effects, ...rest } = sim.data;
+      if (rest.trigger !== 'landfall' && effects.some((x) => x.type === 'destroy_lands'))
+        err(e.id, 'destroy_lands 는 trigger: landfall 사건에만 쓸 수 있음 (누가 상륙한 땅인지 알아야 함)');
       world.events.push({
         id: e.id,
         name: e.name,

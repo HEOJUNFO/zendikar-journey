@@ -3,7 +3,7 @@
 import { z } from 'zod';
 import { STEP_MINUTES } from './clock.ts';
 import { KIND_EFFECTS } from './rules.ts';
-import { addLog, player } from './state.ts';
+import { addLog, isBarren, player } from './state.ts';
 import type { State, Task } from './state.ts';
 import { startTravel, travelBlocked } from './step.ts';
 import { josa, shortName } from './text.ts';
@@ -49,6 +49,7 @@ export function startAction(state: State, world: World, action: Action): string 
       text = `${action.hours}시간 쉬기로 한다.`;
       break;
     case 'explore':
+      if (isBarren(state, p.region)) return '땅이 황폐해져 탐색할 것이 없다.';
       task = { kind: 'explore', activity: `${PACE_LABELS[action.pace]} 탐색`, emoji: '🧭', until: until(action.hours) };
       text = `${action.hours}시간 동안 ${PACE_LABELS[action.pace]} 주변을 탐색한다.`;
       break;

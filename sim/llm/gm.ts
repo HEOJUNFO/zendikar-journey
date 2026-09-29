@@ -31,7 +31,7 @@ Answer with JSON only, no prose.`;
 
 function userPrompt({ day, hour, world, state, eligible, news }: GmDayInput) {
   const events = eligible
-    .map((e) => `- ${e.id}: ${e.name} — ${e.summary} (usually on about ${Math.round(e.chance * 100)}% of days)`)
+    .map((e) => `- ${e.id}: ${e.name} — ${e.summary} (usually on about ${Math.round((e.chance ?? 0) * 100)}% of days)`)
     .join('\n');
   return `Day ${day + 1}, now ${clockText(state)}.
 
