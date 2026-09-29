@@ -5,11 +5,12 @@ name: 다섯 색의 마법
 name_en: Five Colors of Magic
 summary: 이 세계의 마법은 백, 청, 흑, 적, 녹 다섯 색으로 나뉜다
 status: canon
-sources: [ZEN-13, ZEN-135]
+sources: [ZEN-13, ZEN-135, ZEN-53]
 tags: [마법, 마나]
 links:
   - { to: chr-iona, rel: 한 색을 봉인할 수 있는 존재 }
   - { to: evt-lavaball-trap, rel: 적색 마법 }
+  - { to: chr-lorthos, rel: 청색의 존재 }
 ---
 
 ## 설정
@@ -20,6 +21,7 @@ links:
 
 - 백색: 수호와 정의. 에메리아의 천사 이오나 (ZEN-13).
 - 적색: 불, 용암, 파괴. 용암공 함정 (ZEN-135).
+- 청색: 물, 바다, 조수, 속박. 조수를 부리는 로르토스 (ZEN-53).
 
 색은 봉인할 수 있다. 에메리아의 방패 이오나는 적의를 품은 상대의 한 색을 골라, 그 색의 주문을 쓰지 못하게 막는다.
 

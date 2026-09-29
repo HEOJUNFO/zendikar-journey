@@ -235,6 +235,38 @@ def embers(seed):
         d.point((x + 1, y), fill=(255, 122, 26, 160))
     return img
 
+# --- Deep sea (Lorthos, the Tidemaker): dark water, whirlpool, a tentacle breaking the surface ---
+DEEP = rgb('#0f2a3d'); DEEP_D = rgb('#0a1f2e'); DEEP_L = rgb('#1a3b52'); FOAM = rgb('#9cc7d9')
+
+def deep_water(seed):
+    img = noise_tile(seed, DEEP, DEEP_D, DEEP_L, 0.25)
+    d = ImageDraw.Draw(img)
+    rnd = random.Random(seed)
+    for _ in range(3):  # slow swell lines
+        x, y = rnd.randint(2, 20), rnd.randint(4, 28)
+        d.line([(x, y), (x + rnd.randint(5, 9), y)], fill=DEEP_L)
+    return img
+
+def whirlpool(seed):
+    img = deep_water(seed)
+    d = ImageDraw.Draw(img)
+    for r, color in ((13, DEEP_L), (10, rgb('#2a5670')), (7, DEEP_L), (4, rgb('#061521'))):
+        d.arc([16 - r, 16 - r, 16 + r, 16 + r], start=(r * 40) % 360, end=(r * 40 + 250) % 360, fill=color, width=2)
+    d.arc([3, 3, 29, 29], start=200, end=320, fill=FOAM, width=1)
+    return img
+
+def tentacle(seed):
+    img = Image.new('RGBA', (T, T), (0, 0, 0, 0))
+    d = ImageDraw.Draw(img)
+    d.ellipse([6, 24, 26, 31], outline=FOAM, width=1)  # ripple where it breaks the surface
+    pts = [(14, 28), (12, 22), (13, 16), (17, 11), (21, 8), (22, 5), (20, 3)]
+    for i in range(len(pts) - 1):
+        w = max(1, 5 - i)
+        d.line([pts[i], pts[i + 1]], fill=rgb('#3e5f4f'), width=w)
+    for x, y in pts[1:5]:  # suckers
+        d.point((x + 2, y), fill=rgb('#b7c9a8'))
+    return img
+
 # Order defines indices: 1440 + position. Keep in sync with tools/build-map.mjs (CUSTOM).
 TILES = [
     ('sky', sky(1, 0)), ('sky', sky(2, 1)), ('sky', sky(3, 0)),
@@ -251,6 +283,9 @@ TILES = [
     ('lavaPool', lava_pool(23)), ('lavaPool', lava_pool(24)),
     ('spire', spire(25)), ('boulder', boulder(26)),
     ('embers', embers(27)),
+    # Appended for ZEN-53 (deep sea).
+    ('deepWater', deep_water(28)), ('deepWater', deep_water(29)),
+    ('whirlpool', whirlpool(30)), ('tentacle', tentacle(31)),
 ]
 
 rows = math.ceil(len(TILES) / COLS)

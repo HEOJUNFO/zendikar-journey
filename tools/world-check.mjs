@@ -95,7 +95,8 @@ for (const [id, { rel, fm }] of entities) {
     err(rel, `map.x/y 는 0..${MAP_WIDTH - 1} / 0..${MAP_HEIGHT - 1} 범위의 숫자: ${x}, ${y}`);
   if (!num(w) || !num(h) || w < 4 || h < 4) err(rel, `map.w/h 는 4 이상의 숫자: ${w}, ${h}`);
   if (!(terrain in TERRAINS)) err(rel, `map.terrain 은 ${Object.keys(TERRAINS).join('|')} 중 하나: ${terrain}`);
-  mapped.push(id);
+  // Sea features are painted on the map but are not places.
+  else if (!TERRAINS[terrain].sea) mapped.push(id);
 }
 const placesFile = join(root, '..', 'data', 'places.ts');
 const built = existsSync(placesFile)

@@ -40,6 +40,9 @@ const CUSTOM = {
   spire: [1464],
   boulder: [1465],
   embers: [1466],
+  deepWater: [1467, 1468],
+  whirlpool: [1469],
+  tentacle: [1470],
 };
 const T = {
   water: [451, 452],
@@ -72,6 +75,17 @@ export const TERRAINS = {
   },
   // Volcanic chasm (Lavaball Trap): basalt and ash with glowing cracks, lava pools and
   // spires to walk around, black sand where it meets the sea.
+  // Sea feature (Lorthos's deepwater realm): darker water painted over open sea. Raises no
+  // land and makes no place; a whirlpool marks the centre and tentacles break the surface.
+  deepsea: {
+    sea: true,
+    ground: CUSTOM.deepWater,
+    obstacles: [],
+    obstacleChance: 0,
+    decor: CUSTOM.tentacle,
+    decorChance: 0.02,
+    centre: CUSTOM.whirlpool,
+  },
   volcanic: {
     ground: [...CUSTOM.basalt, ...CUSTOM.basalt, ...CUSTOM.ash, ...CUSTOM.lavaCrack],
     coast: CUSTOM.blackSand,
@@ -136,7 +150,10 @@ export function buildMap(locations) {
   }
 
   // Larger areas first so smaller sites (towns inside a region) paint over them.
-  const ordered = [...locations].sort((a, b) => b.map.w * b.map.h - a.map.w * a.map.h);
+  const seaFeatures = locations.filter((l) => TERRAINS[l.map.terrain].sea);
+  const ordered = locations
+    .filter((l) => !TERRAINS[l.map.terrain].sea)
+    .sort((a, b) => b.map.w * b.map.h - a.map.w * a.map.h);
   for (const loc of ordered) {
     const { x: cx, y: cy, w, h } = loc.map;
     const noise = valueNoise(loc.id);
@@ -180,6 +197,7 @@ export function buildMap(locations) {
     }
   }
 
+  for (const loc of seaFeatures) paintSeaFeature(loc, W, H, bg, deco, owner);
   paintSky(W, H, bg, owner, byId);
 
   const places = ordered.map((loc) => ({
@@ -190,6 +208,24 @@ export function buildMap(locations) {
     spots: pickSpots(loc, owner, walkable),
   }));
   return { bg, deco, obj, places };
+}
+
+// Repaints open sea inside the location's noisy ellipse; land and its coast are left alone.
+function paintSeaFeature(loc, W, H, bg, deco, owner) {
+  const { x: cx, y: cy, w, h } = loc.map;
+  const terrain = TERRAINS[loc.map.terrain];
+  const noise = valueNoise(loc.id);
+  for (let x = Math.max(0, Math.floor(cx - w)); x < Math.min(W, Math.ceil(cx + w)); x++) {
+    for (let y = Math.max(0, Math.floor(cy - h)); y < Math.min(H, Math.ceil(cy + h)); y++) {
+      const d = ((x - cx) / (w / 2)) ** 2 + ((y - cy) / (h / 2)) ** 2;
+      if (owner[x][y] !== null || d >= 1 + 0.35 * noise(x, y)) continue;
+      const rand = rng(hashString(`${loc.id}:${x}:${y}`));
+      bg[x][y] = pick(rand, terrain.ground);
+      if (d > 0.05 && rand() < terrain.decorChance) deco[x][y] = pick(rand, terrain.decor);
+    }
+  }
+  const [x, y] = [Math.round(cx), Math.round(cy)];
+  if (terrain.centre && owner[x][y] === null) bg[x][y] = pick(rng(hashString(loc.id)), terrain.centre);
 }
 
 // A meandering channel (1-2 tiles wide) along the location's long axis.

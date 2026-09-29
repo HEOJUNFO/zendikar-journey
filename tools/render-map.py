@@ -39,5 +39,13 @@ for p in places:
         continue
     x, y = p['spots'][0]['x'] * 12, p['spots'][0]['y'] * 12
     draw.text((x, y), p['name'], font=font, fill='white', stroke_width=3, stroke_fill='black', anchor='mm')
+# Sea features (e.g. deepsea) are not places, so label them from their location files.
+for md in (repo / 'world/entities/locations').glob('*.md'):
+    text = md.read_text()
+    name = re.search(r'^name: (.+)$', text, re.M)
+    m = re.search(r'^map: \{ x: (\d+), y: (\d+), .*terrain: deepsea', text, re.M)
+    if name and m:
+        draw.text((int(m.group(1)) * 12, int(m.group(2)) * 12), name.group(1).strip(), font=font,
+                  fill=(170, 210, 230), stroke_width=3, stroke_fill='black', anchor='mm')
 img.convert('RGB').save(repo / 'world/map.png')
 print(f'world/map.png ({W}x{H} tiles, {len(places)} places)')
