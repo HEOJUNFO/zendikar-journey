@@ -222,6 +222,8 @@ export function syncWorld(state: State, world: World) {
     const a = (state.actors[b.id] ??= { ...beingActor(b), manaSpent: old?.manaSpent, boundUntil: old?.boundUntil });
     a.pt = [...b.pt];
     a.abilities = [...b.abilities];
+    // Beings never leave home, so a home moved by a card moves them.
+    if (!a.dead) a.region = b.home;
   }
   delete state.beings;
 }

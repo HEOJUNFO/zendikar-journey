@@ -12,7 +12,7 @@ rarity: mythic
 artist: "Todd Lockwood"
 scryfall: https://scryfall.com/card/zen/99/kalitas-bloodchief-of-ghet
 added: 2026-09-29
-entities: [chr-kalitas, cre-vampire, fac-ghet, law-mana-colors, loc-guul-draz]
+entities: [chr-kalitas, cre-vampire, fac-ghet, law-mana-colors, loc-guul-draz, loc-ghet-estate]
 ---
 
 ## 카드 원문
@@ -37,6 +37,7 @@ entities: [chr-kalitas, cre-vampire, fac-ghet, law-mana-colors, loc-guul-draz]
 - 창백한 피부, 녹색 구슬을 꿴 긴 머리 가닥, 날개처럼 퍼진 가시 돋친 검은 갑옷. [그림]
 - 성격과 말투는 알 수 없다. 그래서 일과 없이 GM이 움직이는 존재로 둔다. [가공]
 - 거처는 카드에 없다. 젠디카르의 흡혈귀가 사는 늪의 땅 굴 드라즈로 정했다. [배경] 흡혈귀의 땅, [그림] 음울한 녹황색 하늘, [결정] 거처 추가
+- 굴 드라즈 안에 게트 혈족이 모여 사는 구역(영지)이 있고, 칼리타스는 그곳에 머문다. [결정] 구역 추가, [가공] 이름 "게트 혈족의 영지"
 
 ## 반영 내역
 
@@ -53,4 +54,7 @@ entities: [chr-kalitas, cre-vampire, fac-ghet, law-mana-colors, loc-guul-draz]
   - `loc-guul-draz`: 새 지역 굴 드라즈 (34, 58), 새 지형 늪(`swamp`, 흑색 땅). 칼리타스의 거처, 게트 혈족의 거점.
   - GM이 움직이는 존재는 거처(`home`)에 머무는 인물이 된다. 칼리타스는 굴 드라즈, 로르토스는 심해의 영역.
   - 같은 지역이면 대화하고 싸울 수 있다. 공격받으면 그날 반격하고, 죽으면 능력과 출현도 끝난다.
+- 2026-09-29 결정 (보강 2): 굴 드라즈 안에 게트 혈족 구역을 둔다.
+  - 엔진에 지역 안의 세부 구역(`map.in`)을 새로 만들었다.
+  - `loc-ghet-estate`: 게트 혈족의 영지, 굴 드라즈 안의 구역, 늪(흑색 땅). 칼리타스의 거처와 게트 혈족의 거점을 이리로 옮겼다.
 - 게임에 아직 없는 것: 마나를 쓰는 주문(플레이어는 마나를 얻지만 아직 쓸 곳이 없다).

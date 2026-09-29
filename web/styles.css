@@ -596,3 +596,19 @@ header h1 {
     top: 120px;
   }
 }
+
+/* --- areas inside a region --- */
+
+.map-area-link {
+  stroke: #f4ecd8;
+  stroke-width: 0.25;
+  stroke-dasharray: 0.6 0.6;
+  opacity: 0.6;
+}
+.map-area-label {
+  font-size: 1.9px;
+  text-anchor: start;
+}
+.map-area-mark {
+  font-size: 2px;
+}

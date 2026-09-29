@@ -6,7 +6,7 @@ import { isPerson, player, present, ptOf } from '../state.ts';
 import type { InterpretInput } from '../run.ts';
 import { travelBlocked } from '../step.ts';
 import { shortName } from '../text.ts';
-import { region, TERRAINS, travelHours } from '../world.ts';
+import { placeName, region, TERRAINS, travelHours } from '../world.ts';
 import { chatCompletion, extractJson } from './chat.ts';
 import { playerText } from './context.ts';
 
@@ -25,7 +25,7 @@ export async function interpret({ world, state, text }: InterpretInput): Promise
     .filter((r) => r.id !== p.region && !TERRAINS[r.terrain].sea)
     .map((r) => {
       const why = travelBlocked(state, world, p, r.id);
-      return `- ${r.id}: ${r.name} (${r.summary}) — ${why ? `갈 수 없음: ${why}` : `${travelHours(here, r)}시간`}`;
+      return `- ${r.id}: ${placeName(world, r)} (${r.summary}) — ${why ? `갈 수 없음: ${why}` : `${travelHours(here, r)}시간`}`;
     });
   const people = present(state, p.region)
     .filter(isPerson)

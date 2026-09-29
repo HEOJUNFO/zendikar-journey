@@ -52,13 +52,24 @@ export const TERRAINS: Record<Terrain, TerrainInfo> = {
 
 // --- frontmatter schemas ---------------------------------------------------------------
 
-export const MapSchema = z.strictObject({
-  x: z.number().min(0).max(MAP_WIDTH - 1),
-  y: z.number().min(0).max(MAP_HEIGHT - 1),
-  terrain: z.enum(TERRAIN_IDS),
-  // Mana color of this land (C = colorless). Default: from the terrain.
-  color: z.enum([...COLORS, 'C']).optional(),
-});
+// Mana color of a land (C = colorless). Default: from the terrain.
+const LandColor = z.enum([...COLORS, 'C']).optional();
+
+export const MapSchema = z.union([
+  // A region: a node on the map.
+  z.strictObject({
+    x: z.number().min(0).max(MAP_WIDTH - 1),
+    y: z.number().min(0).max(MAP_HEIGHT - 1),
+    terrain: z.enum(TERRAIN_IDS),
+    color: LandColor,
+  }),
+  // An area inside a region: a land of its own at the region's place.
+  z.strictObject({
+    in: z.string(),
+    terrain: z.enum(TERRAIN_IDS),
+    color: LandColor,
+  }),
+]);
 
 // Mana a being holds, from its card: { B: 7 } for {5}{B}{B}.
 const ManaSchema = z.partialRecord(z.enum(COLORS), z.number().int().min(1));
@@ -213,6 +224,9 @@ export type Region = {
   terrain: Terrain;
   // Mana color of the land (null = colorless).
   color: Color | null;
+  // An area inside this region (its x, y are the region's). Areas are lands of their own:
+  // people meet, bond, and get hit by events there, but an event on the region reaches them.
+  parent?: string;
 };
 
 export type NpcDef = {
@@ -309,12 +323,20 @@ export function buildWorld(entities: RawEntity[]): { world: World; errors: strin
           name: e.name,
           nameEn: e.name_en ?? '',
           summary: e.summary ?? '',
-          x: map.data.x,
-          y: map.data.y,
+          ...('in' in map.data ? { x: 0, y: 0, parent: map.data.in } : { x: map.data.x, y: map.data.y }),
           terrain: map.data.terrain,
           color: map.data.color === 'C' ? null : (map.data.color ?? TERRAINS[map.data.terrain].mana),
         });
     }
+  }
+  // Areas sit where their region is. One level only, and never at sea.
+  for (const r of world.regions) {
+    if (!r.parent) continue;
+    const p = world.regions.find((x) => x.id === r.parent);
+    if (!p) err(r.id, `map.in ${r.parent} 가 맵에 없음`);
+    else if (p.parent) err(r.id, `map.in ${r.parent} 도 구역임 (구역 안에 구역은 둘 수 없음)`);
+    else if (TERRAINS[p.terrain].sea || TERRAINS[r.terrain].sea) err(r.id, '바다에는 구역을 둘 수 없음');
+    else Object.assign(r, { x: p.x, y: p.y });
   }
 
   for (const e of entities) {
@@ -426,8 +448,13 @@ export function distance(a: { x: number; y: number }, b: { x: number; y: number 
   return Math.hypot(a.x - b.x, a.y - b.y);
 }
 
+// Within a region (its open ground and its areas) any move is an hour. Between regions it is
+// the distance, plus an hour to get out of or into an area through its region.
 export function travelHours(a: Region, b: Region) {
-  return Math.max(1, Math.ceil(distance(a, b) / TRAVEL_UNITS_PER_HOUR));
+  const home = (r: Region) => r.parent ?? r.id;
+  if (home(a) === home(b)) return 1;
+  const road = Math.max(1, Math.ceil(distance(a, b) / TRAVEL_UNITS_PER_HOUR));
+  return road + (a.parent ? 1 : 0) + (b.parent ? 1 : 0);
 }
 
 // Whether someone with these abilities can be in a region at all.
@@ -436,8 +463,21 @@ export function canStay(r: Region, abilities: readonly Ability[]) {
   return !t.sea && (!t.requires || abilities.includes(t.requires));
 }
 
-// Land regions an event reaches.
+// Land regions an event reaches: those within range, with their areas. An event in an area
+// with range 0 stays in that area.
 export function affectedRegions(world: World, ev: EventDef) {
   const origin = region(world, ev.region);
+  if (origin.parent && ev.range === 0) return [origin];
   return world.regions.filter((r) => !TERRAINS[r.terrain].sea && distance(origin, r) <= ev.range);
+}
+
+// Areas inside a region.
+export function areasOf(world: World, id: string) {
+  return world.regions.filter((r) => r.parent === id);
+}
+
+// "굴 드라즈 › 게트 혈족의 영지" for an area, the name for a region.
+export function placeName(world: World, r: Region) {
+  const p = r.parent && world.regions.find((x) => x.id === r.parent);
+  return p ? `${p.name} › ${r.name}` : r.name;
 }

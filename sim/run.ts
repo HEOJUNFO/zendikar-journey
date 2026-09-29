@@ -11,7 +11,7 @@ import { addFoe, clash } from './combat.ts';
 import { manaAvailable, planPayment } from './mana.ts';
 import { josa, shortName } from './text.ts';
 import type { ScheduleBlock } from './types.ts';
-import { canStay } from './world.ts';
+import { canStay, placeName } from './world.ts';
 import type { ActivatedAbility, BeingDef, EventDef, Speaker, World } from './world.ts';
 import type { PlanDayInput } from './llm/planner.ts';
 
@@ -170,7 +170,7 @@ async function prepareDay(state: State, world: World, llm: Llm) {
             stats: a.stats,
             needs: npc.needs,
             routine: npc.routine,
-            regions: world.regions.filter((r) => canStay(r, npc.abilities)),
+            regions: world.regions.filter((r) => canStay(r, npc.abilities)).map((r) => ({ ...r, name: placeName(world, r) })),
             news,
           });
           if (blocks) a.schedule = { day, source: 'llm', blocks };

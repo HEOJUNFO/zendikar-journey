@@ -2,7 +2,7 @@
 // character mode. Before a game starts it shows just the land.
 import { useState } from 'react';
 import type { State } from '../sim/state.ts';
-import { TERRAINS } from '../sim/world.ts';
+import { areasOf, TERRAINS } from '../sim/world.ts';
 import type { World } from '../sim/world.ts';
 import { MapView } from './MapView.tsx';
 import { BeingsList, LogView, ObserverControls, PeopleList, PlayerCard, RegionCard } from './panels.tsx';
@@ -59,12 +59,13 @@ function RegionList(props: { world: World; state: State | null; selected?: strin
     <section className="card">
       <h2>지역</h2>
       <ul className="region-list">
-        {world.regions.map((r) => {
+        {world.regions.filter((r) => !r.parent).flatMap((r) => [r, ...areasOf(world, r.id)]).map((r) => {
           const rs = state?.regions[r.id];
           const count = actors.filter((a) => a.region === r.id && !a.travel).length;
           return (
             <li key={r.id}>
               <button className={`ghost${selected === r.id ? ' on' : ''}`} onClick={() => onSelect(r.id)}>
+                {r.parent && <span className="muted">└</span>}
                 <span className="swatch" style={{ background: TERRAINS[r.terrain].color }} />
                 {r.name}
                 {rs?.destroyed && ' ✕'}

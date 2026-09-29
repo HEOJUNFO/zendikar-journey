@@ -4,6 +4,7 @@ import { player, ptOf } from '../state.ts';
 import { COLOR_LABELS } from '../mana.ts';
 import type { State } from '../state.ts';
 import { shortName } from '../text.ts';
+import { placeName } from '../world.ts';
 import type { World } from '../world.ts';
 
 export function loreText(world: World) {
@@ -21,7 +22,7 @@ export function whereaboutsText(world: World, state: State) {
         ...(state.regions[r.id]?.conditions.map((c) => c.label) ?? []),
       ];
       const land = r.color ? `${COLOR_LABELS[r.color]}색 땅` : '무색 땅';
-      return `- ${r.id} ${r.name} (${land}): ${r.summary}${conds.length ? ` [${conds.join(', ')}]` : ''}${here.length ? ` — ${here.join(', ')}` : ''}`;
+      return `- ${r.id} ${placeName(world, r)} (${land}): ${r.summary}${conds.length ? ` [${conds.join(', ')}]` : ''}${here.length ? ` — ${here.join(', ')}` : ''}`;
     })
     .join('\n');
 }

@@ -13,7 +13,7 @@ import { travelBlocked } from '../sim/step.ts';
 import { shortName } from '../sim/text.ts';
 import { PACES } from '../sim/types.ts';
 import type { Pace } from '../sim/types.ts';
-import { canStay, region, TERRAINS, travelHours } from '../sim/world.ts';
+import { areasOf, canStay, placeName, region, TERRAINS, travelHours } from '../sim/world.ts';
 import type { World } from '../sim/world.ts';
 import type { NewGameInput } from './api.ts';
 import { visibleActors, visibleLog } from './view.ts';
@@ -75,6 +75,8 @@ export function RegionCard(props: {
   const conds = state?.regions[r.id]?.conditions ?? [];
   const destroyed = state?.regions[r.id]?.destroyed;
   const here = state ? visibleActors(state, all).filter((a) => a.region === r.id && !a.travel) : [];
+  const parent = r.parent ? region(world, r.parent) : undefined;
+  const areas = areasOf(world, r.id);
   const p = state && player(state);
   let travel: ReactNode = null;
   if (state && p && onAct && !t.sea) {
@@ -109,7 +111,20 @@ export function RegionCard(props: {
       <h2>
         {r.name} <small>{t.label}{t.sea ? '' : ` · ${r.color ? `${COLOR_LABELS[r.color]}색` : '무색'} 땅`}</small>
       </h2>
+      {parent && <p className="muted">{parent.name} 안의 구역</p>}
       <p>{r.summary}</p>
+      {areas.length > 0 && (
+        <p className="muted">
+          안의 구역:{' '}
+          {areas
+            .map((x) => {
+              const n = state ? visibleActors(state, all).filter((a) => a.region === x.id && !a.travel).length : 0;
+              return n ? `${x.name} (${n}명)` : x.name;
+            })
+            .join(', ')}
+          <small> · 지도에서 골라 들어간다</small>
+        </p>
+      )}
       {destroyed && <p className="cond">✕ 부서진 땅 <small>({formatClock(destroyed.at)}부터, 쓸 수 없음)</small></p>}
       {conds.map((c) => (
         <p key={c.label + c.until} className="cond">
@@ -419,7 +434,7 @@ export function NewGame(props: { world: World; busy: boolean; onStart: (i: NewGa
             <select value={start} onChange={(e) => setStart(e.target.value)}>
               {starts.map((r) => (
                 <option key={r.id} value={r.id}>
-                  {r.name}
+                  {placeName(world, r)}
                 </option>
               ))}
             </select>

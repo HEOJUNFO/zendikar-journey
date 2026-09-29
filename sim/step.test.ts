@@ -10,7 +10,7 @@ import { usableAbilities } from './run.ts';
 import { eligibleGmEvents } from './step.ts';
 import { newState, PLAYER_ID, syncWorld } from './state.ts';
 import type { State } from './state.ts';
-import { buildWorld } from './world.ts';
+import { affectedRegions, buildWorld, travelHours } from './world.ts';
 import type { RawEntity } from './world.ts';
 
 const loc = (id: string, x: number, y: number, terrain: string): RawEntity => ({
@@ -349,6 +349,43 @@ test('an old save gets its beings as actors, keeping their mana and tap', () => 
   assert.equal(state.actors['chr-k'].boundUntil, 1440);
   assert.deepEqual(manaAvailable(state, world, state.actors['chr-k'], state.minutes), { B: 4 });
   assert.equal(state.beings, undefined);
+});
+
+test('areas: a land inside a region, an hour from it, reached by events on the region', async () => {
+  const world = fixture([
+    { id: 'loc-in', kind: 'location', name: '안뜰', status: 'canon', map: { in: 'loc-a', terrain: 'swamp' } },
+    npc('chr-x', npcSim('loc-in')),
+  ]);
+  const inner = world.regions.find((r) => r.id === 'loc-in')!;
+  const [a, b] = ['loc-a', 'loc-b'].map((id) => world.regions.find((r) => r.id === id)!);
+  assert.deepEqual([inner.x, inner.y, inner.color], [10, 10, 'B']);
+  assert.equal(travelHours(a, inner), 1);
+  assert.equal(travelHours(b, inner), travelHours(b, a) + 1); // through the region
+  // Someone on the region's open ground doesn't meet those in the area.
+  const state = character(world, 'loc-a');
+  assert.match((await act(state, world, { type: 'talk', to: 'chr-x', say: '안녕' }, {})).error ?? '', /여기 없다/);
+  await act(state, world, { type: 'move', to: 'loc-in' }, {});
+  assert.equal(state.actors[PLAYER_ID].region, 'loc-in');
+  // An event on the region reaches the area; one in the area stays there.
+  assert.deepEqual(affectedRegions(world, { region: 'loc-a', range: 0 } as never).map((r) => r.id).sort(), ['loc-a', 'loc-in']);
+  assert.deepEqual(affectedRegions(world, { region: 'loc-in', range: 0 } as never).map((r) => r.id), ['loc-in']);
+});
+
+test('buildWorld rejects areas in nowhere, in areas, or at sea', () => {
+  const area = (id: string, parent: string): RawEntity => ({ id, kind: 'location', name: id, status: 'canon', map: { in: parent, terrain: 'swamp' } });
+  const { errors } = buildWorld([
+    loc('loc-a', 10, 10, 'grassland'),
+    loc('loc-sea', 10, 30, 'deepsea'),
+    area('loc-in', 'loc-a'),
+    area('loc-nowhere', 'loc-moon'),
+    area('loc-nested', 'loc-in'),
+    area('loc-wet', 'loc-sea'),
+  ]);
+  const has = (id: string) => errors.some((e) => e.startsWith(`${id}:`));
+  assert.ok(!has('loc-in'));
+  assert.ok(has('loc-nowhere'));
+  assert.ok(has('loc-nested'));
+  assert.ok(has('loc-wet'));
 });
 
 test('NPCs socialising in the same region meet once a day', async () => {
