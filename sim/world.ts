@@ -214,6 +214,14 @@ const EffectSchema = z.discriminatedUnion('type', [
     type: z.literal('lose_life'),
     amount: z.number().int().positive(),
   }),
+  // New characters of this creature kind (MTG tokens) come into being where it happens, with
+  // no master, and turn on whoever set it off for the rest of the day.
+  z.strictObject({
+    type: z.literal('create'),
+    creature: z.string(),
+    count: z.number().int().positive(),
+    pt: z.tuple([z.number().int().min(0), z.number().int().min(1)]),
+  }),
 ]);
 export type Effect = z.infer<typeof EffectSchema>;
 
@@ -278,6 +286,9 @@ export const EventSimSchema = z.discriminatedUnion('trigger', [
   // Goes off when someone arrives in `region` (exactly there: an area is entered on its own).
   // With gained_life, only for those who gained life this turn (game day).
   z.strictObject({ ...EventBase, ...EventCost, trigger: z.literal('enter'), gained_life: z.boolean().default(false) }),
+  // Goes off when a noncreature permanent in `region` is destroyed by someone else's doing (a
+  // spell, an ability or another event): for now the land itself (law-permanents).
+  z.strictObject({ ...EventBase, ...EventCost, trigger: z.literal('destroyed') }),
 ]);
 
 // --- built world -----------------------------------------------------------------------
@@ -353,7 +364,7 @@ export type EventDef = {
   summary: string;
   region: string;
   range: number;
-  trigger: 'gm' | 'landfall' | 'enter';
+  trigger: 'gm' | 'landfall' | 'enter' | 'destroyed';
   chance?: number; // gm
   landfalls?: number; // landfall
   gained_life?: boolean; // enter
@@ -533,8 +544,10 @@ export function buildWorld(entities: RawEntity[]): { world: World; errors: strin
     if (blocks[0].start !== 0 || blocks.at(-1)!.end !== 1440 || blocks.some((b, i) => b.start >= b.end || (i > 0 && blocks[i - 1].end !== b.start)))
       err(npc.id, 'sim.routine 은 00:00 부터 24:00 까지 빈틈 없이 이어져야 함');
   }
+  const known = new Set(entities.map((e) => e.id));
   for (const ev of world.events) {
     regionOk(ev.id, ev.region, 'sim.region');
+    for (const x of ev.effects) if (x.type === 'create' && !known.has(x.creature)) err(ev.id, `create 의 creature ${x.creature} 가 없음`);
     if (ev.cost && !world.beings.some((b) => b.id === ev.cost!.by) && !world.npcs.some((n) => n.id === ev.cost!.by))
       err(ev.id, `sim.cost.by ${ev.cost.by} 가 sim 을 가진 인물이 아님`);
   }

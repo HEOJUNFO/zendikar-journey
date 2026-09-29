@@ -5,7 +5,7 @@ name: 다섯 색의 마법
 name_en: Five Colors of Magic
 summary: 이 세계의 마법은 백, 청, 흑, 적, 녹 다섯 색으로 나뉜다
 status: canon
-sources: [ZEN-13, ZEN-135, ZEN-53, ZEN-99, ZEN-157, ZEN-6, ZEN-120]
+sources: [ZEN-13, ZEN-135, ZEN-53, ZEN-99, ZEN-157, ZEN-6, ZEN-120, ZEN-160]
 tags: [마법, 마나]
 links:
   - { to: chr-iona, rel: 한 색을 봉인할 수 있는 존재 }
@@ -15,6 +15,7 @@ links:
   - { to: cre-baloth, rel: 녹색의 존재 }
   - { to: spl-celestial-mantle, rel: 백색 주문 }
   - { to: chr-chandra, rel: 적색의 존재 }
+  - { to: evt-cobra-trap, rel: 녹색 마법 }
 ---
 
 ## 설정

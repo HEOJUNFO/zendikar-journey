@@ -191,3 +191,46 @@ function raiseToken(state: State, world: World, from: Actor, creature: string, f
     actors: [id],
   });
 }
+
+// New creatures of a kind (MTG tokens) come into being in `regionId` with no master: beasts
+// that don't talk and keep to that land. Returns them.
+export function spawnWild(state: State, world: World, creature: string, pt: [number, number], count: number, regionId: string) {
+  const kind = world.lore.find((l) => l.id === creature);
+  const kindName = kind?.name ?? creature;
+  const out: Actor[] = [];
+  for (let i = 0; i < count; i++) {
+    const id = `tok-${state.nextLogId}-${i}`;
+    state.tokens ??= {};
+    state.tokens[id] = {
+      id,
+      name: kindName,
+      summary: kind?.summary ?? kindName,
+      role: `${region(world, regionId).name}의 ${kindName}`,
+      home: regionId,
+      persona: `말을 하지 않는 ${kindName}. ${kind?.summary ?? ''}`,
+      goal: '제 땅을 지킨다.',
+      pt: [...pt],
+      abilities: [],
+      needs: ['energy'],
+      beast: true,
+      creature,
+      routine: [
+        { start: 0, end: 360, regionId, kind: 'sleep', activity: '똬리를 틀고 쉼', emoji: '💤' },
+        { start: 360, end: 1440, regionId, kind: 'leisure', activity: '제 땅을 지킴', emoji: '🐍' },
+      ],
+    };
+    state.actors[id] = {
+      id,
+      name: kindName,
+      kind: 'npc',
+      region: regionId,
+      stats: { energy: 80, hunger: 0, coin: 0 },
+      pt: [...pt],
+      pace: 'normal',
+      abilities: [],
+      needs: ['energy'],
+    };
+    out.push(state.actors[id]);
+  }
+  return out;
+}

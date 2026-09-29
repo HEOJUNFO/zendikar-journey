@@ -58,6 +58,8 @@
 | "그것의 통제자" | 권속이면 그 주인, 아니면 자신 |
 | 주문 (순간마법, 집중마법) | 배우는 곳에서 익혀 두고, 마나를 치러 1시간 들여 건다. 대상 "상대"는 같은 곳에 있는 다른 이. 맞은 NPC는 그날 시전자를 적으로 삼는다 |
 | 킥커 ("tap an untapped X you control") | 시전자의 권속 중 X인 이 하나를 00:00까지 탭하고 더한 효과를 얻는다 |
+| 지속물 (permanent) | 세계에 남아 누군가에게 속한 것 (`law-permanents`): 땅, 부여마법(오라), 마법물체(아이템), 생물(인물). 플레인즈워커는 아니다 |
+| "생물 아닌 지속물이 파괴되면" | 그 땅에 있는 생물 아닌 지속물(지금은 땅 자체)이 남의 손에 부서질 때 (`trigger: destroyed`) |
 | 플레인즈워커 | 차원을 넘나드는 인물 (`law-planeswalkers`). GM이 움직이는 존재로 둔다 |
 | 충성도 | 기세 (`sim.loyalty`). +N 능력은 올리고 −N 능력은 쓴다. 하루에 하나. 피해는 기세에서 빠지고, 0이면 이 차원을 떠난다 (죽음 아님) |
 | 손패 / 버리기 / 무덤 / 뽑기 | 지닌(아는) 주문 / 주문을 잊음 / 잊은 주문 / 세계의 주문을 무작위로 떠올림 |
@@ -145,7 +147,7 @@ sim:
 sim:
   region: loc-lava-chasm      # 일어나는 곳
   range: 0                    # 이 거리 안의 땅이 영향을 받는다 (0 = 그 지역만)
-  trigger: landfall           # gm | landfall | enter
+  trigger: landfall           # gm | landfall | enter | destroyed (이 땅의 지속물이 남의 손에 부서질 때)
   landfalls: 2                # landfall: 누군가 이 땅과 유대를 맺었고, 그것이 그날 N번째(이상) 상륙일 때 발동
   # gained_life: true         # enter: 누군가 이 지역(구역이면 그 구역)에 들어올 때 발동. true면 그날 생명을 얻은 이만
   # cost: { by: chr-lorthos, mana: "{8}" }  # 선택. 그가 이 마나를 치러야 효과가 난다
@@ -161,6 +163,7 @@ sim:
     - { type: condition, label: 무너진 길, hours: 48, blocks_travel: true }  # 지역에 남는 상태
     - { type: destroy_lands, count: 2 }                            # 대지 파괴(영구): 발동시킨 이가 그날 상륙한 땅 최근 N곳 (landfall 사건만)
     - { type: lose_life, amount: 5 }                               # 발동시킨 이만 생명 N을 잃는다 (landfall, enter 사건만)
+    - { type: create, creature: cre-snake, count: 4, pt: [1, 1] }  # 그 자리에 주인 없는 생물 N (토큰). 그날 일으킨 자를 적으로 삼는다
 ```
 
 효과 종류가 모자라면 카드에 맞춰 `sim/world.ts`(스키마)와 `sim/step.ts`(적용)에 더한다.

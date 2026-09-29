@@ -171,6 +171,26 @@ test('the trap hurts those there and lays waste to the lands the intruder came t
   assert.ok(state.regions['loc-b'].destroyed);
 });
 
+test('a land\'s destroyed-trap answers when that land is laid waste: wild snakes turn on the one who did it', async () => {
+  const snakeTrap: RawEntity = {
+    id: 'evt-snakes',
+    kind: 'event',
+    name: '뱀 함정',
+    status: 'canon',
+    sim: { region: 'loc-a', trigger: 'destroyed', text: '뱀이 쏟아졌다.', effects: [{ type: 'create', creature: 'cre-s', count: 4, pt: [1, 1] }] },
+  };
+  const world = fixture([trap, snakeTrap, lore('cre-s', 'creature')]);
+  const state = await twoLandfalls(world);
+  state.actors[PLAYER_ID].pt = [1, 5];
+  await act(state, world, { type: 'wait', hours: 1 }); // omen
+  await act(state, world, { type: 'wait', hours: 1 }); // the lava trap lays loc-a and loc-b waste
+  assert.ok(state.regions['loc-a'].destroyed);
+  assert.ok(texts(state).includes('뱀이 쏟아졌다.'));
+  const snakes = Object.values(state.actors).filter((a) => state.tokens?.[a.id]?.creature === 'cre-s');
+  assert.equal(snakes.length, 4);
+  assert.ok(snakes.every((s) => s.region === 'loc-a' && !s.master && s.foes?.ids.includes(PLAYER_ID)));
+});
+
 test('4 damage kills an ordinary 1/1 person and ends their life', async () => {
   const world = fixture([trap]);
   const state = await twoLandfalls(world);

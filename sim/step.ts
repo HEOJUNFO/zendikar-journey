@@ -19,8 +19,8 @@ import {
 } from './rules.ts';
 import { gainedLifeToday, loseLife } from './life.ts';
 import { addLog, alive, landUnusable, needsOf, npcDef, present, ptOf, random } from './state.ts';
-import { dealDamage, hostileNpcs } from './combat.ts';
-import { bondBlocked, bondLand, useAbility } from './abilities.ts';
+import { addFoe, dealDamage, hostileNpcs } from './combat.ts';
+import { bondBlocked, bondLand, spawnWild, useAbility } from './abilities.ts';
 import { learnSpell } from './spells.ts';
 import { masterOf } from './retainers.ts';
 import { payMana } from './mana.ts';
@@ -135,6 +135,15 @@ function enterEvents(state: State, world: World, at: number) {
   }
 }
 
+// A noncreature permanent in `regionId` (for now the land itself) was destroyed by `by`'s
+// doing: the land's `destroyed` events answer.
+function permanentDestroyed(state: State, world: World, regionId: string, by: string[], t: number) {
+  for (const ev of world.events) {
+    if (ev.trigger !== 'destroyed' || ev.region !== regionId || onCooldown(state, ev, t)) continue;
+    trigger(state, world, ev, t, { by, lands: [] });
+  }
+}
+
 // Who set an event off and the lands they made landfall on this turn (latest first).
 type Cause = { by: string[]; lands: string[] };
 
@@ -215,7 +224,14 @@ function fire(state: State, world: World, ev: EventDef, t: number, omened: boole
         if (state.regions[id].destroyed) continue;
         state.regions[id].destroyed = { at: t, source: ev.id };
         addLog(state, { kind: 'condition', text: `${region(world, id).name}: 땅이 부서졌다. 이제 이곳에서는 아무것도 얻을 수 없다.`, regions: [id], scope: ev.scope });
+        permanentDestroyed(state, world, id, cause.by ?? [], t);
       }
+    } else if (eff.type === 'create') {
+      const born = spawnWild(state, world, eff.creature, eff.pt, eff.count, ev.region);
+      const kind = world.lore.find((l) => l.id === eff.creature)?.name ?? eff.creature;
+      addLog(state, { kind: 'event', text: `${kind} ${eff.count}마리가 쏟아져 나왔다 (${eff.pt.join('/')}).`, regions: [ev.region], actors: born.map((b) => b.id) });
+      // They turn on whoever set it off, for the rest of the day.
+      for (const b of born) for (const id of cause.by ?? []) addFoe(b, id, t);
     } else {
       for (const id of regions) {
         state.regions[id] ??= { conditions: [] };
