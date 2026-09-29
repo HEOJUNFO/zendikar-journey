@@ -8,7 +8,7 @@ const eligible = [{ id: 'evt-a' }, { id: 'evt-b' }] as EventDef[];
 
 test('parseGmPlan keeps eligible events at hours still ahead', () => {
   const plan = parseGmPlan('```json\n{"fires":[{"eventId":"evt-a","hour":14}],"note":"폭풍"}\n```', { day: 2, hour: 6, eligible });
-  assert.deepEqual(plan, { day: 2, source: 'llm', fires: [{ eventId: 'evt-a', hour: 14 }], note: '폭풍' });
+  assert.deepEqual(plan, { day: 2, source: 'llm', fires: [{ eventId: 'evt-a', hour: 14 }], uses: [], note: '폭풍' });
   assert.deepEqual(parseGmPlan('{"fires":[]}', { day: 0, hour: 6, eligible })?.fires, []);
 });
 
@@ -18,6 +18,15 @@ test('parseGmPlan rejects unknown events, past hours and repeats', () => {
   assert.equal(parseGmPlan('{"fires":[{"eventId":"evt-a","hour":9}]}', at), null);
   assert.equal(parseGmPlan('{"fires":[{"eventId":"evt-a","hour":12},{"eventId":"evt-a","hour":13}]}', at), null);
   assert.equal(parseGmPlan('오늘은 조용하다', at), null);
+});
+
+test('parseGmPlan checks ability uses: known power, living target, once each', () => {
+  const abilities = [{ being: { id: 'chr-k' }, ability: { id: 'kin' } }] as never;
+  const at = { day: 0, hour: 6, eligible: [], abilities, targets: ['chr-x'] };
+  const use = (u: object) => JSON.stringify({ fires: [], uses: [u] });
+  assert.equal(parseGmPlan(use({ being: 'chr-k', ability: 'kin', target: 'chr-x', hour: 9 }), at)?.uses?.length, 1);
+  assert.equal(parseGmPlan(use({ being: 'chr-k', ability: 'kin', target: 'chr-dead', hour: 9 }), at), null);
+  assert.equal(parseGmPlan(use({ being: 'chr-k', ability: 'fly', target: 'chr-x', hour: 9 }), at), null);
 });
 
 test('hosted body uses each provider’s token field and a floor', () => {

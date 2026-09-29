@@ -3,9 +3,10 @@ import { START_MINUTES } from './clock.ts';
 import { INITIAL_STATS } from './rules.ts';
 import { NEEDS } from './types.ts';
 import type { LifeKind, Need, Pace, Schedule, Stats } from './types.ts';
-import type { Ability, Pt, World } from './world.ts';
+import type { Ability, NpcDef, Pt, World } from './world.ts';
+import type { Mana } from './mana.ts';
 
-export type TaskKind = LifeKind | 'explore' | 'travel' | 'fight';
+export type TaskKind = LifeKind | 'explore' | 'travel' | 'fight' | 'bond';
 
 export type Task = {
   kind: TaskKind;
@@ -22,10 +23,13 @@ export type Actor = {
   // Where they are, or where they set out from while travelling.
   region: string;
   travel?: { to: string; arrive: number };
-  // Start of the first hour spent in `region` after travelling there.
-  arrivedAt?: number;
-  // Regions they made landfall on (arrived at) this turn = game day, in order.
+  // Lands (regions) they have bonded with: each gives a mana of its color every turn.
+  bonds?: string[];
+  // Lands they bonded with this turn = game day, in order: their landfalls.
   landfalls?: { day: number; regions: string[] };
+  // When their latest landfall happened (a landfall event may answer it at that hour).
+  landfallAt?: number;
+  manaSpent?: { day: number; spent: Mana };
   stats: Stats;
   // Power / toughness (the player starts at 1/1; missing in old saves = 1/1).
   pt?: Pt;
@@ -97,6 +101,8 @@ export type GmPlan = {
   day: number;
   source: 'none' | 'llm';
   fires: { eventId: string; hour: number }[];
+  // Activated abilities of GM-driven beings to use today.
+  uses?: { being: string; ability: string; target: string; hour: number }[];
   note?: string;
 };
 
@@ -112,6 +118,10 @@ export type State = {
   // The player character died: their life is over.
   over?: { at: number; cause: string };
   actors: Record<string, Actor>;
+  // Characters born in play (tokens), who have no entity file.
+  tokens?: Record<string, NpcDef>;
+  // GM-driven beings (sim.gm): their mana and whether they are tapped.
+  beings?: Record<string, { id: string; manaSpent?: { day: number; spent: Mana }; boundUntil?: number }>;
   regions: Record<string, RegionState>;
   events: Record<string, { lastFired?: number }>;
   // Omened events that go off at `at`, with who set them off.
@@ -217,6 +227,16 @@ export function landUnusable(state: State, regionId: string): string | null {
   return rs?.conditions.find((c) => c.tapped)?.label ?? null;
 }
 
+// The definition an NPC lives by: from world/entities, or a token born in play.
+export function npcDef(state: State, world: World, id: string): NpcDef | undefined {
+  return world.npcs.find((n) => n.id === id) ?? state.tokens?.[id];
+}
+
+export function beingState(state: State, id: string) {
+  state.beings ??= {};
+  return (state.beings[id] ??= { id });
+}
+
 export function player(state: State) {
   return state.playerId ? state.actors[state.playerId] : undefined;
 }
@@ -236,7 +256,7 @@ export function ptOf(a: Actor): Pt {
 
 export function addLog(
   state: State,
-  e: { kind: LogKind; text: string; regions?: string[]; scope?: 'region' | 'world'; actors?: string[] },
+  e: { kind: LogKind; text: string; regions?: string[]; scope?: 'region' | 'world'; actors?: string[]; t?: number },
 ): LogEntry {
   const regions = e.regions ?? [];
   const actors = e.actors ?? [];
@@ -246,7 +266,7 @@ export function addLog(
     state.mode === 'observer' ||
     scope === 'world' ||
     (!!p && (actors.includes(p.id) || (!p.travel && regions.includes(p.region))));
-  const entry: LogEntry = { id: state.nextLogId++, t: state.minutes, kind: e.kind, text: e.text, regions, scope, actors, seen };
+  const entry: LogEntry = { id: state.nextLogId++, t: e.t ?? state.minutes, kind: e.kind, text: e.text, regions, scope, actors, seen };
   state.log.push(entry);
   if (state.log.length > LOG_LIMIT) state.log.splice(0, state.log.length - LOG_LIMIT);
   return entry;

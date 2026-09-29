@@ -4,17 +4,26 @@
 import { formatClock, gameDay } from './clock.ts';
 import { startAction } from './actions.ts';
 import type { Action } from './actions.ts';
-import { addLog, player } from './state.ts';
+import { addLog, beingState, npcDef, player } from './state.ts';
 import type { Actor, GmPlan, LogEntry, State } from './state.ts';
 import { eligibleGmEvents, step } from './step.ts';
 import { addFoe, clash } from './combat.ts';
+import { manaAvailable, planPayment } from './mana.ts';
 import { josa, shortName } from './text.ts';
 import type { ScheduleBlock } from './types.ts';
 import { canStay } from './world.ts';
-import type { EventDef, NpcDef, World } from './world.ts';
+import type { ActivatedAbility, BeingDef, EventDef, NpcDef, World } from './world.ts';
 import type { PlanDayInput } from './llm/planner.ts';
 
-export type GmDayInput = { day: number; hour: number; world: World; state: State; eligible: EventDef[]; news: string[] };
+export type GmDayInput = {
+  day: number;
+  hour: number;
+  world: World;
+  state: State;
+  eligible: EventDef[];
+  abilities: { being: BeingDef; ability: ActivatedAbility }[];
+  news: string[];
+};
 export type NarrateInput = { world: World; state: State; entries: LogEntry[] };
 export type InterpretInput = { world: World; state: State; text: string };
 export type ReplyInput = { world: World; state: State; npc: NpcDef; say: string };
@@ -86,7 +95,7 @@ function busy(p: Actor) {
 }
 
 async function talk(state: State, world: World, p: Actor, npcId: string, say: string, llm: Llm) {
-  const npc = world.npcs.find((n) => n.id === npcId)!;
+  const npc = npcDef(state, world, npcId)!;
   const name = shortName(npc.name);
   addLog(state, { kind: 'speech', text: `${shortName(p.name)}: “${say}”`, regions: [p.region], actors: [p.id, npc.id] });
   let reply: Reply | null = null;
@@ -112,7 +121,7 @@ async function talk(state: State, world: World, p: Actor, npcId: string, say: st
 // The player's blow. A flyer may take to the air instead (only if the attacker can't fly).
 async function attack(state: State, world: World, p: Actor, npcId: string, llm: Llm) {
   const target = state.actors[npcId];
-  const npc = world.npcs.find((n) => n.id === npcId)!;
+  const npc = npcDef(state, world, npcId)!;
   const flies = (a: Actor) => a.abilities.includes('fly');
   if (flies(target) && !flies(p) && target.boundUntil === undefined && llm.evade) {
     let evades = false;
@@ -142,7 +151,7 @@ async function prepareDay(state: State, world: World, llm: Llm) {
   state.preparedDay = day;
   const news = recentNews(state, world);
   const jobs: Promise<void>[] = [];
-  for (const npc of world.npcs) {
+  for (const npc of [...world.npcs, ...Object.values(state.tokens ?? {})]) {
     const a = state.actors[npc.id];
     if (!a || a.dead) continue;
     a.schedule = { day, source: 'routine', blocks: npc.routine };
@@ -176,10 +185,11 @@ async function prepareDay(state: State, world: World, llm: Llm) {
     jobs.push(
       (async () => {
         const eligible = eligibleGmEvents(state, world, state.minutes);
-        if (!eligible.length) return void (state.gm = { day, source: 'llm', fires: [] });
+        const abilities = usableAbilities(state, world, state.minutes);
+        if (!eligible.length && !abilities.length) return void (state.gm = { day, source: 'llm', fires: [] });
         try {
           const hour = Math.floor((state.minutes % 1440) / 60);
-          const plan = await gmDay({ day, hour, world, state, eligible, news });
+          const plan = await gmDay({ day, hour, world, state, eligible, abilities, news });
           if (plan) state.gm = plan;
         } catch (e) {
           console.warn('gmDay failed, no events today:', e);
@@ -188,6 +198,16 @@ async function prepareDay(state: State, world: World, llm: Llm) {
     );
   }
   await Promise.all(jobs);
+}
+
+// Activated abilities GM-driven beings could use today: untapped and able to pay.
+export function usableAbilities(state: State, world: World, t: number) {
+  return world.beings.flatMap((being) => {
+    const bs = beingState(state, being.id);
+    if (bs.boundUntil !== undefined && bs.boundUntil > t) return [];
+    const available = manaAvailable(state, world, bs, t);
+    return being.activated.filter((x) => planPayment(available, x.cost)).map((ability) => ({ being, ability }));
+  });
 }
 
 // What happened in the last day, for planning prompts.

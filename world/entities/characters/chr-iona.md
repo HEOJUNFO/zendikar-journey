@@ -12,6 +12,7 @@ links:
   - { to: law-mana-colors, rel: 한 색을 봉인하는 힘 }
 sim:
   pt: [7, 7]
+  mana: { W: 9 }         # 카드 {6}{W}{W}{W}
   role: 에메리아를 지키는 천사 수호자
   home: loc-emeria
   persona: >-

@@ -5,6 +5,9 @@ import { PACE_LABELS } from '../sim/actions.ts';
 import { formatClock, formatTimeOfDay, gameDay, minuteOfDay } from '../sim/clock.ts';
 import { needsOf, player, present, ptOf } from '../sim/state.ts';
 import { woundsOf } from '../sim/combat.ts';
+import { COLOR_LABELS, formatMana, manaAvailable, manaCapacity } from '../sim/mana.ts';
+import { bondBlocked } from '../sim/abilities.ts';
+import { BOND_HOURS } from '../sim/actions.ts';
 import type { Actor, LogEntry, State } from '../sim/state.ts';
 import { travelBlocked } from '../sim/step.ts';
 import { shortName } from '../sim/text.ts';
@@ -67,7 +70,21 @@ export function RegionCard(props: { world: World; state: State; regionId: string
   const p = player(state);
   let travel: ReactNode = null;
   if (p && !t.sea) {
-    if (p.region === r.id && !p.travel) travel = <p className="muted">지금 여기 있다.</p>;
+    if (p.region === r.id && !p.travel) {
+      const why = bondBlocked(state, world, p, state.minutes);
+      travel = (
+        <>
+          <p className="muted">지금 여기 있다.</p>
+          {why ? (
+            <p className="muted">{why}</p>
+          ) : (
+            <button disabled={busy || !!p.forced || p.boundUntil !== undefined} onClick={() => onAct({ type: 'bond' })}>
+              이 땅과 유대 맺기 ({BOND_HOURS}시간)
+            </button>
+          )}
+        </>
+      );
+    }
     else if (!p.travel) {
       const why = travelBlocked(state, world, p, r.id);
       travel = why ? (
@@ -82,7 +99,7 @@ export function RegionCard(props: { world: World; state: State; regionId: string
   return (
     <section className="card">
       <h2>
-        {r.name} <small>{t.label}</small>
+        {r.name} <small>{t.label}{t.sea ? '' : ` · ${r.color ? `${COLOR_LABELS[r.color]}색` : '무색'} 땅`}</small>
       </h2>
       <p>{r.summary}</p>
       {destroyed && <p className="cond">✕ 부서진 땅 <small>({formatClock(destroyed.at)}부터, 쓸 수 없음)</small></p>}
@@ -177,6 +194,35 @@ export function PlayerCard({ world, state }: { world: World; state: State }) {
         <span>돈</span>
         <b>{Math.round(p.stats.coin)}</b>
       </div>
+      <p className="muted">
+        마나: {formatMana(manaAvailable(state, world, p, state.minutes))} (하루 {formatMana(manaCapacity(state, world, p))})
+      </p>
+      <p className="muted">
+        유대를 맺은 땅: {p.bonds?.length ? p.bonds.map((id) => region(world, id).name).join(', ') : '없음'}
+      </p>
+    </section>
+  );
+}
+
+// GM-driven beings: not on the map, but the observer sees them.
+export function BeingsList({ world, state }: { world: World; state: State }) {
+  if (player(state) || !world.beings.length) return null;
+  return (
+    <section className="card">
+      <h2>지도 밖의 존재</h2>
+      {world.beings.map((b) => {
+        const bs = state.beings?.[b.id] ?? { id: b.id };
+        const tapped = bs.boundUntil !== undefined && bs.boundUntil > state.minutes;
+        return (
+          <div key={b.id} className="person">
+            <b>{shortName(b.name)}</b> <small className="muted">{b.pt.join('/')}</small>
+            <p className="muted">
+              마나 {formatMana(manaAvailable(state, world, bs, state.minutes))}
+              {tapped ? ` · 탭됨 (${formatClock(bs.boundUntil!)}까지)` : ''}
+            </p>
+          </div>
+        );
+      })}
     </section>
   );
 }

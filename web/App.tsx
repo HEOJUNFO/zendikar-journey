@@ -5,7 +5,7 @@ import { TERRAINS } from '../sim/world.ts';
 import { api } from './api.ts';
 import type { GameView } from './api.ts';
 import { MapView } from './MapView.tsx';
-import { CharacterControls, LogView, NewGame, ObserverControls, PeopleList, PlayerCard, RegionCard } from './panels.tsx';
+import { BeingsList, CharacterControls, LogView, NewGame, ObserverControls, PeopleList, PlayerCard, RegionCard } from './panels.tsx';
 import { clock } from './view.ts';
 
 export function App() {
@@ -91,6 +91,7 @@ export function App() {
         <aside className="pane side-pane">
           <PlayerCard world={world} state={state} />
           <PeopleList world={world} state={state} />
+          <BeingsList world={world} state={state} />
         </aside>
       </main>
     </div>

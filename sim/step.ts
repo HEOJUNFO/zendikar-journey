@@ -14,8 +14,10 @@ import {
   STARVING_ENERGY,
   TRAVEL_EFFECT,
 } from './rules.ts';
-import { addLog, alive, landUnusable, needsOf, present, random } from './state.ts';
+import { addLog, alive, beingState, landUnusable, needsOf, present, random } from './state.ts';
 import { dealDamage, hostileNpcs } from './combat.ts';
+import { bondLand, useAbility } from './abilities.ts';
+import { payMana } from './mana.ts';
 import type { Actor, GmPlan, State, Task } from './state.ts';
 import { josa, shortName, toward } from './text.ts';
 import { currentBlock } from './types.ts';
@@ -31,8 +33,10 @@ export function step(state: State, world: World) {
   hostileNpcs(state, t);
   for (const a of alive(state)) {
     actorHour(state, world, a, t);
-    if (a.kind === 'player' && a.task?.until !== undefined && a.task.until <= t + STEP_MINUTES && !a.travel)
+    if (a.kind === 'player' && a.task?.until !== undefined && a.task.until <= t + STEP_MINUTES && !a.travel) {
+      if (a.task.kind === 'bond') bondLand(state, world, a, t + STEP_MINUTES);
       a.task = undefined;
+    }
   }
   meetings(state, world);
   state.minutes = t + STEP_MINUTES;
@@ -42,7 +46,7 @@ export function step(state: State, world: World) {
 
 function startDay(state: State, world: World, t: number) {
   const day = gameDay(t);
-  for (const npc of world.npcs) {
+  for (const npc of [...world.npcs, ...Object.values(state.tokens ?? {})]) {
     const a = state.actors[npc.id];
     if (a && a.schedule?.day !== day) a.schedule = { day, source: 'routine', blocks: npc.routine };
   }
@@ -78,15 +82,20 @@ function gmLayer(state: State, world: World, t: number) {
       const ev = world.events.find((e) => e.id === f.eventId);
       if (ev && f.hour === hour) trigger(state, world, ev, t, { by: [], lands: [] });
     }
+    for (const u of state.gm.uses ?? []) {
+      if (u.hour !== hour) continue;
+      const why = useAbility(state, world, u.being, u.ability, u.target, t);
+      if (why) console.warn(`GM ability ${u.being}/${u.ability} on ${u.target} skipped: ${why}`);
+    }
   }
 
-  // Landfall: someone arrived in the region this hour, and it is at least their Nth land this
-  // turn (a land is a region, a turn is a game day).
+  // Landfall: someone bonded with the region (it came under their control) as this hour began,
+  // and it is at least their Nth land this turn (a land is a region, a turn is a game day).
   for (const ev of world.events) {
     if (ev.trigger !== 'landfall' || onCooldown(state, ev, t)) continue;
     if (state.pending.some((p) => p.eventId === ev.id)) continue;
     const by = present(state, ev.region).filter(
-      (a) => a.arrivedAt === t && a.landfalls?.day === gameDay(t) && a.landfalls.regions.length >= (ev.landfalls ?? 1),
+      (a) => a.landfallAt === t && a.landfalls?.day === gameDay(t) && a.landfalls.regions.length >= (ev.landfalls ?? 1),
     );
     if (!by.length) continue;
     // Their lands this turn, latest first: what a land-destroying effect hits.
@@ -116,6 +125,15 @@ function fire(state: State, world: World, ev: EventDef, t: number, omened: boole
     scope: ev.scope,
     actors: targets.map((a) => a.id),
   });
+  // "You may pay X. If you do, ...": the effects need someone to pay.
+  if (ev.cost) {
+    const payer = state.actors[ev.cost.by] ?? beingState(state, ev.cost.by);
+    const who = shortName(world.beings.find((b) => b.id === ev.cost!.by)?.name ?? state.actors[ev.cost.by]?.name ?? ev.cost.by);
+    if (!payMana(state, world, payer, ev.cost.mana, t)) {
+      addLog(state, { kind: 'effect', text: `${who}에게는 힘이 남아 있지 않았다 (${ev.cost.text}).`, regions: [ev.region, ...regions], scope: ev.scope });
+      return;
+    }
+  }
   const dodged = (a: (typeof targets)[number]) => {
     if (!omened || a.pace !== 'careful') return false;
     addLog(state, { kind: 'effect', text: `${josa(shortName(a.name), '은', '는')} 전조를 알아채고 몸을 피했다.`, regions: [a.region], actors: [a.id] });
@@ -256,7 +274,7 @@ function actorHour(state: State, world: World, a: Actor, t: number) {
   const effect =
     task.kind === 'explore' ? EXPLORE_EFFECT
     : task.kind === 'fight' ? FIGHT_EFFECT
-    : KIND_EFFECTS[task.kind === 'travel' ? 'leisure' : task.kind];
+    : KIND_EFFECTS[task.kind === 'travel' || task.kind === 'bond' ? 'leisure' : task.kind];
   applyEffect(a.stats, effect, 60, needs);
   if (needs.includes('hunger') && a.stats.hunger >= STARVING) applyEffect(a.stats, { energy: STARVING_ENERGY }, 60, needs);
 }
@@ -291,10 +309,6 @@ function travelHour(state: State, world: World, a: Actor, t: number) {
   applyEffect(a.stats, TRAVEL_EFFECT, 60, needsOf(a));
   if (!a.travel || t + STEP_MINUTES < a.travel.arrive) return;
   a.region = a.travel.to;
-  a.arrivedAt = t + STEP_MINUTES;
-  const day = gameDay(a.arrivedAt);
-  if (a.landfalls?.day !== day) a.landfalls = { day, regions: [] };
-  a.landfalls.regions.push(a.region);
   delete a.travel;
   a.task = undefined;
   addLog(state, {

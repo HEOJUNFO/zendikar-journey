@@ -4,6 +4,8 @@
 import { z } from 'zod';
 import { parseTimeOfDay } from './clock.ts';
 import { TRAVEL_UNITS_PER_HOUR } from './rules.ts';
+import { COLORS, parseManaCost } from './mana.ts';
+import type { Color, Mana, ManaCost } from './mana.ts';
 import { LIFE_KINDS, NEEDS } from './types.ts';
 import type { Need, ScheduleBlock } from './types.ts';
 
@@ -28,20 +30,22 @@ export type Terrain = (typeof TERRAIN_IDS)[number];
 type TerrainInfo = {
   label: string;
   color: string;
+  // The land's mana color when its location doesn't say (null = colorless).
+  mana: Color | null;
   // Sea regions are drawn on the map but nobody stays in them.
   sea?: boolean;
   // Needed to get in or out (no ships, bridges or lifts yet).
   requires?: Ability;
 };
 export const TERRAINS: Record<Terrain, TerrainInfo> = {
-  grassland: { label: '초원', color: '#8fb35a' },
-  forest: { label: '숲', color: '#3f7a3a' },
-  rocky: { label: '바위 지대', color: '#8a8173' },
-  beach: { label: '해변', color: '#d9c38a' },
-  settlement: { label: '정착지', color: '#b08850' },
-  sky: { label: '공중섬', color: '#b9c8ea', requires: 'fly' },
-  volcanic: { label: '화산 지대', color: '#b5462c' },
-  deepsea: { label: '심해', color: '#1d3b66', sea: true },
+  grassland: { label: '초원', color: '#8fb35a', mana: 'W' },
+  forest: { label: '숲', color: '#3f7a3a', mana: 'G' },
+  rocky: { label: '바위 지대', color: '#8a8173', mana: 'R' },
+  beach: { label: '해변', color: '#d9c38a', mana: 'U' },
+  settlement: { label: '정착지', color: '#b08850', mana: null },
+  sky: { label: '공중섬', color: '#b9c8ea', mana: 'W', requires: 'fly' },
+  volcanic: { label: '화산 지대', color: '#b5462c', mana: 'R' },
+  deepsea: { label: '심해', color: '#1d3b66', mana: 'U', sea: true },
 };
 
 // --- frontmatter schemas ---------------------------------------------------------------
@@ -50,7 +54,13 @@ export const MapSchema = z.strictObject({
   x: z.number().min(0).max(MAP_WIDTH - 1),
   y: z.number().min(0).max(MAP_HEIGHT - 1),
   terrain: z.enum(TERRAIN_IDS),
+  // Mana color of this land (C = colorless). Default: from the terrain.
+  color: z.enum([...COLORS, 'C']).optional(),
 });
+
+// Mana a being holds, from its card: { B: 7 } for {5}{B}{B}.
+const ManaSchema = z.partialRecord(z.enum(COLORS), z.number().int().min(1));
+const CostSchema = z.string().refine((s) => parseManaCost(s) !== null, '마나 비용 형식: "{5}{B}{B}"');
 
 const Hhmm = z.string().regex(/^([01]\d|2[0-3]):[0-5]\d$|^24:00$/, 'HH:MM');
 // [start, end, region, kind, activity, emoji]
@@ -70,6 +80,7 @@ export type Pt = z.infer<typeof PtSchema>;
 
 export const CharacterSimSchema = z.strictObject({
   pt: PtSchema,
+  mana: ManaSchema.optional(),
   role: z.string().min(1),
   home: z.string(),
   persona: z.string().min(1),
@@ -85,8 +96,39 @@ export const CharacterSimSchema = z.strictObject({
 export const GmBeingSimSchema = z.strictObject({
   gm: z.literal(true),
   pt: PtSchema,
+  mana: ManaSchema.optional(),
   abilities: z.array(z.enum(ABILITIES)).default([]),
+  // Abilities the GM may use for them ("{cost}, {T}: effect"), on any living character.
+  activated: z
+    .array(
+      z.strictObject({
+        id: z.string().min(1),
+        name: z.string().min(1),
+        cost: CostSchema,
+        tap: z.boolean().default(false),
+        effects: z
+          .array(
+            z.discriminatedUnion('type', [
+              // The target dies, whatever its toughness.
+              z.strictObject({ type: z.literal('destroy') }),
+              // If the target died this way, it rises as a new character of this creature kind,
+              // with its power/toughness, in this faction (a token).
+              z.strictObject({ type: z.literal('raise'), creature: z.string(), faction: z.string().optional() }),
+            ]),
+          )
+          .min(1),
+      }),
+    )
+    .default([]),
 });
+export type ActivatedAbility = {
+  id: string;
+  name: string;
+  cost: ManaCost;
+  costText: string;
+  tap: boolean;
+  effects: ({ type: 'destroy' } | { type: 'raise'; creature: string; faction?: string })[];
+};
 
 const EffectSchema = z.discriminatedUnion('type', [
   // Damage to every creature present in the affected regions (piles up against toughness).
@@ -141,13 +183,18 @@ const EventBase = {
   effects: z.array(EffectSchema).min(1),
 };
 
+const EventCost = {
+  // Someone must pay this for the effects to happen (e.g. Lorthos pays {8} when he attacks).
+  cost: z.strictObject({ by: z.string(), mana: CostSchema }).optional(),
+};
+
 export const EventSimSchema = z.discriminatedUnion('trigger', [
   // The GM decides each morning whether it happens today. `chance` is the share of days it
   // usually happens on, a guide for the GM.
-  z.strictObject({ ...EventBase, trigger: z.literal('gm'), chance: z.number().min(0).max(1) }),
+  z.strictObject({ ...EventBase, ...EventCost, trigger: z.literal('gm'), chance: z.number().min(0).max(1) }),
   // Goes off when someone makes landfall on `region` (arrives there) and it is at least their
   // `landfalls`-th landfall this turn (game day).
-  z.strictObject({ ...EventBase, trigger: z.literal('landfall'), landfalls: z.number().int().min(1).default(1) }),
+  z.strictObject({ ...EventBase, ...EventCost, trigger: z.literal('landfall'), landfalls: z.number().int().min(1).default(1) }),
 ]);
 
 // --- built world -----------------------------------------------------------------------
@@ -160,6 +207,8 @@ export type Region = {
   x: number;
   y: number;
   terrain: Terrain;
+  // Mana color of the land (null = colorless).
+  color: Color | null;
 };
 
 export type NpcDef = {
@@ -171,12 +220,21 @@ export type NpcDef = {
   persona: string;
   goal: string;
   pt: Pt;
+  mana?: Mana;
   abilities: Ability[];
   needs: Need[];
   routine: ScheduleBlock[];
 };
 
-export type BeingDef = { id: string; name: string; summary: string; pt: Pt; abilities: Ability[] };
+export type BeingDef = {
+  id: string;
+  name: string;
+  summary: string;
+  pt: Pt;
+  mana?: Mana;
+  abilities: Ability[];
+  activated: ActivatedAbility[];
+};
 
 export type EventDef = {
   id: string;
@@ -192,6 +250,7 @@ export type EventDef = {
   omen?: string;
   text: string;
   effects: Effect[];
+  cost?: { by: string; mana: ManaCost; text: string };
 };
 
 // Every entity in brief, for prompts (laws, creatures, factions...).
@@ -241,7 +300,10 @@ export function buildWorld(entities: RawEntity[]): { world: World; errors: strin
           name: e.name,
           nameEn: e.name_en ?? '',
           summary: e.summary ?? '',
-          ...map.data,
+          x: map.data.x,
+          y: map.data.y,
+          terrain: map.data.terrain,
+          color: map.data.color === 'C' ? null : (map.data.color ?? TERRAINS[map.data.terrain].mana),
         });
     }
   }
@@ -251,7 +313,16 @@ export function buildWorld(entities: RawEntity[]): { world: World; errors: strin
     if (e.kind === 'character' && (e.sim as { gm?: unknown }).gm === true) {
       const sim = GmBeingSimSchema.safeParse(e.sim);
       if (!sim.success) err(e.id, `sim 오류: ${issues(sim.error)}`);
-      else world.beings.push({ id: e.id, name: e.name, summary: e.summary ?? '', pt: sim.data.pt, abilities: sim.data.abilities });
+      else
+        world.beings.push({
+          id: e.id,
+          name: e.name,
+          summary: e.summary ?? '',
+          pt: sim.data.pt,
+          mana: sim.data.mana,
+          abilities: sim.data.abilities,
+          activated: sim.data.activated.map((x) => ({ ...x, cost: parseManaCost(x.cost)!, costText: x.cost })),
+        });
     } else if (e.kind === 'character') {
       const sim = CharacterSimSchema.safeParse(e.sim);
       if (!sim.success) {
@@ -279,7 +350,7 @@ export function buildWorld(entities: RawEntity[]): { world: World; errors: strin
         err(e.id, `sim 오류: ${issues(sim.error)}`);
         continue;
       }
-      const { cooldown_hours, effects, ...rest } = sim.data;
+      const { cooldown_hours, effects, cost, ...rest } = sim.data;
       if (rest.trigger !== 'landfall' && effects.some((x) => x.type === 'destroy_lands'))
         err(e.id, 'destroy_lands 는 trigger: landfall 사건에만 쓸 수 있음 (누가 상륙한 땅인지 알아야 함)');
       world.events.push({
@@ -289,6 +360,7 @@ export function buildWorld(entities: RawEntity[]): { world: World; errors: strin
         ...rest,
         cooldownHours: cooldown_hours,
         effects,
+        ...(cost ? { cost: { by: cost.by, mana: parseManaCost(cost.mana)!, text: cost.mana } } : {}),
       });
     } else {
       err(e.id, `sim 은 character, event 에만 쓸 수 있음 (${e.kind})`);
@@ -313,7 +385,19 @@ export function buildWorld(entities: RawEntity[]): { world: World; errors: strin
     if (blocks[0].start !== 0 || blocks.at(-1)!.end !== 1440 || blocks.some((b, i) => b.start >= b.end || (i > 0 && blocks[i - 1].end !== b.start)))
       err(npc.id, 'sim.routine 은 00:00 부터 24:00 까지 빈틈 없이 이어져야 함');
   }
-  for (const ev of world.events) regionOk(ev.id, ev.region, 'sim.region');
+  for (const ev of world.events) {
+    regionOk(ev.id, ev.region, 'sim.region');
+    if (ev.cost && !world.beings.some((b) => b.id === ev.cost!.by) && !world.npcs.some((n) => n.id === ev.cost!.by))
+      err(ev.id, `sim.cost.by ${ev.cost.by} 가 sim 을 가진 인물이 아님`);
+  }
+  const ids = new Set(entities.map((e) => e.id));
+  for (const b of world.beings)
+    for (const x of b.activated)
+      for (const eff of x.effects)
+        if (eff.type === 'raise') {
+          if (!ids.has(eff.creature)) err(b.id, `activated ${x.id}: creature ${eff.creature} 가 없음`);
+          if (eff.faction && !ids.has(eff.faction)) err(b.id, `activated ${x.id}: faction ${eff.faction} 가 없음`);
+        }
 
   return { world, errors };
 }

@@ -5,6 +5,8 @@ import { loadWorld } from './load.ts';
 import { act, advance } from './run.ts';
 import type { Llm } from './run.ts';
 import { woundsOf } from './combat.ts';
+import { manaAvailable, manaCapacity } from './mana.ts';
+import { usableAbilities } from './run.ts';
 import { newState, PLAYER_ID } from './state.ts';
 import type { State } from './state.ts';
 import { buildWorld } from './world.ts';
@@ -105,18 +107,38 @@ test('travel takes distance / 4 hours and the player sees the arrival', async ()
   assert.ok(entries.some((e) => e.kind === 'arrive' && e.seen));
 });
 
-// loc-c -> loc-a (1h, 1st landfall) -> loc-b (5h, 2nd landfall at 12:00, the trap's land).
+// Landfall = bonding with a land, one a day. To reach a second landfall in one day (which
+// only extra-land effects could give), seed an earlier one: loc-a, then bond with loc-b (the
+// trap's land) from 06:00 to 10:00.
 async function twoLandfalls(world: ReturnType<typeof fixture>) {
-  const state = character(world, 'loc-c');
-  await act(state, world, { type: 'move', to: 'loc-a' });
-  await act(state, world, { type: 'move', to: 'loc-b' });
+  const state = character(world, 'loc-b');
+  const me = state.actors[PLAYER_ID];
+  me.bonds = ['loc-a'];
+  await act(state, world, { type: 'bond' }); // 06:00-10:00
+  me.landfalls!.regions.unshift('loc-a'); // as if an extra-land effect had given loc-a earlier today
   return state;
 }
 
+test('landfall is bonding with a land: one a day, each gives its mana', async () => {
+  const world = fixture();
+  const state = character(world, 'loc-a');
+  const me = state.actors[PLAYER_ID];
+  assert.deepEqual(manaCapacity(state, world, me), {});
+  await act(state, world, { type: 'bond' });
+  assert.deepEqual(me.bonds, ['loc-a']);
+  assert.deepEqual(manaCapacity(state, world, me), { W: 1 }); // grassland
+  assert.match((await act(state, world, { type: 'bond' })).error!, /이미/);
+  await act(state, world, { type: 'move', to: 'loc-c' });
+  assert.match((await act(state, world, { type: 'bond' })).error!, /하루에 하나/);
+  await act(state, world, { type: 'wait', hours: 24 });
+  await act(state, world, { type: 'bond' });
+  assert.deepEqual(manaCapacity(state, world, me), { W: 1, R: 1 }); // rocky
+});
+
 test('the trap answers only when its land is the second landfall of the day', async () => {
   const world = fixture([trap]);
-  const once = character(world, 'loc-a'); // the starting land is not a landfall
-  await act(once, world, { type: 'move', to: 'loc-b' });
+  const once = character(world, 'loc-b');
+  await act(once, world, { type: 'bond' });
   await act(once, world, { type: 'wait', hours: 2 });
   assert.ok(!texts(once).includes('땅이 울린다.'));
 
@@ -219,6 +241,63 @@ test('combat: a flyer may take to the air; an NPC may turn hostile while talking
   assert.ok(texts(s2).some((t) => t.includes('적의를 드러냈다')));
   assert.ok(texts(s2).some((t) => t.includes('공격했다')));
   assert.equal(s2.actors[PLAYER_ID].wounds?.amount, 1);
+});
+
+const lore = (id: string, kind: string): RawEntity => ({ id, kind, name: id, status: 'canon' });
+const being = (id: string, sim: object): RawEntity => ({ id, kind: 'character', name: `${id}, 존재`, status: 'canon', sim: { gm: true, ...sim } });
+const kalitas = being('chr-k', {
+  pt: [5, 5],
+  mana: { B: 7 },
+  activated: [
+    {
+      id: 'kin',
+      name: '혈족으로 들이기',
+      cost: '{B}{B}{B}',
+      tap: true,
+      effects: [{ type: 'destroy' }, { type: 'raise', creature: 'cre-v', faction: 'fac-g' }],
+    },
+  ],
+});
+
+test('a GM-driven being pays mana and taps to destroy someone, who rises as a token', async () => {
+  const world = fixture([kalitas, lore('cre-v', 'creature'), lore('fac-g', 'faction'), npc('chr-x', npcSim('loc-a', 'work', [2, 3]))]);
+  const state = newState(world, { seed: 1, mode: 'observer' });
+  const gmDay: Llm['gmDay'] = async ({ day, hour, abilities }) => ({
+    day,
+    source: 'llm',
+    fires: [],
+    uses: abilities.map((x) => ({ being: x.being.id, ability: x.ability.id, target: 'chr-x', hour })),
+  });
+  await advance(state, world, 2, { gmDay });
+  assert.ok(state.actors['chr-x'].dead);
+  const token = Object.values(state.actors).find((a) => a.id.startsWith('tok-'))!;
+  assert.deepEqual(token.pt, [2, 3]);
+  assert.equal(token.region, 'loc-a');
+  assert.match(state.tokens![token.id].role, /fac-g/);
+  const bs = state.beings!['chr-k'];
+  assert.equal(formatClock(bs.boundUntil!), '2일차 00:00');
+  assert.deepEqual(manaAvailable(state, world, bs, state.minutes), { B: 4 });
+  assert.deepEqual(usableAbilities(state, world, state.minutes), []); // tapped
+  // The token lives a day like any NPC.
+  await advance(state, world, 24, { gmDay: async ({ day }) => ({ day, source: 'llm', fires: [] }) });
+  assert.equal(state.actors[token.id].schedule?.day, 1);
+});
+
+test('Lorthos taps only if he can pay his {8}', async () => {
+  const tideCost = (mana: number): RawEntity[] => [
+    being('chr-l', { pt: [8, 8], mana: { U: mana } }),
+    { ...tide, sim: { ...(tide.sim as object), cost: { by: 'chr-l', mana: '{8}' } } },
+  ];
+  const gmDay: Llm['gmDay'] = async ({ day, hour, eligible }) => ({ day, source: 'llm', fires: eligible.map((e) => ({ eventId: e.id, hour })) });
+  const rich = fixture(tideCost(8));
+  const a = character(rich, 'loc-a');
+  await act(a, rich, { type: 'wait', hours: 1 }, { gmDay });
+  assert.ok(texts(a).some((t) => t.includes('묶였다')));
+  const poor = fixture(tideCost(5));
+  const b = character(poor, 'loc-a');
+  await act(b, poor, { type: 'wait', hours: 1 }, { gmDay });
+  assert.ok(texts(b).some((t) => t.includes('힘이 남아 있지 않았다')));
+  assert.ok(!texts(b).some((t) => t.includes('묶였다')));
 });
 
 test('NPCs socialising in the same region meet once a day', async () => {

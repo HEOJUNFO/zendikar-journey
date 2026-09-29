@@ -52,6 +52,7 @@ Actions:
 - {"type":"wait","hours":1-24}
 - {"type":"talk","to":"<person id>","say":"<what they say>"}
 - {"type":"attack","to":"<person id>"}  (only when they clearly mean to fight; fights can be deadly)
+- {"type":"bond"}  (bond with the land here, taking it as their own; 4 hours, one land a day)
 
 Player typed: ${text}
 

@@ -6,6 +6,7 @@ import { KIND_EFFECTS } from './rules.ts';
 import { addLog, landUnusable, player } from './state.ts';
 import type { State, Task } from './state.ts';
 import { startTravel, travelBlocked } from './step.ts';
+import { bondBlocked } from './abilities.ts';
 import { josa, shortName } from './text.ts';
 import { PACES } from './types.ts';
 import type { World } from './world.ts';
@@ -18,11 +19,15 @@ export const ActionSchema = z.discriminatedUnion('type', [
   z.object({ type: z.literal('wait'), hours: z.number().int().min(1).max(24) }),
   z.object({ type: z.literal('talk'), to: z.string(), say: z.string().min(1).max(300) }),
   z.object({ type: z.literal('attack'), to: z.string() }),
+  // Bond with the land here: it comes under your control (landfall) and gives its mana each turn.
+  z.object({ type: z.literal('bond') }),
 ]);
 export type Action = z.infer<typeof ActionSchema>;
 
 export const PACE_LABELS = { careful: '조심스럽게', normal: '평소대로', hasty: '서둘러' } as const;
 const MEAL_COST = -KIND_EFFECTS.eat.coin;
+// Hours it takes to bond with a land.
+export const BOND_HOURS = 4;
 
 // Starts the action for the player. Returns why it can't be done now, or null.
 export function startAction(state: State, world: World, action: Action): string | null {
@@ -65,6 +70,13 @@ export function startAction(state: State, world: World, action: Action): string 
       task = { kind: 'leisure', activity: '기다림', emoji: '⏳', until: until(action.hours) };
       text = `${action.hours}시간 기다린다.`;
       break;
+    case 'bond': {
+      const why = bondBlocked(state, world, p, t);
+      if (why) return why;
+      task = { kind: 'bond', activity: '땅과 유대 맺기', emoji: '🌱', until: until(BOND_HOURS) };
+      text = `${BOND_HOURS}시간 동안 이 땅과 유대를 맺는다.`;
+      break;
+    }
     case 'attack': {
       const npc = state.actors[action.to];
       if (!npc || npc.kind !== 'npc' || npc.dead) return '그런 인물은 없다.';
