@@ -30,6 +30,17 @@ test('parseGmPlan checks ability uses: known power, living target, once each', (
   assert.equal(parseGmPlan(use({ being: 'chr-k', ability: 'kin', target: 'chr-k', hour: 9 }), at), null); // not itself
 });
 
+test('parseGmPlan: untargeted abilities need no target; one loyalty ability a day per being', () => {
+  const abilities = [
+    { being: { id: 'chr-w' }, ability: { id: 'plus', loyalty: 1, target: true } },
+    { being: { id: 'chr-w' }, ability: { id: 'wheel', loyalty: -2, target: false } },
+  ] as never;
+  const at = { day: 0, hour: 6, eligible: [], abilities, targets: ['chr-x'] };
+  const plan = (uses: object[]) => parseGmPlan(JSON.stringify({ fires: [], uses }), at);
+  assert.equal(plan([{ being: 'chr-w', ability: 'wheel', hour: 9 }])?.uses?.length, 1);
+  assert.equal(plan([{ being: 'chr-w', ability: 'plus', target: 'chr-x', hour: 9 }, { being: 'chr-w', ability: 'wheel', hour: 10 }]), null);
+});
+
 test('hosted body uses each provider’s token field and a floor', () => {
   const base = { url: '', apiKey: '', model: 'm', reasoningEffort: undefined };
   const msgs = [{ role: 'user' as const, content: 'hi' }];

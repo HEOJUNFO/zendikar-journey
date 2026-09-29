@@ -1,13 +1,14 @@
 // Landfall (bonding with a land) and activated abilities of GM-driven beings.
 import { gameDay, untapTime } from './clock.ts';
-import { die } from './combat.ts';
-import { payMana } from './mana.ts';
+import { dealDamage, die, leavePlane } from './combat.ts';
+import { manaAvailable, payMana, planPayment } from './mana.ts';
 import { DEPLETED_LABEL } from './rules.ts';
-import { addLog, npcDef, ptOf } from './state.ts';
+import { castSpell, spellDef } from './spells.ts';
+import { addLog, npcDef, present, ptOf, random } from './state.ts';
 import type { Actor, State } from './state.ts';
 import { josa, shortName } from './text.ts';
-import { region } from './world.ts';
-import type { World } from './world.ts';
+import { region, spellColors } from './world.ts';
+import type { ActivatedAbility, World } from './world.ts';
 
 // Why `a` can't bond with the land they stand on now, or null. One land per turn, as one
 // land drop per turn in MTG.
@@ -51,35 +52,99 @@ export function bondLand(state: State, world: World, a: Actor, t: number) {
   }
 }
 
-// A GM-driven being uses an activated ability on a living character. Returns why not, or null.
+// Why a being can't use this ability now (loyalty, tap, mana), or null. The target is checked
+// by useAbility.
+export function abilityBlocked(state: State, world: World, beingId: string, ability: ActivatedAbility, t: number): string | null {
+  const bs = state.actors[beingId];
+  const name = shortName(bs?.name ?? beingId);
+  if (!bs || bs.dead) return `${josa(name, '은', '는')} 이 세계에 없다.`;
+  if (bs.boundUntil !== undefined && bs.boundUntil > t) return `${josa(name, '은', '는')} 탭되어 있다.`;
+  if (ability.loyalty !== undefined) {
+    if (bs.loyaltyDay === gameDay(t)) return '오늘은 이미 기세를 썼다.';
+    if ((bs.loyalty ?? 0) + ability.loyalty < 0) return '기세가 모자라다.';
+  }
+  if (!planPayment(manaAvailable(state, world, bs, t), ability.cost)) return '마나가 모자라다.';
+  return null;
+}
+
+// A GM-driven being uses an activated ability (on a living character, if it targets). Returns
+// why not, or null.
 export function useAbility(state: State, world: World, beingId: string, abilityId: string, targetId: string, t: number) {
   const being = world.beings.find((b) => b.id === beingId);
   const ability = being?.activated.find((x) => x.id === abilityId);
-  const target = state.actors[targetId];
   if (!being || !ability) return '그런 능력은 없다.';
-  if (!target || target.dead) return '대상이 없다.';
+  const target = ability.target ? state.actors[targetId] : undefined;
+  if (ability.target && (!target || target.dead || target.id === beingId)) return '대상이 없다.';
+  const why = abilityBlocked(state, world, beingId, ability, t);
+  if (why) return why;
   const bs = state.actors[beingId];
   const name = shortName(being.name);
-  if (!bs || bs.dead) return `${josa(name, '은', '는')} 죽었다.`;
-  if (bs.boundUntil !== undefined && bs.boundUntil > t) return `${josa(name, '은', '는')} 탭되어 있다.`;
-  if (!payMana(state, world, bs, ability.cost, t)) return '마나가 모자라다.';
+  payMana(state, world, bs, ability.cost, t);
   if (ability.tap) bs.boundUntil = untapTime(t);
+  if (ability.loyalty !== undefined) {
+    bs.loyalty = (bs.loyalty ?? 0) + ability.loyalty;
+    bs.loyaltyDay = gameDay(t);
+  }
+  const loyalty = ability.loyalty === undefined ? '' : ` (기세 ${ability.loyalty > 0 ? '+' : ''}${ability.loyalty} → ${bs.loyalty})`;
   addLog(state, {
     kind: 'event',
-    text: `${josa(name, '이', '가')} ${josa(ability.name, '을', '를')} 썼다. 대상은 ${shortName(target.name)}.`,
-    regions: [target.region],
-    actors: [target.id],
+    text: `${josa(name, '이', '가')} ${josa(ability.name, '을', '를')} 썼다${loyalty}.${target ? ` 대상은 ${shortName(target.name)}.` : ''}`,
+    regions: [...new Set([bs.region, ...(target ? [target.region] : [])])],
+    actors: target ? [bs.id, target.id] : [bs.id],
   });
+  const cause = `${name}의 ${ability.name}`;
   let died = false;
   for (const eff of ability.effects) {
-    if (eff.type === 'destroy') {
-      die(state, target, t, `${name}의 ${ability.name}`);
+    if (eff.type === 'destroy' && target) {
+      die(state, target, t, cause);
       died = true;
-    } else if (eff.type === 'raise' && died) {
+    } else if (eff.type === 'raise' && died && target) {
       raiseToken(state, world, target, eff.creature, eff.faction, being.id);
+    } else if (eff.type === 'discard_spell') {
+      const gone = discardSpell(state, world, bs, t);
+      if (gone && spellColors(gone).includes(eff.if_color) && target) dealDamage(state, target, eff.damage, t, cause);
+    } else if (eff.type === 'wheel') {
+      for (const x of present(state, bs.region)) wheel(state, world, x, eff.draw);
+    } else if (eff.type === 'flashback' && target) {
+      for (const id of bs.graveyard ?? []) {
+        const s = spellDef(world, id);
+        if (s && spellColors(s).includes(eff.color) && !target.dead) castSpell(state, world, bs, s.id, target.id, false, t, true);
+      }
     }
   }
+  // Spent all their loyalty: gone from this plane.
+  if (ability.loyalty !== undefined && (bs.loyalty ?? 0) <= 0) leavePlane(state, bs, t, `${ability.name}에 기세를 다 씀`);
   return null;
+}
+
+// Let go of one spell they hold, at random (a discard). Returns it.
+function discardSpell(state: State, world: World, a: Actor, t: number) {
+  const hand = a.spells ?? [];
+  if (!hand.length) {
+    addLog(state, { kind: 'effect', text: `${josa(shortName(a.name), '은', '는')} 불사를 주문이 없다.`, regions: [a.region], actors: [a.id], t });
+    return undefined;
+  }
+  const id = hand[Math.floor(random(state) * hand.length)];
+  a.spells = hand.filter((x) => x !== id);
+  a.graveyard = [...(a.graveyard ?? []), id];
+  const s = spellDef(world, id);
+  addLog(state, { kind: 'effect', text: `${josa(shortName(a.name), '이', '가')} ${josa(s?.name ?? id, '을', '를')} 불살라 날렸다.`, regions: [a.region], actors: [a.id], t });
+  return s;
+}
+
+// Let go of every spell held, then come to hold `draw` spells of the world at random.
+function wheel(state: State, world: World, a: Actor, draw: number) {
+  a.graveyard = [...(a.graveyard ?? []), ...(a.spells ?? [])];
+  const pool = [...world.spells];
+  const got: string[] = [];
+  while (got.length < draw && pool.length) got.push(pool.splice(Math.floor(random(state) * pool.length), 1)[0].id);
+  a.spells = got;
+  addLog(state, {
+    kind: 'effect',
+    text: `${josa(shortName(a.name), '은', '는')} 알던 주문을 잊고${got.length ? ` ${got.map((id) => spellDef(world, id)!.name).join(', ')}${josa(spellDef(world, got.at(-1)!)!.name, '을', '를').slice(-1)} 떠올렸다` : ' 아무것도 떠올리지 못했다'}.`,
+    regions: [a.region],
+    actors: [a.id],
+  });
 }
 
 // Someone risen in play (an MTG token) from `from`, with its power/toughness: a new character

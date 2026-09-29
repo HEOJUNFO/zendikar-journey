@@ -114,31 +114,48 @@ export const CharacterSimSchema = z.strictObject({
 
 // A character who doesn't live a routine but acts through GM events and abilities (e.g.
 // Lorthos). They stay at home, where others can meet them.
+const AbilityEffectSchema = z.discriminatedUnion('type', [
+  // The target dies, whatever its toughness.
+  z.strictObject({ type: z.literal('destroy') }),
+  // If the target died this way, it rises as a new character of this creature kind,
+  // with its power/toughness, in this faction, as the being's retainer.
+  z.strictObject({ type: z.literal('raise'), creature: z.string(), faction: z.string().optional() }),
+  // "Discard a card. If a <color> card is discarded this way, deal N damage to any target":
+  // they let go of a spell they hold (their hand); if it was of that color, N damage.
+  z.strictObject({ type: z.literal('discard_spell'), if_color: z.enum(COLORS), damage: z.number().int().positive() }),
+  // "Each player discards their hand, then draws N": everyone where they are lets go of the
+  // spells they hold and comes to hold N spells of the world, at random.
+  z.strictObject({ type: z.literal('wheel'), draw: z.number().int().positive() }),
+  // "Cast any number of <color> spells from your graveyard free": every spell of that color
+  // they let go of, cast on the target without paying.
+  z.strictObject({ type: z.literal('flashback'), color: z.enum(COLORS) }),
+]);
+export type AbilityEffect = z.infer<typeof AbilityEffectSchema>;
+
 export const GmBeingSimSchema = z.strictObject({
   gm: z.literal(true),
   home: z.string(),
   pt: PtSchema,
   mana: ManaSchema.optional(),
   abilities: z.array(z.enum(ABILITIES)).default([]),
-  // Abilities the GM may use for them ("{cost}, {T}: effect"), on any living character.
+  // A planeswalker's loyalty (law-planeswalkers): their momentum. Loyalty abilities raise
+  // or spend it; damage wears it down; at 0 they leave this plane.
+  loyalty: z.number().int().min(1).optional(),
+  // They hold (know) every spell of these colors in the world: their hand.
+  knows_colors: z.array(z.enum(COLORS)).default([]),
+  // Abilities the GM may use for them ("{cost}, {T}: effect" or "+1: effect").
   activated: z
     .array(
       z.strictObject({
         id: z.string().min(1),
         name: z.string().min(1),
-        cost: CostSchema,
+        cost: CostSchema.default('{0}'),
         tap: z.boolean().default(false),
-        effects: z
-          .array(
-            z.discriminatedUnion('type', [
-              // The target dies, whatever its toughness.
-              z.strictObject({ type: z.literal('destroy') }),
-              // If the target died this way, it rises as a new character of this creature kind,
-              // with its power/toughness, in this faction, as the being's retainer.
-              z.strictObject({ type: z.literal('raise'), creature: z.string(), faction: z.string().optional() }),
-            ]),
-          )
-          .min(1),
+        // A loyalty ability: +N / -N loyalty, one a turn (game day).
+        loyalty: z.number().int().optional(),
+        // Whether it has a target (a living character).
+        target: z.boolean().default(true),
+        effects: z.array(AbilityEffectSchema).min(1),
       }),
     )
     .default([]),
@@ -149,7 +166,9 @@ export type ActivatedAbility = {
   cost: ManaCost;
   costText: string;
   tap: boolean;
-  effects: ({ type: 'destroy' } | { type: 'raise'; creature: string; faction?: string })[];
+  loyalty?: number;
+  target: boolean;
+  effects: AbilityEffect[];
 };
 
 const EffectSchema = z.discriminatedUnion('type', [
@@ -323,6 +342,8 @@ export type BeingDef = {
   pt: Pt;
   mana?: Mana;
   abilities: Ability[];
+  loyalty?: number;
+  knowsColors: Color[];
   activated: ActivatedAbility[];
 };
 
@@ -422,6 +443,8 @@ export function buildWorld(entities: RawEntity[]): { world: World; errors: strin
           pt: sim.data.pt,
           mana: sim.data.mana,
           abilities: sim.data.abilities,
+          loyalty: sim.data.loyalty,
+          knowsColors: sim.data.knows_colors,
           activated: sim.data.activated.map((x) => ({ ...x, cost: parseManaCost(x.cost)!, costText: x.cost })),
         });
     } else if (e.kind === 'character' || e.kind === 'creature') {
@@ -532,6 +555,11 @@ export function buildWorld(entities: RawEntity[]): { world: World; errors: strin
   }
 
   return { world, errors };
+}
+
+// A spell's colors: those in its cost.
+export function spellColors(s: SpellDef): Color[] {
+  return Object.keys(s.cost.colored) as Color[];
 }
 
 // --- geometry and access -----------------------------------------------------------------

@@ -3,6 +3,7 @@ import { START_MINUTES } from './clock.ts';
 import { INITIAL_STATS } from './rules.ts';
 import { NEEDS } from './types.ts';
 import type { LifeKind, Need, Pace, Schedule, Stats } from './types.ts';
+import { spellColors } from './world.ts';
 import type { Ability, BeingDef, NpcDef, Pt, Speaker, World } from './world.ts';
 import type { Mana } from './mana.ts';
 
@@ -50,8 +51,15 @@ export type Actor = {
   foes?: { day: number; ids: string[] };
   // Whom they serve: they are that one's retainer (sim/retainers.ts).
   master?: string;
-  // Spells they know (world/entities/spells).
+  // Spells they know (world/entities/spells): their hand.
   spells?: string[];
+  // Spells they let go of (discarded): their graveyard.
+  graveyard?: string[];
+  // A planeswalker's loyalty now, and the game day they last used a loyalty ability.
+  loyalty?: number;
+  loyaltyDay?: number;
+  // A planeswalker who left this plane (with `dead` set, so the world lets them go).
+  left?: boolean;
   // What they think of others, latest impression each (sim/relations.ts).
   relations?: Record<string, { name: string; text: string; t: number }>;
   dead?: { at: number; cause: string };
@@ -197,7 +205,10 @@ export function newState(world: World, opts: NewGame): State {
       needs: [...npc.needs],
     };
   }
-  for (const b of world.beings) state.actors[b.id] = beingActor(b);
+  for (const b of world.beings) {
+    state.actors[b.id] = beingActor(b);
+    refreshBeing(state, world, b);
+  }
   if (opts.mode === 'character') {
     if (!opts.player) throw new Error('character mode needs a player');
     state.playerId = PLAYER_ID;
@@ -248,8 +259,19 @@ export function syncWorld(state: State, world: World) {
     a.abilities = [...b.abilities];
     // Beings never leave home, so a home moved by a card moves them.
     if (!a.dead) a.region = b.home;
+    refreshBeing(state, world, b);
   }
   delete state.beings;
+}
+
+// A being's loyalty (first time) and its hand: every spell of its colors it hasn't held yet
+// (new spell cards join it).
+function refreshBeing(state: State, world: World, b: BeingDef) {
+  const a = state.actors[b.id];
+  if (b.loyalty !== undefined && a.loyalty === undefined) a.loyalty = b.loyalty;
+  const held = new Set([...(a.spells ?? []), ...(a.graveyard ?? [])]);
+  for (const s of world.spells)
+    if (!held.has(s.id) && spellColors(s).some((c) => b.knowsColors.includes(c))) a.spells = [...(a.spells ?? []), s.id];
 }
 
 // A GM-driven being on the map: at home, living by no needs.

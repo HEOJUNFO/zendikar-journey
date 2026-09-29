@@ -17,9 +17,16 @@ export function woundsOf(a: Actor, t: number) {
   return a.wounds?.day === gameDay(t) ? a.wounds.amount : 0;
 }
 
-// Returns whether it killed them. Nonlethal damage knocks out instead of killing.
+// Returns whether it killed them. Nonlethal damage knocks out instead of killing. A
+// planeswalker's damage comes off their loyalty; at 0 they leave the plane.
 export function dealDamage(state: State, a: Actor, amount: number, t: number, cause: string, nonlethal = false) {
   if (a.dead || amount <= 0) return false;
+  if (a.loyalty !== undefined) {
+    a.loyalty = Math.max(nonlethal ? 1 : 0, a.loyalty - amount);
+    addLog(state, { kind: 'combat', text: `${josa(shortName(a.name), '이', '가')} 피해 ${amount}로 기세가 꺾였다 (기세 ${a.loyalty}).`, regions: [a.region], actors: [a.id] });
+    if (a.loyalty <= 0) leavePlane(state, a, t, cause);
+    return false;
+  }
   const toughness = ptOf(a)[1];
   const total = woundsOf(a, t) + amount;
   if (total >= toughness && nonlethal) {
@@ -54,6 +61,17 @@ export function die(state: State, a: Actor, t: number, cause: string) {
     regions: [a.region],
     actors: [a.id],
   });
+}
+
+// A planeswalker whose loyalty is gone leaves this plane: gone from the world, not dead.
+export function leavePlane(state: State, a: Actor, t: number, cause: string) {
+  a.dead = { at: t, cause: `차원을 떠남: ${cause}` };
+  a.left = true;
+  a.task = undefined;
+  a.forced = undefined;
+  delete a.boundUntil;
+  for (const r of retainersOf(state, a.id)) releaseRetainer(state, r, `${shortName(a.name)}이(가) 떠남`);
+  addLog(state, { kind: 'death', text: `${josa(shortName(a.name), '이', '가')} 이 차원을 떠났다 (${cause}).`, regions: [a.region], actors: [a.id] });
 }
 
 // Down but alive: out cold for KO_HOURS, one short of their toughness in wounds.

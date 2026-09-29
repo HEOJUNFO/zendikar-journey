@@ -5,10 +5,11 @@ name: 용암 협곡
 name_en: Lava Chasm
 summary: 용암이 흐르는 좁고 깊은 화산 협곡. 고대의 함정이 도사린 곳
 status: canon
-sources: [ZEN-135]
+sources: [ZEN-135, ZEN-120]
 tags: [화산, 협곡, 함정]
 links:
   - { to: evt-lavaball-trap, rel: 도사린 함정 }
+  - { to: chr-chandra, rel: 헤매는 이 }
 map: { x: 70, y: 48, terrain: volcanic }
 ---
 
@@ -21,6 +22,7 @@ map: { x: 70, y: 48, terrain: volcanic }
 - 지도 남동쪽의 화산 지역이다 (지형 `volcanic`). 플레이어가 처음 시작할 수 있는 땅이다.
 - 위험 요소: 용암공 함정 (`evt-lavaball-trap`). 하루에 여러 땅을 거쳐 이곳에 들어오는 이에게 깨어난다.
 - 할 수 있는 일: 탐험, 무언가를 찾아 협곡 아래로 내려가기 (무엇을 찾는지는 이후 카드로 정한다).
+- 불의 플레인즈워커 찬드라(`chr-chandra`)가 이곳을 헤맨다. 만나 말을 걸거나 싸울 수 있다.
 
 ## 미정/질문
 

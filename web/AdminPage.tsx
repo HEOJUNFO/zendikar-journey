@@ -144,6 +144,21 @@ function ActorDetail({ world, state, a, onRegion }: { world: World; state: State
         <dd>
           {formatMana(manaAvailable(state, world, a, t))} <small className="muted">/ 하루 {formatMana(manaCapacity(state, world, a))}</small>
         </dd>
+        {a.loyalty !== undefined && (
+          <>
+            <dt>기세</dt>
+            <dd>{a.loyalty}{a.loyaltyDay === gameDay(t) ? ' (오늘 씀)' : ''}</dd>
+          </>
+        )}
+        {(a.spells?.length || a.graveyard?.length) ? (
+          <>
+            <dt>주문</dt>
+            <dd>
+              {(a.spells ?? []).map((id) => world.spells.find((s) => s.id === id)?.name ?? id).join(', ') || '없음'}
+              {a.graveyard?.length ? <small className="muted"> · 잊은 것: {a.graveyard.map((id) => world.spells.find((s) => s.id === id)?.name ?? id).join(', ')}</small> : null}
+            </dd>
+          </>
+        ) : null}
         <dt>유대</dt>
         <dd>{a.bonds?.length ? a.bonds.map((id) => region(world, id).name).join(', ') : '없음'}</dd>
         {landfalls.length > 0 && (

@@ -11,7 +11,7 @@ import { clockText, loreText, whereaboutsText } from './context.ts';
 const GmSchema = z.object({
   fires: z.array(z.object({ eventId: z.string(), hour: z.number().int().min(0).max(23) })).max(3),
   uses: z
-    .array(z.object({ being: z.string(), ability: z.string(), target: z.string(), hour: z.number().int().min(0).max(23) }))
+    .array(z.object({ being: z.string(), ability: z.string(), target: z.string().default(''), hour: z.number().int().min(0).max(23) }))
     .max(3)
     .default([]),
   note: z.string().max(300).optional(),
@@ -38,6 +38,21 @@ usual frequency, build on what happened lately, and often decide that nothing ha
 kill are grave; use them rarely, in character, and with a reason the world could come to know.
 Answer with JSON only, no prose.`;
 
+function describeEffect(e: GmDayInput['abilities'][number]['ability']['effects'][number]) {
+  switch (e.type) {
+    case 'destroy':
+      return 'the target dies';
+    case 'raise':
+      return `it rises as their ${e.creature} retainer`;
+    case 'discard_spell':
+      return `they let go of a spell they hold; if it is ${e.if_color}, ${e.damage} damage to the target`;
+    case 'wheel':
+      return `everyone where they are forgets their spells and recalls ${e.draw} at random`;
+    case 'flashback':
+      return `they cast every ${e.color} spell they let go of on the target, free`;
+  }
+}
+
 function userPrompt({ day, hour, world, state, eligible, abilities, news }: GmDayInput) {
   const events = eligible
     .map((e) => `- ${e.id}: ${e.name} — ${e.summary} (usually on about ${Math.round((e.chance ?? 0) * 100)}% of days)`)
@@ -45,7 +60,7 @@ function userPrompt({ day, hour, world, state, eligible, abilities, news }: GmDa
   const powers = abilities
     .map(
       ({ being, ability }) =>
-        `- being ${being.id} (${being.name}, ${being.pt.join('/')}): ability ${ability.id} "${ability.name}" — ${ability.effects.map((x) => x.type).join(' + ')}${ability.tap ? ' (then tapped until midnight)' : ''}`,
+        `- being ${being.id} (${being.name}, ${being.pt.join('/')}${state.actors[being.id]?.loyalty !== undefined ? `, loyalty ${state.actors[being.id].loyalty}` : ''}): ability ${ability.id} "${ability.name}" — ${ability.effects.map(describeEffect).join(' + ')}${ability.tap ? ' (then tapped until midnight)' : ''}${ability.loyalty !== undefined ? ` (loyalty ${ability.loyalty > 0 ? '+' : ''}${ability.loyalty}; one loyalty ability a day; at 0 loyalty they leave this plane)` : ''}${ability.target === false ? ' (no target: use "target": "")' : ''}`,
     )
     .join('\n');
   const targets = Object.values(state.actors)
@@ -91,8 +106,13 @@ export function parseGmPlan(
   if (fires.some((f) => !ids.has(f.eventId) || f.hour < hour)) return null;
   if (new Set(fires.map((f) => f.eventId)).size !== fires.length) return null;
   const powers = new Set(abilities.map((x) => `${x.being.id}/${x.ability.id}`));
-  if (uses.some((u) => !powers.has(`${u.being}/${u.ability}`) || !targets.includes(u.target) || u.target === u.being || u.hour < hour))
-    return null;
+  const targeted = new Set(abilities.filter((x) => x.ability.target !== false).map((x) => `${x.being.id}/${x.ability.id}`));
+  const badTarget = (u: { being: string; ability: string; target: string }) =>
+    targeted.has(`${u.being}/${u.ability}`) && (!targets.includes(u.target) || u.target === u.being);
+  if (uses.some((u) => !powers.has(`${u.being}/${u.ability}`) || badTarget(u) || u.hour < hour)) return null;
+  // A being uses at most one loyalty ability a day.
+  const loyal = uses.filter((u) => abilities.find((x) => x.being.id === u.being && x.ability.id === u.ability)?.ability.loyalty !== undefined);
+  if (new Set(loyal.map((u) => u.being)).size !== loyal.length) return null;
   if (new Set(uses.map((u) => `${u.being}/${u.ability}`)).size !== uses.length) return null;
   return { day, source: 'llm', fires, uses, note: parsed.data.note };
 }

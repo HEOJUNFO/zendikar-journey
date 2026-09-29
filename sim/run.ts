@@ -10,8 +10,8 @@ import { eligibleGmEvents, step } from './step.ts';
 import { addFoe, clash } from './combat.ts';
 import { relationsText, remember } from './relations.ts';
 import { castSpell } from './spells.ts';
+import { abilityBlocked } from './abilities.ts';
 import { bindRetainer, swayBlocked } from './retainers.ts';
-import { manaAvailable, planPayment } from './mana.ts';
 import { josa, shortName } from './text.ts';
 import type { ScheduleBlock } from './types.ts';
 import { canStay, placeName } from './world.ts';
@@ -267,13 +267,9 @@ async function prepareDay(state: State, world: World, llm: Llm) {
 
 // Activated abilities GM-driven beings could use today: untapped and able to pay.
 export function usableAbilities(state: State, world: World, t: number) {
-  return world.beings.flatMap((being) => {
-    const bs = state.actors[being.id];
-    if (!bs || bs.dead) return [];
-    if (bs.boundUntil !== undefined && bs.boundUntil > t) return [];
-    const available = manaAvailable(state, world, bs, t);
-    return being.activated.filter((x) => planPayment(available, x.cost)).map((ability) => ({ being, ability }));
-  });
+  return world.beings.flatMap((being) =>
+    being.activated.filter((x) => !abilityBlocked(state, world, being.id, x, t)).map((ability) => ({ being, ability })),
+  );
 }
 
 // What happened in the last day, for planning prompts.

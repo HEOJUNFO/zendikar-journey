@@ -62,10 +62,10 @@ export function harmful(s: SpellDef) {
 }
 
 // Pays and resolves. A harmful spell's target (if an NPC) takes it as an attack.
-export function castSpell(state: State, world: World, a: Actor, spellId: string, targetId: string, kick: boolean, t: number) {
+export function castSpell(state: State, world: World, a: Actor, spellId: string, targetId: string, kick: boolean, t: number, free = false) {
   const s = spellDef(world, spellId)!;
   const target = state.actors[targetId];
-  payMana(state, world, a, s.cost, t);
+  if (!free) payMana(state, world, a, s.cost, t);
   let kicked = false;
   if (kick && s.kicker) {
     const tapped = tappable(state, world, a, s.kicker.tap)[0];
@@ -78,7 +78,7 @@ export function castSpell(state: State, world: World, a: Actor, spellId: string,
   const on = target.id === a.id ? '자신' : shortName(target.name);
   addLog(state, {
     kind: 'event',
-    text: `${josa(shortName(a.name), '이', '가')} ${on}에게 ${josa(s.name, '을', '를')} 걸었다 (${s.costText}).`,
+    text: `${josa(shortName(a.name), '이', '가')} ${on}에게 ${josa(s.name, '을', '를')} 걸었다 (${free ? '값 없이' : s.costText}).`,
     regions: [a.region],
     actors: [a.id, target.id],
   });

@@ -174,7 +174,7 @@ export function fighting(a: Actor, t: number) {
 }
 
 export function status(world: World, a: Actor) {
-  if (a.dead) return `죽음 (${a.dead.cause})`;
+  if (a.dead) return a.left ? a.dead.cause : `죽음 (${a.dead.cause})`;
   if (a.boundUntil !== undefined) return `묶임 (${formatClock(a.boundUntil)}까지)`;
   const task = a.forced ?? a.task;
   const where = a.travel ? `${region(world, a.region).name} → ${region(world, a.travel.to).name}` : region(world, a.region).name;
@@ -265,7 +265,9 @@ export function BeingsList({ world, state, all }: { world: World; state: State; 
             <b>{bs.dead ? '✝ ' : ''}{shortName(b.name)}</b> <small className="muted">{b.pt.join('/')} · {region(world, bs.region).name}</small>
             <p className="muted">
               마나 {formatMana(manaAvailable(state, world, bs, state.minutes))}
+              {bs.loyalty !== undefined ? ` · 기세 ${bs.loyalty}` : ''}
               {tapped ? ` · 탭됨 (${formatClock(bs.boundUntil!)}까지)` : ''}
+              {bs.left ? ' · 이 차원을 떠남' : ''}
             </p>
           </div>
         );

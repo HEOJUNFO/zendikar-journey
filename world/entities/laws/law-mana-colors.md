@@ -5,7 +5,7 @@ name: 다섯 색의 마법
 name_en: Five Colors of Magic
 summary: 이 세계의 마법은 백, 청, 흑, 적, 녹 다섯 색으로 나뉜다
 status: canon
-sources: [ZEN-13, ZEN-135, ZEN-53, ZEN-99, ZEN-157, ZEN-6]
+sources: [ZEN-13, ZEN-135, ZEN-53, ZEN-99, ZEN-157, ZEN-6, ZEN-120]
 tags: [마법, 마나]
 links:
   - { to: chr-iona, rel: 한 색을 봉인할 수 있는 존재 }
@@ -14,6 +14,7 @@ links:
   - { to: chr-kalitas, rel: 흑색의 존재 }
   - { to: cre-baloth, rel: 녹색의 존재 }
   - { to: spl-celestial-mantle, rel: 백색 주문 }
+  - { to: chr-chandra, rel: 적색의 존재 }
 ---
 
 ## 설정
@@ -23,7 +24,7 @@ links:
 지금까지 드러난 색:
 
 - 백색: 수호와 정의, 빛의 갑옷. 에메리아의 천사 이오나 (ZEN-13), 천상의 망토 (ZEN-6).
-- 적색: 불, 용암, 파괴. 용암공 함정 (ZEN-135).
+- 적색: 불, 용암, 파괴. 용암공 함정 (ZEN-135), 불의 플레인즈워커 찬드라 (ZEN-120).
 - 청색: 물, 바다, 조수, 속박. 조수를 부리는 로르토스 (ZEN-53).
 - 흑색: 죽음과 되살림. 죽인 자를 흡혈귀로 되살리는 칼리타스 (ZEN-99).
 - 녹색: 짐승, 밀림, 굶주림과 성장. 새 땅에서 힘이 치솟는 발로스 (ZEN-157).

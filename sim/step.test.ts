@@ -10,7 +10,7 @@ import { MAX_TALKS_PER_DAY, usableAbilities } from './run.ts';
 import { eligibleGmEvents } from './step.ts';
 import { gainLife } from './life.ts';
 import { newState, PLAYER_ID, ptOf, syncWorld } from './state.ts';
-import { bondBlocked, bondLand } from './abilities.ts';
+import { bondBlocked, bondLand, useAbility } from './abilities.ts';
 import { DEPLETED_LABEL } from './rules.ts';
 import { swayBlocked } from './retainers.ts';
 import type { State } from './state.ts';
@@ -639,6 +639,65 @@ test('an aura stays on its bearer, and when they hit someone their controller\'s
   // Still there the next day.
   await act(state, world, { type: 'wait', hours: 24 });
   assert.deepEqual(ptOf(p), [4, 4]);
+});
+
+const bolt: RawEntity = {
+  id: 'spl-bolt',
+  kind: 'spell',
+  name: '불덩이',
+  status: 'canon',
+  sim: { cost: '{R}', learn_at: 'loc-c', effects: [{ type: 'lose_half_life' }] },
+};
+const walker = being('chr-w', {
+  home: 'loc-a',
+  pt: [0, 5],
+  loyalty: 5,
+  knows_colors: ['R'],
+  activated: [
+    { id: 'plus', name: '불꽃 던지기', loyalty: 1, effects: [{ type: 'discard_spell', if_color: 'R', damage: 4 }] },
+    { id: 'wheel', name: '기억을 태우는 불길', loyalty: -2, target: false, effects: [{ type: 'wheel', draw: 3 }] },
+    { id: 'ult', name: '되살아나는 불꽃', loyalty: -7, effects: [{ type: 'flashback', color: 'R' }] },
+  ],
+});
+
+test('a planeswalker: loyalty abilities once a day, a red spell let go becomes fire, damage wears loyalty down', async () => {
+  const world = fixture([walker, bolt, npc('chr-x', npcSim('loc-a', 'social', [1, 5]))]);
+  const state = character(world, 'loc-a');
+  const w = state.actors['chr-w'];
+  assert.equal(w.loyalty, 5);
+  assert.deepEqual(w.spells, ['spl-bolt']); // holds every red spell
+  assert.equal(useAbility(state, world, 'chr-w', 'plus', 'chr-x', state.minutes), null);
+  assert.equal(w.loyalty, 6);
+  assert.deepEqual(w.graveyard, ['spl-bolt']);
+  assert.equal(woundsOf(state.actors['chr-x'], state.minutes), 4);
+  assert.match(useAbility(state, world, 'chr-w', 'wheel', '', state.minutes) ?? '', /이미 기세/);
+  assert.deepEqual(usableAbilities(state, world, state.minutes), []);
+  // Next day: everyone here lets go of their spells and recalls some at random.
+  state.minutes += 1440;
+  state.actors[PLAYER_ID].spells = ['spl-bolt'];
+  assert.equal(useAbility(state, world, 'chr-w', 'wheel', '', state.minutes), null);
+  assert.equal(w.loyalty, 4);
+  assert.ok(state.actors[PLAYER_ID].graveyard?.includes('spl-bolt'));
+  assert.deepEqual(state.actors[PLAYER_ID].spells, ['spl-bolt']); // the only spell in this world
+  // Blows come off loyalty; at 0 the walker leaves this plane (not a death).
+  state.actors[PLAYER_ID].pt = [4, 4];
+  await act(state, world, { type: 'attack', to: 'chr-w' });
+  assert.equal(w.left, true);
+  assert.ok(texts(state).some((t) => t.includes('이 차원을 떠났다')));
+  assert.equal(state.over, undefined);
+});
+
+test('the ultimate casts every red spell let go of, free', () => {
+  const world = fixture([walker, bolt, npc('chr-x', npcSim('loc-a'))]);
+  const state = newState(world, { seed: 1, mode: 'observer' });
+  const w = state.actors['chr-w'];
+  w.loyalty = 8;
+  w.graveyard = ['spl-bolt'];
+  state.actors['chr-x'].stats.energy = 80;
+  assert.equal(useAbility(state, world, 'chr-w', 'ult', 'chr-x', state.minutes), null);
+  assert.ok(texts(state).some((t) => t.includes('값 없이')));
+  assert.equal(state.actors['chr-x'].stats.energy, 40);
+  assert.equal(w.loyalty, 1);
 });
 
 test('NPCs socialising in the same region meet once a day', async () => {
