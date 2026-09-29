@@ -7,7 +7,7 @@ import { foesOf } from '../sim/combat.ts';
 import { formatMana, manaAvailable, manaCapacity } from '../sim/mana.ts';
 import { needsOf, npcDef } from '../sim/state.ts';
 import type { Actor, LogEntry, State } from '../sim/state.ts';
-import { shortName } from '../sim/text.ts';
+import { josa, shortName } from '../sim/text.ts';
 import { currentBlock } from '../sim/types.ts';
 import { ABILITY_LABELS, placeName, region } from '../sim/world.ts';
 import type { Effect, EventDef, World } from '../sim/world.ts';
@@ -119,7 +119,7 @@ function ActorDetail({ world, state, a, onRegion }: { world: World; state: State
       <p className="muted admin-id">{a.id}</p>
       {(def?.summary || being?.summary) && <p>{def?.summary ?? being?.summary}</p>}
       <p>{status(world, a)}</p>
-      <button className="ghost" onClick={() => onRegion(a.region)}>
+      <button className="ghost admin-goto" onClick={() => onRegion(a.region)}>
         {placeName(world, region(world, a.region))} 보기
       </button>
       {a.travel && <p className="muted">{formatClock(a.travel.arrive)} 도착 예정</p>}
@@ -232,7 +232,7 @@ function TrapDetail(props: { world: World; state: State | null; ev: EventDef; on
       <p className="muted admin-id">{ev.id}</p>
       <p>{ev.summary}</p>
       <p className={s.kind === 'armed' ? '' : 'cond'}>상태: {statusText(s)}</p>
-      <button className="ghost" onClick={() => onRegion(ev.region)}>
+      <button className="ghost admin-goto" onClick={() => onRegion(ev.region)}>
         {placeName(world, region(world, ev.region))} 보기
       </button>
       <dl className="admin-facts">
@@ -253,7 +253,7 @@ function TrapDetail(props: { world: World; state: State | null; ev: EventDef; on
         {ev.cost && (
           <>
             <dt>비용</dt>
-            <dd>{shortName(state?.actors[ev.cost.by]?.name ?? ev.cost.by)}가 {ev.cost.text}</dd>
+            <dd>{josa(shortName(state?.actors[ev.cost.by]?.name ?? ev.cost.by), '이', '가')} {ev.cost.text}를 치른다</dd>
           </>
         )}
         <dt>효과</dt>

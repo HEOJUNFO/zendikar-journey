@@ -118,9 +118,13 @@ export function MapView({ world, state, selected, onSelect, all, picked, onPickA
         );
       })}
       {traps.map((ev, i) => {
-        const node = nodeAt(world, region(world, ev.region));
+        const r = region(world, ev.region);
+        const node = nodeAt(world, r);
         const n = traps.slice(0, i).filter((x) => x.region === ev.region).length;
-        const [x, y] = [node.x - TRAP_GAP * (n + 1.4), node.y + TRAP_GAP * 1.2];
+        // Below-left of a region's node; right below an area's (its name is to the right).
+        const [x, y] = r.parent
+          ? [node.x + TRAP_GAP * n, node.y + TRAP_GAP * 1.4]
+          : [node.x - TRAP_GAP * (n + 1.4), node.y + TRAP_GAP * 1.2];
         const s = 1.3;
         return (
           <g key={ev.id} className={`map-trap map-trap-${trapStatus(state, ev).kind} map-pick`} {...pickable(() => onPickTrap!(ev.id))}>

@@ -762,3 +762,6 @@ button.link {
   font: inherit;
   cursor: pointer;
 }
+.admin-goto {
+  margin: 4px 0 8px;
+}
