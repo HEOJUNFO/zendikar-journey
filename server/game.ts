@@ -45,9 +45,15 @@ export class Game {
     if (this.state) syncWorld(this.state, this.world);
   }
 
-  // Picks up cards added while the server runs.
+  // Picks up cards added while the server runs. A world that doesn't load (a card half written,
+  // or data ahead of the code until the server restarts) keeps the last good one.
   reloadWorld() {
-    this.world = loadWorld();
+    try {
+      this.world = loadWorld();
+    } catch (e) {
+      console.warn(`세계를 다시 읽지 못해 이전 세계로 계속한다: ${(e as Error).message}`);
+      return;
+    }
     if (this.state) syncWorld(this.state, this.world);
   }
 

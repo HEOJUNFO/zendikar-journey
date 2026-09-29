@@ -7,7 +7,7 @@
     "node": ">=24"
   },
   "scripts": {
-    "dev": "node server/main.ts",
+    "dev": "node --watch server/main.ts",
     "typecheck": "tsc",
     "test": "node --test \"sim/**/*.test.ts\"",
     "world:check": "node tools/world-check.mjs",
