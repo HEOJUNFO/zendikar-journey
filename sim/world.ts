@@ -4,7 +4,7 @@
 import { z } from 'zod';
 import { TRAVEL_UNITS_PER_HOUR } from './rules.ts';
 import { COLORS, parseManaCost } from './mana.ts';
-import type { Color, Mana, ManaCost } from './mana.ts';
+import type { Color, Hybrid, Mana, ManaCost } from './mana.ts';
 import { LIFE_KINDS, NEEDS } from './types.ts';
 import type { Need } from './types.ts';
 
@@ -52,8 +52,17 @@ export const TERRAINS: Record<Terrain, TerrainInfo> = {
 
 // --- frontmatter schemas ---------------------------------------------------------------
 
-// Mana color of a land (C = colorless). Default: from the terrain.
-const LandColor = z.enum([...COLORS, 'C']).optional();
+// Mana color of a land (C = colorless; [B, R] = one of the two, chosen when spent). Default:
+// from the terrain.
+const LandColor = z.union([z.enum([...COLORS, 'C']), z.tuple([z.enum(COLORS), z.enum(COLORS)])]).optional();
+
+// What a land does of its own (a location's `sim`): "enters tapped" (bonded with, it gives no
+// mana that day) and what bonding with it brings ("When this land enters, you gain 1 life").
+export const LandSimSchema = z.strictObject({
+  enters_tapped: z.boolean().default(false),
+  on_bond: z.array(z.discriminatedUnion('type', [z.strictObject({ type: z.literal('gain_life'), amount: z.number().int().positive() })])).default([]),
+});
+export type BondEffect = z.infer<typeof LandSimSchema>['on_bond'][number];
 
 export const MapSchema = z.union([
   // A region: a node on the map.
@@ -302,8 +311,12 @@ export type Region = {
   x: number;
   y: number;
   terrain: Terrain;
-  // Mana color of the land (null = colorless).
-  color: Color | null;
+  // Mana color of the land (null = colorless, 'B/R' = one of the two).
+  color: Color | Hybrid | null;
+  // Bonded with, it gives no mana that day.
+  entersTapped: boolean;
+  // What bonding with it brings.
+  onBond: BondEffect[];
   // An area inside this region (its x, y are the region's). Areas are lands of their own:
   // people meet, bond, and get hit by events there, but an event on the region reaches them.
   parent?: string;
@@ -417,8 +430,11 @@ export function buildWorld(entities: RawEntity[]): { world: World; errors: strin
     if (e.map !== undefined) {
       if (e.kind !== 'location') err(e.id, 'map 은 location 에만 쓸 수 있음');
       const map = MapSchema.safeParse(e.map);
+      const land = LandSimSchema.safeParse(e.sim ?? {});
+      if (!land.success) err(e.id, `sim 오류: ${issues(land.error)}`);
       if (!map.success) err(e.id, `map 오류: ${issues(map.error)}`);
-      else
+      else {
+        const c = map.data.color;
         world.regions.push({
           id: e.id,
           name: e.name,
@@ -426,8 +442,11 @@ export function buildWorld(entities: RawEntity[]): { world: World; errors: strin
           summary: e.summary ?? '',
           ...('in' in map.data ? { x: 0, y: 0, parent: map.data.in } : { x: map.data.x, y: map.data.y }),
           terrain: map.data.terrain,
-          color: map.data.color === 'C' ? null : (map.data.color ?? TERRAINS[map.data.terrain].mana),
+          color: c === 'C' ? null : Array.isArray(c) ? (`${c[0]}/${c[1]}` as Hybrid) : (c ?? TERRAINS[map.data.terrain].mana),
+          entersTapped: land.data?.enters_tapped ?? false,
+          onBond: land.data?.on_bond ?? [],
         });
+      }
     }
   }
   // Areas sit where their region is. One level only, and never at sea.
@@ -442,7 +461,10 @@ export function buildWorld(entities: RawEntity[]): { world: World; errors: strin
 
   for (const e of entities) {
     if (e.sim === undefined) continue;
-    if (e.kind === 'character' || e.kind === 'creature') {
+    if (e.kind === 'location') {
+      // A land's own sim: read with its map above.
+      if (e.map === undefined) err(e.id, 'location 의 sim 은 map 이 있을 때만 쓸 수 있음');
+    } else if (e.kind === 'character' || e.kind === 'creature') {
       // A creature's sim is one of its kind, living in the world (e.g. a roaming baloth).
       const sim = CharacterSimSchema.safeParse(e.sim);
       if (!sim.success) {
@@ -508,7 +530,7 @@ export function buildWorld(entities: RawEntity[]): { world: World; errors: strin
       const d = sim.data;
       world.items.push({ id: e.id, name: e.name, summary: e.summary ?? '', cost: parseManaCost(d.cost)!, costText: d.cost, at: d.at, effects: d.effects });
     } else {
-      err(e.id, `sim 은 character, creature, event, spell, item 에만 쓸 수 있음 (${e.kind})`);
+      err(e.id, `sim 은 location, character, creature, event, spell, item 에만 쓸 수 있음 (${e.kind})`);
     }
   }
 

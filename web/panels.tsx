@@ -5,7 +5,7 @@ import { PACE_LABELS } from '../sim/actions.ts';
 import { formatClock, formatTimeOfDay, gameDay, minuteOfDay } from '../sim/clock.ts';
 import { isPerson, needsOf, player, present, ptOf } from '../sim/state.ts';
 import { woundsOf } from '../sim/combat.ts';
-import { COLOR_LABELS, formatMana, manaAvailable, manaCapacity } from '../sim/mana.ts';
+import { formatMana, manaAvailable, manaCapacity, manaLabel } from '../sim/mana.ts';
 import { bondBlocked } from '../sim/abilities.ts';
 import { BOND_HOURS } from '../sim/actions.ts';
 import { CLAIM_HOURS, claimBlocked, itemsAt, itemsOf } from '../sim/items.ts';
@@ -133,10 +133,15 @@ export function RegionCard(props: {
   return (
     <section className="card">
       <h2>
-        {r.name} <small>{t.label}{t.sea ? '' : ` · ${r.color ? `${COLOR_LABELS[r.color]}색` : '무색'} 땅`}</small>
+        {r.name} <small>{t.label}{t.sea ? '' : ` · ${r.color ? `${manaLabel(r.color)}색` : '무색'} 땅`}</small>
       </h2>
       {parent && <p className="muted">{parent.name} 안의 구역</p>}
       <p>{r.summary}</p>
+      {(r.entersTapped || r.onBond.length > 0) && (
+        <p className="muted">
+          {[r.entersTapped && '유대를 맺은 날은 마나를 내지 않음', ...r.onBond.map((x) => `유대를 맺으면 생명 ${x.amount}`)].filter(Boolean).join(' · ')}
+        </p>
+      )}
       {areas.length > 0 && (
         <p className="muted">
           안의 구역:{' '}
@@ -253,7 +258,7 @@ export function PlayerCard({ world, state }: { world: World; state: State }) {
         <b>{Math.round(p.stats.coin)}</b>
       </div>
       <p className="muted">
-        마나: {formatMana(manaAvailable(state, world, p, state.minutes))} (하루 {formatMana(manaCapacity(state, world, p))})
+        마나: {formatMana(manaAvailable(state, world, p, state.minutes))} (하루 {formatMana(manaCapacity(state, world, p, state.minutes))})
       </p>
       <p className="muted">
         유대를 맺은 땅: {p.bonds?.length ? p.bonds.map((id) => region(world, id).name).join(', ') : '없음'}

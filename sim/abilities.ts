@@ -3,6 +3,7 @@ import { gameDay, untapTime } from './clock.ts';
 import { dealDamage, die, leavePlane } from './combat.ts';
 import { manaAvailable, payMana, planPayment } from './mana.ts';
 import { itemsOnLandfall } from './items.ts';
+import { gainLife } from './life.ts';
 import { DEPLETED_LABEL } from './rules.ts';
 import { castSpell, spellDef } from './spells.ts';
 import { addLog, npcDef, present, ptOf, random } from './state.ts';
@@ -51,6 +52,10 @@ export function bondLand(state: State, world: World, a: Actor, t: number) {
       t,
     });
   }
+  // The land's own: "enters tapped", "When this land enters, you gain N life".
+  if (r.entersTapped)
+    addLog(state, { kind: 'status', text: `${josa(r.name, '은', '는')} 탭된 채 들어왔다. 오늘은 마나를 내지 않는다.`, regions: [r.id], actors: [a.id], t });
+  for (const eff of r.onBond) if (eff.type === 'gain_life') gainLife(state, a, eff.amount, t, r.name);
   itemsOnLandfall(state, world, a, t);
 }
 

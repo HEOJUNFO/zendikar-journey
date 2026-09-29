@@ -163,7 +163,7 @@ function ActorDetail({ world, state, a, onRegion }: { world: World; state: State
         <dd>{a.abilities.length ? a.abilities.map((x) => ABILITY_LABELS[x]).join(', ') : '없음'}</dd>
         <dt>마나</dt>
         <dd>
-          {formatMana(manaAvailable(state, world, a, t))} <small className="muted">/ 하루 {formatMana(manaCapacity(state, world, a))}</small>
+          {formatMana(manaAvailable(state, world, a, t))} <small className="muted">/ 하루 {formatMana(manaCapacity(state, world, a, t))}</small>
         </dd>
         {a.loyalty !== undefined && (
           <>

@@ -7,7 +7,7 @@ import type { Llm } from './run.ts';
 import type { Action } from './actions.ts';
 import type { World } from './world.ts';
 import { die, knockedOut, woundsOf } from './combat.ts';
-import { manaAvailable, manaCapacity } from './mana.ts';
+import { manaAvailable, manaCapacity, parseManaCost, planPayment } from './mana.ts';
 import { MAX_TALKS_PER_DAY, usableAbilities } from './run.ts';
 import { eligibleGmEvents, travelBlocked } from './step.ts';
 import { gainLife } from './life.ts';
@@ -880,4 +880,31 @@ test('an NPC tames an item by a claim block, and lets go of it when they die', a
   assert.equal(state.items?.['itm-v']?.owner, undefined);
   await advance(state, world, 2);
   assert.equal(state.items?.['itm-v']?.owner, other);
+});
+
+const refuge: RawEntity = {
+  id: 'loc-refuge',
+  kind: 'location',
+  name: '피난처',
+  status: 'canon',
+  map: { in: 'loc-c', terrain: 'settlement', color: ['B', 'R'] },
+  sim: { enters_tapped: true, on_bond: [{ type: 'gain_life', amount: 1 }] },
+};
+
+test('a refuge: enters tapped (no mana the day it is bonded), gives life on bonding, and its mana is either color', async () => {
+  const world = fixture([refuge]);
+  const state = character(world, 'loc-refuge');
+  const p = state.actors[PLAYER_ID];
+  p.stats.energy = 50;
+  await act(state, world, { type: 'bond' });
+  assert.equal(p.stats.energy, 56); // +10 life, less 4 hours of bonding
+  assert.equal(p.lifeGained, 0);
+  assert.deepEqual(manaCapacity(state, world, p, state.minutes), {});
+  await act(state, world, { type: 'wait', hours: 24 });
+  assert.deepEqual(manaAvailable(state, world, p, state.minutes), { 'B/R': 1 });
+  const cost = (text: string) => parseManaCost(text)!;
+  assert.deepEqual(planPayment({ 'B/R': 1 }, cost('{R}')), { 'B/R': 1 });
+  assert.deepEqual(planPayment({ 'B/R': 1, R: 1 }, cost('{B}{R}')), { R: 1, 'B/R': 1 });
+  assert.equal(planPayment({ 'B/R': 1 }, cost('{B}{R}')), null);
+  assert.deepEqual(planPayment({ 'B/R': 1, G: 1 }, cost('{1}')), { G: 1 }); // two-color mana kept for last
 });
