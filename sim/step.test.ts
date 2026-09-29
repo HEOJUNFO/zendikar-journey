@@ -614,6 +614,33 @@ test('a persuaded NPC becomes the player\'s retainer: follows them and joins the
   assert.equal(x.master, undefined);
 });
 
+const mantle: RawEntity = {
+  id: 'spl-m',
+  kind: 'spell',
+  name: '망토',
+  status: 'canon',
+  sim: { cost: '{W}', learn_at: 'loc-a', target: 'any_here', effects: [{ type: 'aura', pt: [3, 3], double_life_on_hit: true }] },
+};
+
+test('an aura stays on its bearer, and when they hit someone their controller\'s life doubles', async () => {
+  const world = fixture([mantle, npc('chr-x', npcSim('loc-a', 'social', [0, 9]))]);
+  const state = character(world, 'loc-a');
+  const p = state.actors[PLAYER_ID];
+  p.spells = ['spl-m'];
+  p.bonds = ['loc-a'];
+  await act(state, world, { type: 'cast', spell: 'spl-m', to: PLAYER_ID, kick: false });
+  assert.deepEqual(ptOf(p), [4, 4]);
+  assert.equal(state.actors['chr-x'].foes, undefined); // a blessing, not an attack
+  p.stats.energy = 30;
+  await act(state, world, { type: 'attack', to: 'chr-x' });
+  assert.ok(texts(state).some((t) => t.includes('생명') && t.includes('얻었다')));
+  assert.equal(p.stats.energy, 52); // 30 doubled to 60, less the fight hour (-8)
+  assert.equal(p.lifeGained, 0);
+  // Still there the next day.
+  await act(state, world, { type: 'wait', hours: 24 });
+  assert.deepEqual(ptOf(p), [4, 4]);
+});
+
 test('NPCs socialising in the same region meet once a day', async () => {
   const world = fixture([npc('chr-x', npcSim('loc-a')), npc('chr-y', npcSim('loc-a'))]);
   const state = newState(world, { seed: 3, mode: 'observer' });

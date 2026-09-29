@@ -53,6 +53,9 @@
 | 생명 ("loses/gains N life") | 기력에 얹는다. 생명 1 = 기력 10 (`sim/life.ts`). 잃어도 죽지 않고, 기력이 0이면 쓰러진다. 피해가 아니라서 조심해도 못 피한다 |
 | "이번 턴에 생명을 얻었으면" | 그날 생명을 주는 효과를 받았으면. 잠과 식사로 차는 기력은 생명이 아니다 |
 | 함정의 대체 비용 조건 ("If …, you may pay {B} rather than …") | 함정 사건의 발동 조건. 조건이 맞으면 반드시 발동하고, 온전한 값을 치를 주인은 없다 |
+| 오라 ("Enchant creature") | 한 사람에게 거는, 그가 죽을 때까지 남는 주문 (`aura`) |
+| "플레이어에게 전투 피해를 줄 때" | 싸움에서 누군가에게 피해를 줄 때 |
+| "그것의 통제자" | 권속이면 그 주인, 아니면 자신 |
 | 주문 (순간마법, 집중마법) | 배우는 곳에서 익혀 두고, 마나를 치러 1시간 들여 건다. 대상 "상대"는 같은 곳에 있는 다른 이. 맞은 NPC는 그날 시전자를 적으로 삼는다 |
 | 킥커 ("tap an untapped X you control") | 시전자의 권속 중 X인 이 하나를 00:00까지 탭하고 더한 효과를 얻는다 |
 | 생물이 전장에 들어올 때 ("As ~ enters") | 그 인물이 전투에 돌입할 때 (전투 시스템이 생기면) |
@@ -163,12 +166,15 @@ sim:
   speed: sorcery              # sorcery | instant (아직 차이 없음)
   learn_at: loc-malakir       # 배우는 곳. 여기서 "배우기" 행동으로 익힌다
   learn_hours: 4
-  target: other_here          # 같은 곳에 있는 다른 이 하나
+  target: other_here          # other_here: 같은 곳의 다른 이 하나 / any_here: 자신 포함
   kicker: { tap: cre-vampire } # 선택. 시전자가 부리는 이 종류의 생물을 탭하면 킥커
   effects:
     - { type: lose_half_life }                 # 대상이 생명의 절반(올림)을 잃는다
     - { type: gain_life_lost, if_kicked: true } # 잃은 만큼 시전자가 얻는다 (킥커일 때만)
+    # - { type: aura, pt: [3, 3], double_life_on_hit: true }  # 오라: 죽을 때까지 남는다. 입은 이가 싸움에서 피해를 주면 그를 부리는 이의 생명 두 배
 ```
+
+해로운 효과(`lose_half_life`)가 있는 주문을 맞은 NPC는 시전자를 적으로 삼는다. 오라처럼 해롭지 않은 주문은 그렇지 않다.
 
 ## 요소 id 규칙
 

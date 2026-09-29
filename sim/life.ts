@@ -38,6 +38,13 @@ export function lifeOf(a: Actor) {
   return needsOf(a).includes('energy') ? a.stats.energy / LIFE_ENERGY : null;
 }
 
+// "Double their life total": gain as much life as they have (energy is capped at 100).
+export function doubleLife(state: State, a: Actor, t: number, cause: string) {
+  const life = lifeOf(a);
+  if (life === null || life <= 0) return;
+  gainLife(state, a, Math.round(life * 10) / 10, t, cause);
+}
+
 export function gainedLifeToday(a: Actor, t: number) {
   return a.lifeGained === gameDay(t);
 }

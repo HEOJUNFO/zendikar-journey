@@ -5,12 +5,13 @@ name: 권속
 name_en: Retainers
 summary: 누군가를 주인으로 섬기며 그의 부림을 받는 이들. 주인을 따라다니고, 주인의 싸움에 함께 나서고, 주인이 부르면 힘을 보탠다
 status: canon
-sources: [ZEN-99, ZEN-81]
+sources: [ZEN-99, ZEN-81, ZEN-6]
 tags: [규칙, 권속]
 links:
   - { to: chr-kalitas, rel: 권속을 거느린 이 }
   - { to: cre-vampire, rel: 칼리타스의 권속 }
   - { to: spl-blood-tribute, rel: 권속을 부리는 주문 }
+  - { to: spl-celestial-mantle, rel: 권속이 입으면 주인이 얻음 }
 ---
 
 ## 설정

@@ -42,6 +42,8 @@ export type Actor = {
   pt?: Pt;
   // "+N/+N and trample until end of turn": gone at `until` (00:00).
   boost?: { until: number; pt: Pt; trample: boolean };
+  // Auras on them (spells that stay until they die).
+  auras?: { spell: string; name: string; by: string; pt: Pt; doubleLifeOnHit: boolean }[];
   // Combat damage taken this turn; it wears off when the turn ends (00:00).
   wounds?: { day: number; amount: number };
   // Who they'll attack on sight this turn (they were attacked, or turned hostile).
@@ -305,10 +307,11 @@ export function present(state: State, regionId: string) {
   return alive(state).filter((a) => a.region === regionId && !a.travel);
 }
 
-// Power / toughness now, with this turn's boost.
+// Power / toughness now, with this turn's boost and their auras.
 export function ptOf(a: Actor): Pt {
-  const [p, t] = a.pt ?? PLAYER_PT;
-  return a.boost ? [p + a.boost.pt[0], t + a.boost.pt[1]] : [p, t];
+  let [p, t] = a.pt ?? PLAYER_PT;
+  for (const x of [...(a.boost ? [a.boost] : []), ...(a.auras ?? [])]) [p, t] = [p + x.pt[0], t + x.pt[1]];
+  return [p, t];
 }
 
 export function addLog(

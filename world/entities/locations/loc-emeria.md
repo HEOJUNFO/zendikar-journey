@@ -5,10 +5,11 @@ name: 에메리아
 name_en: Emeria
 summary: 천사들이 머무는, 하늘 높이 떠 있는 고대 석조 폐허
 status: canon
-sources: [ZEN-13]
+sources: [ZEN-13, ZEN-6]
 tags: [하늘, 폐허, 천사]
 links:
   - { to: chr-iona, rel: 수호자 }
+  - { to: spl-celestial-mantle, rel: 가르치는 주문 }
 map: { x: 48, y: 13, terrain: sky }
 ---
 
@@ -20,7 +21,7 @@ map: { x: 48, y: 13, terrain: sky }
 
 - 젠디카르 지도에 처음 생긴 지역이다. 지도 북쪽에 떠 있는 공중섬이다 (지형 `sky`).
 - 비행할 수 있는 이만 오가고 머물 수 있다. 지금은 이오나뿐이다.
-- 할 수 있는 일: 기도, 폐허 탐색, 비문 읽기. 이오나를 만날 수 있다.
+- 할 수 있는 일: 기도, 폐허 탐색, 비문 읽기. 이오나를 만날 수 있다. 백색 주문 천상의 망토(`spl-celestial-mantle`)를 배울 수 있다.
 - 위험 요소: 아직 없음 (이후 카드로 추가).
 
 ## 미정/질문

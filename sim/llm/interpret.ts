@@ -58,7 +58,7 @@ Actions:
 - {"type":"bond"}  (bond with the land here, taking it as their own; 4 hours, one land a day)
 ${taught.length ? taught.map((s) => `- {"type":"learn","spell":"${s.id}"}  (learn ${s.name} here: ${s.summary}; ${s.learnHours} hours)`).join('\n') + '\n' : ''}${
           known.length
-            ? known.map((s) => `- {"type":"cast","spell":"${s.id}","to":"<person id>","kick":false}  (cast ${s.name} ${s.costText} on someone here: ${s.summary})`).join('\n') + '\n'
+            ? known.map((s) => `- {"type":"cast","spell":"${s.id}","to":"<person id${s.target === 'any_here' ? ` or ${p.id} for themselves` : ''}>","kick":false}  (cast ${s.name} ${s.costText} on someone here: ${s.summary})`).join('\n') + '\n'
             : ''
         }
 Player typed: ${text}

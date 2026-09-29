@@ -224,8 +224,8 @@ export const SpellSimSchema = z.strictObject({
   // Where it is learned, and how long that takes.
   learn_at: z.string(),
   learn_hours: z.number().int().min(1).default(4),
-  // Who it can target: someone else standing in the same place.
-  target: z.literal('other_here').default('other_here'),
+  // Who it can target: someone else standing in the same place, or anyone there (self too).
+  target: z.enum(['other_here', 'any_here']).default('other_here'),
   // Kicker: tap an untapped creature of this kind that the caster controls, for more effect.
   kicker: z.strictObject({ tap: z.string() }).optional(),
   effects: z
@@ -235,6 +235,14 @@ export const SpellSimSchema = z.strictObject({
         z.strictObject({ type: z.literal('lose_half_life') }),
         // The caster gains the life lost this way (only if kicked, with if_kicked).
         z.strictObject({ type: z.literal('gain_life_lost'), if_kicked: z.boolean().default(false) }),
+        // An aura: stays on the target until they die. +P/+T; with double_life_on_hit, whenever
+        // they deal combat damage to someone, whoever controls them (their master, or they
+        // themselves) doubles their life.
+        z.strictObject({
+          type: z.literal('aura'),
+          pt: z.tuple([z.number().int(), z.number().int()]).default([0, 0]),
+          double_life_on_hit: z.boolean().default(false),
+        }),
       ]),
     )
     .min(1),
@@ -296,6 +304,7 @@ export type SpellDef = {
   cost: ManaCost;
   costText: string;
   speed: 'sorcery' | 'instant';
+  target: 'other_here' | 'any_here';
   learnAt: string;
   learnHours: number;
   kicker?: { tap: string };
@@ -472,6 +481,7 @@ export function buildWorld(entities: RawEntity[]): { world: World; errors: strin
         cost: parseManaCost(d.cost)!,
         costText: d.cost,
         speed: d.speed,
+        target: d.target,
         learnAt: d.learn_at,
         learnHours: d.learn_hours,
         kicker: d.kicker,
@@ -508,7 +518,7 @@ export function buildWorld(entities: RawEntity[]): { world: World; errors: strin
   const ids = new Set(entities.map((e) => e.id));
   for (const s of world.spells) {
     const r = regionOk(s.id, s.learnAt, 'sim.learn_at');
-    if (r && !canStay(r, [])) err(s.id, `sim.learn_at ${s.learnAt} 에는 사람이 머물 수 없음`);
+    if (r && TERRAINS[r.terrain].sea) err(s.id, `sim.learn_at ${s.learnAt} 은 바다라 아무도 머물 수 없음`);
     if (s.kicker && !ids.has(s.kicker.tap)) err(s.id, `sim.kicker.tap ${s.kicker.tap} 가 없음`);
   }
   for (const b of world.beings) {

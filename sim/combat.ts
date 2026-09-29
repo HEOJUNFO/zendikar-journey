@@ -6,6 +6,7 @@
 import { formatClock, gameDay, STEP_MINUTES } from './clock.ts';
 import { remember } from './relations.ts';
 import { masterOf, releaseRetainer, retainersOf } from './retainers.ts';
+import { doubleLife } from './life.ts';
 import { HUNT_HUNGER, KILL_FEED, KO_ACTIVITY, KO_HOURS } from './rules.ts';
 import { addLog, needsOf, npcDef, present, ptOf, random } from './state.ts';
 import type { Actor, State } from './state.ts';
@@ -124,6 +125,15 @@ export function clash(state: State, attacker: Actor, defender: Actor, t: number)
   // Simultaneous: both blows land before either death counts.
   dealDamage(state, defender, ap, t, `${josa(a, '과', '와')}의 싸움`, !lethal(attacker, defender));
   dealDamage(state, attacker, dp, t, `${josa(d, '과', '와')}의 싸움`, !lethal(attacker, defender));
+  // An aura that doubles its controller's life when its bearer deals combat damage.
+  for (const [x, dealt] of [[attacker, ap], [defender, dp]] as const) {
+    if (dealt <= 0) continue;
+    for (const aura of x.auras ?? []) {
+      if (!aura.doubleLifeOnHit) continue;
+      const controller = masterOf(state, x) ?? x;
+      if (!controller.dead) doubleLife(state, controller, t, `${shortName(x.name)}의 ${aura.name}`);
+    }
+  }
   // Someone went down: the fight is over.
   if (down(attacker) || down(defender)) {
     attacker.foes = attacker.foes && { ...attacker.foes, ids: attacker.foes.ids.filter((x) => x !== defender.id) };

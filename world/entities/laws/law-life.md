@@ -5,11 +5,12 @@ name: 생명
 name_en: Life
 summary: 생명은 몸의 기운(기력)이다. 생명을 잃으면 기운이 빠지고, 생명을 얻으면 기운이 차오른다
 status: canon
-sources: [ZEN-105, ZEN-81]
+sources: [ZEN-105, ZEN-81, ZEN-6]
 tags: [규칙, 생명]
 links:
   - { to: evt-needlebite-trap, rel: 생명을 빼앗는 함정 }
   - { to: spl-blood-tribute, rel: 생명을 빼앗고 얻는 주문 }
+  - { to: spl-celestial-mantle, rel: 생명을 두 배로 }
 ---
 
 ## 설정
@@ -27,3 +28,4 @@ links:
 
 - 생명을 주는 효과(치유, 흡혈)가 카드로 나오면 여기에 이어 붙인다. 첫 효과는 피의 공물의 킥커다 (ZEN-81).
 - "생명의 절반"은 지금 생명(기력 ÷ 10)의 절반을 올림한 만큼이다.
+- "생명이 두 배가 된다"는 지금 생명만큼 얻는 것이다. 기력은 100까지라 두 배는 100에서 멈춘다 (ZEN-6).

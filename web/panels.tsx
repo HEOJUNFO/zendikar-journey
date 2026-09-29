@@ -8,7 +8,7 @@ import { woundsOf } from '../sim/combat.ts';
 import { COLOR_LABELS, formatMana, manaAvailable, manaCapacity } from '../sim/mana.ts';
 import { bondBlocked } from '../sim/abilities.ts';
 import { BOND_HOURS } from '../sim/actions.ts';
-import { castBlocked, learnBlocked, spellsTaughtAt } from '../sim/spells.ts';
+import { castBlocked, harmful, learnBlocked, spellsTaughtAt } from '../sim/spells.ts';
 import type { Actor, LogEntry, State } from '../sim/state.ts';
 import { travelBlocked } from '../sim/step.ts';
 import { shortName } from '../sim/text.ts';
@@ -408,7 +408,7 @@ export function CharacterControls(props: {
                 <button
                   key={s.id}
                   type="button"
-                  className="danger"
+                  className={harmful(s) ? 'danger' : ''}
                   disabled={busy || !!stuck || !!why}
                   title={why ?? `${shortName(target.name)}에게 ${s.name} ${s.costText}${kick ? ' (킥커 포함)' : ''}`}
                   onClick={() => onAct({ type: 'cast', spell: s.id, to: target.id, kick })}
@@ -418,6 +418,20 @@ export function CharacterControls(props: {
               );
             })}
         </form>
+      )}
+      {known.some((s) => s.target === 'any_here') && (
+        <div className="row">
+          {known
+            .filter((s) => s.target === 'any_here')
+            .map((s) => {
+              const why = castBlocked(state, world, p, s.id, p.id, false, state.minutes);
+              return (
+                <button key={s.id} disabled={busy || !!stuck || !!why} title={why ?? `나에게 ${s.name} ${s.costText}`} onClick={() => onAct({ type: 'cast', spell: s.id, to: p.id, kick: false })}>
+                  ✨ {s.name} (나에게)
+                </button>
+              );
+            })}
+        </div>
       )}
       {stuck && <p className="muted">{p.travel ? '이동 중이다.' : '움직일 수 없다. 기다리는 수밖에 없다.'}</p>}
     </div>
