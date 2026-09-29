@@ -4,6 +4,7 @@ import { formatClock } from './clock.ts';
 import { loadWorld } from './load.ts';
 import { act, advance } from './run.ts';
 import type { Llm } from './run.ts';
+import { woundsOf } from './combat.ts';
 import { newState, PLAYER_ID } from './state.ts';
 import type { State } from './state.ts';
 import { buildWorld } from './world.ts';
@@ -18,7 +19,7 @@ const loc = (id: string, x: number, y: number, terrain: string): RawEntity => ({
 });
 const npc = (id: string, sim: object): RawEntity => ({ id, kind: 'character', name: `${id}, 누군가`, status: 'canon', sim });
 const allDay = (region: string, kind = 'social') => [['00:00', '24:00', region, kind, '이야기', '💬']];
-const npcSim = (region: string, kind = 'social') => ({ role: 'r', home: region, persona: 'p', goal: 'g', routine: allDay(region, kind) });
+const npcSim = (region: string, kind = 'social', pt = [1, 1]) => ({ pt, role: 'r', home: region, persona: 'p', goal: 'g', routine: allDay(region, kind) });
 
 function fixture(extra: RawEntity[] = []) {
   const { world, errors } = buildWorld([
@@ -45,7 +46,7 @@ const trap: RawEntity = {
     omen: '땅이 울린다.',
     text: '함정이 터졌다.',
     effects: [
-      { type: 'stat', energy: -40 },
+      { type: 'damage', amount: 4 },
       { type: 'destroy_lands', count: 2 },
     ],
   },
@@ -128,18 +129,29 @@ test('the trap answers only when its land is the second landfall of the day', as
 test('the trap hurts those there and lays waste to the lands the intruder came through', async () => {
   const world = fixture([trap]);
   const state = await twoLandfalls(world);
+  state.actors[PLAYER_ID].pt = [1, 5]; // tough enough to live through 4 damage
   await act(state, world, { type: 'wait', hours: 1 }); // omen
-  const before = state.actors[PLAYER_ID].stats.energy;
   await act(state, world, { type: 'wait', hours: 1 }); // the trap
   assert.ok(texts(state).includes('함정이 터졌다.'));
-  assert.ok(state.actors[PLAYER_ID].stats.energy <= before - 40 + 1);
+  assert.equal(state.actors[PLAYER_ID].wounds?.amount, 4);
   for (const id of ['loc-a', 'loc-b']) assert.ok(state.regions[id].destroyed);
   assert.ok(!state.regions['loc-c'].destroyed);
   assert.match((await act(state, world, { type: 'explore', hours: 1, pace: 'normal' })).error!, /부서/);
-  // Destroyed for good: still so days later.
+  // Wounds heal when the turn ends; destroyed land stays destroyed.
   await act(state, world, { type: 'wait', hours: 24 });
   await act(state, world, { type: 'wait', hours: 24 });
+  assert.equal(woundsOf(state.actors[PLAYER_ID], state.minutes), 0);
   assert.ok(state.regions['loc-b'].destroyed);
+});
+
+test('4 damage kills an ordinary 1/1 person and ends their life', async () => {
+  const world = fixture([trap]);
+  const state = await twoLandfalls(world);
+  await act(state, world, { type: 'wait', hours: 1 });
+  await act(state, world, { type: 'wait', hours: 1 });
+  assert.ok(state.actors[PLAYER_ID].dead);
+  assert.ok(state.over);
+  assert.match((await act(state, world, { type: 'wait', hours: 1 })).error!, /끝났다/);
 });
 
 test('the careful dodge an omened trap', async () => {
@@ -169,6 +181,44 @@ test('the tide taps people first, then coastal lands, and they skip the next unt
   // max 2: the player and one coastal land (loc-a), not the second (loc-c).
   assert.ok(texts(state).some((t) => t.startsWith('loc-a: 잠긴 해안')));
   assert.ok(!texts(state).some((t) => t.startsWith('loc-c: 잠긴 해안')));
+});
+
+test('combat: both strike at once; a 1/1 attacking a 2/2 dies', async () => {
+  const world = fixture([npc('chr-x', npcSim('loc-a', 'work', [2, 2]))]);
+  const state = character(world, 'loc-a');
+  await act(state, world, { type: 'attack', to: 'chr-x' });
+  assert.ok(state.actors[PLAYER_ID].dead);
+  assert.equal(state.actors['chr-x'].wounds?.amount, 1);
+  assert.ok(!state.actors['chr-x'].dead);
+});
+
+test('combat: the attacked NPC fights back each hour until someone falls', async () => {
+  const world = fixture([npc('chr-x', npcSim('loc-a', 'work', [1, 3]))]);
+  const state = character(world, 'loc-a');
+  state.actors[PLAYER_ID].pt = [1, 5];
+  await act(state, world, { type: 'attack', to: 'chr-x' }); // x 1, me 1 (one exchange that hour)
+  await act(state, world, { type: 'wait', hours: 1 }); // x attacks: x 2, me 2
+  await act(state, world, { type: 'attack', to: 'chr-x' }); // x 3: dead, me 3
+  assert.ok(state.actors['chr-x'].dead);
+  assert.equal(state.actors[PLAYER_ID].wounds?.amount, 3);
+  assert.ok(!state.actors[PLAYER_ID].dead);
+});
+
+test('combat: a flyer may take to the air; an NPC may turn hostile while talking', async () => {
+  const flyer = { ...npcSim('loc-a', 'work', [7, 7]), abilities: ['fly'] };
+  const world = fixture([npc('chr-x', flyer)]);
+  const state = character(world, 'loc-a');
+  await act(state, world, { type: 'attack', to: 'chr-x' }, { evade: async () => true });
+  assert.ok(texts(state).some((t) => t.includes('날아올라 공격을 피했다')));
+  assert.ok(!state.actors[PLAYER_ID].dead);
+
+  const world2 = fixture([npc('chr-y', npcSim('loc-a', 'work', [1, 1]))]);
+  const s2 = character(world2, 'loc-a');
+  s2.actors[PLAYER_ID].pt = [0, 5];
+  await act(s2, world2, { type: 'talk', to: 'chr-y', say: '비켜' }, { reply: async () => ({ say: '감히!', attack: true }) });
+  assert.ok(texts(s2).some((t) => t.includes('적의를 드러냈다')));
+  assert.ok(texts(s2).some((t) => t.includes('공격했다')));
+  assert.equal(s2.actors[PLAYER_ID].wounds?.amount, 1);
 });
 
 test('NPCs socialising in the same region meet once a day', async () => {

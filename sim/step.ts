@@ -8,12 +8,14 @@ import {
   applyEffect,
   COLLAPSE_HOURS,
   EXPLORE_EFFECT,
+  FIGHT_EFFECT,
   KIND_EFFECTS,
   STARVING,
   STARVING_ENERGY,
   TRAVEL_EFFECT,
 } from './rules.ts';
-import { addLog, landUnusable, needsOf, present, random } from './state.ts';
+import { addLog, alive, landUnusable, needsOf, present, random } from './state.ts';
+import { dealDamage, hostileNpcs } from './combat.ts';
 import type { Actor, GmPlan, State, Task } from './state.ts';
 import { josa, shortName, toward } from './text.ts';
 import { currentBlock } from './types.ts';
@@ -26,7 +28,8 @@ export function step(state: State, world: World) {
   gmLayer(state, world, t);
   // Factions: none yet (world/entities/factions is empty).
   regionLayer(state, world, t);
-  for (const a of Object.values(state.actors)) {
+  hostileNpcs(state, t);
+  for (const a of alive(state)) {
     actorHour(state, world, a, t);
     if (a.kind === 'player' && a.task?.until !== undefined && a.task.until <= t + STEP_MINUTES && !a.travel)
       a.task = undefined;
@@ -105,7 +108,7 @@ function trigger(state: State, world: World, ev: EventDef, t: number, cause: Cau
 
 function fire(state: State, world: World, ev: EventDef, t: number, omened: boolean, cause: Partial<Cause>) {
   const regions = affectedRegions(world, ev).map((r) => r.id);
-  const targets = Object.values(state.actors).filter((a) => !a.travel && regions.includes(a.region));
+  const targets = alive(state).filter((a) => !a.travel && regions.includes(a.region));
   addLog(state, {
     kind: 'event',
     text: ev.text,
@@ -113,20 +116,24 @@ function fire(state: State, world: World, ev: EventDef, t: number, omened: boole
     scope: ev.scope,
     actors: targets.map((a) => a.id),
   });
+  const dodged = (a: (typeof targets)[number]) => {
+    if (!omened || a.pace !== 'careful') return false;
+    addLog(state, { kind: 'effect', text: `${josa(shortName(a.name), '은', '는')} 전조를 알아채고 몸을 피했다.`, regions: [a.region], actors: [a.id] });
+    return true;
+  };
   for (const eff of ev.effects) {
-    if (eff.type === 'stat') {
+    if (eff.type === 'damage') {
+      for (const a of targets) if (!dodged(a)) dealDamage(state, a, eff.amount, t, ev.name);
+    } else if (eff.type === 'stat') {
       for (const a of targets) {
         const name = shortName(a.name);
-        if (omened && a.pace === 'careful') {
-          addLog(state, { kind: 'effect', text: `${josa(name, '은', '는')} 전조를 알아채고 몸을 피했다.`, regions: [a.region], actors: [a.id] });
-          continue;
-        }
+        if (dodged(a)) continue;
         applyEffect(a.stats, eff, 60, needsOf(a));
         addLog(state, { kind: 'effect', text: `${josa(name, '이', '가')} 휘말렸다 (${describeStat(eff)}).`, regions: [a.region], actors: [a.id] });
       }
     } else if (eff.type === 'tap') {
       const until = untapTime(t, eff.skip_untap);
-      const people = targets.filter((a) => a.boundUntil === undefined);
+      const people = targets.filter((a) => !a.dead && a.boundUntil === undefined);
       for (let i = people.length - 1; i > 0; i--) {
         const j = Math.floor(random(state) * (i + 1));
         [people[i], people[j]] = [people[j], people[i]];
@@ -246,7 +253,11 @@ function actorHour(state: State, world: World, a: Actor, t: number) {
     return;
   }
   const needs = needsOf(a);
-  applyEffect(a.stats, task.kind === 'explore' ? EXPLORE_EFFECT : KIND_EFFECTS[task.kind === 'travel' ? 'leisure' : task.kind], 60, needs);
+  const effect =
+    task.kind === 'explore' ? EXPLORE_EFFECT
+    : task.kind === 'fight' ? FIGHT_EFFECT
+    : KIND_EFFECTS[task.kind === 'travel' ? 'leisure' : task.kind];
+  applyEffect(a.stats, effect, 60, needs);
   if (needs.includes('hunger') && a.stats.hunger >= STARVING) applyEffect(a.stats, { energy: STARVING_ENERGY }, 60, needs);
 }
 
@@ -296,7 +307,7 @@ function travelHour(state: State, world: World, a: Actor, t: number) {
 
 // NPCs who are both eating or socialising in the same region meet once a day.
 function meetings(state: State, world: World) {
-  const open = Object.values(state.actors).filter(
+  const open = alive(state).filter(
     (a) => a.kind === 'npc' && !a.travel && a.boundUntil === undefined && (a.task?.kind === 'social' || a.task?.kind === 'eat'),
   );
   for (let i = 0; i < open.length; i++) {

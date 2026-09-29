@@ -11,6 +11,9 @@ links:
   - { to: loc-deepwater-realm, rel: 사는 곳 }
   - { to: evt-lorthos-emerges, rel: 출현 }
   - { to: law-mana-colors, rel: 청색의 존재 }
+sim:
+  gm: true              # 일과 없이 GM 사건으로만 움직인다
+  pt: [8, 8]
 ---
 
 ## 설정
@@ -21,7 +24,8 @@ links:
 
 ## 게임에서의 역할
 
-- 일과를 사는 NPC가 아니다 (`sim` 없음). 바다에 머무는 존재라 GM이 사건(`evt-lorthos-emerges`)으로 움직인다.
+- 일과를 사는 NPC가 아니다 (`sim: { gm: true }`). 바다에 머무는 존재라 GM이 사건(`evt-lorthos-emerges`)으로 움직인다.
+- 8/8. 전투에서 쓰는 값이다. 그의 출현(공격)은 피해를 주지 않고 탭만 한다. 누군가 그와 싸우게 되면 이 값으로 맞선다.
 - 바다를 무대로 한 위협이다. 해안에서 지내는 것은 언제나 약간의 위험을 안는다.
 - 출현: `evt-lorthos-emerges`.
 - 대화 상대가 될 수 있는지(말을 하는지, 뜻을 전하는지)는 아직 정하지 않았다.

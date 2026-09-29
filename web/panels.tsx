@@ -3,7 +3,8 @@ import type { ReactNode } from 'react';
 import type { Action } from '../sim/actions.ts';
 import { PACE_LABELS } from '../sim/actions.ts';
 import { formatClock, formatTimeOfDay, gameDay, minuteOfDay } from '../sim/clock.ts';
-import { needsOf, player, present } from '../sim/state.ts';
+import { needsOf, player, present, ptOf } from '../sim/state.ts';
+import { woundsOf } from '../sim/combat.ts';
 import type { Actor, LogEntry, State } from '../sim/state.ts';
 import { travelBlocked } from '../sim/step.ts';
 import { shortName } from '../sim/text.ts';
@@ -115,7 +116,14 @@ function Bar({ label, value, max = 100, bad = false }: { label: string; value: n
   );
 }
 
+function fighting(a: Actor, t: number) {
+  const [p, tough] = ptOf(a);
+  const w = woundsOf(a, t);
+  return `${p}/${tough}${w ? ` · 피해 ${w}` : ''}`;
+}
+
 function status(world: World, a: Actor) {
+  if (a.dead) return `죽음 (${a.dead.cause})`;
   if (a.boundUntil !== undefined) return `묶임 (${formatClock(a.boundUntil)}까지)`;
   const task = a.forced ?? a.task;
   const where = a.travel ? `${region(world, a.region).name} → ${region(world, a.travel.to).name}` : region(world, a.region).name;
@@ -125,13 +133,14 @@ function status(world: World, a: Actor) {
 export function PeopleList({ world, state }: { world: World; state: State }) {
   const p = player(state);
   const people = visibleActors(state).filter((a) => a.kind === 'npc');
+  const dead = p ? [] : Object.values(state.actors).filter((a) => a.kind === 'npc' && a.dead);
   return (
     <section className="card">
       <h2>{p ? '곁에 있는 이' : '인물'}</h2>
       {people.length === 0 && <p className="muted">{p ? '아무도 없다.' : '아직 인물이 없다.'}</p>}
       {people.map((a) => (
         <div key={a.id} className="person">
-          <b>{shortName(a.name)}</b>
+          <b>{shortName(a.name)}</b> <small className="muted">{fighting(a, state.minutes)}</small>
           <p className="muted">{status(world, a)}</p>
           {!p && (
             <>
@@ -139,6 +148,12 @@ export function PeopleList({ world, state }: { world: World; state: State }) {
               {needsOf(a).includes('hunger') && <Bar label="배고픔" value={a.stats.hunger} bad />}
             </>
           )}
+        </div>
+      ))}
+      {dead.map((a) => (
+        <div key={a.id} className="person">
+          <b>✝ {shortName(a.name)}</b>
+          <p className="muted">{status(world, a)}</p>
         </div>
       ))}
     </section>
@@ -150,7 +165,10 @@ export function PlayerCard({ world, state }: { world: World; state: State }) {
   if (!p) return null;
   return (
     <section className="card">
-      <h2>{p.name}</h2>
+      <h2>
+        {p.dead ? '✝ ' : ''}
+        {p.name} <small>{fighting(p, state.minutes)}</small>
+      </h2>
       {p.background && <p className="muted">{p.background}</p>}
       <p>{status(world, p)}</p>
       <Bar label="기력" value={p.stats.energy} />
@@ -200,6 +218,15 @@ export function CharacterControls(props: {
   const people = present(state, p.region).filter((a) => a.kind === 'npc' && a.boundUntil === undefined);
   const stuck = p.travel || p.forced || p.boundUntil !== undefined;
   const target = people.find((a) => a.id === talkTo) ?? people[0];
+  if (state.over) {
+    return (
+      <div className="controls controls-player">
+        <p className="over">
+          {p.name}의 인생은 {formatClock(state.over.at)}에 끝났다 ({state.over.cause}). 새 게임으로 다시 시작할 수 있다.
+        </p>
+      </div>
+    );
+  }
 
   return (
     <div className="controls controls-player">
@@ -270,6 +297,15 @@ export function CharacterControls(props: {
           </select>
           <input value={line} onChange={(e) => setLine(e.target.value)} disabled={busy || !!stuck} placeholder="할 말" aria-label="할 말" />
           <button disabled={busy || !!stuck || !line.trim()}>말하기</button>
+          <button
+            type="button"
+            className="danger"
+            disabled={busy || !!stuck || !target}
+            title={target ? `${shortName(target.name)} ${ptOf(target).join('/')} — 죽을 수 있다` : undefined}
+            onClick={() => target && onAct({ type: 'attack', to: target.id })}
+          >
+            공격
+          </button>
         </form>
       )}
       {stuck && <p className="muted">{p.travel ? '이동 중이다.' : '움직일 수 없다. 기다리는 수밖에 없다.'}</p>}

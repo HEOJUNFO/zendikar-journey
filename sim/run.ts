@@ -7,6 +7,7 @@ import type { Action } from './actions.ts';
 import { addLog, player } from './state.ts';
 import type { Actor, GmPlan, LogEntry, State } from './state.ts';
 import { eligibleGmEvents, step } from './step.ts';
+import { addFoe, clash } from './combat.ts';
 import { josa, shortName } from './text.ts';
 import type { ScheduleBlock } from './types.ts';
 import { canStay } from './world.ts';
@@ -17,13 +18,18 @@ export type GmDayInput = { day: number; hour: number; world: World; state: State
 export type NarrateInput = { world: World; state: State; entries: LogEntry[] };
 export type InterpretInput = { world: World; state: State; text: string };
 export type ReplyInput = { world: World; state: State; npc: NpcDef; say: string };
+// What the NPC says, and whether they now attack the player.
+export type Reply = { say: string; attack: boolean };
+export type EvadeInput = { world: World; state: State; npc: NpcDef; attacker: Actor };
 
 export type Llm = {
   planDay?: (input: PlanDayInput) => Promise<ScheduleBlock[] | null>;
   gmDay?: (input: GmDayInput) => Promise<GmPlan | null>;
   narrate?: (input: NarrateInput) => Promise<string | null>;
   interpret?: (input: InterpretInput) => Promise<Action | null>;
-  reply?: (input: ReplyInput) => Promise<string | null>;
+  reply?: (input: ReplyInput) => Promise<Reply | null>;
+  // A flyer attacked by someone who can't fly: fly off (true) or stand and fight.
+  evade?: (input: EvadeInput) => Promise<boolean>;
 };
 
 // Longest a single player action may run before control comes back.
@@ -55,17 +61,18 @@ export async function act(state: State, world: World, input: Action | string, ll
   const error = startAction(state, world, action);
   if (error) return { error, entries: [] };
   if (action.type === 'talk') await talk(state, world, p, action.to, action.say, llm);
+  if (action.type === 'attack') await attack(state, world, p, action.to, llm);
 
-  for (let n = 0; busy(p) && n < MAX_ACT_HOURS; n++) {
+  for (let n = 0; busy(p) && !state.over && n < MAX_ACT_HOURS; n++) {
     await prepareDay(state, world, llm);
     const before = state.nextLogId;
     step(state, world);
     // Something is happening right here: stop and let the player decide. News from afar
     // (world-scope events elsewhere) doesn't interrupt.
     const alarm = state.log.some(
-      (e) => e.id >= before && (e.kind === 'omen' || e.kind === 'event') && e.regions.includes(p.region),
+      (e) => e.id >= before && (e.kind === 'omen' || e.kind === 'event' || e.kind === 'combat') && e.regions.includes(p.region),
     );
-    if (alarm && p.task && !p.travel && !p.forced && p.boundUntil === undefined) {
+    if (alarm && p.task && p.task.kind !== 'fight' && !p.travel && !p.forced && p.boundUntil === undefined) {
       p.task = undefined;
       addLog(state, { kind: 'system', text: '하던 일을 멈췄다.', regions: [p.region], actors: [p.id] });
     }
@@ -82,7 +89,7 @@ async function talk(state: State, world: World, p: Actor, npcId: string, say: st
   const npc = world.npcs.find((n) => n.id === npcId)!;
   const name = shortName(npc.name);
   addLog(state, { kind: 'speech', text: `${shortName(p.name)}: “${say}”`, regions: [p.region], actors: [p.id, npc.id] });
-  let reply: string | null = null;
+  let reply: Reply | null = null;
   if (llm.reply) {
     try {
       reply = await llm.reply({ world, state, npc, say });
@@ -92,10 +99,39 @@ async function talk(state: State, world: World, p: Actor, npcId: string, say: st
   }
   addLog(state, {
     kind: 'speech',
-    text: reply ? `${name}: “${reply}”` : `${josa(name, '은', '는')} 말없이 당신을 바라본다.`,
+    text: reply ? `${name}: “${reply.say}”` : `${josa(name, '은', '는')} 말없이 당신을 바라본다.`,
     regions: [p.region],
     actors: [npc.id, p.id],
   });
+  if (reply?.attack) {
+    addFoe(state.actors[npc.id], p.id, state.minutes);
+    addLog(state, { kind: 'combat', text: `${josa(name, '이', '가')} 적의를 드러냈다.`, regions: [p.region], actors: [npc.id, p.id] });
+  }
+}
+
+// The player's blow. A flyer may take to the air instead (only if the attacker can't fly).
+async function attack(state: State, world: World, p: Actor, npcId: string, llm: Llm) {
+  const target = state.actors[npcId];
+  const npc = world.npcs.find((n) => n.id === npcId)!;
+  const flies = (a: Actor) => a.abilities.includes('fly');
+  if (flies(target) && !flies(p) && target.boundUntil === undefined && llm.evade) {
+    let evades = false;
+    try {
+      evades = await llm.evade({ world, state, npc, attacker: p });
+    } catch (e) {
+      console.warn(`evade for ${npcId} failed:`, e);
+    }
+    if (evades) {
+      addLog(state, {
+        kind: 'combat',
+        text: `${josa(shortName(target.name), '은', '는')} 날아올라 공격을 피했다.`,
+        regions: [p.region],
+        actors: [target.id, p.id],
+      });
+      return;
+    }
+  }
+  clash(state, p, target, state.minutes);
 }
 
 // Plans for the day, made once when the day starts: each NPC's schedule and the GM's
@@ -108,7 +144,7 @@ async function prepareDay(state: State, world: World, llm: Llm) {
   const jobs: Promise<void>[] = [];
   for (const npc of world.npcs) {
     const a = state.actors[npc.id];
-    if (!a) continue;
+    if (!a || a.dead) continue;
     a.schedule = { day, source: 'routine', blocks: npc.routine };
     if (!llm.planDay) continue;
     const planDay = llm.planDay;

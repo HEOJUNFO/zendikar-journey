@@ -5,7 +5,7 @@ import { player } from '../sim/state.ts';
 import type { Actor, State } from '../sim/state.ts';
 
 export function visibleActors(state: State): Actor[] {
-  const all = Object.values(state.actors);
+  const all = Object.values(state.actors).filter((a) => !a.dead || a.kind === 'player');
   const p = player(state);
   if (!p) return all;
   return all.filter((a) => a.id === p.id || (!p.travel && !a.travel && a.region === p.region));

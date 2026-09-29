@@ -17,6 +17,7 @@ export const ActionSchema = z.discriminatedUnion('type', [
   z.object({ type: z.literal('eat') }),
   z.object({ type: z.literal('wait'), hours: z.number().int().min(1).max(24) }),
   z.object({ type: z.literal('talk'), to: z.string(), say: z.string().min(1).max(300) }),
+  z.object({ type: z.literal('attack'), to: z.string() }),
 ]);
 export type Action = z.infer<typeof ActionSchema>;
 
@@ -27,6 +28,7 @@ const MEAL_COST = -KIND_EFFECTS.eat.coin;
 export function startAction(state: State, world: World, action: Action): string | null {
   const p = player(state);
   if (!p) return '관찰자 모드에서는 행동할 수 없다.';
+  if (p.dead) return '당신의 인생은 끝났다.';
   const t = state.minutes;
   if (p.travel) return '이동 중이다.';
   if (action.type !== 'wait') {
@@ -63,9 +65,18 @@ export function startAction(state: State, world: World, action: Action): string 
       task = { kind: 'leisure', activity: '기다림', emoji: '⏳', until: until(action.hours) };
       text = `${action.hours}시간 기다린다.`;
       break;
+    case 'attack': {
+      const npc = state.actors[action.to];
+      if (!npc || npc.kind !== 'npc' || npc.dead) return '그런 인물은 없다.';
+      const name = shortName(npc.name);
+      if (npc.travel || npc.region !== p.region) return `${josa(name, '은', '는')} 여기 없다.`;
+      task = { kind: 'fight', activity: `${josa(name, '과', '와')} 싸움`, emoji: '⚔️', until: until(1) };
+      text = `${name}에게 덤벼든다.`;
+      break;
+    }
     case 'talk': {
       const npc = state.actors[action.to];
-      if (!npc || npc.kind !== 'npc') return '그런 인물은 없다.';
+      if (!npc || npc.kind !== 'npc' || npc.dead) return '그런 인물은 없다.';
       const name = shortName(npc.name);
       if (npc.travel || npc.region !== p.region) return `${josa(name, '은', '는')} 여기 없다.`;
       if (npc.boundUntil !== undefined) return `${josa(name, '은', '는')} 묶여 있다.`;

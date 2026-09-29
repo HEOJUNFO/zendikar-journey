@@ -3,9 +3,9 @@ import { START_MINUTES } from './clock.ts';
 import { INITIAL_STATS } from './rules.ts';
 import { NEEDS } from './types.ts';
 import type { LifeKind, Need, Pace, Schedule, Stats } from './types.ts';
-import type { Ability, World } from './world.ts';
+import type { Ability, Pt, World } from './world.ts';
 
-export type TaskKind = LifeKind | 'explore' | 'travel';
+export type TaskKind = LifeKind | 'explore' | 'travel' | 'fight';
 
 export type Task = {
   kind: TaskKind;
@@ -27,6 +27,15 @@ export type Actor = {
   // Regions they made landfall on (arrived at) this turn = game day, in order.
   landfalls?: { day: number; regions: string[] };
   stats: Stats;
+  // Power / toughness (the player starts at 1/1; missing in old saves = 1/1).
+  pt?: Pt;
+  // Combat damage taken this turn; it wears off when the turn ends (00:00).
+  wounds?: { day: number; amount: number };
+  // Who they'll attack on sight this turn (they were attacked, or turned hostile).
+  foes?: { day: number; ids: string[] };
+  dead?: { at: number; cause: string };
+  // Hour of their last combat exchange (one per hour).
+  lastClash?: number;
   pace: Pace;
   abilities: Ability[];
   // Stats they live by; missing in saves from before needs existed (= all).
@@ -65,6 +74,8 @@ export type LogKind =
   | 'activity'
   | 'meet'
   | 'status'
+  | 'combat'
+  | 'death'
   | 'player'
   | 'speech'
   | 'narration'
@@ -98,6 +109,8 @@ export type State = {
   minutes: number;
   mode: Mode;
   playerId?: string;
+  // The player character died: their life is over.
+  over?: { at: number; cause: string };
   actors: Record<string, Actor>;
   regions: Record<string, RegionState>;
   events: Record<string, { lastFired?: number }>;
@@ -112,6 +125,8 @@ export type State = {
 };
 
 export const PLAYER_ID = 'player';
+// An ordinary person. Grows with training, gear and magic (when cards bring them).
+export const PLAYER_PT: Pt = [1, 1];
 const LOG_LIMIT = 3000;
 
 export type NewGame = {
@@ -145,6 +160,7 @@ export function newState(world: World, opts: NewGame): State {
       kind: 'npc',
       region: npc.home,
       stats: { ...INITIAL_STATS },
+      pt: [...npc.pt],
       pace: 'normal',
       abilities: [...npc.abilities],
       needs: [...npc.needs],
@@ -159,6 +175,7 @@ export function newState(world: World, opts: NewGame): State {
       kind: 'player',
       region: opts.player.region,
       stats: { ...INITIAL_STATS },
+      pt: [...PLAYER_PT],
       pace: 'normal',
       abilities: [],
       needs: [...NEEDS],
@@ -185,6 +202,7 @@ export function syncWorld(state: State, world: World) {
     };
     state.actors[npc.id].abilities = [...npc.abilities];
     state.actors[npc.id].needs = [...npc.needs];
+    state.actors[npc.id].pt = [...npc.pt];
   }
 }
 
@@ -203,9 +221,17 @@ export function player(state: State) {
   return state.playerId ? state.actors[state.playerId] : undefined;
 }
 
-// Actors standing in a region (not on the road).
+export function alive(state: State) {
+  return Object.values(state.actors).filter((a) => !a.dead);
+}
+
+// Living actors standing in a region (not on the road).
 export function present(state: State, regionId: string) {
-  return Object.values(state.actors).filter((a) => a.region === regionId && !a.travel);
+  return alive(state).filter((a) => a.region === regionId && !a.travel);
+}
+
+export function ptOf(a: Actor): Pt {
+  return a.pt ?? PLAYER_PT;
 }
 
 export function addLog(

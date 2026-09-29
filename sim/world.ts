@@ -63,7 +63,13 @@ const RoutineRow = z.tuple([
   z.string().min(1),
 ]);
 
+// Power / toughness, as on the card. Combat damage piles up against toughness until the turn
+// ends; reaching it is death.
+const PtSchema = z.tuple([z.number().int().min(0), z.number().int().min(1)]);
+export type Pt = z.infer<typeof PtSchema>;
+
 export const CharacterSimSchema = z.strictObject({
+  pt: PtSchema,
   role: z.string().min(1),
   home: z.string(),
   persona: z.string().min(1),
@@ -75,7 +81,19 @@ export const CharacterSimSchema = z.strictObject({
   routine: z.array(RoutineRow).min(1),
 });
 
+// A character who doesn't live a routine but acts through GM events (e.g. Lorthos).
+export const GmBeingSimSchema = z.strictObject({
+  gm: z.literal(true),
+  pt: PtSchema,
+  abilities: z.array(z.enum(ABILITIES)).default([]),
+});
+
 const EffectSchema = z.discriminatedUnion('type', [
+  // Damage to every creature present in the affected regions (piles up against toughness).
+  z.strictObject({
+    type: z.literal('damage'),
+    amount: z.number().int().positive(),
+  }),
   // Stat change for everyone present in the affected regions.
   z.strictObject({
     type: z.literal('stat'),
@@ -152,10 +170,13 @@ export type NpcDef = {
   home: string;
   persona: string;
   goal: string;
+  pt: Pt;
   abilities: Ability[];
   needs: Need[];
   routine: ScheduleBlock[];
 };
+
+export type BeingDef = { id: string; name: string; summary: string; pt: Pt; abilities: Ability[] };
 
 export type EventDef = {
   id: string;
@@ -179,6 +200,8 @@ export type Lore = { id: string; kind: string; name: string; summary: string };
 export type World = {
   regions: Region[];
   npcs: NpcDef[];
+  // GM-driven characters: no routine, not on the map as actors.
+  beings: BeingDef[];
   events: EventDef[];
   lore: Lore[];
 };
@@ -203,7 +226,7 @@ function issues(error: z.ZodError) {
 // throwing so world-check can list them all.
 export function buildWorld(entities: RawEntity[]): { world: World; errors: string[] } {
   const errors: string[] = [];
-  const world: World = { regions: [], npcs: [], events: [], lore: [] };
+  const world: World = { regions: [], npcs: [], beings: [], events: [], lore: [] };
   const err = (id: string, msg: string) => errors.push(`${id}: ${msg}`);
 
   for (const e of entities) {
@@ -225,7 +248,11 @@ export function buildWorld(entities: RawEntity[]): { world: World; errors: strin
 
   for (const e of entities) {
     if (e.sim === undefined) continue;
-    if (e.kind === 'character') {
+    if (e.kind === 'character' && (e.sim as { gm?: unknown }).gm === true) {
+      const sim = GmBeingSimSchema.safeParse(e.sim);
+      if (!sim.success) err(e.id, `sim 오류: ${issues(sim.error)}`);
+      else world.beings.push({ id: e.id, name: e.name, summary: e.summary ?? '', pt: sim.data.pt, abilities: sim.data.abilities });
+    } else if (e.kind === 'character') {
       const sim = CharacterSimSchema.safeParse(e.sim);
       if (!sim.success) {
         err(e.id, `sim 오류: ${issues(sim.error)}`);

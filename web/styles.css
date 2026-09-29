@@ -58,6 +58,16 @@ button:disabled {
   opacity: 0.45;
   cursor: default;
 }
+button.danger {
+  background: var(--danger);
+  color: #1a0d08;
+}
+.over {
+  font-family: var(--serif);
+  font-size: 16px;
+  color: var(--danger);
+  margin: 0;
+}
 button.ghost {
   background: transparent;
   color: var(--ink);

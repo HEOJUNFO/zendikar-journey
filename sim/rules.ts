@@ -13,6 +13,8 @@ export const KIND_EFFECTS: Record<LifeKind, Effect> = {
 };
 // Change per game hour while travelling between regions.
 export const TRAVEL_EFFECT: Effect = { energy: -3, hunger: 4, coin: 0 };
+// Fighting: exhausting.
+export const FIGHT_EFFECT: Effect = { energy: -8, hunger: 5, coin: 0 };
 // Exploring a region: tiring, no pay.
 export const EXPLORE_EFFECT: Effect = { energy: -6, hunger: 5, coin: 0 };
 // Extra energy loss per hour when starving (hunger >= STARVING).

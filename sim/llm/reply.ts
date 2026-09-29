@@ -1,14 +1,17 @@
 // An NPC answers the player, in character.
 import { formatClock } from '../clock.ts';
-import { player } from '../state.ts';
-import type { ReplyInput } from '../run.ts';
+import { z } from 'zod';
+import { player, ptOf } from '../state.ts';
+import type { EvadeInput, Reply, ReplyInput } from '../run.ts';
 import { recentNews } from '../run.ts';
 import { shortName } from '../text.ts';
 import { region } from '../world.ts';
-import { chatCompletion } from './chat.ts';
+import { chatCompletion, extractJson } from './chat.ts';
 import { loreText, playerText } from './context.ts';
 
-export async function reply({ world, state, npc, say }: ReplyInput): Promise<string | null> {
+const ReplySchema = z.object({ say: z.string().min(1), attack: z.boolean().default(false) });
+
+export async function reply({ world, state, npc, say }: ReplyInput): Promise<Reply | null> {
   const p = player(state)!;
   const me = state.actors[npc.id];
   const name = shortName(npc.name);
@@ -26,7 +29,8 @@ export async function reply({ world, state, npc, say }: ReplyInput): Promise<str
 Who you are: ${npc.persona}
 Your goal: ${npc.goal}
 Your role: ${npc.role}
-Reply in Korean with only your spoken words (no name prefix, no narration, no quotes), 1 to 3 sentences.`,
+Your power/toughness is ${ptOf(state.actors[npc.id]).join('/')}; theirs is ${ptOf(p).join('/')}. Fights here are deadly.
+Answer with JSON only: {"say": "<your spoken words in Korean, 1 to 3 sentences, no name prefix or narration>", "attack": <true only if, in character, you now attack them>}`,
       },
       {
         role: 'user',
@@ -45,6 +49,33 @@ Reply as ${name} to: ${say}`,
     ],
     800,
   );
-  const text = content.trim().replace(/^["“”']+|["“”']+$/g, '').replace(new RegExp(`^${name}\\s*:\\s*`), '');
-  return text || null;
+  const parsed = ReplySchema.safeParse(extractJson(content));
+  if (!parsed.success) {
+    console.warn(`Unusable reply from ${npc.id}:`, content);
+    return null;
+  }
+  const text = parsed.data.say.trim().replace(/^["“”']+|["“”']+$/g, '').replace(new RegExp(`^${name}\\s*:\\s*`), '');
+  return text ? { say: text, attack: parsed.data.attack } : null;
+}
+
+// Attacked by someone who can't fly: take to the air, or stand and fight?
+export async function evade({ world, state, npc, attacker }: EvadeInput): Promise<boolean> {
+  const content = await chatCompletion(
+    [
+      {
+        role: 'system',
+        content: `You are ${npc.name}, a character in the plane of Zendikar. You can fly; the one attacking you cannot.
+Who you are: ${npc.persona}
+Your goal: ${npc.goal}
+Answer with JSON only: {"evade": true} to fly out of reach, or {"evade": false} to stand and fight.`,
+      },
+      {
+        role: 'user',
+        content: `World lore:\n${loreText(world)}\n\n${shortName(attacker.name)} (power/toughness ${ptOf(attacker).join('/')}) attacks you (${ptOf(state.actors[npc.id]).join('/')}) in ${region(world, attacker.region).name}. ${playerText(state)}`,
+      },
+    ],
+    400,
+  );
+  const parsed = z.object({ evade: z.boolean() }).safeParse(extractJson(content));
+  return parsed.success ? parsed.data.evade : false;
 }
