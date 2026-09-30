@@ -19,6 +19,7 @@ import { crushRelic, relicsHere } from './relics.ts';
 import { loremastersOf, recallBlocked, recallCount } from './loremaster.ts';
 import { sacrifice } from './monument.ts';
 import { strandedText } from './stranded.ts';
+import { bounce, bounceCandidates } from './bounce.ts';
 import { applyRally, hireableFor, hireMerc, hirePrice, rallyText } from './allies.ts';
 import { answerAsk, askText, canServe } from './asks.ts';
 import { eonLand, eonsIn, spendBlocked, storeBlocked } from './eons.ts';
@@ -64,6 +65,8 @@ export type ChooseInput = { world: World; state: State; npc: Speaker; what: stri
 export type ChooseColorInput = { world: World; state: State; npc: Speaker; opponents: Actor[] };
 // A trap (`trap`) sprung by `intruders` picks one of `creatures` (anywhere in the world) to draw there.
 export type SummonInput = { world: World; state: State; trap: EventDef; creatures: Actor[]; intruders: Actor[] };
+// A trap (`trap`) flings up to `count` of `creatures` (those there), set off by `intruders`.
+export type BounceInput = { world: World; state: State; trap: EventDef; creatures: Actor[]; intruders: Actor[]; count: number };
 // An NPC (`npc`) must let go of one of `spells` (their hand), for `cause`.
 export type DiscardInput = { world: World; state: State; npc: Speaker; spells: SpellDef[]; cause: string };
 // An NPC (`npc`) picks one of `options` (things, not people: e.g. relics to destroy), or none if `optional`.
@@ -91,6 +94,8 @@ export type Llm = {
   chooseColor?: (input: ChooseColorInput) => Promise<Color | null>;
   // A summoning trap sprung (Summoning Trap): which of `creatures` it draws there, or none.
   summon?: (input: SummonInput) => Promise<string | null>;
+  // A whiplash trap sprung (Whiplash Trap): which of `creatures` it flings (up to `count`), by id.
+  bounce?: (input: BounceInput) => Promise<string[] | null>;
   // One who must let go of a spell (discard): which of `spells` they give up.
   discard?: (input: DiscardInput) => Promise<string | null>;
   // One of some things (not people): which, or none.
@@ -333,6 +338,33 @@ async function summons(state: State, world: World, llm: Llm) {
   }
 }
 
+// Whiplash traps sprung this hour (sim/step.ts): the LLM, as the trap, flings up to `count` of
+// the creatures there (sim/bounce.ts). With no usable answer, those who came to serve whoever
+// sprang it first, then the rest, in order.
+async function bounces(state: State, world: World, llm: Llm) {
+  const due = state.bounces ?? [];
+  state.bounces = [];
+  for (const b of due) {
+    const trap = world.events.find((e) => e.id === b.event);
+    const creatures = bounceCandidates(state, world, b.region, state.minutes);
+    const intruders = b.by.map((id) => state.actors[id]).filter((a) => a && !a.dead);
+    if (!trap || !creatures.length) continue;
+    let picks: string[] | null = null;
+    if (llm.bounce) {
+      try {
+        picks = await llm.bounce({ world, state, trap, creatures, intruders, count: b.count });
+      } catch (e) {
+        console.warn(`bounce for ${trap.id} failed:`, e);
+      }
+    }
+    const ok = picks && picks.every((id) => creatures.some((c) => c.id === id)) ? [...new Set(picks)].slice(0, b.count) : null;
+    const theirs = (c: Actor) => (c.master && b.by.includes(c.master) ? 0 : 1);
+    const flung = ok ?? [...creatures].sort((x, y) => theirs(x) - theirs(y)).slice(0, b.count).map((c) => c.id);
+    if (!flung.length) addLog(state, { kind: 'event', text: `${trap.name}: 줄기들은 허공만 휘젓고 잠잠해졌다.`, regions: [b.region] });
+    for (const id of flung) bounce(state, world, state.actors[id], state.minutes, trap.name);
+  }
+}
+
 // Arrow volleys loosed this hour (sim/step.ts): the LLM, as the trap, divides the damage among
 // the attackers who set it off (all of it, as it chooses). With no usable answer, it falls one
 // at a time around them, strongest first.
@@ -411,6 +443,7 @@ async function choices(state: State, world: World, llm: Llm) {
   await wanderings(state, world, llm);
   await evasions(state, world, llm);
   await summons(state, world, llm);
+  await bounces(state, world, llm);
   await volleys(state, world, llm);
   const due = state.choices ?? [];
   state.choices = [];

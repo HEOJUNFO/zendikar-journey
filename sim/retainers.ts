@@ -86,6 +86,7 @@ export function readyCourt(state: State, world: World, a: Actor, whoId: string, 
 // `a` now serves `master`. An Ally joining a party wakes its rallies (sim/allies.ts).
 export function bindRetainer(state: State, world: World, a: Actor, master: Actor, t: number, how: string) {
   a.master = master.id;
+  a.joinedAt = t;
   remember(a, master, `나의 주인 (${how})`, t);
   addLog(state, {
     kind: 'status',

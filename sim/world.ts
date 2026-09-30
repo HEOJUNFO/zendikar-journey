@@ -415,6 +415,10 @@ const EffectSchema = z.discriminatedUnion('type', [
   // Volley Trap): N damage among those who set it off; the LLM, as the trap, divides it after
   // the hour. Not for morning (gm) events.
   z.strictObject({ type: z.literal('volley'), amount: z.number().int().positive() }),
+  // "Return N target creatures to their owners' hands" (Whiplash Trap): the LLM, as the trap,
+  // picks up to N creatures there after the hour; each is flung (sim/bounce.ts). Not for
+  // morning (gm) events.
+  z.strictObject({ type: z.literal('bounce'), count: z.number().int().positive() }),
 ]);
 export type Effect = z.infer<typeof EffectSchema>;
 
@@ -556,6 +560,10 @@ export const EventSimSchema = z.discriminatedUnion('trigger', [
     // Only for those who tamed an item this turn (Baloth Cage Trap: "if an opponent had an
     // artifact enter the battlefield under their control this turn").
     claimed: z.boolean().default(false),
+    // Only for those who had this many creatures or more come under their control this turn
+    // (Whiplash Trap: "if an opponent had two or more creatures enter the battlefield under
+    // their control this turn"): retainers who joined, were born or were raised theirs today.
+    joined: z.number().int().min(1).optional(),
   }),
   // Goes off when a noncreature permanent in `region` is destroyed by someone else's doing (a
   // spell, an ability or another event): for now the land itself (law-permanents).
@@ -702,6 +710,7 @@ export type EventDef = {
   refused?: boolean; // enter
   searched?: boolean; // enter
   claimed?: boolean; // enter
+  joined?: number; // enter
   cards?: number; // drew
   attackers?: number; // attacked
   cooldownHours: number;
@@ -852,8 +861,8 @@ export function buildWorld(entities: RawEntity[]): { world: World; errors: strin
       const { cooldown_hours, effects, cost, ...rest } = sim.data;
       if (rest.trigger !== 'landfall' && effects.some((x) => x.type === 'destroy_lands'))
         err(e.id, 'destroy_lands 는 trigger: landfall 사건에만 쓸 수 있음 (누가 상륙한 땅인지 알아야 함)');
-      if (rest.trigger === 'gm' && effects.some((x) => x.type === 'lose_life' || x.type === 'damage_hand' || x.type === 'forget' || x.type === 'summon' || x.type === 'volley'))
-        err(e.id, 'lose_life, damage_hand, forget, summon, volley 는 trigger: gm 사건에 쓸 수 없음 (누가 일으켰는지 알아야 함)');
+      if (rest.trigger === 'gm' && effects.some((x) => x.type === 'lose_life' || x.type === 'damage_hand' || x.type === 'forget' || x.type === 'summon' || x.type === 'volley' || x.type === 'bounce'))
+        err(e.id, 'lose_life, damage_hand, forget, summon, volley, bounce 는 trigger: gm 사건에 쓸 수 없음 (누가 일으켰는지 알아야 함)');
       world.events.push({
         id: e.id,
         name: e.name,

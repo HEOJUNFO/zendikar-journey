@@ -5,7 +5,7 @@ import { npcDef, ptOf } from '../state.ts';
 import { COLOR_LABELS, COLORS, creatureColors, manaCapacity } from '../mana.ts';
 import type { Color } from '../mana.ts';
 import { region, spellColors } from '../world.ts';
-import type { ChooseColorInput, ChooseInput, DiscardInput, PickInput, SummonInput, VolleyInput, WanderInput } from '../run.ts';
+import type { BounceInput, ChooseColorInput, ChooseInput, DiscardInput, PickInput, SummonInput, VolleyInput, WanderInput } from '../run.ts';
 import { loreText } from './context.ts';
 import { recentNews } from '../run.ts';
 import { relationsText } from '../relations.ts';
@@ -114,6 +114,41 @@ Which do you draw here?`,
     return creatures[0]?.id ?? null;
   }
   return parsed.data.pick;
+}
+
+// A whiplash trap (Whiplash Trap) flings up to `count` of the creatures there: the LLM decides,
+// as the trap. Each flung one loses all that was on it and whoever it served (sim/bounce.ts).
+export async function chooseBounce({ world, state, trap, creatures, intruders, count }: BounceInput): Promise<string[] | null> {
+  const content = await chatCompletion(
+    [
+      {
+        role: 'system',
+        content: `You are an ancient trap of the plane of Zendikar: ${trap.name}. ${trap.summary}
+Someone sprang you. You may fling up to ${count} of the creatures below: each flung one is torn from whoever it served, loses every strength laid on it, lands elsewhere nearby and lies stunned an hour (a summoned token vanishes). Pick as the trap would.
+Answer with JSON only: {"picks": ["<id>", ...]} (at most ${count}; [] for none).`,
+      },
+      {
+        role: 'user',
+        content: `World lore:
+${loreText(world)}
+
+Who sprang you:
+${intruders.map((a) => `- ${shortName(a.name)}${a.kind === 'player' ? ' (the player)' : ''}`).join('\n') || '- (no one is left)'}
+
+Creatures here:
+${creatures.map((c) => `- ${c.id}: ${c.name}${c.master ? `, serving ${c.master === state.playerId ? 'the player' : shortName(state.actors[c.master]?.name ?? c.master)}` : ''} (power/toughness ${ptOf(c).join('/')})`).join('\n')}
+
+Which do you fling?`,
+      },
+    ],
+    300,
+  );
+  const parsed = z.object({ picks: z.array(z.string()) }).safeParse(extractJson(content));
+  if (!parsed.success || parsed.data.picks.some((id) => !creatures.some((c) => c.id === id))) {
+    console.warn(`Unusable bounce from ${trap.id}:`, content);
+    return null;
+  }
+  return parsed.data.picks.slice(0, count);
 }
 
 // An arrow volley trap (Arrow Volley Trap) divides its damage among the attackers who set it off,

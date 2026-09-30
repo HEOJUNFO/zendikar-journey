@@ -121,6 +121,8 @@ export type Actor = {
   skipDay?: number;
   // When they came into play (born, raised or brought back), for "entered this turn".
   enteredAt?: number;
+  // When they last came to serve their master (hired, won over, pledged): sim/bounce.ts.
+  joinedAt?: number;
   // +1/+1 counters on them: for good, until they die.
   plusCounters?: number;
   // Abilities they have only for a while ("gains flying until end of turn"), in `abilities`
@@ -263,6 +265,8 @@ export type State = {
   // Summoning traps sprung (sim/step.ts): which of the creatures looked at is drawn there is
   // the LLM's pick, as the trap, after the hour (sim/run.ts `summons`).
   summons?: { event: string; creatures: string[]; by: string[]; region: string; t: number }[];
+  // Whiplash traps sprung this hour: whom (up to `count`, of those there) the LLM, as the trap, flings.
+  bounces?: { event: string; count: number; by: string[]; region: string; t: number }[];
   // A flyer NPC attacked by one who can't fly: whether they take to the air is asked of the LLM
   // after the hour (sim/run.ts); the blow waits until then.
   evades?: { by: string; from: string; t: number }[];

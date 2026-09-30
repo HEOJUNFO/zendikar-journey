@@ -26,7 +26,8 @@ import { claimBlocked } from './items.ts';
 import { spendBlocked, storeBlocked } from './eons.ts';
 import { applyEnterDestroy, bondBlocked, enterDestroy, onEnter, bondLand, bondTargets, callForth, fetchTargets, fireTargets, firesOnBond, growBlocked, spawnWild, summonLibrary, useAbility } from './abilities.ts';
 import { DEPLETED_LABEL, DESTROYED_DAYS, TRAVEL_UNITS_PER_HOUR } from './rules.ts';
-import { retainersOf, swayBlocked } from './retainers.ts';
+import { bindRetainer, retainersOf, swayBlocked } from './retainers.ts';
+import { joinedToday } from './bounce.ts';
 import { upkeepWins } from './win.ts';
 import { hirePrice } from './allies.ts';
 import { askOptions, askText } from './asks.ts';
@@ -2132,6 +2133,52 @@ test('a summoning trap: one refused today who enters draws a creature card there
   assert.ok(texts(state).some((t) => t.includes('끌려와 문간의 어둠에서 걸어 나왔다')));
 });
 
+const whiplash: RawEntity = {
+  id: 'evt-whip',
+  kind: 'event',
+  name: '채찍 함정',
+  status: 'canon',
+  sim: { region: 'loc-b', trigger: 'enter', joined: 2, text: '줄기가 휘몰아쳤다.', effects: [{ type: 'bounce', count: 2 }] },
+};
+
+test('a whiplash trap: one with two joined today who enters sets it off; two there are flung: stripped, freed, landed nearby, stunned; a token is gone', async () => {
+  const world = fixture([
+    whiplash,
+    lore('cre-w', 'creature'),
+    { id: 'loc-bz', kind: 'location', name: '곁의 숲', status: 'canon', map: { in: 'loc-b', terrain: 'forest' } },
+    npc('chr-x', npcSim('loc-b')),
+    npc('chr-m', { ...npcSim('loc-b'), mana: { R: 5 }, ally: true, hireable: true }),
+    npc('chr-y', npcSim('loc-b')),
+  ]);
+  const state = newState(world, { seed: 1, mode: 'observer' });
+  const [x, m, y] = [state.actors['chr-x'], state.actors['chr-m'], state.actors['chr-y']];
+  x.region = m.region = 'loc-a';
+  bindRetainer(state, world, m, x, state.minutes, '고용');
+  m.plusCounters = 2;
+  const [wolf] = spawnWild(state, world, 'cre-w', [2, 2], 1, 'loc-a', ['G']);
+  wolf.master = x.id;
+  assert.equal(joinedToday(state, x, state.minutes), 2);
+  const asked: string[][] = [];
+  const bounce: Llm['bounce'] = async ({ creatures, count }) => (asked.push(creatures.map((c) => c.id).sort()), assert.equal(count, 2), [m.id, wolf.id]);
+  await advance(state, world, 2, { bounce });
+  assert.equal(asked.length, 1);
+  assert.ok(asked[0].includes(m.id) && asked[0].includes(wolf.id) && !asked[0].includes(PLAYER_ID));
+  assert.equal(m.master, undefined); // freed
+  assert.equal(m.plusCounters, undefined); // stripped
+  assert.equal(m.region, 'loc-bz'); // landed in another area of the region
+  assert.ok(wolf.dead && wolf.left); // a token: gone
+  assert.ok(texts(state).some((t) => t.includes('내동댕이쳐져 곁의 숲에 떨어졌다')));
+  // One with only one joined today: nothing.
+  const s2 = newState(world, { seed: 1, mode: 'observer' });
+  const [x2, m2] = [s2.actors['chr-x'], s2.actors['chr-m']];
+  x2.region = m2.region = 'loc-a';
+  bindRetainer(s2, world, m2, x2, s2.minutes, '고용');
+  let sprung = false;
+  await advance(s2, world, 3, { bounce: async () => ((sprung = true), []) });
+  assert.equal(sprung, false);
+  assert.equal(m2.master, 'chr-x');
+});
+
 test('turned down: the player refusing to serve, or refusing the player, marks the one refused that day', async () => {
   const seeker = { ...npcSim('loc-a', 'work'), plan: [['00:00', '24:00', 'loc-a', 'social', '그를 찾아감', '💬', null, null, PLAYER_ID]] };
   const world = fixture([npc('chr-x', seeker)]);
@@ -2144,6 +2191,15 @@ test('turned down: the player refusing to serve, or refusing the player, marks t
   const s2 = character(w2, 'loc-a');
   await act(s2, w2, { type: 'talk', to: 'chr-y', say: '나와 함께 가자' }, { reply: async () => ({ say: '싫소.', attack: false, refused: true }) });
   assert.equal(s2.actors[PLAYER_ID].refused, 0);
+});
+
+test('the real Whiplash Trap lies in Tazeem: two joined today, two flung', () => {
+  const world = loadWorld();
+  const ev = world.events.find((e) => e.id === 'evt-whiplash-trap')!;
+  assert.equal(ev.region, 'loc-tazeem');
+  assert.equal(ev.trigger, 'enter');
+  assert.equal(ev.joined, 2);
+  assert.deepEqual(ev.effects, [{ type: 'bounce', count: 2 }]);
 });
 
 test('the real Summoning Trap lies in Bala Ged and may draw any creature card there, the Shoal Serpent too', () => {

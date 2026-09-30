@@ -34,6 +34,7 @@ import { CRAWL_FACTOR, dryOut, stranded } from './stranded.ts';
 import { wanderHour, withPositions } from './wander.ts';
 import { anthemHour, upkeepSacrifice } from './monument.ts';
 import { HIRE_HOURS, hireBlocked, hireMerc } from './allies.ts';
+import { bounceCandidates, joinedToday } from './bounce.ts';
 import { COURT_HOURS, courtBlocked, followsMaster, masterOf, readyCourt, refusedToday, upkeepPossessions } from './retainers.ts';
 import { learnBlocked, learnSpell, npcCastBlocked, readyCast, spellDef } from './spells.ts';
 import { payMana } from './mana.ts';
@@ -193,7 +194,7 @@ function enterEvents(state: State, world: World, at: number) {
     }
     if (ev.trigger !== 'enter' || onCooldown(state, ev, at)) continue;
     if (state.pending.some((p) => p.eventId === ev.id)) continue;
-    const by = present(state, ev.region).filter((a) => a.arrivedAt === at && (!ev.gained_life || gainedLifeToday(a, at)) && (!ev.refused || refusedToday(a, at)) && (!ev.searched || a.searched === gameDay(at)) && (!ev.claimed || a.claimed === gameDay(at)));
+    const by = present(state, ev.region).filter((a) => a.arrivedAt === at && (!ev.gained_life || gainedLifeToday(a, at)) && (!ev.refused || refusedToday(a, at)) && (!ev.searched || a.searched === gameDay(at)) && (!ev.claimed || a.claimed === gameDay(at)) && (!ev.joined || joinedToday(state, a, at) >= ev.joined));
     if (by.length) trigger(state, world, ev, at, { by: by.map((a) => a.id), lands: [] });
   }
 }
@@ -358,6 +359,9 @@ function fire(state: State, world: World, ev: EventDef, t: number, omened: boole
           t,
         });
       }
+    } else if (eff.type === 'bounce') {
+      // Whom it flings is the trap's, asked after the hour.
+      if (bounceCandidates(state, world, ev.region, t).length) (state.bounces ??= []).push({ event: ev.id, count: eff.count, by: cause.by ?? [], region: ev.region, t });
     } else if (eff.type === 'summon') {
       // Which of the creatures looked at is drawn here (if any) is the trap's, asked after the hour.
       const creatures = summonLibrary(state, world, ev.region, cause.by ?? []).slice(0, eff.look);

@@ -26,6 +26,7 @@ function triggerText(ev: EventDef) {
         ev.refused && '그날 누군가를 따르게 하려다 거절당한 이',
         ev.searched && '그날 페치로 땅을 찾아온 이',
         ev.claimed && '그날 아이템을 길들인 이',
+        ev.joined && `그날 권속이 ${ev.joined} 이상 새로 든 이`,
       ].filter(Boolean);
       return `${who.length ? who.join(', ') : '누군가'}가 들어설 때 터진다`;
     }
