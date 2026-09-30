@@ -2171,3 +2171,13 @@ test('every being has life: those who never tire too', () => {
   assert.equal(lifeOf(state.actors['chr-lorthos']), 20);
   assert.equal(lifeOf(state.actors['chr-kalitas']), 20);
 });
+
+test('the real Terra Stomper hunts in Oran-Rief, 8/8 with trample', () => {
+  const world = loadWorld();
+  const state = newState(world, { seed: 1, mode: 'observer' });
+  const s = state.actors['cre-terra-stomper'];
+  assert.equal(s?.region, 'loc-oran-rief');
+  assert.deepEqual(ptOf(s), [8, 8]);
+  assert.ok(hasAbility(s, 'trample', state.minutes));
+  assert.ok(world.npcs.find((x) => x.id === 'cre-terra-stomper')?.beast);
+});
