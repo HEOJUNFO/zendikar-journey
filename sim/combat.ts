@@ -135,7 +135,7 @@ export function clash(state: State, attacker: Actor, defender: Actor, t: number)
   addFoe(defender, attacker.id, t);
   addFoe(attacker, defender.id, t);
   // Struck by one's own master (or striking them): the bond is broken.
-  // Not those seized (Roil Elemental): only their master's end frees them.
+  // Not those seized (Roil Elemental, Sorin): only their master's end (or its hour) frees them.
   if (defender.master === attacker.id && !defender.seized) releaseRetainer(state, defender, '주인에게 공격당함');
   if (attacker.master === defender.id && !attacker.seized) releaseRetainer(state, attacker, '주인에게 덤빔');
   remember(defender, attacker, `나를 공격했다 (${formatClock(t)})`, t);

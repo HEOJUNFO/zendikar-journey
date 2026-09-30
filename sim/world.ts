@@ -181,6 +181,15 @@ const AbilityEffectSchema = z.discriminatedUnion('type', [
   // "Cast any number of <color> spells from your graveyard free": every spell of that color
   // they let go of, cast on the target without paying.
   z.strictObject({ type: z.literal('flashback'), color: z.enum(COLORS) }),
+  // N damage to the target ("deals N damage to any target").
+  z.strictObject({ type: z.literal('damage'), amount: z.number().int().positive() }),
+  // The user gains N life ("and you gain N life").
+  z.strictObject({ type: z.literal('gain_life'), amount: z.number().int().positive() }),
+  // "Target opponent's life total becomes N".
+  z.strictObject({ type: z.literal('set_life'), amount: z.number().int().min(1) }),
+  // "You control target player during that player's next turn": the target's next day (00:00
+  // to 00:00) is the user's: seized as their retainer for it (sim/retainers.ts).
+  z.strictObject({ type: z.literal('possess_next_turn') }),
 ]);
 export type AbilityEffect = z.infer<typeof AbilityEffectSchema>;
 

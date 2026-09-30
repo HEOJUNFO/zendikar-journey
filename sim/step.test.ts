@@ -14,7 +14,7 @@ import { castBlocked, castSpell } from './spells.ts';
 import { COLORS, formatMana, manaAvailable, manaCapacity, parseManaCost, planPayment } from './mana.ts';
 import { MAX_TALKS_PER_DAY, usableAbilities } from './run.ts';
 import { eligibleGmEvents, travelBlocked } from './step.ts';
-import { gainLife } from './life.ts';
+import { gainLife, lifeOf } from './life.ts';
 import { hasAbility, newState, outOfTime, PLAYER_ID, present, ptOf, syncWorld } from './state.ts';
 import { spendBlocked, storeBlocked } from './eons.ts';
 import { bondBlocked, bondLand, bondTargets, fetchTargets, fireTargets, firesOnBond, growBlocked, spawnWild, useAbility } from './abilities.ts';
@@ -1779,25 +1779,24 @@ test('a Roil Elemental bonding may seize anyone there, from their master too; on
   assert.equal(x.master, 'cre-r');
   assert.equal(x.seized, true);
   assert.ok(texts(state).some((t) => t.includes('소용돌이가') && t.includes('삼켰다')));
-  // Striking it doesn't free them; its end does.
-  (await import('./combat.ts')).clash(state, x, state.actors['cre-r'], state.minutes);
+  // Struck by it, they stay its; its end frees them.
+  (await import('./combat.ts')).clash(state, state.actors['cre-r'], x, state.minutes);
   assert.equal(x.master, 'cre-r');
   die(state, state.actors['cre-r'], state.minutes, '시험');
   assert.equal(x.master, undefined);
   assert.equal(x.seized, undefined);
 });
 
-test('the player seized is dragged along, and can only wait or strike what holds them', async () => {
+test('the player seized is dragged along and can only wait; they can\'t turn on what holds them', async () => {
   const world = fixture([roil(roilDay)]);
   const state = character(world, 'loc-a');
   const p = state.actors[PLAYER_ID];
   await act(state, world, { type: 'wait', hours: 4 }, { choose: async () => PLAYER_ID });
   assert.equal(p.master, 'cre-r');
-  assert.match((await act(state, world, { type: 'move', to: 'loc-c' })).error!, /휩쓸려 있다/);
-  assert.match((await act(state, world, { type: 'eat' })).error!, /기다리거나/);
+  assert.match((await act(state, world, { type: 'move', to: 'loc-c' })).error!, /붙들려 있다/);
+  assert.match((await act(state, world, { type: 'attack', to: 'cre-r' })).error!, /기다릴 수만/);
   await act(state, world, { type: 'wait', hours: 4 });
   assert.equal(p.region, 'loc-b'); // dragged where it went
-  assert.equal(startActionOk(state, world, { type: 'attack', to: 'cre-r' }), true);
 });
 
 test('the real Roil Elemental drifts over Tazeem', () => {
@@ -1880,4 +1879,64 @@ test('the real Shoal Serpent lurks in the new Silundi Sea', () => {
   assert.equal(s?.region, 'loc-silundi-sea');
   assert.deepEqual(s.abilities, ['aquatic', 'defender']);
   assert.equal(region(world, 'loc-silundi-sea').terrain, 'deepsea');
+});
+
+const sorin = being('chr-so', {
+  home: 'loc-a',
+  abilities: [],
+  pt: [0, 4],
+  loyalty: 4,
+  activated: [
+    { id: 'plus', name: '피의 일격', loyalty: 2, effects: [{ type: 'damage', amount: 2 }, { type: 'gain_life', amount: 2 }] },
+    { id: 'ten', name: '생명의 저울', loyalty: -3, effects: [{ type: 'set_life', amount: 10 }] },
+    { id: 'rule', name: '지배', loyalty: -7, effects: [{ type: 'possess_next_turn' }] },
+  ],
+});
+
+test('Sorin: +2 strikes and drinks, −3 sets a life to 10, −7 takes someone\'s next day; planeswalkers have life apart from loyalty', async () => {
+  const world = fixture([sorin, npc('chr-x', npcSim('loc-a', 'social', [1, 5])), npc('chr-k2', { ...npcSim('loc-a'), needs: [] })]);
+  const state = newState(world, { seed: 1, mode: 'observer' });
+  const so = state.actors['chr-so'];
+  const x = state.actors['chr-x'];
+  assert.equal(lifeOf(so), 20); // a planeswalker's life, apart from loyalty
+  assert.equal(useAbility(state, world, 'chr-so', 'plus', 'chr-x', state.minutes), null);
+  assert.equal(woundsOf(x, state.minutes), 2);
+  assert.equal(so.life, 22);
+  assert.equal(so.loyalty, 6);
+  // −3: down to 10, or up to 10.
+  state.minutes += 1440;
+  assert.equal(useAbility(state, world, 'chr-so', 'ten', 'chr-x', state.minutes), null);
+  assert.equal(x.life, 10);
+  state.minutes += 1440;
+  so.loyalty = 9;
+  x.life = 4;
+  assert.equal(useAbility(state, world, 'chr-so', 'ten', 'chr-x', state.minutes), null);
+  assert.equal(x.life, 10);
+  // No life, no change.
+  state.minutes += 1440;
+  assert.equal(useAbility(state, world, 'chr-so', 'ten', 'chr-k2', state.minutes), null);
+  assert.ok(texts(state).some((t) => t.includes('생명이 없어')));
+  // −7: tomorrow is Sorin's; the day after, theirs again.
+  state.minutes += 1440;
+  so.loyalty = 8;
+  assert.equal(useAbility(state, world, 'chr-so', 'rule', 'chr-x', state.minutes), null);
+  assert.equal(x.master, undefined); // not yet: their next day
+  const day = Math.floor(state.minutes / 1440);
+  state.minutes = (day + 1) * 1440 - 60;
+  await advance(state, world, 2); // through 00:00
+  assert.equal(x.master, 'chr-so');
+  assert.equal(x.seized, true);
+  await advance(state, world, 24); // through the next 00:00
+  assert.equal(x.master, undefined);
+  assert.ok(texts(state).some((t) => t.includes('지배가 끝남')));
+});
+
+test('the real Sorin Markov walks Guul Draz; Chandra has life too', () => {
+  const world = loadWorld();
+  const state = newState(world, { seed: 1, mode: 'observer' });
+  const so = state.actors['chr-sorin-markov'];
+  assert.equal(so?.region, 'loc-guul-draz');
+  assert.equal(so.loyalty, 4);
+  assert.equal(lifeOf(so), 20);
+  assert.equal(lifeOf(state.actors['chr-chandra']), 20);
 });

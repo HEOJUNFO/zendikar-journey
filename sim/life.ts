@@ -12,10 +12,18 @@ import { josa, shortName, toward } from './text.ts';
 // MTG's starting life total.
 export const START_LIFE = 20;
 
-// Life they have now, or null for those who live by no energy (Kalitas, Lorthos): they neither
-// lose nor gain it.
+// Life they have now, or null for those who have none (Kalitas, Lorthos: they live by no
+// energy): they neither lose nor gain it. Planeswalkers have life too ([결정] 2026-09-30).
 export function lifeOf(a: Actor) {
-  return needsOf(a).includes('energy') ? (a.life ?? START_LIFE) : null;
+  return needsOf(a).includes('energy') || a.loyalty !== undefined ? (a.life ?? START_LIFE) : null;
+}
+
+// "Their life total becomes N": they gain or lose the difference.
+export function setLife(state: State, a: Actor, n: number, t: number, cause: string, by?: Actor) {
+  const life = lifeOf(a);
+  if (a.dead || life === null || life === n) return;
+  if (life < n) gainLife(state, a, n - life, t, cause);
+  else loseLife(state, a, life - n, t, cause, by);
 }
 
 // `by`: whose doing it is (a land's bonder, a spell's caster), if anyone's.

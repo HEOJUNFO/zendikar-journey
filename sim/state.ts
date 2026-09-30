@@ -69,9 +69,11 @@ export type Actor = {
   master?: string;
   // Abilities they have lost for a while ("loses defender until end of turn").
   lost?: { ability: Ability; until: number }[];
-  // Seized (Roil Elemental): held by their master's power, not their will. Striking the master
-  // doesn't free them; only the master's end does. The player seized can only wait or strike it.
+  // Seized (Roil Elemental, Sorin): held by their master's power, not their will. They can't
+  // turn on their master; only the master's end (or `seizedUntil`) frees them. The player
+  // seized can only wait.
   seized?: boolean;
+  seizedUntil?: number;
   // Lands they sought out with a fetch land: gone from their "library". Kept for when
   // exploring can turn things up (fewer empty searches, as MTG's deck thinning).
   fetched?: string[];
@@ -217,6 +219,9 @@ export type State = {
   // after the hour (sim/run.ts), from these candidates.
   // `optional`: they may pick no one ("you may").
   choices?: Choice[];
+  // "You control target player during that player's next turn" (Sorin): the target is seized by
+  // `by` from `from` until `until` (their next day), at the upkeep (sim/retainers.ts).
+  possessions?: { target: string; by: string; from: number; until: number }[];
   // Picks the player owes (an Ally's rally in their party): they answer with a "choose" action
   // before anything else (sim/run.ts).
   asks?: Choice[];

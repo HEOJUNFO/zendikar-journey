@@ -27,7 +27,7 @@ import { CLAIM_HOURS, claimBlocked, claimItem, itemsAt } from './items.ts';
 import { EON_HOURS, eonLand, holdStill, spendBlocked, spendDay, storeBlocked, storeDay, timeNews } from './eons.ts';
 import { upkeepWins } from './win.ts';
 import { HIRE_HOURS, hireBlocked, hireMerc } from './allies.ts';
-import { COURT_HOURS, courtBlocked, followsMaster, masterOf, readyCourt } from './retainers.ts';
+import { COURT_HOURS, courtBlocked, followsMaster, masterOf, readyCourt, upkeepPossessions } from './retainers.ts';
 import { learnBlocked, learnSpell, npcCastBlocked, readyCast, spellDef } from './spells.ts';
 import { payMana } from './mana.ts';
 import type { Actor, GmPlan, State, Task } from './state.ts';
@@ -85,6 +85,7 @@ function startDay(state: State, world: World, t: number) {
     expireGranted(state, t);
     upkeepRevive(state, world, t);
     upkeepWins(state, world, t);
+    upkeepPossessions(state, t);
   }
   if (state.gm.day !== day) state.gm = { day, source: 'none', fires: [] };
   if (state.met.day !== day) state.met = { day, pairs: [] };

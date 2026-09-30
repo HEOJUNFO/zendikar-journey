@@ -89,9 +89,11 @@ export function bindRetainer(state: State, world: World, a: Actor, master: Actor
 // "Gain control of target creature for as long as you control this" (Roil Elemental): `a` is
 // torn from whoever they served (or from themselves, the player too) and serves `master` until
 // `master` is gone. Not an Ally joining a party: control changes, nothing enters.
-export function seize(state: State, a: Actor, master: Actor, t: number) {
+export function seize(state: State, a: Actor, master: Actor, t: number, until?: number) {
   a.master = master.id;
   a.seized = true;
+  if (until !== undefined) a.seizedUntil = until;
+  else delete a.seizedUntil;
   a.task = undefined;
   remember(a, master, `나를 삼켜 끌고 다닌다 (${formatClock(t)})`, t);
   addLog(state, {
@@ -107,5 +109,21 @@ export function releaseRetainer(state: State, a: Actor, why: string) {
   if (!a.master) return;
   delete a.master;
   delete a.seized;
+  delete a.seizedUntil;
   addLog(state, { kind: 'status', text: `${josa(shortName(a.name), '이', '가')} 권속에서 풀려났다 (${why}).`, regions: [a.region], actors: [a.id] });
+}
+
+// At a turn's start (00:00): a possession ends (their day is theirs again), or begins (Sorin's
+// "you control target player during that player's next turn").
+export function upkeepPossessions(state: State, t: number) {
+  for (const a of Object.values(state.actors))
+    if (a.seizedUntil !== undefined && a.seizedUntil <= t) releaseRetainer(state, a, `${shortName(state.actors[a.master ?? '']?.name ?? '')}의 지배가 끝남`);
+  const due = (state.possessions ?? []).filter((x) => x.from <= t);
+  state.possessions = (state.possessions ?? []).filter((x) => x.from > t);
+  for (const x of due) {
+    const target = state.actors[x.target];
+    const by = state.actors[x.by];
+    if (!target || target.dead || !by || by.dead || x.until <= t) continue;
+    seize(state, target, by, t, x.until);
+  }
 }

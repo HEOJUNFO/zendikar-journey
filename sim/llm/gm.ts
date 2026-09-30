@@ -50,6 +50,14 @@ function describeEffect(e: GmDayInput['abilities'][number]['ability']['effects']
       return `everyone where they are forgets their spells and recalls ${e.draw} at random`;
     case 'flashback':
       return `they cast every ${e.color} spell they let go of on the target, free`;
+    case 'damage':
+      return `${e.amount} damage to the target (it can kill)`;
+    case 'gain_life':
+      return `they gain ${e.amount} life`;
+    case 'set_life':
+      return `the target's life becomes ${e.amount} (a loss if they have more, a gain if less)`;
+    case 'possess_next_turn':
+      return `the target's whole next day (from midnight to midnight) is theirs: the target follows and serves them that day`;
   }
 }
 

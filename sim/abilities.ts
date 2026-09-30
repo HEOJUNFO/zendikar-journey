@@ -5,7 +5,7 @@ import { creatureColors, manaAvailable, payMana, planPayment } from './mana.ts';
 import { landTapBlocked, tapLand } from './landtap.ts';
 import type { Color } from './mana.ts';
 import { itemsOnLandfall } from './items.ts';
-import { gainLife, lifeOf, loseLife } from './life.ts';
+import { gainLife, lifeOf, loseLife, setLife } from './life.ts';
 import { allyJoined } from './allies.ts';
 import { DEPLETED_LABEL } from './rules.ts';
 import { castSpell, spellDef } from './spells.ts';
@@ -355,6 +355,17 @@ export function useAbility(state: State, world: World, beingId: string, abilityI
       if (gone && spellColors(gone).includes(eff.if_color) && target) dealDamage(state, target, eff.damage, t, cause);
     } else if (eff.type === 'wheel') {
       for (const x of present(state, bs.region)) wheel(state, world, x, eff.draw, t);
+    } else if (eff.type === 'damage' && target) {
+      if (dealDamage(state, target, eff.amount, t, cause)) died = true;
+    } else if (eff.type === 'gain_life') {
+      gainLife(state, bs, eff.amount, t, cause);
+    } else if (eff.type === 'set_life' && target) {
+      if (lifeOf(target) === null) addLog(state, { kind: 'effect', text: `${josa(shortName(target.name), '은', '는')} 생명이 없어 아무렇지 않다.`, regions: [target.region], actors: [target.id], t });
+      else setLife(state, target, eff.amount, t, cause, bs);
+    } else if (eff.type === 'possess_next_turn' && target) {
+      const from = untapTime(t);
+      (state.possessions ??= []).push({ target: target.id, by: bs.id, from, until: from + 1440 });
+      addLog(state, { kind: 'event', text: `${shortName(target.name)}의 내일은 ${name}의 것이 되었다.`, regions: [bs.region, target.region], actors: [bs.id, target.id], t });
     } else if (eff.type === 'flashback' && target) {
       for (const id of bs.graveyard ?? []) {
         const s = spellDef(world, id);
