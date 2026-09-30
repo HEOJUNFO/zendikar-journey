@@ -1338,3 +1338,21 @@ test('Iona with no answer from the LLM still names a color', async () => {
   await act(state, world, { type: 'wait', hours: 1 });
   assert.ok(COLORS.includes(sealToday(state.actors['chr-iona'], state.minutes)!));
 });
+
+test('the real Valakut: seeking out a land with a fetch land, then bonding Valakut the same day, wakes the lavaball trap', async () => {
+  const world = loadWorld();
+  const state = newState(world, { seed: 3, mode: 'character', player: { name: '나', background: '떠돌이', region: 'loc-valakut' } });
+  const p = state.actors[PLAYER_ID];
+  p.bonds = ['loc-arid-mesa'];
+  await act(state, world, { type: 'fetch', from: 'loc-arid-mesa', to: 'loc-akoum' });
+  await act(state, world, { type: 'bond' });
+  assert.deepEqual(p.landfalls?.regions, ['loc-akoum', 'loc-valakut']);
+  // The land answers as the next hour begins, with an omen; an hour later, the fire.
+  await act(state, world, { type: 'wait', hours: 1 });
+  assert.ok(texts(state).some((x) => x.includes('발라쿠트의 땅이 울리고')));
+  await act(state, world, { type: 'wait', hours: 1 });
+  // The intruder's two lands of the day are gone, and the fire hit everyone at Valakut.
+  assert.ok(state.regions['loc-valakut']?.destroyed);
+  assert.ok(state.regions['loc-akoum']?.destroyed);
+  assert.ok(p.dead);
+});
