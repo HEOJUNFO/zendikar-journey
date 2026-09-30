@@ -5,12 +5,13 @@ name: 푸른 지하묘지
 name_en: Verdant Catacombs
 summary: 굴 드라즈와 발라 게드가 겹친 땅 밑의 옛 무덤. 천장에서 이끼와 뿌리가 늘어지고, 먼 입구로 희뿌연 빛이 든다
 status: canon
-sources: [ZEN-229]
+sources: [ZEN-229, ZEN-160]
 tags: [지하묘지, 폐허, 길, 페치]
 links:
   - { to: loc-guul-draz, rel: 겹친 늪 대륙 }
   - { to: loc-bala-ged, rel: 겹친 밀림 대륙 }
   - { to: law-life, rel: 길을 여는 값 }
+  - { to: evt-cobra-trap, rel: 도사린 함정 }
 map: { x: 217.5, y: 368.5, terrain: ruins }
 sim:
   nonbasic: true                          # 이름 있는 대지
@@ -35,3 +36,4 @@ sim:
   - 희생 = 그 이의 유대만 끊긴다. 찾아온 땅은 하루 한 땅에 들지 않고 상륙으로 친다.
 - 플레이어는 버튼, NPC는 LLM이 짠 하루의 `fetch` 블록으로 쓴다 ([결정] 2026-09-30: 페치랜드는 NPC도 쓴다).
 - 지금 찾을 수 있는 땅: 굴 드라즈 (늪), 무라사·발라 게드 (숲).
+- **코브라 함정** (`evt-cobra-trap`, ZEN-160): 이 땅이 남의 손에 부서지면 1/1 코브라 넷이 쏟아져 나와 부순 자를 덮친다 ([결정] 2026-09-30 다시 놓기). 지금은 지하묘지가 부서질 길이 없어 잠들어 있다.

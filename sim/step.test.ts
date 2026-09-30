@@ -1448,3 +1448,10 @@ test('the real Chandra wanders Akoum', () => {
   assert.equal(state.actors['chr-chandra']?.region, 'loc-akoum');
   assert.equal(state.actors['chr-chandra']?.loyalty, 5);
 });
+
+test('the real cobra trap lies in Verdant Catacombs: laid waste, it looses four snakes on the one who did it', () => {
+  const world = loadWorld();
+  const ev = world.events.find((e) => e.id === 'evt-cobra-trap')!;
+  assert.equal(ev.region, 'loc-verdant-catacombs');
+  assert.equal(ev.trigger, 'destroyed');
+});
