@@ -10,7 +10,7 @@ import { startAction } from './actions.ts';
 import type { World } from './world.ts';
 import { addFoe, attackBlocked, die, knockedOut, landwalked, woundsOf } from './combat.ts';
 import { sealedBy, sealToday } from './seal.ts';
-import { castBlocked, castSpell } from './spells.ts';
+import { castBlocked, castSpell, readyCast } from './spells.ts';
 import { COLORS, formatMana, manaAvailable, manaCapacity, parseManaCost, planPayment } from './mana.ts';
 import { MAX_TALKS_PER_DAY, usableAbilities, volleyShares } from './run.ts';
 import { eligibleGmEvents, travelBlocked } from './step.ts';
@@ -2403,4 +2403,50 @@ test('the real Goma Fada walks Akoum\'s roads', () => {
   assert.equal(r.parent, undefined);
   assert.deepEqual(r.wanders?.stops.map((s) => s.name), ['로가 대로', '아쿰의 띠', '비탄의 고개']);
   assert.ok(r.notLand);
+});
+
+const pledge: RawEntity = {
+  id: 'spl-p',
+  kind: 'spell',
+  name: '서약',
+  status: 'canon',
+  sim: { cost: '{1}', learn_at: 'loc-a', target: 'self', kicker: { mana: '{1}' }, effects: [{ type: 'create_retainers', creature: 'cre-ks', count: 2, kicked_count: 4, pt: [1, 1], colors: ['W'] }] },
+};
+
+test('a spell of one\'s own: soldiers born at the caster\'s side as retainers; a mana kicker doubles them', async () => {
+  const world = fixture([pledge, lore('cre-ks', 'creature')]);
+  const state = character(world, 'loc-a');
+  const p = state.actors[PLAYER_ID];
+  p.spells = ['spl-p'];
+  p.bonds = ['loc-a'];
+  assert.match(castBlocked(state, world, p, 'spl-p', p.id, true, state.minutes)!, /킥커까지/); // 1 mana: no kicker
+  await act(state, world, { type: 'cast', spell: 'spl-p', to: p.id, kick: false });
+  const mine = () => Object.values(state.actors).filter((a) => a.master === PLAYER_ID);
+  assert.equal(mine().length, 2);
+  assert.ok(texts(state).some((t) => t.includes('2명이 나타나') && t.includes('서약했다')));
+  // Two lands: the kicked one.
+  const s2 = character(world, 'loc-a');
+  const p2 = s2.actors[PLAYER_ID];
+  p2.spells = ['spl-p'];
+  p2.bonds = ['loc-a', 'loc-b'];
+  assert.equal(castBlocked(s2, world, p2, 'spl-p', p2.id, true, s2.minutes), null);
+  await act(s2, world, { type: 'cast', spell: 'spl-p', to: p2.id, kick: true });
+  assert.equal(Object.values(s2.actors).filter((a) => a.master === PLAYER_ID).length, 4);
+  assert.ok(texts(s2).some((t) => t.includes('킥커 {1}')));
+  // An NPC casts it as they finish readying it, kicked if they can pay.
+  const w3 = fixture([pledge, lore('cre-ks', 'creature'), npc('chr-c', { ...npcSim('loc-a'), mana: { W: 2 } })]);
+  const s3 = newState(w3, { seed: 1, mode: 'observer' });
+  s3.actors['chr-c'].spells = ['spl-p'];
+  readyCast(s3, w3, s3.actors['chr-c'], 'spl-p', s3.minutes);
+  assert.equal(Object.values(s3.actors).filter((a) => a.master === 'chr-c').length, 4);
+  assert.equal(s3.choices?.length ?? 0, 0); // no one to pick
+});
+
+test('the real Conqueror\'s Pledge is taught in Ondu: six Kor Soldiers, twelve kicked for {6}', () => {
+  const world = loadWorld();
+  const s = world.spells.find((x) => x.id === 'spl-conquerors-pledge')!;
+  assert.equal(s.learnAt, 'loc-ondu');
+  assert.equal(s.target, 'self');
+  assert.equal(s.kicker?.manaText, '{6}');
+  assert.deepEqual(s.effects[0], { type: 'create_retainers', creature: 'cre-kor-soldier', count: 6, kicked_count: 12, pt: [1, 1], colors: ['W'] });
 });

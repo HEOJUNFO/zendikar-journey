@@ -5,7 +5,7 @@ name: 권속
 name_en: Retainers
 summary: 누군가를 주인으로 섬기며 그의 부림을 받는 이들. 주인을 따라다니고, 주인의 싸움에 함께 나서고, 주인이 부르면 힘을 보탠다
 status: canon
-sources: [ZEN-99, ZEN-81, ZEN-6, ZEN-212, ZEN-213, ZEN-12, ZEN-139, ZEN-178, ZEN-62, ZEN-111]
+sources: [ZEN-99, ZEN-81, ZEN-6, ZEN-212, ZEN-213, ZEN-12, ZEN-139, ZEN-178, ZEN-62, ZEN-111, ZEN-8]
 tags: [규칙, 권속]
 links:
   - { to: loc-emeria, rel: 죽은 권속을 되돌림 }

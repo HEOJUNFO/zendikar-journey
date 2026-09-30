@@ -112,7 +112,13 @@ ${
         }
 ${taught.length ? taught.map((s) => `- {"type":"learn","spell":"${s.id}"}  (learn ${s.name} here: ${s.summary}; ${s.learnHours} hours)`).join('\n') + '\n' : ''}${
           known.length
-            ? known.map((s) => `- {"type":"cast","spell":"${s.id}","to":"<person id${s.target === 'any_here' ? ` or ${p.id} for themselves` : ''}>","kick":false}  (cast ${s.name} ${s.costText} on someone here: ${s.summary})`).join('\n') + '\n'
+            ? known
+                .map((s) =>
+                  s.target === 'self'
+                    ? `- {"type":"cast","spell":"${s.id}","to":"${p.id}","kick":false}  (cast ${s.name} ${s.costText}: ${s.summary}${s.kicker?.mana ? `; "kick":true pays ${s.kicker.manaText} more for the kicked effect` : ''})`
+                    : `- {"type":"cast","spell":"${s.id}","to":"<person id${s.target === 'any_here' ? ` or ${p.id} for themselves` : ''}>","kick":false}  (cast ${s.name} ${s.costText} on someone here: ${s.summary})`,
+                )
+                .join('\n') + '\n'
             : ''
         }${[...items.map((x) => `- {"type":"claim","item":"${x.id}"}  (tame ${x.name} ${x.costText}, making it theirs: ${x.summary})`), ...fetches, ...days].join('\n')}
 Player typed: ${text}

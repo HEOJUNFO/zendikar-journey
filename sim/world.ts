@@ -390,10 +390,12 @@ export const SpellSimSchema = z.strictObject({
   // Where it is learned, and how long that takes.
   learn_at: z.string(),
   learn_hours: z.number().int().min(1).default(4),
-  // Who it can target: someone else standing in the same place, or anyone there (self too).
-  target: z.enum(['other_here', 'any_here']).default('other_here'),
-  // Kicker: tap an untapped creature of this kind that the caster controls, for more effect.
-  kicker: z.strictObject({ tap: z.string() }).optional(),
+  // Who it can target: someone else standing in the same place, or anyone there (self too);
+  // self: no target, it is the caster's own (e.g. "create tokens").
+  target: z.enum(['other_here', 'any_here', 'self']).default('other_here'),
+  // Kicker, for more effect: tap an untapped creature of this kind that the caster controls,
+  // or pay this much more mana ("Kicker {6}").
+  kicker: z.union([z.strictObject({ tap: z.string() }), z.strictObject({ mana: CostSchema })]).optional(),
   effects: z
     .array(
       z.discriminatedUnion('type', [
@@ -408,6 +410,16 @@ export const SpellSimSchema = z.strictObject({
           type: z.literal('aura'),
           pt: z.tuple([z.number().int(), z.number().int()]).default([0, 0]),
           double_life_on_hit: z.boolean().default(false),
+        }),
+        // "Create N P/T <color> <kind> creature tokens" (kicked: `kicked_count` instead): born
+        // at the caster's side, their retainers (Conqueror's Pledge).
+        z.strictObject({
+          type: z.literal('create_retainers'),
+          creature: z.string(),
+          count: z.number().int().positive(),
+          kicked_count: z.number().int().positive().optional(),
+          pt: z.tuple([z.number().int().min(0), z.number().int().min(1)]),
+          colors: z.array(z.enum(COLORS)),
         }),
       ]),
     )
@@ -554,10 +566,10 @@ export type SpellDef = {
   cost: ManaCost;
   costText: string;
   speed: 'sorcery' | 'instant';
-  target: 'other_here' | 'any_here';
+  target: 'other_here' | 'any_here' | 'self';
   learnAt: string;
   learnHours: number;
-  kicker?: { tap: string };
+  kicker?: { tap: string; mana?: undefined; manaText?: undefined } | { tap?: undefined; mana: ManaCost; manaText: string };
   effects: SpellEffect[];
 };
 
@@ -749,7 +761,7 @@ export function buildWorld(entities: RawEntity[]): { world: World; errors: strin
         target: d.target,
         learnAt: d.learn_at,
         learnHours: d.learn_hours,
-        kicker: d.kicker,
+        ...(d.kicker ? { kicker: 'tap' in d.kicker ? { tap: d.kicker.tap } : { mana: parseManaCost(d.kicker.mana)!, manaText: d.kicker.mana } } : {}),
         effects: d.effects,
       });
     } else if (e.kind === 'item') {
@@ -786,7 +798,8 @@ export function buildWorld(entities: RawEntity[]): { world: World; errors: strin
   for (const s of world.spells) {
     const r = regionOk(s.id, s.learnAt, 'sim.learn_at');
     if (r && TERRAINS[r.terrain].sea) err(s.id, `sim.learn_at ${s.learnAt} 은 바다라 아무도 머물 수 없음`);
-    if (s.kicker && !ids.has(s.kicker.tap)) err(s.id, `sim.kicker.tap ${s.kicker.tap} 가 없음`);
+    if (s.kicker?.tap && !ids.has(s.kicker.tap)) err(s.id, `sim.kicker.tap ${s.kicker.tap} 가 없음`);
+    for (const e of s.effects) if (e.type === 'create_retainers' && !ids.has(e.creature)) err(s.id, `create_retainers.creature ${e.creature} 가 없음`);
   }
   for (const x of world.items) {
     const r = regionOk(x.id, x.at, 'sim.at');

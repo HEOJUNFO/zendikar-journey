@@ -607,7 +607,7 @@ export function CharacterControls(props: {
             공격
           </button>
           {target &&
-            known.map((s) => {
+            known.filter((s) => s.target !== 'self').map((s) => {
               const kick = !!s.kicker && !castBlocked(state, world, p, s.id, target.id, true, state.minutes);
               const why = castBlocked(state, world, p, s.id, target.id, false, state.minutes);
               return (
@@ -625,17 +625,27 @@ export function CharacterControls(props: {
             })}
         </form>
       )}
-      {known.some((s) => s.target === 'any_here') && (
+      {known.some((s) => s.target === 'any_here' || s.target === 'self') && (
         <div className="row">
           {known
-            .filter((s) => s.target === 'any_here')
-            .map((s) => {
+            .filter((s) => s.target === 'any_here' || s.target === 'self')
+            .flatMap((s) => {
               const why = castBlocked(state, world, p, s.id, p.id, false, state.minutes);
-              return (
-                <button key={s.id} disabled={busy || !!stuck || !!why} title={why ?? `나에게 ${s.name} ${s.costText}`} onClick={() => onAct({ type: 'cast', spell: s.id, to: p.id, kick: false })}>
-                  ✨ {s.name} (나에게)
+              const label = s.target === 'self' ? s.name : `${s.name} (나에게)`;
+              const plain = (
+                <button key={s.id} disabled={busy || !!stuck || !!why} title={why ?? `${s.target === 'self' ? '' : '나에게 '}${s.name} ${s.costText}`} onClick={() => onAct({ type: 'cast', spell: s.id, to: p.id, kick: false })}>
+                  ✨ {label}
                 </button>
               );
+              // A mana kicker is the player's choice: a second button.
+              if (!s.kicker?.mana) return [plain];
+              const whyKick = castBlocked(state, world, p, s.id, p.id, true, state.minutes);
+              return [
+                plain,
+                <button key={`${s.id}-kick`} disabled={busy || !!stuck || !!whyKick} title={whyKick ?? `${s.name} ${s.costText} + 킥커 ${s.kicker.manaText}`} onClick={() => onAct({ type: 'cast', spell: s.id, to: p.id, kick: true })}>
+                  ✨ {label} (킥커)
+                </button>,
+              ];
             })}
         </div>
       )}

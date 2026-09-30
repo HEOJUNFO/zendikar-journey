@@ -28,6 +28,13 @@ function colorsOf(sym: ManaSymbol): string[] {
 
 export type ManaCost = { generic: number; colored: Partial<Record<Color, number>> };
 
+// Two costs paid together (a spell and its kicker).
+export function addCosts(a: ManaCost, b: ManaCost): ManaCost {
+  const colored: ManaCost['colored'] = { ...a.colored };
+  for (const [c, n] of Object.entries(b.colored) as [Color, number][]) colored[c] = (colored[c] ?? 0) + n;
+  return { generic: a.generic + b.generic, colored };
+}
+
 // "{5}{B}{B}" -> { generic: 5, colored: { B: 2 } }
 export function parseManaCost(text: string): ManaCost | null {
   const cost: ManaCost = { generic: 0, colored: {} };

@@ -672,7 +672,8 @@ function growInput(state: State, world: World, a: Actor): PlanDayInput['grow'] {
 
 // Spells they could learn (not beasts), and spells they hold and could pay for, for their plan.
 function spellsInput(state: State, world: World, a: Actor, npc: NpcDef): Pick<PlanDayInput, 'learn' | 'cast'> {
-  const text = (s: SpellDef) => `${s.name} (${s.summary}), costs ${s.costText}${s.target === 'any_here' ? ', on someone there or themselves' : ', on someone else there'}`;
+  const text = (s: SpellDef) =>
+    `${s.name} (${s.summary}), costs ${s.costText}${s.kicker?.mana ? ` (or ${s.kicker.manaText} more, kicked, if they can pay then)` : ''}${s.target === 'self' ? ', their own (no target)' : s.target === 'any_here' ? ', on someone there or themselves' : ', on someone else there'}`;
   const learn = npc.beast ? [] : learnableSpells(world, a).map((s) => ({ id: s.id, at: s.learnAt, text: `${text(s)}; learning takes ${s.learnHours} hours` }));
   const cast = castableSpells(state, world, a, state.minutes).map((s) => ({ id: s.id, text: text(s) }));
   return { ...(learn.length ? { learn } : {}), ...(cast.length ? { cast } : {}) };

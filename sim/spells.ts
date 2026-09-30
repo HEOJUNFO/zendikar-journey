@@ -6,7 +6,8 @@
 import { untapTime } from './clock.ts';
 import { addFoe } from './combat.ts';
 import { gainLife, lifeOf, loseLife } from './life.ts';
-import { formatMana, manaAvailable, manaCapacity, payMana, planPayment } from './mana.ts';
+import { addCosts, formatMana, manaAvailable, manaCapacity, payMana, planPayment } from './mana.ts';
+import { spawnWild } from './abilities.ts';
 import { remember } from './relations.ts';
 import { creatureOf, retainersOf } from './retainers.ts';
 import { addLog, present, ptOf, targetable } from './state.ts';
@@ -52,19 +53,22 @@ export function castBlocked(state: State, world: World, a: Actor, spellId: strin
   const by = sealedBy(state, a, s, t);
   if (by) return sealText(by, t);
   const target = state.actors[targetId];
-  if (!target || target.dead || (target.id === a.id && s.target !== 'any_here')) return '그런 대상은 없다.';
+  if (!target || target.dead || (target.id === a.id && s.target === 'other_here') || (s.target === 'self' && target.id !== a.id)) return '그런 대상은 없다.';
   if (target.id !== a.id && !present(state, a.region).some((x) => x.id === target.id))
     return `${josa(shortName(target.name), '은', '는')} 여기 없다.`;
-  if (!targetable(target, t)) return `${josa(shortName(target.name), '은', '는')} 방어막에 싸여 대상이 될 수 없다.`;
+  if (s.target !== 'self' && !targetable(target, t)) return `${josa(shortName(target.name), '은', '는')} 방어막에 싸여 대상이 될 수 없다.`;
   if (!planPayment(manaAvailable(state, world, a, t), s.cost))
     return `마나가 모자라다 (${s.costText}, 지금 ${formatMana(manaAvailable(state, world, a, t))}).`;
   if (kick && !s.kicker) return '추가 비용이 없는 주문이다.';
-  if (kick && !tappable(state, world, a, s.kicker!.tap).length) return '추가 비용으로 탭할 것이 없다.';
+  if (kick && s.kicker?.tap && !tappable(state, world, a, s.kicker.tap).length) return '추가 비용으로 탭할 것이 없다.';
+  if (kick && s.kicker?.mana && !planPayment(manaAvailable(state, world, a, t), addCosts(s.cost, s.kicker.mana)))
+    return `킥커까지 치를 마나가 모자라다 (${s.costText} + ${s.kicker.manaText}).`;
   return null;
 }
 
 // Whom `a` could cast `s` on where they stand: anyone else there, or themselves too.
 export function castTargets(state: State, a: Actor, s: SpellDef) {
+  if (s.target === 'self') return [a];
   return present(state, a.region).filter((x) => (x.id !== a.id || s.target === 'any_here') && targetable(x, state.minutes));
 }
 
@@ -83,6 +87,8 @@ export function npcCastBlocked(state: State, world: World, a: Actor, spellId: st
 export function readyCast(state: State, world: World, a: Actor, spellId: string, t: number) {
   const s = spellDef(world, spellId);
   if (!s || npcCastBlocked(state, world, a, s.id, t)) return;
+  // Their own (no target): cast as they finish, kicked if they can pay it.
+  if (s.target === 'self') return castSpell(state, world, a, s.id, a.id, !!s.kicker && !castBlocked(state, world, a, s.id, a.id, true, t), t);
   const candidates = castTargets(state, a, s).map((x) => x.id);
   if (!candidates.length) return;
   (state.choices ??= []).push({ by: a.id, land: a.region, effect: { type: 'cast', spell: s.id }, candidates, optional: true, t });
@@ -112,9 +118,11 @@ export function castSpell(state: State, world: World, a: Actor, spellId: string,
     addLog(state, { kind: 'status', text: `${josa(shortName(a.name), '은', '는')} ${josa(s.name, '을', '를')} 쓰지 못했다: ${sealText(by, t)}`, regions: [a.region], actors: [a.id, by.id], t });
     return;
   }
-  if (!free) payMana(state, world, a, s.cost, t);
-  let kicked = false;
-  if (kick && s.kicker) {
+  // A mana kicker is paid with the spell, if they can.
+  const manaKick = kick && !!s.kicker?.mana && !free && !!planPayment(manaAvailable(state, world, a, t), addCosts(s.cost, s.kicker.mana));
+  if (!free) payMana(state, world, a, manaKick ? addCosts(s.cost, s.kicker!.mana!) : s.cost, t);
+  let kicked = manaKick;
+  if (kick && s.kicker?.tap) {
     const tapped = tappable(state, world, a, s.kicker.tap)[0];
     if (tapped) {
       tapped.boundUntil = untapTime(t);
@@ -123,9 +131,10 @@ export function castSpell(state: State, world: World, a: Actor, spellId: string,
     }
   }
   const on = target.id === a.id ? '자신' : shortName(target.name);
+  const paid = free ? '값 없이' : kicked && s.kicker?.mana ? `${s.costText} + 킥커 ${s.kicker.manaText}` : s.costText;
   addLog(state, {
     kind: 'event',
-    text: `${josa(shortName(a.name), '이', '가')} ${on}에게 ${josa(s.name, '을', '를')} 걸었다 (${free ? '값 없이' : s.costText}).`,
+    text: s.target === 'self' ? `${josa(shortName(a.name), '이', '가')} ${josa(s.name, '을', '를')} 썼다 (${paid}).` : `${josa(shortName(a.name), '이', '가')} ${on}에게 ${josa(s.name, '을', '를')} 걸었다 (${paid}).`,
     regions: [a.region],
     actors: [a.id, target.id],
   });
@@ -138,6 +147,12 @@ export function castSpell(state: State, world: World, a: Actor, spellId: string,
       loseLife(state, target, lost, t, s.name, a);
     } else if (eff.type === 'gain_life_lost' && (!eff.if_kicked || kicked) && lost > 0) {
       gainLife(state, a, lost, t, s.name);
+    } else if (eff.type === 'create_retainers') {
+      const n = kicked && eff.kicked_count ? eff.kicked_count : eff.count;
+      const born = spawnWild(state, world, eff.creature, eff.pt, n, a.region, eff.colors);
+      for (const b of born) b.master = a.id;
+      const kind = world.lore.find((l) => l.id === eff.creature)?.name ?? eff.creature;
+      addLog(state, { kind: 'event', text: `${kind} ${n}명이 나타나 ${shortName(a.name)}에게 서약했다 (${eff.pt.join('/')}, 권속).`, regions: [a.region], actors: [a.id, ...born.map((b) => b.id)] });
     } else if (eff.type === 'aura') {
       target.auras = [...(target.auras ?? []), { spell: s.id, name: s.name, by: a.id, pt: [...eff.pt], doubleLifeOnHit: eff.double_life_on_hit }];
       addLog(state, {

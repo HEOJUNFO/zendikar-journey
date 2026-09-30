@@ -377,13 +377,13 @@ function SpellDetail(props: { world: World; state: State | null; sp: SpellDef; o
         <dt>속도</dt>
         <dd>{sp.speed === 'instant' ? '순간마법 (언제든)' : '집중마법 (할 일이 없을 때만)'}</dd>
         <dt>대상</dt>
-        <dd>{sp.target === 'any_here' ? '같은 곳의 누구든 (자신도)' : '같은 곳의 다른 한 사람'}</dd>
+        <dd>{sp.target === 'self' ? '없음 (시전자 자신의 것)' : sp.target === 'any_here' ? '같은 곳의 누구든 (자신도)' : '같은 곳의 다른 한 사람'}</dd>
         <dt>배우기</dt>
         <dd>{placeName(world, region(world, sp.learnAt))}에서 {sp.learnHours}시간</dd>
         {sp.kicker && (
           <>
             <dt>킥커</dt>
-            <dd>권속 {world.lore.find((x) => x.id === sp.kicker!.tap)?.name ?? sp.kicker.tap} 하나를 탭</dd>
+            <dd>{sp.kicker.tap ? `권속 ${world.lore.find((x) => x.id === sp.kicker!.tap)?.name ?? sp.kicker.tap} 하나를 탭` : `마나 ${sp.kicker.manaText} 더`}</dd>
           </>
         )}
         <dt>효과</dt>
@@ -425,6 +425,8 @@ function spellEffectText(e: SpellEffect) {
       return `잃은 만큼 시전자가 생명을 얻음${e.if_kicked ? ' (킥커 시)' : ''}`;
     case 'aura':
       return `오라: ${signed(e.pt[0])}/${signed(e.pt[1])}${e.double_life_on_hit ? ', 전투 피해를 주면 조종자의 생명 두 배' : ''}`;
+    case 'create_retainers':
+      return `${e.pt.join('/')} 권속 ${e.count}${e.kicked_count ? ` (킥커 시 ${e.kicked_count})` : ''}`;
   }
 }
 
