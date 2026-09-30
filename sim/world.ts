@@ -260,8 +260,12 @@ export const CharacterSimSchema = z.strictObject({
   // blocks them (strikes back, flies from them), or picks them (spells, abilities, lands).
   protection: z.array(z.enum(COLORS)).default([]),
   // Stats they live by (default: all). Without hunger they never eat; without coin work earns
-  // nothing; with none (e.g. Kalitas) they neither tire nor gain or lose life.
-  needs: z.array(z.enum(NEEDS)).default([...NEEDS]),
+  // nothing. Every living being tires (energy, user decision 2026-09-30); life is everyone's
+  // regardless.
+  needs: z
+    .array(z.enum(NEEDS))
+    .default([...NEEDS])
+    .refine((n) => n.includes('energy'), { message: '모든 존재는 기력(energy)을 쓴다' }),
   // A beast: doesn't talk, hunts whoever stands with it when hungry, hunts a land out, and
   // holds only the hunting ground it last bonded with.
   beast: z.boolean().default(false),

@@ -331,7 +331,7 @@ test('combat: a flyer may take to the air; an NPC may turn hostile while talking
 const lore = (id: string, kind: string): RawEntity => ({ id, kind, name: id, status: 'canon' });
 // A character of legend: powers of their own, no needs. By default one who lives in the sea.
 const being = (id: string, sim: object): RawEntity =>
-  planned({ id, kind: 'character', name: `${id}, 존재`, status: 'canon', sim: { role: 'r', persona: 'p', goal: 'g', needs: [], home: 'loc-sea', abilities: ['aquatic'], ...sim } });
+  planned({ id, kind: 'character', name: `${id}, 존재`, status: 'canon', sim: { role: 'r', persona: 'p', goal: 'g', needs: ['energy'], home: 'loc-sea', abilities: ['aquatic'], ...sim } });
 const kalitas = being('chr-k', {
   home: 'loc-c',
   abilities: [],
@@ -412,7 +412,8 @@ test('characters of legend live planned days like anyone; those of the sea never
   await advance(state, world, 30);
   assert.equal(state.actors['chr-k'].kind, 'npc');
   assert.equal(state.actors['chr-k'].region, 'loc-a');
-  assert.equal(state.actors['chr-k'].stats.energy, 80); // lives by no needs
+  assert.ok(state.actors['chr-k'].stats.energy < 80); // every being tires
+  assert.equal(state.actors['chr-k'].stats.hunger, 20); // but he doesn't eat
   assert.equal(state.actors['chr-l'].region, 'loc-sea');
   assert.match(travelBlocked(state, world, state.actors['chr-l'], 'loc-a')!, /뭍/);
 });
@@ -1777,7 +1778,7 @@ const roil = (plan: unknown[][]): RawEntity => planned({
   kind: 'creature',
   name: '정령',
   status: 'canon',
-  sim: { pt: [3, 2], mana: { U: 6 }, role: 'r', home: 'loc-a', persona: 'p', goal: 'g', needs: [], beast: true, abilities: ['fly'], landfall_seize: true, plan },
+  sim: { pt: [3, 2], mana: { U: 6 }, role: 'r', home: 'loc-a', persona: 'p', goal: 'g', needs: ['energy'], beast: true, abilities: ['fly'], landfall_seize: true, plan },
 });
 const roilDay = [
   ['00:00', '06:00', 'loc-a', 'leisure', '맴돎', '🌀'],
@@ -1911,7 +1912,7 @@ const sorin = being('chr-so', {
 });
 
 test('Sorin: +2 strikes and drinks, −3 sets a life to 10, −7 takes someone\'s next day; planeswalkers have life apart from loyalty', async () => {
-  const world = fixture([sorin, npc('chr-x', npcSim('loc-a', 'social', [1, 5])), npc('chr-k2', { ...npcSim('loc-a'), needs: [] })]);
+  const world = fixture([sorin, npc('chr-x', npcSim('loc-a', 'social', [1, 5])), npc('chr-k2', { ...npcSim('loc-a'), needs: ['energy'] })]);
   const state = newState(world, { seed: 1, mode: 'observer' });
   const so = state.actors['chr-so'];
   const x = state.actors['chr-x'];
@@ -2337,7 +2338,7 @@ test('a hungry token hunts only with no master: a herd\'s young keeps to its mas
 });
 
 test('swampwalk: one bonded with a swamp can\'t strike back at it, nor fly from it', async () => {
-  const wraith = { ...npcSim('loc-a', 'work', [4, 2]), needs: [], beast: true, abilities: ['swampwalk'] };
+  const wraith = { ...npcSim('loc-a', 'work', [4, 2]), needs: ['energy'], beast: true, abilities: ['swampwalk'] };
   const world = fixture([loc('loc-swamp', 12, 10, 'swamp'), npc('chr-w', wraith), npc('chr-x', npcSim('loc-a', 'work', [3, 9])), npc('chr-f', { ...npcSim('loc-a', 'work', [3, 9]), abilities: ['fly'] })]);
   const state = newState(world, { seed: 1, mode: 'observer' });
   const [w, x, f] = [state.actors['chr-w'], state.actors['chr-x'], state.actors['chr-f']];
@@ -2681,7 +2682,7 @@ test('the real Hagra Diabolist lives in the Hagra swamp of Guul Draz, for 50 coi
 });
 
 test('intimidate: one who shares none of its colors can\'t strike back at it, nor fly from it', async () => {
-  const demon = { ...npcSim('loc-a', 'work', [6, 3]), mana: { B: 5 }, needs: [], beast: true, abilities: ['intimidate'] };
+  const demon = { ...npcSim('loc-a', 'work', [6, 3]), mana: { B: 5 }, needs: ['energy'], beast: true, abilities: ['intimidate'] };
   const world = fixture([loc('loc-swamp', 12, 10, 'swamp'), npc('chr-d', demon), npc('chr-x', npcSim('loc-a', 'work', [3, 9])), npc('chr-f', { ...npcSim('loc-a', 'work', [3, 9]), abilities: ['fly'] })]);
   const state = newState(world, { seed: 1, mode: 'observer' });
   const [d, x, f] = [state.actors['chr-d'], state.actors['chr-x'], state.actors['chr-f']];
@@ -2711,7 +2712,7 @@ test('intimidate: one who shares none of its colors can\'t strike back at it, no
 });
 
 test('first strike: one who has it strikes first, and one it fells never strikes back; both have it, simultaneous', () => {
-  const fs = (pt: [number, number]) => ({ ...npcSim('loc-a', 'work', pt), needs: [], abilities: ['first_strike'] });
+  const fs = (pt: [number, number]) => ({ ...npcSim('loc-a', 'work', pt), needs: ['energy'], abilities: ['first_strike'] });
   const world = fixture([npc('chr-s', fs([3, 3])), npc('chr-s2', fs([3, 3])), npc('chr-x', npcSim('loc-a', 'work', [3, 3])), npc('chr-y', npcSim('loc-a', 'work', [3, 3])), npc('chr-big', npcSim('loc-a', 'work', [2, 9]))]);
   const state = newState(world, { seed: 1, mode: 'observer' });
   const [s, s2, x, y, big] = ['chr-s', 'chr-s2', 'chr-x', 'chr-y', 'chr-big'].map((id) => state.actors[id]);
@@ -2767,8 +2768,8 @@ test('the real Shepherd of the Lost keeps Emeria: a 3/3 Angel with flying, first
 });
 
 test('enter_destroy: arriving where an Angel is, the hunter may destroy it; shroud and indestructible are spared', async () => {
-  const hunter = { ...npcSim('loc-c', 'work', [6, 3]), home: 'loc-a', mana: { B: 5 }, needs: [], types: ['demon'], enter_destroy: 'angel' };
-  const angel = (extra: object = {}) => ({ ...npcSim('loc-c', 'work', [7, 7]), needs: [], types: ['angel'], ...extra });
+  const hunter = { ...npcSim('loc-c', 'work', [6, 3]), home: 'loc-a', mana: { B: 5 }, needs: ['energy'], types: ['demon'], enter_destroy: 'angel' };
+  const angel = (extra: object = {}) => ({ ...npcSim('loc-c', 'work', [7, 7]), needs: ['energy'], types: ['angel'], ...extra });
   const world = fixture([npc('chr-h', hunter), npc('chr-an', angel()), npc('chr-sh', angel({ abilities: ['shroud'] })), npc('chr-y', npcSim('loc-c', 'work'))]);
   const state = newState(world, { seed: 1, mode: 'observer' });
   assert.equal(state.actors['chr-h'].region, 'loc-a');
@@ -2806,8 +2807,8 @@ test('the real Halo Hunter lairs in Akoum, intimidating, hunting Iona the Angel'
 });
 
 test('a sealed color is sealed itself: a being of it has no powers against the sealer, its lands only give mana', () => {
-  const iona = { ...npcSim('loc-a', 'work', [7, 7]), needs: [], mana: { W: 9 }, seal: true, types: ['angel'] };
-  const demon = { ...npcSim('loc-a', 'work', [6, 3]), needs: [], mana: { B: 5 }, abilities: ['intimidate', 'fly'], enter_destroy: 'angel' };
+  const iona = { ...npcSim('loc-a', 'work', [7, 7]), needs: ['energy'], mana: { W: 9 }, seal: true, types: ['angel'] };
+  const demon = { ...npcSim('loc-a', 'work', [6, 3]), needs: ['energy'], mana: { B: 5 }, abilities: ['intimidate', 'fly'], enter_destroy: 'angel' };
   const world = fixture([loc('loc-swamp', 12, 10, 'swamp'), npc('chr-io', iona), npc('chr-d', demon), npc('chr-d2', demon)]);
   const state = newState(world, { seed: 1, mode: 'observer' });
   const [io, d, d2] = [state.actors['chr-io'], state.actors['chr-d'], state.actors['chr-d2']];
@@ -2897,7 +2898,7 @@ test('the real Landbind Ritual is taught in Ondu: 2 life per plains', () => {
 });
 
 test('enter_drain: on the first arrival of the day, all others there lose life per Vampire of her side; her controller gains it', async () => {
-  const witch = { ...npcSim('loc-c', 'work', [4, 4]), home: 'loc-a', mana: { B: 5 }, needs: [], creature: 'cre-v', enter_drain: { per: 'cre-v' } };
+  const witch = { ...npcSim('loc-c', 'work', [4, 4]), home: 'loc-a', mana: { B: 5 }, needs: ['energy'], creature: 'cre-v', enter_drain: { per: 'cre-v' } };
   const world = fixture([lore('cre-v', 'creature'), npc('chr-w', witch), npc('chr-v', { ...npcSim('loc-c'), creature: 'cre-v' }), npc('chr-x', npcSim('loc-c')), npc('chr-y', npcSim('loc-c'))]);
   const state = newState(world, { seed: 1, mode: 'observer' });
   const [w, v, x, y] = [state.actors['chr-w'], state.actors['chr-v'], state.actors['chr-x'], state.actors['chr-y']];
@@ -2917,10 +2918,10 @@ test('enter_drain: on the first arrival of the day, all others there lose life p
 });
 
 test('protection from white: white does not hurt her, block her, nor pick her', async () => {
-  const witch = { ...npcSim('loc-a', 'work', [4, 4]), mana: { B: 5 }, needs: [], protection: ['W'] };
-  const white = (pt: number[]) => ({ ...npcSim('loc-a', 'work', pt), mana: { W: 3 }, needs: [] });
+  const witch = { ...npcSim('loc-a', 'work', [4, 4]), mana: { B: 5 }, needs: ['energy'], protection: ['W'] };
+  const white = (pt: number[]) => ({ ...npcSim('loc-a', 'work', pt), mana: { W: 3 }, needs: ['energy'] });
   const mantle: RawEntity = { id: 'spl-wm', kind: 'spell', name: '백색 오라', status: 'canon', sim: { cost: '{W}', learn_at: 'loc-a', target: 'any_here', effects: [{ type: 'aura', pt: [1, 1] }] } };
-  const world = fixture([mantle, npc('chr-w', witch), npc('chr-k', white([5, 9])), npc('chr-g', { ...npcSim('loc-a', 'work', [2, 9]), mana: { G: 2 }, needs: [] })]);
+  const world = fixture([mantle, npc('chr-w', witch), npc('chr-k', white([5, 9])), npc('chr-g', { ...npcSim('loc-a', 'work', [2, 9]), mana: { G: 2 }, needs: ['energy'] })]);
   const state = newState(world, { seed: 1, mode: 'observer' });
   const [w, k, g] = [state.actors['chr-w'], state.actors['chr-k'], state.actors['chr-g']];
   const t = state.minutes;
@@ -2999,7 +3000,7 @@ test('the real Mind Sludge is taught at the Ghet estate: a discard per swamp', (
 });
 
 test('landfall drain: as he bonds, one there he picks loses 3 life and he grows three +1/+1 counters; or none', async () => {
-  const demon = { ...npcSim('loc-a', 'work', [3, 3]), mana: { B: 5 }, needs: [], landfall_drain: { life: 3, counters: 3 } };
+  const demon = { ...npcSim('loc-a', 'work', [3, 3]), mana: { B: 5 }, needs: ['energy'], landfall_drain: { life: 3, counters: 3 } };
   const world = fixture([npc('chr-o', demon), npc('chr-x', npcSim('loc-a')), npc('chr-s', { ...npcSim('loc-a'), abilities: ['shroud'] })]);
   const state = newState(world, { seed: 1, mode: 'observer' });
   const [o, x] = [state.actors['chr-o'], state.actors['chr-x']];

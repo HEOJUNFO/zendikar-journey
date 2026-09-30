@@ -33,6 +33,6 @@ entities: [cre-bog-tatters, loc-piranha-marsh]
 
 ## 반영 내역
 
-- `cre-bog-tatters` (새 생물종, 하나): 4/2, 흑 5, `needs: []`, `beast`, `swampwalk`.
+- `cre-bog-tatters` (새 생물종, 하나): 4/2, 흑 5, `needs: [energy]` (처음엔 `[]`, 2026-09-30 모든 존재가 지치게), `beast`, `swampwalk`.
 - `loc-piranha-marsh`: 떠도는 망령.
 - 엔진: 능력 `swampwalk`(`combat.ts` 의 `landwalked`: 기본 늪과 유대한 상대는 맞받아치지도 날아 피하지도 못함).

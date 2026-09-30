@@ -219,7 +219,7 @@ sim:
     ...
   goal: 에메리아와 그곳을 찾는 의로운 이들을 지킨다.
   abilities: [fly]            # 선택. 지금은 fly 만 있다
-  needs: [energy]             # 선택. 쓰는 스탯 (energy, hunger, coin). 기본은 셋 다
+  needs: [energy]             # 선택. 쓰는 스탯 (energy, hunger, coin). 기본은 셋 다. energy 는 빠질 수 없다
 ```
 
 인물의 `sim` 에는 선택으로 `mana: { W: 9 }` (카드의 마나 값과 색)를 단다. 그 밖의 선택 항목:
@@ -227,7 +227,7 @@ sim:
 - `landfall: { pt: [4, 4], trample: true }`: 땅과 유대를 맺으면 그날 00:00까지 +P/+T (와 돌진).
 - `beast: true`: 짐승. 말을 하지 않고, 배고픔 60 이상이면 같은 곳의 가장 약한 이를 덮치며(잡아먹으면 배고픔 -60), 사냥(`eat`)한 땅은 72시간 "사냥감이 바닥남"이 되어 다시 사냥터로 삼지 못한다.
 - `abilities: [aquatic]`: 물에 사는 이. 바다에만 머문다 (로르토스).
-- `needs: []`: 지치지도 굶지도 않는다. 생명은 `needs` 와 상관없이 모두 가진다.
+- `energy` 는 빠질 수 없다: 모든 존재가 지친다 ([결정] 2026-09-30). 생명은 `needs` 와 상관없이 모두 가진다.
 
 생물종(`creature`)에도 같은 `sim` 을 달 수 있다. 그 종의 한 개체가 세계에 산다 (예: `cre-baloth`).
 
@@ -245,7 +245,7 @@ sim:
   role: ...
   persona: ...
   goal: ...
-  needs: []
+  needs: [energy]
   activated:                  # 아침 LLM이 쓸지, 누구에게 쓸지 정한다 (대상: 살아 있는 인물 하나)
     - id: blood-kin
       name: 죽여서 혈족으로 들이기
