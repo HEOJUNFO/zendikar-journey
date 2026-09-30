@@ -3,7 +3,7 @@
 import { formatClock } from '../sim/clock.ts';
 import { player } from '../sim/state.ts';
 import type { Actor, State } from '../sim/state.ts';
-import { MAP_HEIGHT, MAP_WIDTH, TERRAINS } from '../sim/world.ts';
+import { areasOf, MAP_HEIGHT, MAP_WIDTH, TERRAINS } from '../sim/world.ts';
 import type { EventDef, Region, World } from '../sim/world.ts';
 import type { Color } from '../sim/mana.ts';
 
@@ -54,7 +54,7 @@ export function halfCircle(x: number, y: number, r: number, side: 0 | 1) {
 // their region's place; this is only how they are drawn.)
 const SIZE_RADIUS = { continent: 22, island: 7 } as const;
 function areaAngle(world: World, r: Region) {
-  const sibs = world.regions.filter((x) => x.parent === r.parent);
+  const sibs = areasOf(world, r.parent!);
   const n = sibs.length;
   const spread = Math.min(2.4, (n - 1) * 1.4);
   return Math.PI / 2 + (n > 1 ? -spread / 2 + (spread * sibs.indexOf(r)) / (n - 1) : 0);

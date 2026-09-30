@@ -147,6 +147,8 @@ export const MapSchema = z.union([
     in: z.string(),
     terrain: z.enum(TERRAIN_IDS),
     color: LandColor,
+    // Where it sits among its region's areas on the map, east (low) to west (high); default 0.
+    order: z.number().optional(),
   }),
 ]);
 
@@ -406,6 +408,8 @@ export type Region = {
   size?: 'continent' | 'island';
   // The continent this island belongs to (`map.of`), for the map only.
   of?: string;
+  // An area's place among its region's areas on the map (`map.order`), east to west.
+  order?: number;
 };
 
 export type NpcDef = {
@@ -528,7 +532,7 @@ export function buildWorld(entities: RawEntity[]): { world: World; errors: strin
           name: e.name,
           nameEn: e.name_en ?? '',
           summary: e.summary ?? '',
-          ...('in' in map.data ? { x: 0, y: 0, parent: map.data.in } : { x: map.data.x, y: map.data.y, size: map.data.size, of: map.data.of }),
+          ...('in' in map.data ? { x: 0, y: 0, parent: map.data.in, order: map.data.order } : { x: map.data.x, y: map.data.y, size: map.data.size, of: map.data.of }),
           terrain: map.data.terrain,
           color: c === 'C' ? null : Array.isArray(c) ? (`${c[0]}/${c[1]}` as Hybrid) : (c ?? TERRAINS[map.data.terrain].mana),
           entersTapped: land.data?.enters_tapped ?? false,
@@ -735,8 +739,9 @@ export function affectedRegions(world: World, ev: EventDef) {
 }
 
 // Areas inside a region.
+// A region's areas, in their map order (east to west).
 export function areasOf(world: World, id: string) {
-  return world.regions.filter((r) => r.parent === id);
+  return world.regions.filter((r) => r.parent === id).sort((a, b) => (a.order ?? 0) - (b.order ?? 0));
 }
 
 // "굴 드라즈 › 게트 혈족의 영지" for an area, the name for a region.

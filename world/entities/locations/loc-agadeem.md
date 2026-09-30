@@ -11,7 +11,7 @@ links:
   - { to: loc-agadeem-crypt, rel: 안의 구역 }
   - { to: loc-kabira-crossroads, rel: 안의 구역 }
   - { to: loc-ondu, rel: 붙어 있는 대륙 }
-map: { x: 195, y: 185, terrain: beach, size: island, of: loc-ondu }
+map: { x: 195, y: 178, terrain: beach, size: island, of: loc-ondu }
 ---
 
 ## 설정
@@ -20,7 +20,7 @@ map: { x: 195, y: 185, terrain: beach, size: island, of: loc-ondu }
 
 ## 게임에서의 역할
 
-- 온두 서쪽의 지역이다 (지형 `beach`, 청색 땅, 섬) ([결정] 2026-09-30). 온두까지 약 5시간. 위치 (195, 185)는 [가공]이다 (처음엔 서남쪽, ZEN-214 때 서쪽으로 옮김). 온두에 딸린 섬이라 `map.of: loc-ondu` 로 적고, 지도에서 온두와 얕은 바다로 이어 그린다 ([결정] 2026-09-30). 온두 대륙에 딸린 작은 섬이라 지도에 작게 그린다 (`size: island`) ([결정] 2026-09-30). 구역이 둘이라 섬 원이 조금 커졌다.
+- 온두 서쪽의 지역이다 (지형 `beach`, 청색 땅, 섬) ([결정] 2026-09-30). 온두까지 약 5시간. 위치 (195, 178)는 [가공]이다 (처음엔 서남쪽, ZEN-214 때 서쪽으로 옮김). 온두에 딸린 섬이라 `map.of: loc-ondu` 로 적고, 지도에서 온두와 얕은 바다로 이어 그린다 ([결정] 2026-09-30). 온두 대륙에 딸린 작은 섬이라 지도에 작게 그린다 (`size: island`) ([결정] 2026-09-30). 구역이 둘이라 섬 원이 조금 커졌다.
 - 안에 구역 아게딤의 묘실(`loc-agadeem-crypt`)과 카비라 교차로(`loc-kabira-crossroads`)가 있다.
 
 ## 미정/질문
