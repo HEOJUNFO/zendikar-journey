@@ -10,7 +10,7 @@ tags: [섬, 화산, 산맥, 적색]
 links:
   - { to: loc-ondu, rel: 딸린 대륙 }
   - { to: loc-valakut, rel: 탈리브의 왕관 최고봉 }
-map: { x: 476, y: 357, terrain: volcanic, size: island, of: loc-ondu }   # 기본 산: 적 마나 [결정] 2026-09-30. 방향은 [가공]
+map: { x: 1120.4, y: 862, terrain: volcanic, size: island, of: loc-ondu }   # 기본 산: 적 마나 [결정] 2026-09-30. 방향은 [가공]
 ---
 
 ## 설정

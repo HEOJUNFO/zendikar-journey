@@ -54,11 +54,11 @@ export function halfCircle(x: number, y: number, r: number, side: 0 | 1) {
 // small island), is itself a circle of that size, with its areas as small circles across the
 // lower part; the upper part is where its own people and marks go. (The engine puts areas at
 // their region's place; this is only how they are drawn.)
-const SIZE_RADIUS = { continent: 30, island: 10 } as const;
+const SIZE_RADIUS = { continent: 60, island: 20 } as const;
 // The small circle of an area inside a region, and the circle of a plain land (one with no
 // size or areas, e.g. Verdant Catacombs).
-export const AREA_NODE = 3.2;
-export const PLAIN_NODE = 6;
+export const AREA_NODE = 6.4;
+export const PLAIN_NODE = 12;
 function areaAngle(world: World, r: Region) {
   const sibs = areasOf(world, r.parent!);
   const n = sibs.length;
@@ -70,9 +70,9 @@ function areaAngle(world: World, r: Region) {
 export function containerRadius(world: World, r: Region) {
   if (r.parent) return 0;
   const n = world.regions.filter((x) => x.parent === r.id).length;
-  const base = r.size ? SIZE_RADIUS[r.size] : n ? 14 : 0;
+  const base = r.size ? SIZE_RADIUS[r.size] : n ? 28 : 0;
   // A small island has room for one area; each more widens it so their circles don't touch.
-  return base && base + (r.size === 'island' ? Math.max(0, n - 1) * 4 : Math.max(0, n - 3) * 1.8);
+  return base && base + (r.size === 'island' ? Math.max(0, n - 1) * 8 : Math.max(0, n - 3) * 3.6);
 }
 
 export function nodeAt(world: World, r: Region) {
@@ -124,7 +124,7 @@ export function areaLabelAt(world: World, r: Region) {
 
 // Shallow water around a continent and the islands that belong to it (`map.of`), joining them
 // so the islands read as the continent's: a wider circle under each, and a band to each island.
-const SHELF = 5;
+const SHELF = 10;
 export function shelves(world: World) {
   return world.regions
     .filter((c) => world.regions.some((i) => i.of === c.id))
@@ -143,7 +143,7 @@ export type MapBox = { x: number; y: number; w: number; h: number };
 
 // Room for the names around the outermost lands (more on top, where the full-screen map's bar sits).
 const FIT_PAD = { x: 24, top: 24, bottom: 20 };
-const FIT_MIN_W = 160;
+const FIT_MIN_W = 384;
 
 // The box that holds every land (with their names), widened to the map's shape so the map
 // opens on the lands rather than on the empty sea around them.

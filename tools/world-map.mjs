@@ -41,8 +41,8 @@ const nodes = world.regions.filter((r) => !r.parent).map((r) => {
   const { x, y } = Object.fromEntries(Object.entries(nodeAt(world, r)).map(([k, v]) => [k, v * S]));
   const R = containerRadius(world, r) * S;
   const shape = t.sea
-    ? `<circle cx="${x}" cy="${y}" r="70" fill="${t.color}" opacity="0.75"/>` +
-      `<circle cx="${x}" cy="${y}" r="30" fill="none" stroke="#9fc4ff" stroke-width="2" stroke-dasharray="6 6"/>`
+    ? `<circle cx="${x}" cy="${y}" r="140" fill="${t.color}" opacity="0.75"/>` +
+      `<circle cx="${x}" cy="${y}" r="60" fill="none" stroke="#9fc4ff" stroke-width="2" stroke-dasharray="6 6"/>`
     : R
       ? ''
       : land(x, y, PLAIN_NODE * S, landColors(r), 'stroke="#f4ecd8" stroke-width="3"');
@@ -51,7 +51,7 @@ const nodes = world.regions.filter((r) => !r.parent).map((r) => {
   const label = R ? regionLabelAt(world, r) : null;
   const [lx, anchor] = label ? [label.x * S, label.anchor] : [x, 'middle'];
   const [ny, ty] = !label
-    ? [y + (t.sea ? 92 : (PLAIN_NODE + 3.5) * S), y + (t.sea ? 110 : (PLAIN_NODE + 6.5) * S)]
+    ? [y + (t.sea ? 162 : (PLAIN_NODE + 3.5) * S), y + (t.sea ? 180 : (PLAIN_NODE + 6.5) * S)]
     : label.side === 'above'
       ? [label.y * S - 18, label.y * S]
       : [label.y * S, label.y * S + 17];
@@ -64,9 +64,9 @@ const nodes = world.regions.filter((r) => !r.parent).map((r) => {
 const box = Object.fromEntries(Object.entries(fitView(world)).map(([k, v]) => [k, Math.round(v * S)]));
 const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="${box.x} ${box.y} ${box.w} ${box.h}" width="${box.w}" height="${box.h}">
   <style>
-    .name { font: 600 18px sans-serif; fill: #f4ecd8; }
-    .terrain { font: 13px sans-serif; fill: #b9c3cf; }
-    .area { font: 600 14px sans-serif; fill: #f4ecd8; }
+    .name { font: 600 27px sans-serif; fill: #f4ecd8; }
+    .terrain { font: 19.5px sans-serif; fill: #b9c3cf; }
+    .area { font: 600 21px sans-serif; fill: #f4ecd8; }
   </style>
   <rect x="${box.x}" y="${box.y}" width="${box.w}" height="${box.h}" fill="#16324f"/>
 ${shelfShapes.join('\n')}

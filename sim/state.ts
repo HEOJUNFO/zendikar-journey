@@ -354,6 +354,17 @@ export function syncWorld(state: State, world: World) {
   // longer in the world leave the save; those standing where nothing is any more go home, or
   // to the first land they can stay on.
   const exists = (id: string) => world.regions.some((r) => r.id === id);
+  // A wandering place kept where the map no longer has its roads (the map redrawn): back to its start.
+  for (const [id, w] of Object.entries(state.wanderers ?? {})) {
+    const r = world.regions.find((x) => x.id === id);
+    if (!r?.wanders) {
+      delete state.wanderers![id];
+      continue;
+    }
+    const points = [r, ...r.wanders.stops];
+    const span = Math.max(...points.flatMap((p) => points.map((q) => Math.hypot(p.x - q.x, p.y - q.y))));
+    if (Math.hypot(w.x - r.x, w.y - r.y) > span * 1.5 + 1 || (w.to && !r.wanders.stops.some((x) => x.name === w.to))) state.wanderers![id] = { x: r.x, y: r.y };
+  }
   // Regions and events gone from the world leave no state behind.
   for (const id of Object.keys(state.regions)) if (!exists(id)) delete state.regions[id];
   for (const id of Object.keys(state.events)) if (!world.events.some((e) => e.id === id)) delete state.events[id];

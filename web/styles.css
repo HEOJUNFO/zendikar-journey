@@ -267,19 +267,19 @@ header h1 {
   stroke-width: 0.68;
 }
 .map-label {
-  font: 600 3.45px var(--sans);
+  font: 600 5.2px var(--sans);
   fill: var(--ink);
   text-anchor: middle;
   paint-order: stroke;
   stroke: var(--sea);
-  stroke-width: 0.9px;
+  stroke-width: 1.35px;
 }
 .map-alert {
-  font-size: 3.9px;
+  font-size: 5.85px;
   fill: var(--danger);
 }
 .map-destroyed {
-  font: 700 5.1px var(--sans);
+  font: 700 7.65px var(--sans);
   fill: var(--danger);
   text-anchor: middle;
   pointer-events: none;
@@ -660,10 +660,10 @@ header h1 {
   stroke: var(--accent);
 }
 .map-area-label {
-  font-size: 2.7px;
+  font-size: 4.05px;
 }
 .map-area-mark {
-  font-size: 3px;
+  font-size: 4.5px;
 }
 
 /* --- operator's map --- */

@@ -37,14 +37,14 @@ entities: [chr-lorthos, evt-lorthos-emerges, law-mana-colors, loc-sunder-offing,
 - 폭풍이 따르고, 파도가 해안의 바위와 구조물을 덮친다. 가시 돋친 관 같은 머리, 거대한 촉수. [그림]
 - 평소에는 모습을 드러내지 않는다. [카드] "emerges"에서 추론
 - 그 깊은 바다는 무라사 북서쪽, 선더만(Sunder Bay) 밖의 선더만 앞바다다. 로르토스는 선더만 일대에서 자주 보였다 [배경]. 물빛이 짙고 소용돌이가 돈다. 뱃사람들이 피해 돌아간다. [가공]
-- 해안 = 앞바다에서 가까운 땅 모두 (거리 120 안: 무라사와 그 구역). [결정]
+- 해안 = 앞바다에서 가까운 땅 모두 (거리 240 안: 무라사와 그 구역). [결정]
 - 한 달에 한 번꼴, 한 번 나오면 7일 쉰다. 1시간 전 전조가 오고 온 세상이 소식을 듣는다. [가공] 폭풍 전조는 [그림]에서 착안
 - 로르토스는 일과를 사는 NPC가 아니라 GM이 사건으로 움직이는 존재다. [가공]
 
 ## 반영 내역
 
 - `chr-lorthos`: 전설의 거대한 문어. 물에 사는 이(`aquatic`), 하루는 LLM이 짠다. 선더만 앞바다에 산다.
-- `evt-lorthos-emerges`: `trigger: gm`, `region: loc-sunder-offing`, `range: 120`, `scope: world`, 로르토스가 마나 8을 치른다. 효과는 `tap`(최대 8, 인물 먼저 그다음 해안의 땅, 다음 언탭 건너뜀 → 모레 00:00에 풀림)이다.
+- `evt-lorthos-emerges`: `trigger: gm`, `region: loc-sunder-offing`, `range: 240`, `scope: world`, 로르토스가 마나 8을 치른다. 효과는 `tap`(최대 8, 인물 먼저 그다음 해안의 땅, 다음 언탭 건너뜀 → 모레 00:00에 풀림)이다.
 - `loc-sunder-offing`: 무라사 북서쪽, 선더만 밖의 깊은 바다. 선더만과 한 땅 (`one_land_with`, [결정] 2026-09-30).
 - `loc-thunder-bay` (선더만, Sunder Bay): 무라사 북서쪽 테두리의 바다 구역, 기본 섬 ([결정] 2026-09-30).
 - `law-mana-colors`: 청색을 더했다.

@@ -45,7 +45,7 @@ function LandCircle({ x, y, r, colors, className }: { x: number; y: number; r: n
 
 // Zoom: the narrowest view (most zoomed in), each button step, and how far a drag must go
 // before it pans instead of clicking.
-const MIN_VIEW_W = 50;
+const MIN_VIEW_W = 120;
 const ZOOM_STEP = 1.4;
 const DRAG_PX = 4;
 
@@ -217,18 +217,18 @@ export function MapView({ world, state, selected, onSelect, all, picked, onPickA
               <title>{`${r.name} (${t.label})`}</title>
               {t.sea ? (
                 <>
-                  <circle cx={r.x} cy={r.y} r={10.5} fill={t.color} opacity={0.8} />
-                  <circle cx={r.x} cy={r.y} r={4.5} className="map-whirl" />
+                  <circle cx={r.x} cy={r.y} r={21} fill={t.color} opacity={0.8} />
+                  <circle cx={r.x} cy={r.y} r={9} className="map-whirl" />
                 </>
               ) : (
                 <LandCircle x={r.x} y={r.y} r={PLAIN_NODE} colors={landColors(r)} className="map-node" />
               )}
-              {isSel && <circle cx={r.x} cy={r.y} r={t.sea ? 12.3 : PLAIN_NODE + 2.1} className="map-selected" />}
+              {isSel && <circle cx={r.x} cy={r.y} r={t.sea ? 24.6 : PLAIN_NODE + 2.1} className="map-selected" />}
               {destroyed && <text x={r.x} y={r.y + 1.6} className="map-destroyed">✕</text>}
               {conds.length > 0 && (
                 <text x={r.x + PLAIN_NODE + 0.3} y={r.y - PLAIN_NODE + 0.9} className="map-alert">⚠</text>
               )}
-              <text x={r.x} y={r.y + (t.sea ? 14.7 : PLAIN_NODE + 4.8)} className="map-label">{r.name}</text>
+              <text x={r.x} y={r.y + (t.sea ? 25.2 : PLAIN_NODE + 4.8)} className="map-label">{r.name}</text>
             </g>
           );
         })}

@@ -25,13 +25,13 @@ import { drawKnowledge, handSize, knownSecrets, secretsOf } from './knowledge.ts
 import { claimBlocked } from './items.ts';
 import { spendBlocked, storeBlocked } from './eons.ts';
 import { applyEnterDestroy, bondBlocked, enterDestroy, onEnter, bondLand, bondTargets, callForth, fetchTargets, fireTargets, firesOnBond, growBlocked, spawnWild, summonLibrary, useAbility } from './abilities.ts';
-import { DEPLETED_LABEL, DESTROYED_DAYS } from './rules.ts';
+import { DEPLETED_LABEL, DESTROYED_DAYS, TRAVEL_UNITS_PER_HOUR } from './rules.ts';
 import { swayBlocked } from './retainers.ts';
 import { upkeepWins } from './win.ts';
 import { hirePrice } from './allies.ts';
 import { askOptions, askText } from './asks.ts';
 import type { State } from './state.ts';
-import { affectedRegions, buildWorld, landTypes, realmOf, region, travelHours } from './world.ts';
+import { affectedRegions, buildWorld, distance, landTypes, realmOf, region, travelHours } from './world.ts';
 import type { RawEntity } from './world.ts';
 
 const loc = (id: string, x: number, y: number, terrain: string): RawEntity => ({
@@ -152,13 +152,13 @@ test('sky and sea regions cannot be reached without the means', async () => {
   assert.match((await act(state, world, { type: 'move', to: 'loc-sea' })).error!, /바다/);
 });
 
-test('travel takes distance / 12 hours and the player sees the arrival', async () => {
+test('travel takes distance / TRAVEL_UNITS_PER_HOUR hours and the player sees the arrival', async () => {
   const world = fixture();
   const state = character(world);
   const start = state.minutes;
   const { error, entries } = await act(state, world, { type: 'move', to: 'loc-b' });
   assert.equal(error, undefined);
-  assert.equal(state.minutes - start, 2 * 60); // 20 units / 12, rounded up
+  assert.equal(state.minutes - start, Math.ceil(20 / TRAVEL_UNITS_PER_HOUR) * 60); // 20 units, rounded up
   assert.equal(state.actors[PLAYER_ID].region, 'loc-b');
   assert.ok(entries.some((e) => e.kind === 'arrive' && e.seen));
 });
@@ -1629,10 +1629,11 @@ const hellkite = (mana: object): RawEntity => planned({
 });
 
 test('haste halves the way, never under an hour', () => {
-  const world = fixture();
-  const [a, b] = [region(world, 'loc-a'), region(world, 'loc-b')];
-  assert.equal(travelHours(a, b), 2);
-  assert.equal(travelHours(a, b, ['haste']), 1);
+  const world = fixture([loc('loc-far', 10 + 3 * TRAVEL_UNITS_PER_HOUR, 10, 'grassland')]);
+  const [a, b] = [region(world, 'loc-a'), region(world, 'loc-far')];
+  assert.equal(travelHours(a, b), 3);
+  assert.equal(travelHours(a, b, ['haste']), 2);
+  assert.equal(travelHours(a, region(world, 'loc-b'), ['haste']), 1);
   assert.equal(travelHours(a, region(world, 'loc-sea'), ['haste']), Math.ceil(travelHours(a, region(world, 'loc-sea')) / 2));
 });
 
@@ -2157,7 +2158,8 @@ test('the real Summoning Trap lies in Bala Ged and may draw any creature card th
 });
 
 test('one of the sea on land dries out, 1 toughness every 3 hours, unless it crawls back to the water', async () => {
-  const world = fixture([beastKind('cre-sea', ['aquatic'], 'loc-sea')]);
+  // A shore two hours from the sea (so four crawling).
+  const world = fixture([beastKind('cre-sea', ['aquatic'], 'loc-sea'), loc('loc-shore', 10, 30 + 2 * TRAVEL_UNITS_PER_HOUR, 'beach')]);
   const state = newState(world, { seed: 1, mode: 'observer' });
   const fish = state.actors['cre-sea'];
   fish.region = 'loc-a'; // drawn onto land
@@ -2168,7 +2170,7 @@ test('one of the sea on land dries out, 1 toughness every 3 hours, unless it cra
   // Crawling back instead: twice as long, and back in the water it recovers at midnight.
   const s2 = newState(world, { seed: 1, mode: 'observer' });
   const f2 = s2.actors['cre-sea'];
-  f2.region = 'loc-a';
+  f2.region = 'loc-shore';
   PLANS.set('cre-sea', [['00:00', '24:00', 'loc-sea', 'leisure', '바다로', '🐟']]);
   await advance(s2, world, 6);
   assert.ok(texts(s2).some((t) => t.includes('기어 향했다 (4시간 거리)')));
@@ -2401,7 +2403,7 @@ test('a wandering place walks toward the stop the LLM picks, carries those in it
   assert.equal(state.actors['chr-h'].region, 'loc-car'); // carried along
   // Travel to it is measured to where it is now.
   const placed = withPositions(state, world);
-  assert.ok(travelHours(region(placed, 'loc-b'), region(placed, 'loc-car')) < travelHours(region(world, 'loc-b'), region(world, 'loc-car')));
+  assert.ok(distance(region(placed, 'loc-b'), region(placed, 'loc-car')) < distance(region(world, 'loc-b'), region(world, 'loc-car')));
   await advance(state, world, 13, { wander });
   assert.ok(texts(state).some((t) => t.includes('동쪽 길에 닿았다')));
   assert.equal(asked[1], '동쪽 길'); // at a stop, it picks the next
@@ -3162,6 +3164,10 @@ test('when the world moves a character\'s home, they go there in a running game 
   state.regions['loc-gone'] = { conditions: [] };
   syncWorld(state, world);
   assert.equal(state.regions['loc-gone'], undefined);
+  // A wandering place kept far off its roads (the map redrawn) goes back to its start.
+  state.wanderers = { 'loc-goma-fada': { x: 10, y: 10, to: '로가 대로' } };
+  syncWorld(state, world);
+  assert.deepEqual(state.wanderers['loc-goma-fada'], { x: region(world, 'loc-goma-fada').x, y: region(world, 'loc-goma-fada').y });
   // One who serves someone stays at their side.
   const k = state.actors['chr-kazuul-warlord'];
   k.master = 'chr-kalitas';
