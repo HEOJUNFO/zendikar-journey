@@ -4,7 +4,7 @@ import { INITIAL_STATS } from './rules.ts';
 import { NEEDS } from './types.ts';
 import type { LifeKind, Need, Pace, Schedule, Stats } from './types.ts';
 import { canStay, spellColors } from './world.ts';
-import type { Ability, BondEffect, NpcDef, Pt, Speaker, World } from './world.ts';
+import type { Ability, BondEffect, CreatureType, NpcDef, Pt, Speaker, World } from './world.ts';
 import type { Color, Mana } from './mana.ts';
 
 export type TaskKind = LifeKind | 'explore' | 'travel' | 'fight' | 'bond' | 'learn' | 'cast' | 'fetch';
@@ -144,7 +144,7 @@ export type Actor = {
 // What falls on the one picked: a land's bonding effect, a burst of damage (Valakut), or a
 // spell an NPC casts (sim/spells.ts).
 export type Choice = { by: string; land: string; effect: ChoiceEffect; candidates: string[]; optional?: boolean; t: number };
-export type ChoiceEffect = BondEffect | { type: 'damage'; amount: number } | { type: 'cast'; spell: string; free?: boolean } | { type: 'follow' } | { type: 'rally'; source: string } | { type: 'seize' } | { type: 'pledge'; from: string } | { type: 'evade'; from: string } | { type: 'discard'; cause: string } | { type: 'sacrifice'; item: string };
+export type ChoiceEffect = BondEffect | { type: 'damage'; amount: number } | { type: 'cast'; spell: string; free?: boolean } | { type: 'follow' } | { type: 'rally'; source: string } | { type: 'seize' } | { type: 'pledge'; from: string } | { type: 'evade'; from: string } | { type: 'discard'; cause: string } | { type: 'sacrifice'; item: string } | { type: 'destroy'; kind: CreatureType };
 
 export type Condition = {
   label: string;

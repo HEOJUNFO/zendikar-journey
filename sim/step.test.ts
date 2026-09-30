@@ -8,19 +8,19 @@ import type { PlanDayInput } from './llm/planner.ts';
 import type { Action } from './actions.ts';
 import { startAction } from './actions.ts';
 import type { World } from './world.ts';
-import { addFoe, attackBlocked, die, knockedOut, landwalked, woundsOf } from './combat.ts';
+import { addFoe, attackBlocked, die, intimidated, knockedOut, landwalked, unblockable, woundsOf } from './combat.ts';
 import { sealedBy, sealToday } from './seal.ts';
 import { castBlocked, castSpell, readyCast } from './spells.ts';
-import { COLORS, formatMana, manaAvailable, manaCapacity, parseManaCost, planPayment } from './mana.ts';
+import { actorColors, COLORS, formatMana, manaAvailable, manaCapacity, parseManaCost, planPayment } from './mana.ts';
 import { MAX_TALKS_PER_DAY, usableAbilities, volleyShares } from './run.ts';
 import { eligibleGmEvents, travelBlocked } from './step.ts';
 import { gainLife, lifeOf } from './life.ts';
-import { hasAbility, newState, outOfTime, PLAYER_ID, present, ptOf, syncWorld, targetable } from './state.ts';
+import { hasAbility, newState, npcDef, outOfTime, PLAYER_ID, present, ptOf, syncWorld, targetable } from './state.ts';
 import { foresightText } from './foresight.ts';
 import { withPositions } from './wander.ts';
 import { claimBlocked } from './items.ts';
 import { spendBlocked, storeBlocked } from './eons.ts';
-import { bondBlocked, bondLand, bondTargets, fetchTargets, fireTargets, firesOnBond, growBlocked, spawnWild, summonLibrary, useAbility } from './abilities.ts';
+import { applyEnterDestroy, bondBlocked, bondLand, bondTargets, callForth, fetchTargets, fireTargets, firesOnBond, growBlocked, spawnWild, summonLibrary, useAbility } from './abilities.ts';
 import { DEPLETED_LABEL, DESTROYED_DAYS } from './rules.ts';
 import { swayBlocked } from './retainers.ts';
 import { upkeepWins } from './win.ts';
@@ -2666,4 +2666,68 @@ test('the real Hagra Diabolist lives in the Hagra swamp of Guul Draz, for 50 coi
   const def = world.npcs.find((x) => x.id === 'chr-hagra-diabolist')!;
   assert.equal(hirePrice(def), 50);
   assert.deepEqual(def.rally, [{ type: 'lose_life_allies' }]);
+});
+
+test('intimidate: one who shares none of its colors can\'t strike back at it, nor fly from it', async () => {
+  const demon = { ...npcSim('loc-a', 'work', [6, 3]), mana: { B: 5 }, needs: [], beast: true, abilities: ['intimidate'] };
+  const world = fixture([loc('loc-swamp', 12, 10, 'swamp'), npc('chr-d', demon), npc('chr-x', npcSim('loc-a', 'work', [3, 9])), npc('chr-f', { ...npcSim('loc-a', 'work', [3, 9]), abilities: ['fly'] })]);
+  const state = newState(world, { seed: 1, mode: 'observer' });
+  const [d, x, f] = [state.actors['chr-d'], state.actors['chr-x'], state.actors['chr-f']];
+  assert.deepEqual(actorColors(state, world, d), ['B']);
+  assert.deepEqual(actorColors(state, world, x), []);
+  addFoe(d, 'chr-x', state.minutes);
+  let asked = 0;
+  await advance(state, world, 1, { evade: async () => (asked++, true) });
+  assert.equal(woundsOf(x, state.minutes), 6);
+  assert.equal(woundsOf(d, state.minutes), 0); // no blow back
+  assert.ok(texts(state).some((t) => t.includes('흑의 기운이 없어 위협하는 적에게 맞서지 못한다')));
+  // A flyer with no black can't take to the air from it.
+  x.region = 'loc-b';
+  addFoe(d, 'chr-f', state.minutes);
+  await advance(state, world, 1, { evade: async () => (asked++, true) });
+  assert.equal(asked, 0);
+  assert.equal(woundsOf(f, state.minutes), 6);
+  // One bonded with a black land (a swamp) shares its color: they block.
+  x.bonds = ['loc-swamp'];
+  assert.deepEqual(actorColors(state, world, x), ['B']);
+  assert.equal(intimidated(state, world, d, x, state.minutes), false);
+  assert.equal(unblockable(state, world, d, x, state.minutes), null);
+});
+
+test('enter_destroy: arriving where an Angel is, the hunter may destroy it; shroud and indestructible are spared', async () => {
+  const hunter = { ...npcSim('loc-c', 'work', [6, 3]), home: 'loc-a', mana: { B: 5 }, needs: [], types: ['demon'], enter_destroy: 'angel' };
+  const angel = (extra: object = {}) => ({ ...npcSim('loc-c', 'work', [7, 7]), needs: [], types: ['angel'], ...extra });
+  const world = fixture([npc('chr-h', hunter), npc('chr-an', angel()), npc('chr-sh', angel({ abilities: ['shroud'] })), npc('chr-y', npcSim('loc-c', 'work'))]);
+  const state = newState(world, { seed: 1, mode: 'observer' });
+  assert.equal(state.actors['chr-h'].region, 'loc-a');
+  const asked: string[][] = [];
+  await advance(state, world, 3, { choose: async ({ candidates, optional }) => (asked.push(candidates.map((c) => c.id)), assert.ok(optional), 'chr-an') });
+  assert.equal(state.actors['chr-h'].region, 'loc-c');
+  assert.deepEqual(asked, [['chr-an']]); // not the shrouded one, not a non-angel
+  assert.ok(state.actors['chr-an'].dead);
+  assert.ok(!state.actors['chr-sh'].dead);
+  // Indestructible: not destroyed.
+  const t = state.minutes;
+  const g = state.actors['chr-sh'];
+  g.abilities = ['indestructible'];
+  applyEnterDestroy(state, world, state.actors['chr-h'], g, t);
+  assert.ok(!g.dead);
+  // Brought there by a trap, too.
+  state.choices = [];
+  callForth(state, world, 'chr-h', 'loc-b', [], t);
+  assert.equal(state.choices.length, 0); // no angel in loc-b
+  g.abilities = [];
+  g.region = 'loc-b';
+  callForth(state, world, 'chr-h', 'loc-b', [], t);
+  assert.equal(state.choices.at(-1)?.effect.type, 'destroy');
+});
+
+test('the real Halo Hunter lairs in Akoum, intimidating, hunting Iona the Angel', () => {
+  const world = loadWorld();
+  const state = newState(world, { seed: 1, mode: 'observer' });
+  const h = state.actors['cre-halo-hunter'];
+  assert.equal(h.region, 'loc-akoum');
+  assert.ok(hasAbility(h, 'intimidate', state.minutes));
+  assert.equal(npcDef(state, world, h.id)?.enterDestroy, 'angel');
+  assert.deepEqual(npcDef(state, world, 'chr-iona')?.types, ['angel']);
 });

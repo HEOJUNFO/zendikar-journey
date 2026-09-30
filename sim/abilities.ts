@@ -1,6 +1,6 @@
 // Landfall (bonding with a land) and activated abilities, used as the morning LLM plans.
 import { gameDay, untapTime } from './clock.ts';
-import { addFoe, dealDamage, die, leavePlane } from './combat.ts';
+import { addFoe, dealDamage, destroy, leavePlane } from './combat.ts';
 import { creatureColors, manaAvailable, payMana, planPayment } from './mana.ts';
 import { landTapBlocked, tapLand } from './landtap.ts';
 import type { Color } from './mana.ts';
@@ -45,7 +45,7 @@ export function bondTargets(state: State, world: World, a: Actor, regionId: stri
 }
 
 // The effect falls on `target`, if they are still there.
-export function applyBondEffect(state: State, world: World, a: Actor, regionId: string, eff: Exclude<ChoiceEffect, { type: 'cast' | 'follow' | 'rally' | 'seize' | 'pledge' | 'evade' | 'discard' | 'sacrifice' }>, targetId: string | undefined, t: number) {
+export function applyBondEffect(state: State, world: World, a: Actor, regionId: string, eff: Exclude<ChoiceEffect, { type: 'cast' | 'follow' | 'rally' | 'seize' | 'pledge' | 'evade' | 'discard' | 'sacrifice' | 'destroy' }>, targetId: string | undefined, t: number) {
   const r = region(world, regionId);
   if (eff.type === 'damage') return mountainFire(state, world, a, r, eff.amount, targetId, t);
   const target = targetId ? bondTargets(state, world, a, regionId, eff).find((x) => x.id === targetId) : undefined;
@@ -351,12 +351,7 @@ export function useAbility(state: State, world: World, beingId: string, abilityI
   let died = false;
   for (const eff of ability.effects) {
     if (eff.type === 'destroy' && target) {
-      if (hasAbility(target, 'indestructible', t)) {
-        addLog(state, { kind: 'effect', text: `${josa(shortName(target.name), '은', '는')} 파괴되지 않는다 (파괴불가).`, regions: [target.region], actors: [target.id], t });
-        continue;
-      }
-      die(state, target, t, cause);
-      died = true;
+      if (destroy(state, target, t, cause)) died = true;
     } else if (eff.type === 'raise' && died && target) {
       raiseToken(state, world, target, eff.creature, eff.faction, eff.colors, being.id);
     } else if (eff.type === 'discard_spell') {
@@ -552,7 +547,33 @@ export function callForth(state: State, world: World, id: string, regionId: stri
     t,
   });
   for (const f of foes) addFoe(x, f, t);
+  enterDestroy(state, world, x, t);
   return x;
+}
+
+// "When this enters, destroy target <type>" (Halo Hunter: an Angel). Each time they arrive in
+// a land (or are brought there), whom of that type there (if anyone) to destroy is theirs to
+// pick, after the hour (state.choices).
+export function enterDestroy(state: State, world: World, a: Actor, t: number) {
+  const kind = npcDef(state, world, a.id)?.enterDestroy;
+  if (!kind || a.dead) return;
+  const candidates = present(state, a.region)
+    .filter((x) => x.id !== a.id && (npcDef(state, world, x.id)?.types ?? []).includes(kind) && targetable(x, t))
+    .map((x) => x.id);
+  if (candidates.length) (state.choices ??= []).push({ by: a.id, land: a.region, effect: { type: 'destroy', kind }, candidates, optional: true, t });
+}
+
+// Their pick lands: the one picked, still there, is destroyed.
+export function applyEnterDestroy(state: State, world: World, a: Actor, target: Actor, t: number) {
+  if (a.dead || target.dead || target.region !== a.region || target.travel || !targetable(target, t)) return;
+  addLog(state, {
+    kind: 'event',
+    text: `${josa(shortName(a.name), '이', '가')} 들어서자마자 ${josa(shortName(target.name), '을', '를')} 덮쳐 파괴하려 한다.`,
+    regions: [a.region],
+    actors: [a.id, target.id],
+    t,
+  });
+  destroy(state, target, t, `${shortName(a.name)}의 사냥`);
 }
 
 // --- Oran-Rief: "{T}: Put a +1/+1 counter on each green creature that entered this turn" ---

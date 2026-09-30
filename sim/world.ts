@@ -12,9 +12,13 @@ export const MAP_WIDTH = 600;
 export const MAP_HEIGHT = 450;
 
 // fly: can reach sky islands. aquatic: lives in the sea, and only there.
-export const ABILITIES = ['fly', 'aquatic', 'lifelink', 'vigilance', 'haste', 'trample', 'defender', 'shroud', 'swampwalk', 'indestructible'] as const;
+export const ABILITIES = ['fly', 'aquatic', 'lifelink', 'vigilance', 'haste', 'trample', 'defender', 'shroud', 'swampwalk', 'indestructible', 'intimidate'] as const;
 export type Ability = (typeof ABILITIES)[number];
-export const ABILITY_LABELS: Record<Ability, string> = { fly: '비행', aquatic: '물에 삶', lifelink: '생명연결', vigilance: '경계', haste: '속공', trample: '돌진', defender: '수비대', shroud: '방어막', swampwalk: '늪걷기', indestructible: '파괴불가' };
+export const ABILITY_LABELS: Record<Ability, string> = { fly: '비행', aquatic: '물에 삶', lifelink: '생명연결', vigilance: '경계', haste: '속공', trample: '돌진', defender: '수비대', shroud: '방어막', swampwalk: '늪걷기', indestructible: '파괴불가', intimidate: '위협' };
+// Creature types a card may name ("destroy target Angel").
+export const CREATURE_TYPES = ['angel', 'demon'] as const;
+export type CreatureType = (typeof CREATURE_TYPES)[number];
+export const CREATURE_TYPE_LABELS: Record<CreatureType, string> = { angel: '천사', demon: '악마' };
 
 export const TERRAIN_IDS = [
   'grassland',
@@ -229,6 +233,12 @@ export const CharacterSimSchema = z.strictObject({
   persona: z.string().min(1),
   goal: z.string().min(1),
   abilities: z.array(z.enum(ABILITIES)).default([]),
+  // Creature types from the card's type line that a card names ("destroy target Angel").
+  types: z.array(z.enum(CREATURE_TYPES)).default([]),
+  // "When this enters, destroy target <type>" (Halo Hunter: an Angel): each time they arrive
+  // in a land (or are brought there), they may destroy one of that type there
+  // (sim/abilities.ts `enterDestroy`, picked by the LLM after the hour).
+  enter_destroy: z.enum(CREATURE_TYPES).optional(),
   // Stats they live by (default: all). Without hunger they never eat; without coin work earns
   // nothing; with none (e.g. Kalitas) they neither tire nor gain or lose life.
   needs: z.array(z.enum(NEEDS)).default([...NEEDS]),
@@ -567,6 +577,8 @@ export type NpcDef = {
   landfallSeize?: boolean;
   landfallLose?: Ability[];
   landfallGrant?: Ability[];
+  types?: CreatureType[];
+  enterDestroy?: CreatureType;
   // The creature kind they are (e.g. cre-vampire), for "a Vampire you control".
   creature?: string;
   // Their colors when their mana doesn't say (e.g. a black Vampire risen in play).
@@ -729,7 +741,7 @@ export function buildWorld(entities: RawEntity[]): { world: World; errors: strin
         err(e.id, `sim 오류: ${issues(sim.error)}`);
         continue;
       }
-      const { knows_colors, activated, wins_at_life, extra_combat, landfall_token, landfall_seize, landfall_lose, landfall_grant, name, ...rest } = sim.data;
+      const { knows_colors, activated, wins_at_life, extra_combat, landfall_token, landfall_seize, landfall_lose, landfall_grant, enter_destroy, name, ...rest } = sim.data;
 
       world.npcs.push({
         id: e.id,
@@ -743,6 +755,7 @@ export function buildWorld(entities: RawEntity[]): { world: World; errors: strin
         ...(landfall_seize ? { landfallSeize: true } : {}),
         ...(landfall_lose.length ? { landfallLose: landfall_lose } : {}),
         ...(landfall_grant.length ? { landfallGrant: landfall_grant } : {}),
+        ...(enter_destroy ? { enterDestroy: enter_destroy } : {}),
         ...(extra_combat ? { extraCombat: { cost: parseManaCost(extra_combat.cost)!, costText: extra_combat.cost } } : {}),
         activated: activated.map((x) => ({ ...x, cost: parseManaCost(x.cost)!, costText: x.cost })),
       });

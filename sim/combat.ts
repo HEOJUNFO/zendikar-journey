@@ -8,7 +8,7 @@ import { remember } from './relations.ts';
 import { masterOf, releaseRetainer, retainersOf } from './retainers.ts';
 import { releaseItems } from './items.ts';
 import { doubleLife, gainLife, lifeOf } from './life.ts';
-import { manaAvailable, payMana, planPayment } from './mana.ts';
+import { actorColors, COLOR_LABELS, manaAvailable, payMana, planPayment } from './mana.ts';
 import { HUNT_HUNGER, KILL_FEED, KO_ACTIVITY, KO_HOURS } from './rules.ts';
 import { addLog, hasAbility, needsOf, npcDef, outOfTime, present, ptOf, random } from './state.ts';
 import type { Actor, State } from './state.ts';
@@ -131,11 +131,40 @@ export function landwalked(world: World, attacker: Actor, defender: Actor, t: nu
   });
 }
 
-// `unblocked`: the defender can't strike back this exchange (landwalk).
-export function clash(state: State, attacker: Actor, defender: Actor, t: number, unblocked = false) {
+// Intimidate ("can't be blocked except by artifact creatures and/or creatures that share a
+// color with it"): one who shares none of its colors can't strike back at it, nor fly from it.
+// Their colors: a card's, or the colors of the lands they have bonded with (sim/mana.ts).
+export function intimidated(state: State, world: World, attacker: Actor, defender: Actor, t: number) {
+  if (!hasAbility(attacker, 'intimidate', t)) return false;
+  const theirs = actorColors(state, world, defender);
+  return !actorColors(state, world, attacker).some((c) => theirs.includes(c));
+}
+
+// Why the defender can't block the attacker (strike back, or fly from them), or null.
+export function unblockable(state: State, world: World, attacker: Actor, defender: Actor, t: number): string | null {
+  if (landwalked(world, attacker, defender, t)) return '늪과 이어진 몸이라 늪을 걷는 적에게';
+  if (intimidated(state, world, attacker, defender, t)) {
+    const colors = actorColors(state, world, attacker).map((c) => COLOR_LABELS[c]).join('·');
+    return `${colors}의 기운이 없어 위협하는 적에게`;
+  }
+  return null;
+}
+
+// "Destroy": they die, unless indestructible. Returns whether they died.
+export function destroy(state: State, target: Actor, t: number, cause: string) {
+  if (hasAbility(target, 'indestructible', t)) {
+    addLog(state, { kind: 'effect', text: `${josa(shortName(target.name), '은', '는')} 파괴되지 않는다 (파괴불가).`, regions: [target.region], actors: [target.id], t });
+    return false;
+  }
+  die(state, target, t, cause);
+  return true;
+}
+
+// `unblocked`: why the defender can't strike back this exchange (landwalk, intimidate), if so.
+export function clash(state: State, attacker: Actor, defender: Actor, t: number, unblocked: string | null = null) {
   const [ap] = ptOf(attacker);
-  // A tapped (bound) or knocked-out defender can't strike back, nor one the attacker walks through.
-  const helpless = defender.boundUntil !== undefined ? '묶여 있어' : knockedOut(defender) ? '기절해 있어' : unblocked ? '늪과 이어진 몸이라 늪을 걷는 적에게' : null;
+  // A tapped (bound) or knocked-out defender can't strike back, nor one who can't block the attacker.
+  const helpless = defender.boundUntil !== undefined ? '묶여 있어' : knockedOut(defender) ? '기절해 있어' : unblocked;
   const tapped = !!helpless;
   const [dp] = tapped ? [0] : ptOf(defender);
   const a = shortName(attacker.name);
@@ -238,7 +267,7 @@ function extraCombat(state: State, world: World, a: Actor, foe: Actor, t: number
     actors: [a.id, foe.id],
   });
   const band = [a, ...retainersOf(state, a.id).filter((r) => r.region === a.region && !r.travel && r.lastClash === t)];
-  for (const x of band) if (!down(x) && !down(foe)) clash(state, x, foe, t, landwalked(world, x, foe, t));
+  for (const x of band) if (!down(x) && !down(foe)) clash(state, x, foe, t, unblockable(state, world, x, foe, t));
 }
 
 // A flyer set on by one who can't fly may take to the air, as an NPC the player attacks (sim/run.ts
@@ -275,7 +304,7 @@ export function hostileNpcs(state: State, world: World, t: number) {
     // Their own foes, and (a retainer) whoever their master is fighting right here.
     const m = masterOf(state, a);
     const theirs = [...foesOf(a, t), ...(m && m.region === a.region && !m.travel ? foesOf(m, t) : [])];
-    let foe = present(state, a.region).find((b) => theirs.includes(b.id) && b.id !== a.master && !down(b) && (evasion(a, b, t) !== 'evade' || landwalked(world, a, b, t)));
+    let foe = present(state, a.region).find((b) => theirs.includes(b.id) && b.id !== a.master && !down(b) && (evasion(a, b, t) !== 'evade' || !!unblockable(state, world, a, b, t)));
     const hunted = !foe && prey(state, world, a, t);
     if (hunted) {
       foe = hunted;
@@ -289,8 +318,8 @@ export function hostileNpcs(state: State, world: World, t: number) {
     }
     if (!foe) continue;
     // A flyer yet to answer: the blow waits for it (asked after the hour).
-    // One it walks through can't fly from it either.
-    const walked = landwalked(world, a, foe, t);
+    // One who can't block it (landwalk, intimidate) can't fly from it either.
+    const walked = unblockable(state, world, a, foe, t);
     if (!walked && evasion(a, foe, t) === 'ask') {
       const f = foe;
       if (f.kind === 'player') {

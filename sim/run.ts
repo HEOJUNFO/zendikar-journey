@@ -7,7 +7,7 @@ import type { Action } from './actions.ts';
 import { addLog, hasAbility, npcDef, outOfTime, player, ptOf, random, speakerDef } from './state.ts';
 import type { Actor, GmPlan, LogEntry, State } from './state.ts';
 import { eligibleGmEvents, ruinsUntil, step } from './step.ts';
-import { addFoe, clash, dealDamage } from './combat.ts';
+import { addFoe, clash, dealDamage, unblockable } from './combat.ts';
 import { relationsText, remember } from './relations.ts';
 import { claimableItems } from './items.ts';
 import { lifeOf } from './life.ts';
@@ -23,11 +23,11 @@ import { castableSpells, castBlocked, castSpell, harmful, learnableSpells, spell
 import { opponentsOf, sealsDue, setSeal } from './seal.ts';
 import { COLORS } from './mana.ts';
 import type { Color } from './mana.ts';
-import { abilityBlocked, applyBondEffect, enteredToday, fetchBlocked, fetchTargets, growBlocked, growLand, callForth } from './abilities.ts';
+import { abilityBlocked, applyBondEffect, applyEnterDestroy, enteredToday, fetchBlocked, fetchTargets, growBlocked, growLand, callForth } from './abilities.ts';
 import { bindRetainer, courtTargets, followsMaster, refuse, seize, swayBlocked } from './retainers.ts';
 import { josa, shortName } from './text.ts';
 import type { ScheduleBlock } from './types.ts';
-import { ABILITY_LABELS, canStay, LAND_TYPE_LABELS, landTypes, placeName } from './world.ts';
+import { ABILITY_LABELS, canStay, CREATURE_TYPE_LABELS, LAND_TYPE_LABELS, landTypes, placeName } from './world.ts';
 import type { ActivatedAbility, EventDef, NpcDef, Region, Speaker, SpellDef, World } from './world.ts';
 import type { PlanDayInput } from './llm/planner.ts';
 
@@ -422,6 +422,19 @@ async function choices(state: State, world: World, llm: Llm) {
       sacrifice(state, world, x, item, state.minutes);
       continue;
     }
+    // Halo Hunter, arriving: which one of the kind he hunts (if any) he destroys.
+    if (c.effect.type === 'destroy') {
+      if (!llm.choose) continue;
+      let pick: string | null = null;
+      try {
+        pick = await llm.choose({ world, state, npc, candidates, optional: true, what: `${land.name}: 당신이 이곳에 들어섰다. 여기 있는 ${CREATURE_TYPE_LABELS[c.effect.kind]} 가운데 하나를 골라 파괴할 수 있다 (파괴된 이는 죽는다). 아무도 고르지 않을 수도 있다` });
+      } catch (e) {
+        console.warn(`choose (destroy) for ${c.by} failed:`, e);
+      }
+      const target = candidates.find((x) => x.id === pick);
+      if (target) applyEnterDestroy(state, world, by, target, state.minutes);
+      continue;
+    }
     if (c.effect.type === 'seize') {
       if (!llm.choose) continue;
       let pick: string | null = null;
@@ -608,7 +621,9 @@ async function attack(state: State, world: World, p: Actor, npcId: string, llm: 
   const target = state.actors[npcId];
   const npc = speakerDef(state, world, npcId)!;
   const flies = (a: Actor) => a.abilities.includes('fly');
-  if (flies(target) && !flies(p) && target.boundUntil === undefined && llm.evade) {
+  // One who can't block the player (landwalk, intimidate) can't fly from them either.
+  const unblocked = unblockable(state, world, p, target, state.minutes);
+  if (!unblocked && flies(target) && !flies(p) && target.boundUntil === undefined && llm.evade) {
     let evades = false;
     try {
       evades = await llm.evade({ world, state, npc, attacker: p });
@@ -625,7 +640,7 @@ async function attack(state: State, world: World, p: Actor, npcId: string, llm: 
       return;
     }
   }
-  clash(state, p, target, state.minutes);
+  clash(state, p, target, state.minutes, unblocked);
 }
 
 // An NPC's day is asked for this many times before the world halts.

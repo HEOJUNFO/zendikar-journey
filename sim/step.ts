@@ -23,7 +23,7 @@ import { gainedLifeToday, loseLife } from './life.ts';
 import { forget, forgetAbout } from './relations.ts';
 import { addLog, alive, landUnusable, needsOf, npcDef, outOfTime, present, ptOf, random } from './state.ts';
 import { addFoe, attackBlocked, dealDamage, foesOf, hostileNpcs } from './combat.ts';
-import { bondBlocked, bondLand, expireGranted, FETCH_HOURS, fetchLand, fetchSource, growBlocked, growEntered, growLand, spawnWild, summonLibrary, upkeepRevive, useAbility } from './abilities.ts';
+import { bondBlocked, bondLand, enterDestroy, expireGranted, FETCH_HOURS, fetchLand, fetchSource, growBlocked, growEntered, growLand, spawnWild, summonLibrary, upkeepRevive, useAbility } from './abilities.ts';
 import { CLAIM_HOURS, claimBlocked, claimItem, itemsAt } from './items.ts';
 import { EON_HOURS, eonLand, holdStill, spendBlocked, spendDay, storeBlocked, storeDay, timeNews } from './eons.ts';
 import { upkeepWins } from './win.ts';
@@ -80,6 +80,7 @@ export function step(state: State, placed: World) {
     }
   }
   enterEvents(state, world, t + STEP_MINUTES);
+  for (const a of alive(state)) if (a.arrivedAt === t + STEP_MINUTES) enterDestroy(state, world, a, t + STEP_MINUTES);
   attackEvents(state, world, t);
   meetings(state, world);
   state.minutes = t + STEP_MINUTES;

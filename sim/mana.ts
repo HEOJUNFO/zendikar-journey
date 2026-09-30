@@ -63,6 +63,18 @@ export function creatureColors(def: NpcDef | undefined): Color[] {
   return def?.colors ?? (Object.keys(def?.mana ?? {}) as Color[]);
 }
 
+// A being's colors, as a card asks "shares a color with it" (Intimidate): a card's own, or
+// for one without (the player, a person), those of the lands they have bonded with.
+export function actorColors(state: State, world: World, a: { id: string; bonds?: string[] }): Color[] {
+  const own = creatureColors(world.npcs.find((n) => n.id === a.id) ?? state.tokens?.[a.id]);
+  if (own.length) return own;
+  const lands = (a.bonds ?? []).flatMap((id) => {
+    const sym = world.regions.find((r) => r.id === id)?.color;
+    return sym ? (colorsOf(sym) as Color[]) : [];
+  });
+  return [...new Set(lands)];
+}
+
 type Holder = {
   id: string;
   bonds?: string[];

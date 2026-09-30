@@ -3,6 +3,7 @@
 // falls on (sim/allies.ts), whether to serve one who asks it of them, and whether to take to
 // the air when one who can't fly sets on them.
 import { untapTime } from './clock.ts';
+import { applyEnterDestroy } from './abilities.ts';
 import { applyRally, rallyText } from './allies.ts';
 import { bindRetainer, refuse } from './retainers.ts';
 import { letGo } from './discard.ts';
@@ -11,6 +12,7 @@ import { castSpell } from './spells.ts';
 import { addLog, player } from './state.ts';
 import type { Actor, Choice, State } from './state.ts';
 import { josa, shortName } from './text.ts';
+import { CREATURE_TYPE_LABELS } from './world.ts';
 import type { World } from './world.ts';
 
 // What the pick is about, for them.
@@ -22,6 +24,7 @@ export function askText(state: State, world: World, c: Choice) {
   if (c.effect.type === 'discard') return `${c.effect.cause}: 지닌 주문 하나를 잊어야 한다. 무엇을?`;
   if (c.effect.type === 'cast') return `${world.spells.find((s) => s.id === (c.effect as { spell: string }).spell)?.name ?? ''}을(를) 하나 더, 값 없이 걸 수 있다. 누구에게?`;
   if (c.effect.type === 'sacrifice') return `${state.items?.[c.effect.item]?.name ?? c.effect.item}이(가) 오늘의 제물을 요구한다. 부리는 이 가운데 누구를 바칠까? (바친 이는 죽는다)`;
+  if (c.effect.type === 'destroy') return `이곳에 들어서며 ${CREATURE_TYPE_LABELS[c.effect.kind]} 하나를 파괴할 수 있다. 누구를? (파괴된 이는 죽는다)`;
   return '';
 }
 
@@ -66,6 +69,9 @@ export function answerAsk(state: State, world: World, pick: string | null, t: nu
   } else if (c.effect.type === 'discard') {
     // One they must give up: an answer that isn't one of theirs gives up the first.
     letGo(state, world, p, pick && c.candidates.includes(pick) ? pick : c.candidates[0], t);
+  } else if (c.effect.type === 'destroy') {
+    const target = pick && c.candidates.includes(pick) ? state.actors[pick] : undefined;
+    if (target) applyEnterDestroy(state, world, p, target, t);
   } else if (c.effect.type === 'evade') {
     const from = state.actors[c.effect.from];
     if (!from) return;
