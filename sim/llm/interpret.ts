@@ -76,7 +76,11 @@ Actions:
 - {"type":"wait","hours":1-24}
 - {"type":"talk","to":"<person id>","say":"<what they say>"}
 - {"type":"attack","to":"<person id>"}  (only when they clearly mean to fight; fights can be deadly)
-- {"type":"bond"}  (bond with the land here, taking it as their own; 4 hours, one land a day)
+${
+          here.onBond.some((x) => x.type === 'lose_life')
+            ? `- {"type":"bond","target":"<person id here>"}  (bond with the land here, taking it as their own; 4 hours, one land a day. As they do, the person they name loses ${here.onBond.find((x) => x.type === 'lose_life')!.amount} life to it; leave target out only if nobody else is here)`
+            : '- {"type":"bond"}  (bond with the land here, taking it as their own; 4 hours, one land a day)'
+        }
 ${taught.length ? taught.map((s) => `- {"type":"learn","spell":"${s.id}"}  (learn ${s.name} here: ${s.summary}; ${s.learnHours} hours)`).join('\n') + '\n' : ''}${
           known.length
             ? known.map((s) => `- {"type":"cast","spell":"${s.id}","to":"<person id${s.target === 'any_here' ? ` or ${p.id} for themselves` : ''}>","kick":false}  (cast ${s.name} ${s.costText} on someone here: ${s.summary})`).join('\n') + '\n'

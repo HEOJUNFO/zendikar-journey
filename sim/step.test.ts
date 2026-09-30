@@ -1136,3 +1136,41 @@ test('Oran-Rief: tapped, each green creature that came into play today gets a +1
   assert.match(growBlocked(state, world, p, 'loc-rief', state.minutes)!, /없다/);
   assert.deepEqual(ptOf(snake), [2, 2]); // the counter stays
 });
+
+const piranhas: RawEntity = {
+  id: 'loc-piranha',
+  kind: 'location',
+  name: '피라냐 습지',
+  status: 'canon',
+  map: { in: 'loc-b', terrain: 'swamp', color: 'B' },
+  sim: { nonbasic: true, enters_tapped: true, on_bond: [{ type: 'lose_life', amount: 1 }] },
+};
+
+test('a land that takes a life: the player picks someone there as they bond, and they lose 1 life', async () => {
+  const world = fixture([piranhas, npc('chr-x', npcSim('loc-piranha', 'leisure'))]);
+  const state = character(world, 'loc-piranha');
+  const x = state.actors['chr-x'];
+  x.stats.energy = 50;
+  assert.match((await act(state, world, { type: 'bond' })).error!, /골라야 한다/);
+  await act(state, world, { type: 'bond', target: 'chr-x' });
+  assert.deepEqual(state.actors[PLAYER_ID].bonds, ['loc-piranha']);
+  assert.equal(x.stats.energy, 36); // -10 for the life, -1 an hour of leisure for 4 hours
+});
+
+test('an NPC bonding with it picks by the LLM whom it falls on; alone, it falls on no one', async () => {
+  const world = fixture([piranhas, npc('chr-x', { ...npcSim('loc-piranha'), plan: [['00:00', '24:00', 'loc-piranha', 'bond', '늪과 유대', '🌱']] })]);
+  const state = character(world, 'loc-piranha');
+  const p = state.actors[PLAYER_ID];
+  p.stats.energy = 50;
+  const asked: string[][] = [];
+  const choose: Llm['choose'] = async ({ candidates }) => (asked.push(candidates.map((a) => a.id)), PLAYER_ID);
+  await act(state, world, { type: 'wait', hours: 4 }, { choose });
+  assert.deepEqual(asked, [[PLAYER_ID]]);
+  assert.equal(p.stats.energy, 36);
+  assert.ok(texts(state).some((t) => t.includes('피라냐 습지에 내주었다')));
+
+  const alone = character(fixture([piranhas, npc('chr-x', { ...npcSim('loc-piranha'), plan: [['00:00', '24:00', 'loc-piranha', 'bond', '늪과 유대', '🌱']] })]), 'loc-a');
+  await advance(alone, world, 4, { choose });
+  assert.deepEqual(alone.actors['chr-x'].bonds, ['loc-piranha']);
+  assert.equal(asked.length, 1); // no one to pick
+});

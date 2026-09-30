@@ -28,7 +28,27 @@ export function bondBlocked(state: State, world: World, a: Actor, t: number): st
 
 // Landfall: the land comes under their control (the one they stand on, or one sought out from
 // afar with a fetch land).
-export function bondLand(state: State, world: World, a: Actor, t: number, regionId = a.region) {
+// Who a land's "target player loses N life" may fall on as `a` bonds with it: the people
+// standing there with them (not beasts, not `a`).
+export function bondVictims(state: State, world: World, a: Actor, regionId: string) {
+  return present(state, regionId).filter((x) => x.id !== a.id && !npcDef(state, world, x.id)?.beast);
+}
+
+// `target` loses the land's life, if they are still there.
+export function bondDrain(state: State, world: World, a: Actor, regionId: string, amount: number, targetId: string | undefined, t: number) {
+  const r = region(world, regionId);
+  const target = targetId ? bondVictims(state, world, a, regionId).find((x) => x.id === targetId) : undefined;
+  if (!target) {
+    if (targetId) addLog(state, { kind: 'status', text: `${r.name}: 노린 이가 이미 곁에 없다.`, regions: [r.id], actors: [a.id], t });
+    return;
+  }
+  addLog(state, { kind: 'event', text: `${josa(shortName(a.name), '이', '가')} ${josa(shortName(target.name), '을', '를')} ${r.name}에 내주었다.`, regions: [r.id], actors: [a.id, target.id], t });
+  loseLife(state, target, amount, r.name);
+}
+
+// `target`: whom the player picked for a "target player loses N life" land. An NPC's pick is
+// asked of the LLM after the hour (state.choices).
+export function bondLand(state: State, world: World, a: Actor, t: number, regionId = a.region, target?: string) {
   const r = region(world, regionId);
   const def = npcDef(state, world, a.id);
   // A beast holds only its latest hunting ground.
@@ -58,7 +78,13 @@ export function bondLand(state: State, world: World, a: Actor, t: number, region
   // The land's own: "enters tapped", "When this land enters, you gain N life".
   if (r.entersTapped)
     addLog(state, { kind: 'status', text: `${josa(r.name, '은', '는')} 탭된 채 들어왔다. 오늘은 마나를 내지 않는다.`, regions: [r.id], actors: [a.id], t });
-  for (const eff of r.onBond) if (eff.type === 'gain_life') gainLife(state, a, eff.amount, t, r.name);
+  for (const eff of r.onBond) {
+    if (eff.type === 'gain_life') gainLife(state, a, eff.amount, t, r.name);
+    if (eff.type !== 'lose_life') continue;
+    const victims = bondVictims(state, world, a, r.id);
+    if (a.kind === 'player' || !victims.length) bondDrain(state, world, a, r.id, eff.amount, target, t);
+    else (state.choices ??= []).push({ by: a.id, land: r.id, amount: eff.amount, candidates: victims.map((x) => x.id), t });
+  }
   itemsOnLandfall(state, world, a, t);
 }
 

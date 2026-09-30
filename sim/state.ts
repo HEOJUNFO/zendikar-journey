@@ -23,6 +23,8 @@ export type Task = {
   // keeps days (sim/eons.ts).
   from?: string;
   land?: string;
+  // bond: whom the land's "target player loses N life" falls on (the player's pick).
+  target?: string;
 };
 
 export type Actor = {
@@ -183,6 +185,9 @@ export type State = {
   items?: Record<string, { name: string; owner?: string; counters: number }>;
   // Extra turns (sim/eons.ts): on that game day only `actor` moves; everyone else is out of time.
   extraDays?: { actor: string; day: number }[];
+  // Picks an NPC owes (a land's "target player loses N life" as they bonded with it): the LLM
+  // makes them after the hour (sim/run.ts), from these candidates.
+  choices?: { by: string; land: string; amount: number; candidates: string[]; t: number }[];
   nextLogId: number;
   log: LogEntry[];
 };

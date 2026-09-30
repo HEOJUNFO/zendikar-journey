@@ -35,12 +35,14 @@
     <text x="690" y="811.8000000000001" text-anchor="middle" class="area">카잔두 피난처</text></g>
   <g><circle cx="1257.2203421273746" cy="634.3821634808016" r="16" fill="#3f7fcf" stroke="#f4ecd8" stroke-width="2"/>
     <text x="1288.6464023516828" y="717.7117856968346" text-anchor="start" class="area">마고시, 물의 장막</text></g>
-  <g><circle cx="840" cy="1596" r="16" fill="#9a958b" stroke="#f4ecd8" stroke-width="2"/>
-    <text x="840" y="1681.8000000000002" text-anchor="middle" class="area">습지 평원</text></g>
+  <g><circle cx="882.5183673576876" cy="1580.4795843607762" r="16" fill="#9a958b" stroke="#f4ecd8" stroke-width="2"/>
+    <text x="931.9942857375423" y="1648.2194643442251" text-anchor="start" class="area">습지 평원</text></g>
   <g><circle cx="1202.7796578726254" cy="634.3821634808016" r="16" fill="#9a958b" stroke="#f4ecd8" stroke-width="2"/>
     <text x="1171.3535976483172" y="717.7117856968346" text-anchor="end" class="area">안개 낀 우림</text></g>
   <g><circle cx="1164.850467890891" cy="595.3288070379194" r="16" fill="#3f9447" stroke="#f4ecd8" stroke-width="2"/>
     <text x="1089.6349136533356" y="633.5710778241871" text-anchor="end" class="area">오란리프, 우거진 땅</text></g>
+  <g><circle cx="797.4816326423124" cy="1580.4795843607762" r="16" fill="#2b2233" stroke="#f4ecd8" stroke-width="2"/>
+    <text x="748.0057142624577" y="1648.2194643442251" text-anchor="end" class="area">피라냐 습지</text></g>
   <g>
     <text x="1101" y="1116" text-anchor="end" class="name">아게딤</text>
     <text x="1101" y="1133" text-anchor="end" class="terrain">해변</text></g>

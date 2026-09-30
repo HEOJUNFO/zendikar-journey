@@ -6,7 +6,7 @@ import { formatClock, formatTimeOfDay, gameDay, minuteOfDay } from '../sim/clock
 import { isPerson, needsOf, outOfTime, player, present, ptOf } from '../sim/state.ts';
 import { woundsOf } from '../sim/combat.ts';
 import { formatMana, manaAvailable, manaCapacity, manaLabel } from '../sim/mana.ts';
-import { bondBlocked, enteredToday, fetchTargets, growBlocked, growLand } from '../sim/abilities.ts';
+import { bondBlocked, bondVictims, enteredToday, fetchTargets, growBlocked, growLand } from '../sim/abilities.ts';
 import { BOND_HOURS } from '../sim/actions.ts';
 import { CLAIM_HOURS, claimBlocked, itemsAt, itemsOf } from '../sim/items.ts';
 import { eonLand, eonsIn, spendBlocked, storeBlocked } from '../sim/eons.ts';
@@ -85,13 +85,25 @@ export function RegionCard(props: {
   if (state && p && onAct && !t.sea) {
     if (p.region === r.id && !p.travel) {
       const why = bondBlocked(state, world, p, state.minutes);
+      // A land that takes someone's life as you bond with it: you pick whom, if anyone is here.
+      const victims = r.onBond.some((x) => x.type === 'lose_life') ? bondVictims(state, world, p, r.id) : [];
+      const held = busy || !!p.forced || p.boundUntil !== undefined;
       travel = (
         <>
           <p className="muted">지금 여기 있다.</p>
           {why ? (
             <p className="muted">{why}</p>
+          ) : victims.length ? (
+            <div className="row">
+              <span className="muted">유대 맺기 ({BOND_HOURS}시간), 생명을 앗길 사람:</span>
+              {victims.map((x) => (
+                <button key={x.id} disabled={held} onClick={() => onAct({ type: 'bond', target: x.id })}>
+                  {shortName(x.name)}
+                </button>
+              ))}
+            </div>
           ) : (
-            <button disabled={busy || !!p.forced || p.boundUntil !== undefined} onClick={() => onAct({ type: 'bond' })}>
+            <button disabled={held} onClick={() => onAct({ type: 'bond' })}>
               이 땅과 유대 맺기 ({BOND_HOURS}시간)
             </button>
           )}
@@ -142,7 +154,7 @@ export function RegionCard(props: {
         <p className="muted">
           {[
             r.entersTapped && '유대를 맺은 날은 마나를 내지 않음',
-            ...r.onBond.map((x) => `유대를 맺으면 생명 ${x.amount}`),
+            ...r.onBond.map((x) => (x.type === 'gain_life' ? `유대를 맺으면 생명 ${x.amount}` : `유대를 맺으면 곁의 한 사람이 생명 ${x.amount}을 잃음`)),
             r.fetch && `내어 주면 ${r.fetch.types.map((x) => LAND_TYPE_LABELS[x]).join('·')} 땅 하나와 멀리서 유대 (생명 ${r.fetch.life})`,
             r.eon && `하루를 맡기면 (${r.eon.costText}) 내일을 잃고, 되찾으면 세상이 멈춘 하루를 얻음`,
             r.growEntered && `탭하면 오늘 새로 난 ${manaLabel(r.growEntered.color)}색 생물 모두에게 +1/+1`,

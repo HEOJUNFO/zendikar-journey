@@ -6,7 +6,7 @@ import { BOND_HOURS, KIND_EFFECTS } from './rules.ts';
 import { addLog, isPerson, landUnusable, outOfTime, player } from './state.ts';
 import type { State, Task } from './state.ts';
 import { startTravel, travelBlocked } from './step.ts';
-import { bondBlocked, fetchBlocked, growBlocked } from './abilities.ts';
+import { bondBlocked, bondVictims, fetchBlocked, growBlocked } from './abilities.ts';
 import { CLAIM_HOURS, claimBlocked, itemDef } from './items.ts';
 import { EON_HOURS, spendBlocked, storeBlocked } from './eons.ts';
 import { castBlocked, learnBlocked, spellDef } from './spells.ts';
@@ -24,7 +24,8 @@ export const ActionSchema = z.discriminatedUnion('type', [
   z.object({ type: z.literal('talk'), to: z.string(), say: z.string().min(1).max(300) }),
   z.object({ type: z.literal('attack'), to: z.string() }),
   // Bond with the land here: it comes under your control (landfall) and gives its mana each turn.
-  z.object({ type: z.literal('bond') }),
+  // A land whose bonding makes someone here lose life ("target player loses 1 life"): `target`.
+  z.object({ type: z.literal('bond'), target: z.string().optional() }),
   // Learn a spell taught here; cast a known one on someone here (kick: pay its kicker too).
   z.object({ type: z.literal('learn'), spell: z.string() }),
   z.object({ type: z.literal('cast'), spell: z.string(), to: z.string(), kick: z.boolean().default(false) }),
@@ -88,8 +89,14 @@ export function startAction(state: State, world: World, action: Action): string 
     case 'bond': {
       const why = bondBlocked(state, world, p, t);
       if (why) return why;
-      task = { kind: 'bond', activity: '땅과 유대 맺기', emoji: '🌱', until: until(BOND_HOURS) };
-      text = `${BOND_HOURS}시간 동안 이 땅과 유대를 맺는다.`;
+      // "Target player loses N life": pick someone here, when anyone is.
+      const drain = region(world, p.region).onBond.find((x) => x.type === 'lose_life');
+      const victims = drain ? bondVictims(state, world, p, p.region) : [];
+      if (victims.length && !victims.some((x) => x.id === action.target))
+        return `이 땅은 곁의 한 사람의 생명을 앗아 간다. 누구에게 내줄지 골라야 한다: ${victims.map((x) => shortName(x.name)).join(', ')}.`;
+      const target = victims.find((x) => x.id === action.target);
+      task = { kind: 'bond', activity: '땅과 유대 맺기', emoji: '🌱', until: until(BOND_HOURS), ...(target ? { target: target.id } : {}) };
+      text = `${BOND_HOURS}시간 동안 이 땅과 유대를 맺는다.${target ? ` ${josa(shortName(target.name), '이', '가')} 이 땅에 생명을 앗길 것이다.` : ''}`;
       break;
     }
     case 'attack': {

@@ -52,7 +52,7 @@ export function step(state: State, world: World) {
     const timed = ['bond', 'claim', 'store_day', 'spend_day', 'grow'];
     if (done && (a.kind === 'player' || timed.includes(a.task!.kind))) {
       const at = t + STEP_MINUTES;
-      if (a.task!.kind === 'bond') bondLand(state, world, a, at);
+      if (a.task!.kind === 'bond') bondLand(state, world, a, at, a.region, a.task!.target);
       if (a.task!.kind === 'learn' && a.task!.spell) learnSpell(state, world, a, a.task!.spell, at);
       if (a.task!.kind === 'claim' && a.task!.item) claimItem(state, world, a, a.task!.item, at);
       if (a.task!.kind === 'fetch' && a.task!.from && a.task!.land) fetchLand(state, world, a, a.task!.from, a.task!.land, at);

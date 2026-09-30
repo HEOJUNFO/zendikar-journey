@@ -91,7 +91,16 @@ export const LandSimSchema = z.strictObject({
   // creature card from your graveyard to the battlefield": at 00:00, whoever holds it with N
   // plains or more gets back the last retainer who died serving them.
   upkeep_revive: z.strictObject({ plains: z.number().int().positive() }).optional(),
-  on_bond: z.array(z.discriminatedUnion('type', [z.strictObject({ type: z.literal('gain_life'), amount: z.number().int().positive() })])).default([]),
+  // What bonding with it does: the bonder gains life, or ("target player loses N life") someone
+  // standing there, whom the bonder picks, loses it.
+  on_bond: z
+    .array(
+      z.discriminatedUnion('type', [
+        z.strictObject({ type: z.literal('gain_life'), amount: z.number().int().positive() }),
+        z.strictObject({ type: z.literal('lose_life'), amount: z.number().int().positive() }),
+      ]),
+    )
+    .default([]),
   // "{U}, {T}: Put an eon counter on this land. Skip your next turn" and "{T}, Remove an eon
   // counter and return it to its owner's hand: Take an extra turn after this one" (Magosi):
   // whoever holds it may leave a day in it (losing their next day) and later take it back

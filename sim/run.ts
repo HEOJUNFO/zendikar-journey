@@ -4,7 +4,7 @@
 import { formatClock, gameDay } from './clock.ts';
 import { startAction } from './actions.ts';
 import type { Action } from './actions.ts';
-import { addLog, npcDef, outOfTime, player, speakerDef } from './state.ts';
+import { addLog, npcDef, outOfTime, player, random, speakerDef } from './state.ts';
 import type { Actor, GmPlan, LogEntry, State } from './state.ts';
 import { eligibleGmEvents, step } from './step.ts';
 import { addFoe, clash } from './combat.ts';
@@ -12,7 +12,7 @@ import { relationsText, remember } from './relations.ts';
 import { claimableItems } from './items.ts';
 import { eonLand, eonsIn, spendBlocked, storeBlocked } from './eons.ts';
 import { castSpell } from './spells.ts';
-import { abilityBlocked, enteredToday, growBlocked, growLand } from './abilities.ts';
+import { abilityBlocked, bondDrain, enteredToday, growBlocked, growLand } from './abilities.ts';
 import { bindRetainer, swayBlocked } from './retainers.ts';
 import { josa, shortName } from './text.ts';
 import type { ScheduleBlock } from './types.ts';
@@ -37,6 +37,9 @@ export type ReplyInput = { world: World; state: State; npc: Speaker; say: string
 export type Reply = { say: string; attack: boolean; follow?: boolean; impression?: string };
 export type EvadeInput = { world: World; state: State; npc: Speaker; attacker: Actor };
 export type ConverseInput = { world: World; state: State; a: Speaker; b: Speaker };
+// An NPC picks whom an effect falls on (e.g. a land's "target player loses 1 life"): one of
+// `candidates`, by id.
+export type ChooseInput = { world: World; state: State; npc: Speaker; what: string; candidates: Actor[] };
 // Two NPCs' exchange: the lines, what each now thinks of the other (by id), and who, if
 // anyone, now attacks the other.
 export type Conversation = { lines: { by: string; say: string }[]; impressions: Record<string, string>; attacker: string | null };
@@ -50,6 +53,7 @@ export type Llm = {
   // A flyer attacked by someone who can't fly: fly off (true) or stand and fight.
   evade?: (input: EvadeInput) => Promise<boolean>;
   converse?: (input: ConverseInput) => Promise<Conversation | null>;
+  choose?: (input: ChooseInput) => Promise<string | null>;
 };
 
 // NPC conversations written per game day at most (each is one LLM call).
@@ -69,6 +73,7 @@ export async function advance(state: State, world: World, hours: number, llm: Ll
     const before = state.nextLogId;
     step(state, world);
     await conversations(state, world, before, llm);
+    await choices(state, world, llm);
   }
   await narrate(state, world, firstId, llm);
   return { error, entries: state.log.filter((e) => e.id >= firstId) };
@@ -96,6 +101,7 @@ export async function act(state: State, world: World, input: Action | string, ll
       const before = state.nextLogId;
       step(state, world);
       await conversations(state, world, before, llm);
+    await choices(state, world, llm);
     }
     addLog(state, { kind: 'system', text: `시간 밖에서 ${n}시간이 흘렀다. 이제 다시 움직일 수 있다.`, regions: [p.region], actors: [p.id] });
     await narrate(state, world, firstId, llm);
@@ -114,6 +120,7 @@ export async function act(state: State, world: World, input: Action | string, ll
     const before = state.nextLogId;
     step(state, world);
     await conversations(state, world, before, llm);
+    await choices(state, world, llm);
     // Something is happening right here: stop and let the player decide. News from afar
     // (world-scope events elsewhere) doesn't interrupt.
     const alarm = state.log.some(
@@ -169,6 +176,30 @@ async function conversations(state: State, world: World, since: number, llm: Llm
 }
 
 // Still doing something, or out of time (their action waits until they are back).
+// Picks NPCs owe from this hour (state.choices), made by the LLM. When it can't answer, the
+// engine picks at random among the candidates, so the effect still lands.
+async function choices(state: State, world: World, llm: Llm) {
+  const due = state.choices ?? [];
+  state.choices = [];
+  for (const c of due) {
+    const by = state.actors[c.by];
+    const npc = speakerDef(state, world, c.by);
+    const land = world.regions.find((r) => r.id === c.land);
+    const candidates = c.candidates.map((id) => state.actors[id]).filter((x) => x && !x.dead);
+    if (!by || by.dead || !npc || !land || !candidates.length) continue;
+    let pick: string | null = null;
+    if (llm.choose) {
+      try {
+        pick = await llm.choose({ world, state, npc, candidates, what: `${land.name}: 당신이 이 땅과 유대를 맺자, 고른 한 사람이 생명 ${c.amount}을 잃는다 (${land.summary})` });
+      } catch (e) {
+        console.warn(`choose for ${c.by} failed:`, e);
+      }
+    }
+    if (!candidates.some((x) => x.id === pick)) pick = candidates[Math.floor(random(state) * candidates.length)].id;
+    bondDrain(state, world, by, land.id, c.amount, pick!, state.minutes);
+  }
+}
+
 function busy(state: State, p: Actor) {
   return !!(p.task || p.travel || p.forced || p.boundUntil !== undefined || outOfTime(state, p));
 }
