@@ -34,7 +34,9 @@ export const MANA_COLORS: Record<Color | 'C', string> = {
   C: '#9a958b',
 };
 export function landColors(r: Region): string[] {
-  if (TERRAINS[r.terrain].sea) return [TERRAINS[r.terrain].color];
+  // A sea region is drawn as sea; a sea that is an area of a land (a bay: Sunder Bay) is a land
+  // among its region's areas, colored by its mana like the rest.
+  if (TERRAINS[r.terrain].sea && !r.parent) return [TERRAINS[r.terrain].color];
   if (r.noMana || !r.color) return [MANA_COLORS.C];
   return r.color.split('/').map((c) => MANA_COLORS[c as Color]);
 }
