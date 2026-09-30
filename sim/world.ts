@@ -249,7 +249,8 @@ export const CharacterSimSchema = z.strictObject({
   ally: z.boolean().default(false),
   // "Whenever this or another Ally enters under your control, …": when an Ally joins their
   // party. damage_allies: damage to one there equal to the party's Allies (Murasa Pyromancer).
-  rally: z.array(z.discriminatedUnion('type', [z.strictObject({ type: z.literal('damage_allies') })])).default([]),
+  // lose_life_allies: one there loses life equal to the party's Allies (Hagra Diabolist).
+  rally: z.array(z.discriminatedUnion('type', [z.strictObject({ type: z.literal('damage_allies') }), z.strictObject({ type: z.literal('lose_life_allies') })])).default([]),
   // "You may look at the top card of your library any time" (Sphinx of Jwar Isle): they see
   // what is coming. The rest of today's events and powers the morning LLM picked are in their
   // plan (made after it) and their talk (sim/foresight.ts).
@@ -558,7 +559,7 @@ export type NpcDef = {
   winsAtLife?: number;
   extraCombat?: { cost: ManaCost; costText: string };
   ally?: boolean;
-  rally?: { type: 'damage_allies' }[];
+  rally?: { type: 'damage_allies' | 'lose_life_allies' }[];
   hireable?: boolean;
   foresight?: boolean;
   landfall?: { pt: [number, number]; trample: boolean };

@@ -5,9 +5,10 @@ name: 동료
 name_en: Allies
 summary: 젠디카르의 원정대. 동료는 한 사람의 무리에 들어 함께 떠돌고 싸우며, 동료가 무리에 들 때마다 무리 안의 동료들이 힘을 낸다
 status: canon
-sources: [ZEN-139]
+sources: [ZEN-139, ZEN-95]
 tags: [규칙, 동료, 원정대]
 links:
+  - { to: chr-hagra-diabolist, rel: 동료 (오우거 주술사, 용병) }
   - { to: law-retainers, rel: 무리는 주인과 권속 }
   - { to: chr-murasa-pyromancer, rel: 첫 동료 }
 ---

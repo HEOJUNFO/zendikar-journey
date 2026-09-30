@@ -2640,3 +2640,31 @@ test('the real Gigantiform is taught in Oran-Rief', () => {
   assert.equal(s.learnAt, 'loc-oran-rief');
   assert.equal(s.kicker?.manaText, '{4}');
 });
+
+test('an Ally with a life-draining rally: hired, the player picks one there to lose life equal to the party\'s Allies', async () => {
+  const ogre = { ...npcSim('loc-a', 'work', [3, 2]), mana: { B: 5 }, ally: true, hireable: true, rally: [{ type: 'lose_life_allies' }] };
+  const world = fixture([npc('chr-o', ogre), npc('chr-x', npcSim('loc-a'))]);
+  const state = character(world, 'loc-a');
+  const p = state.actors[PLAYER_ID];
+  p.stats.coin = 60;
+  await act(state, world, { type: 'hire', to: 'chr-o' });
+  assert.equal(state.actors['chr-o'].master, PLAYER_ID);
+  assert.equal(p.stats.coin, 10);
+  assert.equal(state.asks?.[0]?.effect.type, 'rally');
+  assert.match(askText(state, world, state.asks![0]), /생명 1을 잃는다/);
+  await act(state, world, { type: 'choose', pick: 'chr-x' });
+  assert.equal(state.actors['chr-x'].life, 19);
+  assert.ok(texts(state).some((t) => t.includes('저주를 퍼부었다')));
+});
+
+test('the real Hagra Diabolist lives in the Hagra swamp of Guul Draz, for 50 coin', () => {
+  const world = loadWorld();
+  const state = newState(world, { seed: 1, mode: 'observer' });
+  const o = state.actors['chr-hagra-diabolist'];
+  assert.equal(o?.region, 'loc-hagra');
+  assert.equal(region(world, 'loc-hagra').parent, 'loc-guul-draz');
+  assert.ok(region(world, 'loc-hagra').notLand);
+  const def = world.npcs.find((x) => x.id === 'chr-hagra-diabolist')!;
+  assert.equal(hirePrice(def), 50);
+  assert.deepEqual(def.rally, [{ type: 'lose_life_allies' }]);
+});

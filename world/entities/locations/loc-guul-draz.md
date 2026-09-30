@@ -5,9 +5,10 @@ name: 굴 드라즈
 name_en: Guul Draz
 summary: 젠디카르 남서쪽의 음울한 늪 대륙. 얕은 물길이 끝없이 갈라지고, 흡혈귀들이 산다
 status: canon
-sources: [ZEN-219, ZEN-222, ZEN-229, ZEN-99, ZEN-105, ZEN-111]
+sources: [ZEN-219, ZEN-222, ZEN-229, ZEN-99, ZEN-105, ZEN-111, ZEN-95]
 tags: [대륙, 늪, 흑색, 흡혈귀]
 links:
+  - { to: loc-hagra, rel: 안의 구역 (대륙을 덮은 늪) }
   - { to: chr-sorin-markov, rel: 거니는 옛 흡혈귀 }
   - { to: loc-marsh-flats, rel: 안의 구역 }
   - { to: loc-piranha-marsh, rel: 안의 구역 }

@@ -6,6 +6,7 @@
 // ("this or another Ally"). What it falls on is the controller's pick: the player's (state.asks,
 // sim/asks.ts) or, for an NPC, the LLM's. Mercenaries (`sim.hireable`) serve whoever pays.
 import { addFoe, dealDamage } from './combat.ts';
+import { loseLife } from './life.ts';
 import { bindRetainer, masterOf, retainersOf, swayBlocked } from './retainers.ts';
 import { addLog, npcDef, present, targetable } from './state.ts';
 import type { Actor, State } from './state.ts';
@@ -42,7 +43,14 @@ export function rallyText(state: State, world: World, sourceId: string) {
   const x = state.actors[sourceId];
   const controller = x && (masterOf(state, x) ?? x);
   if (!x || !controller) return '';
-  return `${shortName(x.name)}의 불길: 고른 하나에게 피해 ${alliesOf(state, world, controller).length} (무리의 동료 수, 죽을 수도 있다)`;
+  const n = alliesOf(state, world, controller).length;
+  return (npcDef(state, world, x.id)?.rally ?? [])
+    .map((eff) =>
+      eff.type === 'lose_life_allies'
+        ? `${shortName(x.name)}의 저주: 고른 하나가 생명 ${n}을 잃는다 (무리의 동료 수, 죽을 수도 있다)`
+        : `${shortName(x.name)}의 불길: 고른 하나에게 피해 ${n} (무리의 동료 수, 죽을 수도 있다)`,
+    )
+    .join(', ');
 }
 
 // The rally lands on `targetId` (Murasa Pyromancer: damage equal to the Allies its controller
@@ -53,8 +61,18 @@ export function applyRally(state: State, world: World, sourceId: string, targetI
   if (!x || x.dead || !target || target.dead || target.region !== x.region || target.travel || !targetable(target, t)) return;
   const controller = masterOf(state, x) ?? x;
   for (const eff of npcDef(state, world, x.id)?.rally ?? []) {
-    if (eff.type !== 'damage_allies') continue;
     const n = alliesOf(state, world, controller).length;
+    if (eff.type === 'lose_life_allies') {
+      addLog(state, {
+        kind: 'combat',
+        text: `${josa(shortName(x.name), '이', '가')} ${shortName(target.name)}에게 저주를 퍼부었다 (동료 ${n}).`,
+        regions: [x.region],
+        actors: [x.id, target.id],
+      });
+      loseLife(state, target, n, t, `${shortName(x.name)}의 저주`, x);
+      if (!target.dead) addFoe(target, x.id, t);
+      continue;
+    }
     addLog(state, {
       kind: 'combat',
       text: `${josa(shortName(x.name), '이', '가')} ${shortName(target.name)}에게 불길을 퍼부었다 (동료 ${n}).`,
