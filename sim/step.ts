@@ -12,6 +12,7 @@ import {
   EXPLORE_EFFECT,
   FIGHT_EFFECT,
   DEPLETED_HOURS,
+  DESTROYED_DAYS,
   DEPLETED_LABEL,
   KIND_EFFECTS,
   STARVING,
@@ -246,8 +247,13 @@ function fire(state: State, world: World, ev: EventDef, t: number, omened: boole
       for (const id of (cause.lands ?? []).slice(0, eff.count)) {
         state.regions[id] ??= { conditions: [] };
         if (state.regions[id].destroyed) continue;
-        state.regions[id].destroyed = { at: t, source: ev.id };
-        addLog(state, { kind: 'condition', text: `${region(world, id).name}: 땅이 부서졌다. 이제 이곳에서는 아무것도 얻을 수 없다.`, regions: [id], scope: ev.scope });
+        state.regions[id].destroyed = { at: t, source: ev.id, until: ruinsUntil(t) };
+        addLog(state, {
+          kind: 'condition',
+          text: `${region(world, id).name}: 땅이 부서졌다. ${formatClock(ruinsUntil(t))}까지 이곳에서는 아무것도 얻을 수 없다.`,
+          regions: [id],
+          scope: ev.scope,
+        });
         permanentDestroyed(state, world, id, cause.by ?? [], t);
       }
     } else if (eff.type === 'create') {
@@ -276,9 +282,19 @@ function describeStat(eff: { energy?: number; hunger?: number; coin?: number }) 
 
 // --- regions -----------------------------------------------------------------------------
 
+// When a land destroyed at `at` comes back: the midnight DESTROYED_DAYS days on.
+export function ruinsUntil(at: number) {
+  return untapTime(at) + (DESTROYED_DAYS - 1) * 1440;
+}
+
 function regionLayer(state: State, world: World, t: number) {
   for (const [id, rs] of Object.entries(state.regions)) {
     const r = world.regions.find((x) => x.id === id);
+    // A destroyed land comes back (bonds with it held all along give mana again).
+    if (rs.destroyed && (rs.destroyed.until ?? ruinsUntil(rs.destroyed.at)) <= t) {
+      delete rs.destroyed;
+      if (r) addLog(state, { kind: 'condition', text: `${r.name}: 부서졌던 땅이 되살아났다. 다시 유대를 맺고 마나를 얻을 수 있다.`, regions: [id], scope: 'world' });
+    }
     for (const c of rs.conditions.filter((c) => c.until <= t)) {
       if (r) addLog(state, { kind: 'condition', text: c.tapped ? `${r.name}: 다시 쓸 수 있게 되었다 (${c.label} 풀림).` : `${r.name}: ${josa(c.label, '이', '가')} 걷혔다.`, regions: [id] });
     }

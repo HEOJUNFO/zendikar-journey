@@ -16,7 +16,7 @@ import { gainLife } from './life.ts';
 import { newState, outOfTime, PLAYER_ID, present, ptOf, syncWorld } from './state.ts';
 import { spendBlocked, storeBlocked } from './eons.ts';
 import { bondBlocked, bondLand, bondTargets, fetchTargets, fireTargets, firesOnBond, growBlocked, spawnWild, useAbility } from './abilities.ts';
-import { DEPLETED_LABEL } from './rules.ts';
+import { DEPLETED_LABEL, DESTROYED_DAYS } from './rules.ts';
 import { swayBlocked } from './retainers.ts';
 import type { State } from './state.ts';
 import { affectedRegions, buildWorld, region, travelHours } from './world.ts';
@@ -196,11 +196,19 @@ test('the trap hurts those there and lays waste to the lands the intruder came t
   for (const id of ['loc-a', 'loc-b']) assert.ok(state.regions[id].destroyed);
   assert.ok(!state.regions['loc-c'].destroyed);
   assert.match((await act(state, world, { type: 'explore', hours: 1, pace: 'normal' })).error!, /부서/);
-  // Wounds heal when the turn ends; destroyed land stays destroyed.
+  // Wounds heal when the turn ends; destroyed land lies in ruins for a week.
   await act(state, world, { type: 'wait', hours: 24 });
   await act(state, world, { type: 'wait', hours: 24 });
   assert.equal(woundsOf(state.actors[PLAYER_ID], state.minutes), 0);
   assert.ok(state.regions['loc-b'].destroyed);
+  const until = state.regions['loc-b'].destroyed!.until!;
+  assert.equal(until % 1440, 0); // a midnight
+  assert.equal(Math.floor(until / 1440) - Math.floor(state.regions['loc-b'].destroyed!.at / 1440), DESTROYED_DAYS);
+  while (state.minutes < until) await act(state, world, { type: 'wait', hours: 24 });
+  for (const id of ['loc-a', 'loc-b']) assert.equal(state.regions[id].destroyed, undefined);
+  assert.ok(texts(state).some((x) => x.includes('부서졌던 땅이 되살아났다')));
+  // Bonds held all along give mana again.
+  assert.deepEqual(manaCapacity(state, world, state.actors[PLAYER_ID], state.minutes), { W: 1, G: 1 });
 });
 
 test('a land\'s destroyed-trap answers when that land is laid waste: wild snakes turn on the one who did it', async () => {

@@ -121,8 +121,9 @@ export type Condition = {
 
 export type RegionState = {
   conditions: Condition[];
-  // Destroyed land, for good (until a card brings it back).
-  destroyed?: { at: number; source: string };
+  // Destroyed land: in ruins for everyone until `until` (a midnight, DESTROYED_DAYS on).
+  // Saves from before it came back have no `until` (sim/step.ts `ruinsUntil`).
+  destroyed?: { at: number; source: string; until?: number };
 };
 
 export type LogKind =

@@ -13,7 +13,7 @@ import { eonLand, eonsIn, spendBlocked, storeBlocked } from '../sim/eons.ts';
 import { castBlocked, harmful, learnBlocked, spellsTaughtAt } from '../sim/spells.ts';
 import { sealToday } from '../sim/seal.ts';
 import type { Actor, LogEntry, State } from '../sim/state.ts';
-import { travelBlocked } from '../sim/step.ts';
+import { ruinsUntil, travelBlocked } from '../sim/step.ts';
 import { josa, shortName } from '../sim/text.ts';
 import { PACES } from '../sim/types.ts';
 import type { Pace } from '../sim/types.ts';
@@ -193,7 +193,7 @@ export function RegionCard(props: {
           <small> · 지도에서 골라 들어간다</small>
         </p>
       )}
-      {destroyed && <p className="cond">✕ 부서진 땅 <small>({formatClock(destroyed.at)}부터, 쓸 수 없음)</small></p>}
+      {destroyed && <p className="cond">✕ 부서진 땅 <small>({formatClock(destroyed.until ?? ruinsUntil(destroyed.at))}까지 쓸 수 없음)</small></p>}
       {conds.map((c) => (
         <p key={c.label + c.until} className="cond">
           ⚠ {c.label} <small>({formatClock(c.until)}까지{c.blocksTravel ? ', 오갈 수 없음' : ''}{c.tapped ? ', 쓸 수 없음' : ''})</small>

@@ -41,6 +41,9 @@ export const HUNT_HUNGER = 60;
 export const KILL_FEED = 60;
 // How long a land stays hunted out after a beast fed there.
 export const DEPLETED_HOURS = 72;
+// A destroyed land lies in ruins for everyone this many days, and comes back at a midnight
+// (user decision 2026-09-30).
+export const DESTROYED_DAYS = 7;
 export const DEPLETED_LABEL = '사냥감이 바닥남';
 
 // A fight with no player in it doesn't kill: whoever goes down is knocked out this long.
