@@ -50,7 +50,7 @@ npm run world:check
   - `narrate.ts`: 턴에서 일어난 일을 서술한다. 인물 모드는 2인칭, 관찰자 모드는 연대기 문체다.
   - `interpret.ts`: 플레이어의 자유 입력을 행동(`sim/actions.ts`) 하나로 바꾼다.
   - `reply.ts`: NPC가 캐릭터를 유지하며 플레이어에게 대답하고, 적의를 드러낼지, 플레이어를 어떻게 여기게 됐는지(인상) 정한다. 비행하는 NPC가 공격받았을 때 피할지도 정한다.
-  - `choose.ts`: NPC가 자기 효과가 누구에게 떨어질지 고른다 (피라냐 습지의 생명 잃기, 바다절벽의 하루 비행). 한 시간이 끝난 뒤 `run.ts` 가 묻고(`state.choices`), 답이 없으면 후보 가운데 무작위.
+  - `choose.ts`: NPC가 자기 효과가 누구에게 떨어질지 고른다 (피라냐 습지의 생명 잃기, 바다절벽의 하루 비행, 흔들리는 봉우리의 하루 +2/+0). 한 시간이 끝난 뒤 `run.ts` 가 묻고(`state.choices`), 답이 없으면 후보 가운데 무작위.
   - `converse.ts`: 마주친 두 NPC의 짧은 대화를 쓰고, 서로의 인상과 한쪽이 적의를 드러낼지 정한다 (하루 최대 `MAX_TALKS_PER_DAY` 번).
 
 ## 시뮬레이션 엔진 (`sim/`)
@@ -75,7 +75,7 @@ npm run world:check
 - **아이템** (`items.ts`, `world/entities/items`): MTG의 마법물체. 한곳(`at`)에 서 있고, 그곳에서 값을 치르고 1시간 들여 "길들이면" 그의 것이 된다(`state.items`). NPC는 길들일 수 있는 것이 있는 날 LLM 계획에 `claim` 블록이 열린다. 주인이 죽거나 떠나면 다시 주인 없는 것. 영원의 그릇은 길들일 때 생명을 담고, 주인이 상륙할 때 더 크면 되돌린다.
 - **권속** (`retainers.ts`): 카드의 "당신이 통제하는 생물". 인물의 `master` 가 주인이다. 권속은 주인 곁에서 하루를 살고(LLM이 짠 하루에서 장소만 주인을 따름), 같은 곳에서 주인이 싸우는 상대에게 함께 덤빈다. 칼리타스가 되살린 흡혈귀는 그의 권속이고, 플레이어는 대화로 설득해 얻는다(`reply.ts` 의 `follow`). 주인이 죽거나 서로 싸우면 풀려난다.
 - **시간 밖** (`eons.ts`, `state.ts` 의 `outOfTime`): 마고시(`sim.eon`)와 유대를 맺은 이는 하루를 맡기거나(다음 하루를 잃음, `skipDay`) 되찾는다(유대가 끊기고 다음 하루는 그만 움직임, `state.extraDays`). 시간 밖인 이는 그날 제자리에 서서 아무것도 하지 않고, 계획도 짜이지 않고, `present` 에 없어 누구도 닿지 않으며, 하던 일의 시각이 한 시간씩 밀린다(`holdStill`). 남의 추가 턴인 날은 아침 사건도 없다. 플레이어가 시간 밖이면 `act` 는 그 하루를 흘려보낸다. NPC는 LLM 계획의 `store_day`/`spend_day` 블록으로 쓴다.
-- **대상을 고르는 땅** (`abilities.ts` 의 `targetedBondEffect`, `bondTargets`, `applyBondEffect`): 유대를 맺을 때 그 자리의 하나에게 떨어지는 효과(`on_bond` 의 `lose_life`, `grant`). 플레이어는 행동의 `target` 으로, NPC는 한 시간 뒤 LLM이 고른다. `grant` 는 00:00까지의 능력이다(`Actor.granted`, `expireGranted`).
+- **대상을 고르는 땅** (`abilities.ts` 의 `targetedBondEffect`, `bondTargets`, `applyBondEffect`): 유대를 맺을 때 그 자리의 하나에게 떨어지는 효과(`on_bond` 의 `lose_life`, `grant`, `pump`). 플레이어는 행동의 `target` 으로, NPC는 한 시간 뒤 LLM이 고른다. `grant` 는 00:00까지의 능력(`Actor.granted`), `pump` 는 00:00까지의 +N/+N(`Actor.pumps`)이다(`expireGranted`).
 - **땅의 탭 능력** (`landtap.ts`): 마나 말고 {T}로 쓰는 땅의 능력은 그날 그 땅의 마나를 없앤다(`Actor.landsTapped`). 오란리프(`sim.grow_entered`, `abilities.ts` 의 `growEntered`)는 오늘 새로 나온(`enteredAt`) 그 색 생물 모두에게 +1/+1 카운터(`plusCounters`)를 준다. 플레이어는 버튼, NPC는 LLM 계획의 `grow` 블록.
 - **플레이어 행동** (`actions.ts`): 이동, 쉬기, 탐색(조심/평소/서둘러), 먹기, 기다리기, 대화, 공격, 땅과 유대 맺기, 주문 배우기, 주문 쓰기, 아이템 길들이기, 길 찾기(페치랜드를 내어 주고 산·평원 같은 땅과 멀리서 유대, `fetchLand`), 하루 맡기기·되찾기(마고시), 숲의 힘(오란리프). 자기 지역에서 전조나 사건이 일어나면 하던 일을 멈추고 선택을 돌려받는다.
 

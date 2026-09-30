@@ -1210,3 +1210,21 @@ test('an NPC bonding with the seacliff may pick itself for the wings', async () 
   assert.deepEqual(asked, [['chr-x']]);
   assert.ok(state.actors['chr-x'].abilities.includes('fly'));
 });
+
+test('teetering peaks: the one bonding picks someone there (themselves too) to hit harder until midnight', async () => {
+  const peaks: RawEntity = {
+    id: 'loc-peaks',
+    kind: 'location',
+    name: '봉우리',
+    status: 'canon',
+    map: { in: 'loc-c', terrain: 'rocky', color: 'R' },
+    sim: { nonbasic: true, enters_tapped: true, on_bond: [{ type: 'pump', pt: [2, 0] }] },
+  };
+  const world = fixture([peaks]);
+  const state = character(world, 'loc-peaks');
+  const p = state.actors[PLAYER_ID];
+  await act(state, world, { type: 'bond', target: PLAYER_ID });
+  assert.deepEqual(ptOf(p), [3, 1]);
+  await act(state, world, { type: 'wait', hours: 16 }); // past midnight
+  assert.deepEqual(ptOf(p), [1, 1]);
+});

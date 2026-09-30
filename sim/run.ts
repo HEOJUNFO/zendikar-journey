@@ -195,7 +195,9 @@ async function choices(state: State, world: World, llm: Llm) {
             ? `고른 하나가 생명 ${c.effect.amount}을 잃는다`
             : c.effect.type === 'grant'
               ? `고른 하나(당신 자신도 된다)가 오늘 자정까지 ${ABILITY_LABELS[c.effect.ability]} 능력을 얻는다`
-              : '';
+              : c.effect.type === 'pump'
+                ? `고른 하나(당신 자신도 된다)가 오늘 자정까지 공격력/방어력 ${c.effect.pt.join('/')}만큼 강해진다`
+                : '';
         pick = await llm.choose({ world, state, npc, candidates, what: `${land.name}: 당신이 이 땅과 유대를 맺자, ${what} (${land.summary})` });
       } catch (e) {
         console.warn(`choose for ${c.by} failed:`, e);

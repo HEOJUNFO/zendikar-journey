@@ -35,9 +35,10 @@ export function targetedBondEffect(r: Region) {
 }
 
 // Whom it may fall on as `a` bonds with it: anyone standing there, beasts too (user decision
-// 2026-09-30); `a` too when it is a gift, as "target creature" may be one's own.
+// 2026-09-30); `a` too when it is a gift ("target creature" may be one's own), not when it
+// takes life ("target player", as one's opponent).
 export function bondTargets(state: State, world: World, a: Actor, regionId: string, eff: BondEffect) {
-  return present(state, regionId).filter((x) => x.id !== a.id || eff.type === 'grant');
+  return present(state, regionId).filter((x) => x.id !== a.id || eff.type !== 'lose_life');
 }
 
 // The effect falls on `target`, if they are still there.
@@ -52,6 +53,10 @@ export function applyBondEffect(state: State, world: World, a: Actor, regionId: 
     addLog(state, { kind: 'event', text: `${josa(shortName(a.name), '이', '가')} ${josa(shortName(target.name), '을', '를')} ${r.name}에 내주었다.`, regions: [r.id], actors: [a.id, target.id], t });
     loseLife(state, target, eff.amount, r.name);
   } else if (eff.type === 'grant') grantAbility(state, target, eff.ability, untapTime(t), r.name, t);
+  else if (eff.type === 'pump') {
+    target.pumps = [...(target.pumps ?? []), { pt: [...eff.pt], until: untapTime(t) }];
+    addLog(state, { kind: 'event', text: `${r.name}의 기운이 ${shortName(target.name)}에게 깃들었다 (${ptOf(target).join('/')}, 자정까지).`, regions: [r.id], actors: [a.id, target.id], t });
+  }
 }
 
 // `x` has `ability` until `until` ("until end of turn": 00:00).
@@ -66,9 +71,13 @@ export function grantAbility(state: State, x: Actor, ability: Ability, until: nu
   addLog(state, { kind: 'event', text: `${cause}의 바람이 ${shortName(x.name)}에게 ${josa(label, '을', '를')} 주었다 (자정까지).`, regions: [x.region], actors: [x.id], t });
 }
 
-// What was given for a while is gone at `t`.
+// What was given for a while (abilities, +N/+N) is gone at `t`.
 export function expireGranted(state: State, t: number) {
   for (const x of Object.values(state.actors)) {
+    if (x.pumps?.some((b) => b.until <= t)) {
+      x.pumps = x.pumps.filter((b) => b.until > t);
+      if (!x.dead) addLog(state, { kind: 'status', text: `${shortName(x.name)}에게 깃든 기운이 가라앉았다 (${ptOf(x).join('/')}).`, regions: [x.region], actors: [x.id], t });
+    }
     const gone = (x.granted ?? []).filter((g) => g.until <= t);
     if (!gone.length) continue;
     x.granted = x.granted!.filter((g) => g.until > t);

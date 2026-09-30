@@ -78,7 +78,7 @@ Actions:
 - {"type":"attack","to":"<person id>"}  (only when they clearly mean to fight; fights can be deadly)
 ${
           targetedBondEffect(here)
-            ? `- {"type":"bond","target":"<id of someone here${targetedBondEffect(here)!.type === 'grant' ? `, or ${p.id} for themselves` : ''}>"}  (bond with the land here, taking it as their own; 4 hours, one land a day. As they do: ${bondEffectText(targetedBondEffect(here)!)}; leave target out only if nobody is there to name)`
+            ? `- {"type":"bond","target":"<id of someone here${targetedBondEffect(here)!.type !== 'lose_life' ? `, or ${p.id} for themselves` : ''}>"}  (bond with the land here, taking it as their own; 4 hours, one land a day. As they do: ${bondEffectText(targetedBondEffect(here)!)}; leave target out only if nobody is there to name)`
             : '- {"type":"bond"}  (bond with the land here, taking it as their own; 4 hours, one land a day)'
         }
 ${taught.length ? taught.map((s) => `- {"type":"learn","spell":"${s.id}"}  (learn ${s.name} here: ${s.summary}; ${s.learnHours} hours)`).join('\n') + '\n' : ''}${

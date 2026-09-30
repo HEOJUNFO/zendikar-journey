@@ -76,6 +76,8 @@ export type Actor = {
   // Abilities they have only for a while ("gains flying until end of turn"), in `abilities`
   // until `until`.
   granted?: { ability: Ability; until: number }[];
+  // "+N/+N until end of turn" from lands and the like, on top of `boost` (landfall's), until `until`.
+  pumps?: { pt: Pt; until: number }[];
   // Spells they know (world/entities/spells): their hand.
   spells?: string[];
   // Spells they let go of (discarded): their graveyard.
@@ -362,11 +364,11 @@ export function present(state: State, regionId: string) {
   return alive(state).filter((a) => a.region === regionId && !a.travel && !outOfTime(state, a));
 }
 
-// Power / toughness now, with their +1/+1 counters, this turn's boost and their auras.
+// Power / toughness now, with their +1/+1 counters, this turn's boosts and their auras.
 export function ptOf(a: Actor): Pt {
   let [p, t] = a.pt ?? PLAYER_PT;
   if (a.plusCounters) [p, t] = [p + a.plusCounters, t + a.plusCounters];
-  for (const x of [...(a.boost ? [a.boost] : []), ...(a.auras ?? [])]) [p, t] = [p + x.pt[0], t + x.pt[1]];
+  for (const x of [...(a.boost ? [a.boost] : []), ...(a.pumps ?? []), ...(a.auras ?? [])]) [p, t] = [p + x.pt[0], t + x.pt[1]];
   return [p, t];
 }
 

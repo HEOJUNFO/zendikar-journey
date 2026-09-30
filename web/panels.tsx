@@ -17,7 +17,6 @@ import { josa, shortName } from '../sim/text.ts';
 import { PACES } from '../sim/types.ts';
 import type { Pace } from '../sim/types.ts';
 import { ABILITY_LABELS, areasOf, bondEffectText, canStay, hasPowers, LAND_TYPE_LABELS, placeName, region, TERRAINS, travelHours } from '../sim/world.ts';
-import type { Ability } from '../sim/world.ts';
 import type { World } from '../sim/world.ts';
 import type { NewGameInput } from './api.ts';
 import { visibleActors, visibleLog } from './view.ts';
@@ -98,7 +97,8 @@ export function RegionCard(props: {
           ) : targets.length ? (
             <div className="row">
               <span className="muted">
-                유대 맺기 ({BOND_HOURS}시간), {eff!.type === 'lose_life' ? '생명을 앗길 이' : `${ABILITY_LABELS[(eff as { ability: Ability }).ability]}을 얻을 이`}:
+                유대 맺기 ({BOND_HOURS}시간),{' '}
+                {eff!.type === 'lose_life' ? '생명을 앗길 이' : eff!.type === 'grant' ? `${ABILITY_LABELS[eff!.ability]}을 얻을 이` : '힘을 받을 이'}:
               </span>
               {targets.map((x) => (
                 <button key={x.id} disabled={held} onClick={() => onAct({ type: 'bond', target: x.id })}>

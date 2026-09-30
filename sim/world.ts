@@ -102,6 +102,8 @@ export const LandSimSchema = z.strictObject({
         z.strictObject({ type: z.literal('lose_life'), amount: z.number().int().positive() }),
         // "Target creature gains flying until end of turn": one there (them too), until 00:00.
         z.strictObject({ type: z.literal('grant'), ability: z.enum(ABILITIES) }),
+        // "Target creature gets +2/+0 until end of turn": one there (them too), until 00:00.
+        z.strictObject({ type: z.literal('pump'), pt: z.tuple([z.number().int(), z.number().int()]) }),
       ]),
     )
     .default([]),
@@ -121,7 +123,11 @@ export type BondEffect = z.infer<typeof LandSimSchema>['on_bond'][number];
 export function bondEffectText(eff: BondEffect) {
   if (eff.type === 'gain_life') return `유대를 맺으면 생명 ${eff.amount}`;
   if (eff.type === 'lose_life') return `유대를 맺으면 곁의 하나(맺는 이가 고름)가 생명 ${eff.amount}을 잃음`;
+  if (eff.type === 'pump') return `유대를 맺으면 곁의 하나(자신도, 맺는 이가 고름)가 자정까지 ${signed(eff.pt[0])}/${signed(eff.pt[1])}`;
   return `유대를 맺으면 곁의 하나(자신도, 맺는 이가 고름)가 자정까지 ${ABILITY_LABELS[eff.ability]}`;
+}
+function signed(n: number) {
+  return n < 0 ? `${n}` : `+${n}`;
 }
 
 export const MapSchema = z.union([
