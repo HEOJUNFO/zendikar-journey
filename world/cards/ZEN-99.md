@@ -12,7 +12,7 @@ rarity: mythic
 artist: "Todd Lockwood"
 scryfall: https://scryfall.com/card/zen/99/kalitas-bloodchief-of-ghet
 added: 2026-09-29
-entities: [chr-kalitas, cre-vampire, fac-ghet, law-mana-colors, law-retainers]
+entities: [chr-kalitas, cre-vampire, fac-ghet, law-mana-colors, law-retainers, loc-ghet-estate, loc-guul-draz]
 ---
 
 ## 카드 원문
@@ -58,3 +58,7 @@ entities: [chr-kalitas, cre-vampire, fac-ghet, law-mana-colors, law-retainers]
   - 엔진에 지역 안의 세부 구역(`map.in`)을 새로 만들었다.
   - `loc-ghet-estate`: 게트 혈족의 영지, 굴 드라즈 안의 구역, 늪(흑색 땅). 칼리타스의 거처와 게트 혈족의 거점을 이리로 옮겼다.
 - 게임에 아직 없는 것: 마나를 쓰는 주문(플레이어는 마나를 얻지만 아직 쓸 곳이 없다).
+- 2026-09-30 다시 놓기 (지역 초기화 뒤, 대지 20장을 깐 다음):
+  - `loc-ghet-estate`: 굴 드라즈 안의 구역으로 되살렸다 ([결정] 예전과 같은 자리). 늪 지형이라 기본 늪이다 (굴 드라즈 다음 두 번째).
+  - `chr-kalitas` 를 canon 으로 되돌렸다. 능력은 그대로다.
+  - 지도: 굴 드라즈의 구역이 셋이 되어 동쪽 구역 이름이 푸른 지하묘지 이름과 겹쳤다. 발라 게드를 (196, 234), 지하묘지를 (164, 244.5)로 조금 올렸다 ([가공]).
