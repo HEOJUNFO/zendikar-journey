@@ -5,12 +5,10 @@ name: 타짐
 name_en: Tazeem
 summary: 젠디카르 북쪽의 물가 대륙. 깎아지른 절벽과 해안이 이어지고, 하늘에는 에메리아의 폐허가 떠 있으며, 우마라 강에는 거대한 폭포 마고시가 쏟아지고, 오란리프의 숲이 끝없이 자란다
 status: canon
-sources: [ZEN-213, ZEN-218, ZEN-220, ZEN-221, ZEN-225, ZEN-62, ZEN-65, ZEN-63, ZEN-64]
+sources: [ZEN-213, ZEN-218, ZEN-220, ZEN-221, ZEN-225, ZEN-62, ZEN-63]
 tags: [대륙, 해안, 절벽, 청색]
 links:
-  - { to: loc-silundi-coast, rel: 안의 구역 }
   - { to: loc-sea-gate, rel: 안의 구역 }
-  - { to: loc-silundi-sea, rel: 동쪽 바다 }
   - { to: cre-roil-elemental, rel: 떠도는 뒤틀림 }
   - { to: loc-emeria, rel: 하늘의 구역 }
   - { to: loc-deepwater-realm, rel: 서쪽 바다 }
@@ -36,7 +34,6 @@ map: { x: 308, y: 142, terrain: beach, size: continent }
 
 ## 미정/질문
 
-- 동쪽 해안의 실룬디 연안(`loc-silundi-coast`, 기본 섬)이 안의 구역이다. 실룬디 바다를 마주하고, 인어 비행술사(`chr-seascape-aerialist`, ZEN-64)가 산다 ([결정] 2026-09-30).
 - 해안의 항구 도시 바다 관문(`loc-sea-gate`, 기본 섬)이 안의 구역이다. 인어 전승술사(`chr-sea-gate-loremaster`, ZEN-63)가 산다 ([결정] 2026-09-30).
 - 타짐의 다른 곳(할리마르 바다 등 [배경])은 그 카드가 나오면 구역으로 더한다.
 - 안개 낀 우림(ZEN-220)은 처음 타짐 안에 두었다가 무라사로 옮겼다 ([결정] 2026-09-30).

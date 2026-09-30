@@ -3106,12 +3106,12 @@ test('an Ally\'s gift of the sky: each Ally joining gives every Ally of the part
   assert.equal(hasAbility(o, 'fly', state.minutes), false);
 });
 
-test('the real Seascape Aerialist lives on the Silundi Coast, a shore of Tazeem', () => {
+test('the real Seascape Aerialist lives on the Silundi Coast, a shore of Ondu', () => {
   const world = loadWorld();
   const state = newState(world, { seed: 1, mode: 'observer' });
   const a = state.actors['chr-seascape-aerialist'];
   assert.equal(a?.region, 'loc-silundi-coast');
-  assert.equal(region(world, 'loc-silundi-coast').parent, 'loc-tazeem');
+  assert.equal(region(world, 'loc-silundi-coast').parent, 'loc-ondu');
   assert.deepEqual(landTypes(region(world, 'loc-silundi-coast')), ['island']);
   assert.equal(travelBlocked(state, world, a, 'loc-tazeem'), null);
   assert.deepEqual(world.npcs.find((x) => x.id === 'chr-seascape-aerialist')?.rally, [{ type: 'grant_allies', ability: 'fly' }]);
