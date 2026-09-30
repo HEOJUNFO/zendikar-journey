@@ -12,7 +12,7 @@ rarity: mythic
 artist: "Jason Chan"
 scryfall: https://scryfall.com/card/zen/13/iona-shield-of-emeria
 added: 2026-09-28
-entities: [chr-iona, law-mana-colors]
+entities: [chr-iona, law-mana-colors, loc-emeria]
 ---
 
 ## 카드 원문

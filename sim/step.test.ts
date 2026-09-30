@@ -1435,3 +1435,12 @@ test('an NPC who readies a spell may hold it back, keeping its mana', async () =
   assert.equal(state.actors['chr-x'].foes, undefined);
   assert.deepEqual(manaAvailable(state, world, state.actors['chr-v'], state.minutes), { B: 2 });
 });
+
+test('the real Emeria teaches the celestial mantle, and Iona, who lives there, is offered it in her plan', async () => {
+  const world = loadWorld();
+  assert.equal(world.spells.find((s) => s.id === 'spl-celestial-mantle')?.learnAt, 'loc-emeria');
+  const state = newState(world, { seed: 1, mode: 'observer' });
+  let offered: PlanDayInput['learn'];
+  await advance(state, world, 1, { planDay: async (input) => (input.id === 'chr-iona' && (offered = input.learn), planDay!(input)) });
+  assert.ok(offered?.some((s) => s.id === 'spl-celestial-mantle' && s.at === 'loc-emeria'));
+});

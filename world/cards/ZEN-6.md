@@ -11,7 +11,7 @@ rarity: rare
 artist: "Steve Argyle"
 scryfall: https://scryfall.com/card/zen/6/celestial-mantle
 added: 2026-09-29
-entities: [spl-celestial-mantle, law-life, law-mana-colors, law-retainers]
+entities: [spl-celestial-mantle, law-life, law-mana-colors, law-retainers, loc-emeria]
 ---
 
 ## 카드 원문
@@ -45,3 +45,7 @@ entities: [spl-celestial-mantle, law-life, law-mana-colors, law-retainers]
   - 주문(오라)으로 넣는다.
   - 에메리아에서 배운다. 지금은 오를 수 없어 배울 수 없다.
 - 카드의 "플레이어에게 전투 피해" = 싸움에서 누군가에게 피해를 줌, "통제하는 이" = 권속이면 주인 (`law-retainers`).
+- 2026-09-30 다시 놓기 (지역 초기화 뒤, 대지 20장을 깐 다음):
+  - 배우는 곳: 에메리아(`loc-emeria`, 타짐 안의 공중섬) ([결정] 예전과 같은 자리). `spl-celestial-mantle` 을 canon 으로 되돌렸다.
+  - 이제 배울 수 있다: 에메리아는 밧줄(6시간)이나 비행으로 오르고, 백 마나 3을 모을 백색 땅도 여럿 있다.
+  - NPC도 주문을 배우고 쓰므로 (ZEN-81 다시 놓기의 결정), 에메리아의 이오나(백 9)가 배워 쓸 수 있다.

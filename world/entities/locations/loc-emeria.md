@@ -5,11 +5,13 @@ name: 에메리아
 name_en: Emeria, the Sky Ruin
 summary: 타짐 하늘에 떠 있는 고대 석조 폐허. 금빛 하늘 아래 부서진 탑과 바위 조각이 떠다니고, 코르는 밧줄로 절벽을 타고 오른다
 status: canon
-sources: [ZEN-213]
+sources: [ZEN-213, ZEN-13, ZEN-6]
 tags: [하늘, 폐허, 천사, 백색]
 links:
   - { to: loc-tazeem, rel: 아래의 땅 }
   - { to: law-retainers, rel: 죽은 권속을 되돌림 }
+  - { to: chr-iona, rel: 지키는 천사 }
+  - { to: spl-celestial-mantle, rel: 가르치는 주문 }
 map: { in: loc-tazeem, terrain: sky }
 sim:
   nonbasic: true                          # 이름 있는 대지: 평원이 아니다
@@ -34,5 +36,5 @@ sim:
 
 ## 미정/질문
 
-- 이오나와 천상의 망토는 예전 카드를 다시 놓을 때 여기로 돌아온다 (지금은 배치 대기).
+- 이오나(`chr-iona`, ZEN-13)가 이곳을 지킨다. 천상의 망토(`spl-celestial-mantle`, ZEN-6)를 여기서 배운다 (4시간). 둘 다 2026-09-30 다시 놓기에서 돌아왔다.
 - 평원이 지금은 온두 하나라 되살리기는 한동안 잠들어 있다.
