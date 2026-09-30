@@ -11,7 +11,7 @@ links:
   - { to: loc-murasa, rel: 바깥 지역 }
   - { to: loc-sunder-offing, rel: 밖의 깊은 바다 }
   - { to: chr-lorthos, rel: 자주 보이는 이 }
-map: { in: loc-murasa, terrain: deepsea, pos: [-0.59, -0.81], tiles: 3 }   # 바다 구역, 북서쪽 해안에 반쯤 걸침 [결정] 2026-09-30
+map: { in: loc-murasa, terrain: deepsea, pos: [-0.59, -0.81], tiles: 20 }   # 바다 구역, 북서쪽 해안에 반쯤 걸침 [결정] 2026-09-30
 sim:
   land_type: island                        # 기본 섬으로 친다 [결정] 2026-09-30
 ---

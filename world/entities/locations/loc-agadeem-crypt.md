@@ -12,7 +12,7 @@ links:
   - { to: loc-agadeem, rel: 바깥 지역 }
   - { to: loc-kabira-crossroads, rel: 길이 이어지는 도시 }
   - { to: law-retainers, rel: 죽은 권속의 힘 }
-map: { in: loc-agadeem, terrain: ruins, color: B, pos: [-0.2, 0.3], tiles: 2 }
+map: { in: loc-agadeem, terrain: ruins, color: B, pos: [-0.2, 0.3], tiles: 10 }
 sim:
   nonbasic: true                          # 이름 있는 대지
   enters_tapped: true                     # [카드] 탭된 채 들어온다

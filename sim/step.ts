@@ -459,18 +459,20 @@ export function startTravel(state: State, world: World, a: Actor, to: string, t:
   });
 }
 
-// Hours from where `a` stands to `tile` of `to`. Within one region: the steps between the tiles
-// (at least one), and the climb into or out of a sky land for one who can't fly. Between
-// regions: the road (`travelHours`). Haste halves it.
+// Hours from where `a` stands to `tile` of `to`: the tiles between them, an hour a step (at
+// least one; a place one land with another, an hour), and the climb into or out of a sky land
+// for one who can't fly. Haste halves it. With no tiles to go by: the road between the lands'
+// middles (`travelHours`).
 export function moveHours(world: World, a: Actor, to: string, tile: Tile | undefined) {
   const from = region(world, a.region);
   const dest = region(world, to);
-  if ((from.parent ?? from.id) !== (dest.parent ?? dest.id) || !a.tile || !tile) return travelHours(from, dest, a.abilities);
+  if (!a.tile || !tile || from.wanders || dest.wanders) return travelHours(from, dest, a.abilities);
   const climb = (r: Region) => {
     const need = TERRAINS[r.terrain].requires;
     return need && !a.abilities.includes(need) ? (r.climbHours ?? 0) : 0;
   };
-  const hours = Math.max(1, tileSteps(a.tile, tile)) + (from.id === dest.id ? 0 : climb(from) + climb(dest));
+  const one = from.oneLandWith === dest.id || dest.oneLandWith === from.id;
+  const hours = (one ? 1 : Math.max(1, tileSteps(a.tile, tile))) + (from.id === dest.id ? 0 : climb(from) + climb(dest));
   return a.abilities.includes('haste') ? Math.max(1, Math.ceil(hours / 2)) : hours;
 }
 

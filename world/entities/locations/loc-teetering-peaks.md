@@ -10,7 +10,7 @@ tags: [봉우리, 바위기둥, 적색]
 links:
   - { to: loc-ondu, rel: 바깥 지역 }
   - { to: loc-makindi, rel: 곁의 협곡 }
-map: { in: loc-ondu, terrain: rocky, color: R, pos: [0.25, 0.3], tiles: 2 }   # 마킨디 협곡 곁 [결정] 2026-09-30 (예전엔 아쿰)
+map: { in: loc-ondu, terrain: rocky, color: R, pos: [0.25, 0.3], tiles: 10 }   # 마킨디 협곡 곁 [결정] 2026-09-30 (예전엔 아쿰)
 sim:
   nonbasic: true                          # 이름 있는 대지: 산이 아니다
   enters_tapped: true                     # [카드] 탭된 채 들어온다

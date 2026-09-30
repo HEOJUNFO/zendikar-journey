@@ -12,7 +12,7 @@ links:
   - { to: loc-murasa, rel: 바깥 지역 }
   - { to: loc-tazeem, rel: 길이 닿는 물가 }
   - { to: law-life, rel: 길을 여는 값 }
-map: { in: loc-murasa, terrain: forest, pos: [-0.45, -0.1], tiles: 4 }
+map: { in: loc-murasa, terrain: forest, pos: [-0.45, -0.1], tiles: 15 }
 sim:
   nonbasic: true                          # 이름 있는 대지: 숲이 아니다
   no_mana: true                           # [카드] 마나 능력이 없다

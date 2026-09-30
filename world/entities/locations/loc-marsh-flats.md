@@ -11,7 +11,7 @@ links:
   - { to: loc-guul-draz, rel: 바깥 지역 }
   - { to: loc-ondu, rel: 길이 닿는 평원 }
   - { to: law-life, rel: 길을 여는 값 }
-map: { in: loc-guul-draz, terrain: swamp, pos: [0.35, -0.15], tiles: 3 }
+map: { in: loc-guul-draz, terrain: swamp, pos: [0.35, -0.15], tiles: 10 }
 sim:
   nonbasic: true                          # 이름 있는 대지: 늪이 아니다
   no_mana: true                           # [카드] 마나 능력이 없다

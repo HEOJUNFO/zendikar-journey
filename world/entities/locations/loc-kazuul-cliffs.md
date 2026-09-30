@@ -10,7 +10,7 @@ tags: [절벽, 산, 길목, 오우거, 미노타우로스, 적색]
 links:
   - { to: loc-murasa, rel: 바깥 지역 }
   - { to: chr-kazuul-warlord, rel: 절벽의 미노타우로스 전쟁군주 }
-map: { in: loc-murasa, terrain: rocky, pos: [0.1, 0.65], tiles: 2 }   # 기본 산: 적 마나 [결정] 2026-09-30
+map: { in: loc-murasa, terrain: rocky, pos: [0.1, 0.65], tiles: 10 }   # 기본 산: 적 마나 [결정] 2026-09-30
 ---
 
 ## 설정

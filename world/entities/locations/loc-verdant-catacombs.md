@@ -12,7 +12,7 @@ links:
   - { to: loc-bala-ged, rel: 겹친 밀림 대륙 }
   - { to: law-life, rel: 길을 여는 값 }
   - { to: evt-cobra-trap, rel: 도사린 함정 }
-map: { x: 582, y: 1168.6, terrain: ruins }
+map: { x: 954, y: 1696, terrain: ruins, tiles: 12 }
 sim:
   nonbasic: true                          # 이름 있는 대지
   no_mana: true                           # [카드] 마나 능력이 없다

@@ -28,7 +28,7 @@ import { applyEnterDestroy, bondBlocked, enterDestroy, onEnter, bondLand, bondTa
 import { DEPLETED_LABEL, DESTROYED_DAYS, TRAVEL_UNITS_PER_HOUR } from './rules.ts';
 import { bindRetainer, retainersOf, swayBlocked } from './retainers.ts';
 import { joinedToday } from './bounce.ts';
-import { fixedTile, nearestTile, ownsTile, sameTile, tilesOf, tileSteps } from './tiles.ts';
+import { fixedTile, nearestTile, ownsTile, sameTile, tilesOf, tileSteps, tooSmall } from './tiles.ts';
 import { applyQuell, upkeepQuell } from './quell.ts';
 import { upkeepWins } from './win.ts';
 import { hirePrice } from './allies.ts';
@@ -47,7 +47,7 @@ const loc = (id: string, x: number, y: number, terrain: string): RawEntity => ({
   kind: 'location',
   name: id,
   status: 'canon',
-  map: { x, y, terrain },
+  map: { x, y, terrain, tiles: 1 },
 });
 // No one's day is written anywhere: the LLM plans it. Here a fake planner stands in, giving
 // each character the day a test writes for them (`plan` in these helpers, as
@@ -486,7 +486,7 @@ test('an old save gets its beings as actors, keeping their mana and tap', () => 
 
 test('areas: a land inside a region, an hour from it, reached by events on the region', async () => {
   const world = fixture([
-    { id: 'loc-in', kind: 'location', name: '안뜰', status: 'canon', map: { in: 'loc-a', terrain: 'swamp' } },
+    { id: 'loc-in', kind: 'location', name: '안뜰', status: 'canon', map: { in: 'loc-a', terrain: 'swamp', tiles: 1 } },
     npc('chr-x', npcSim('loc-in')),
   ]);
   const inner = world.regions.find((r) => r.id === 'loc-in')!;
@@ -945,7 +945,7 @@ const refuge: RawEntity = {
   kind: 'location',
   name: '피난처',
   status: 'canon',
-  map: { in: 'loc-c', terrain: 'settlement', color: ['B', 'R'] },
+  map: { in: 'loc-c', terrain: 'settlement', color: ['B', 'R'], tiles: 1 },
   sim: { enters_tapped: true, on_bond: [{ type: 'gain_life', amount: 1 }] },
 };
 
@@ -1047,7 +1047,7 @@ const crypt: RawEntity = {
   kind: 'location',
   name: '묘실',
   status: 'canon',
-  map: { in: 'loc-c', terrain: 'ruins', color: 'B' },
+  map: { in: 'loc-c', terrain: 'ruins', color: 'B', tiles: 1 },
   sim: { nonbasic: true, fallen_mana: { color: 'B', cost: 2 } },
 };
 
@@ -1082,7 +1082,7 @@ const skyRuin: RawEntity = {
   kind: 'location',
   name: '하늘 폐허',
   status: 'canon',
-  map: { in: 'loc-a', terrain: 'sky' },
+  map: { in: 'loc-a', terrain: 'sky', tiles: 1 },
   sim: { nonbasic: true, climb_hours: 6, upkeep_revive: { plains: 2 } },
 };
 
@@ -1096,7 +1096,7 @@ test('a sky ruin that can be climbed: those who cannot fly get there by rope, si
   assert.match(travelBlocked(state, world, state.actors[PLAYER_ID], 'loc-sky')!, /비행/); // a sky island with no ropes
   await act(state, world, { type: 'move', to: 'loc-ruin' });
   assert.equal(state.actors[PLAYER_ID].region, 'loc-ruin');
-  assert.equal(formatClock(state.minutes), '1일차 14:00'); // two tiles on foot, and six hours of rope
+  assert.equal(formatClock(state.minutes), '1일차 13:00'); // a tile on foot, and six hours of rope
 });
 
 test('at dawn, one holding the ruin and enough plains gets back the last retainer who died serving them', async () => {
@@ -1124,7 +1124,7 @@ const magosi: RawEntity = {
   kind: 'location',
   name: '마고시',
   status: 'canon',
-  map: { in: 'loc-a', terrain: 'river' },
+  map: { in: 'loc-a', terrain: 'river', tiles: 1 },
   sim: { nonbasic: true, enters_tapped: true, eon: { cost: '{U}' } },
 };
 const blue = loc('loc-u', 20, 20, 'beach');
@@ -1201,7 +1201,7 @@ const oranRief: RawEntity = {
   kind: 'location',
   name: '오란리프',
   status: 'canon',
-  map: { in: 'loc-b', terrain: 'forest', color: 'G' },
+  map: { in: 'loc-b', terrain: 'forest', color: 'G', tiles: 1 },
   sim: { nonbasic: true, enters_tapped: true, grow_entered: { color: 'G' } },
 };
 
@@ -1229,7 +1229,7 @@ const piranhas: RawEntity = {
   kind: 'location',
   name: '피라냐 습지',
   status: 'canon',
-  map: { in: 'loc-b', terrain: 'swamp', color: 'B' },
+  map: { in: 'loc-b', terrain: 'swamp', color: 'B', tiles: 1 },
   sim: { nonbasic: true, enters_tapped: true, on_bond: [{ type: 'lose_life', amount: 1 }] },
 };
 
@@ -1267,7 +1267,7 @@ const seacliff: RawEntity = {
   kind: 'location',
   name: '바다절벽',
   status: 'canon',
-  map: { in: 'loc-a', terrain: 'beach', color: 'U' },
+  map: { in: 'loc-a', terrain: 'beach', color: 'U', tiles: 1 },
   sim: { nonbasic: true, enters_tapped: true, on_bond: [{ type: 'grant', ability: 'fly' }] },
 };
 
@@ -1281,7 +1281,7 @@ test('a seacliff: the one bonding picks someone there (themselves too) to fly un
   assert.equal(travelBlocked(state, world, p, 'loc-sky'), null);
   await act(state, world, { type: 'move', to: 'loc-sky' });
   assert.equal(p.region, 'loc-sky');
-  await act(state, world, { type: 'wait', hours: 12 }); // past midnight
+  await act(state, world, { type: 'wait', hours: 14 }); // past midnight
   assert.ok(!p.abilities.includes('fly'));
   assert.match(travelBlocked(state, world, p, 'loc-a')!, /비행/); // stranded on a sky island with no ropes
   assert.ok(texts(state).some((t) => t.includes('비행이(가) 사라졌다')));
@@ -1302,7 +1302,7 @@ test('teetering peaks: the one bonding picks someone there (themselves too) to h
     kind: 'location',
     name: '봉우리',
     status: 'canon',
-    map: { in: 'loc-c', terrain: 'rocky', color: 'R' },
+    map: { in: 'loc-c', terrain: 'rocky', color: 'R', tiles: 1 },
     sim: { nonbasic: true, enters_tapped: true, on_bond: [{ type: 'pump', pt: [2, 0] }] },
   };
   const world = fixture([peaks]);
@@ -1319,7 +1319,7 @@ const valakut: RawEntity = {
   kind: 'location',
   name: '발라쿠트',
   status: 'canon',
-  map: { in: 'loc-c', terrain: 'volcanic', color: 'R' },
+  map: { in: 'loc-c', terrain: 'volcanic', color: 'R', tiles: 1 },
   sim: { nonbasic: true, enters_tapped: true, mountain_fire: { others: 5, damage: 3 } },
 };
 const peaks = [1, 2, 3, 4, 5, 6].map((i) => loc(`loc-m${i}`, 60 + i * 2, 60, 'rocky'));
@@ -2149,19 +2149,21 @@ const whiplash: RawEntity = {
   sim: { region: 'loc-b', trigger: 'enter', joined: 2, text: '줄기가 휘몰아쳤다.', effects: [{ type: 'bounce', count: 2 }] },
 };
 
-test('tiles: every land holds its tiles, areas as many as they say, a continent open ground besides', () => {
+test('tiles: every land holds as many tiles as the lore gives it, at least 100 a continent and 10 any other land; seas share the water', () => {
   const world = loadWorld();
   const owners = Object.values(world.tileOwner!);
   for (const r of world.regions.filter((x) => !x.wanders)) {
     const n = tilesOf(world, r.id).length;
-    assert.ok(n >= 1, r.id);
-    if (r.parent) assert.equal(n, r.tileCount ?? 1, r.id);
-    if (r.size === 'continent') assert.ok(n >= 12, r.id);
+    if (r.parent) assert.equal(n, r.tileCount ?? 10, r.id);
     assert.equal(owners.filter((o) => o === r.id).length, n, r.id); // one land to a tile
   }
-  assert.equal(tilesOf(world, 'loc-makindi').length, 4);
-  assert.equal(tilesOf(world, 'loc-oran-rief').length, 5);
-  assert.equal(tilesOf(world, 'loc-hagra').length, 5);
+  assert.deepEqual(tooSmall(world), []);
+  assert.equal(tilesOf(world, 'loc-makindi').length, 50);
+  assert.equal(tilesOf(world, 'loc-oran-rief').length, 80);
+  assert.equal(tilesOf(world, 'loc-silundi-sea').length, 120);
+  // A continent: its open ground and its areas.
+  const ondu = ['loc-ondu', ...world.regions.filter((x) => x.parent === 'loc-ondu').map((x) => x.id)];
+  assert.equal(ondu.reduce((n, id) => n + tilesOf(world, id).length, 0), 200);
 });
 
 test('tiles: only those on the same tile meet; one seeking another walks to their tile, an hour a step', async () => {
@@ -2218,7 +2220,7 @@ test('a whiplash trap: one with two joined today who enters sets it off; two the
   const world = fixture([
     whiplash,
     lore('cre-w', 'creature'),
-    { id: 'loc-bz', kind: 'location', name: '곁의 숲', status: 'canon', map: { in: 'loc-b', terrain: 'forest' } },
+    { id: 'loc-bz', kind: 'location', name: '곁의 숲', status: 'canon', map: { in: 'loc-b', terrain: 'forest', tiles: 1 } },
     npc('chr-x', npcSim('loc-b')),
     npc('chr-m', { ...npcSim('loc-b'), mana: { R: 5 }, ally: true, hireable: true }),
     npc('chr-y', npcSim('loc-b')),
@@ -2330,7 +2332,7 @@ test('one of the sea on land dries out, 1 toughness every 3 hours, unless it cra
   const world = fixture([beastKind('cre-sea', ['aquatic'], 'loc-sea'), loc('loc-shore', 10, 30 + 2 * TRAVEL_UNITS_PER_HOUR, 'beach')]);
   const state = newState(world, { seed: 1, mode: 'observer' });
   const fish = state.actors['cre-sea'];
-  fish.region = 'loc-a'; // drawn onto land
+  put(world, fish, 'loc-a'); // drawn onto land
   PLANS.set('cre-sea', [['00:00', '24:00', 'loc-a', 'leisure', '버둥거림', '🐟']]); // stays and fights
   await advance(state, world, 13);
   assert.ok(fish.dead);
@@ -2338,7 +2340,7 @@ test('one of the sea on land dries out, 1 toughness every 3 hours, unless it cra
   // Crawling back instead: twice as long, and back in the water it recovers at midnight.
   const s2 = newState(world, { seed: 1, mode: 'observer' });
   const f2 = s2.actors['cre-sea'];
-  f2.region = 'loc-shore';
+  put(world, f2, 'loc-shore');
   PLANS.set('cre-sea', [['00:00', '24:00', 'loc-sea', 'leisure', '바다로', '🐟']]);
   await advance(s2, world, 6);
   assert.ok(texts(s2).some((t) => t.includes('기어 향했다 (4시간 거리)')));

@@ -1,6 +1,7 @@
 // Free text from the player -> one Action the engine can run.
 import { z } from 'zod';
-import { sameTile, tileLabel } from '../tiles.ts';
+import { nearestTile, sameTile, tileCenter, tileLabel } from '../tiles.ts';
+import { moveHours } from '../step.ts';
 import { ActionSchema } from '../actions.ts';
 import type { Action } from '../actions.ts';
 import { isPerson, npcDef, player, present, ptOf } from '../state.ts';
@@ -9,7 +10,7 @@ import { askOptions, askText } from '../asks.ts';
 import type { InterpretInput } from '../run.ts';
 import { travelBlocked } from '../step.ts';
 import { shortName } from '../text.ts';
-import { bondEffectText, placeName, region, TERRAINS, travelHours } from '../world.ts';
+import { bondEffectText, placeName, region, TERRAINS } from '../world.ts';
 import { itemsAt, itemOwner } from '../items.ts';
 import { loremastersOf, recallBlocked, recallCount } from '../loremaster.ts';
 import { enteredToday, fetchTargets, fireTargets, growBlocked, growLand, targetedBondEffect } from '../abilities.ts';
@@ -33,7 +34,7 @@ export async function interpret({ world, state, text }: InterpretInput): Promise
     .filter((r) => r.id !== p.region && !TERRAINS[r.terrain].sea)
     .map((r) => {
       const why = travelBlocked(state, world, p, r.id);
-      return `- ${r.id}: ${placeName(world, r)} (${r.summary}) — ${why ? `갈 수 없음: ${why}` : `${travelHours(here, r, p.abilities)}시간`}`;
+      return `- ${r.id}: ${placeName(world, r)} (${r.summary}) — ${why ? `갈 수 없음: ${why}` : `${moveHours(world, p, r.id, nearestTile(world, r.id, p.tile && tileCenter(p.tile)))}시간`}`;
     });
   const taught = spellsTaughtAt(world, p.region).filter((s) => !p.spells?.includes(s.id));
   const known = world.spells.filter((s) => p.spells?.includes(s.id));

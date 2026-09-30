@@ -15,7 +15,7 @@ links:
   - { to: loc-magosi, rel: 우마라 강의 폭포 }
   - { to: loc-oran-rief, rel: 산호 바위 숲 }
   - { to: loc-soaring-seacliff, rel: 해안의 바다절벽 }
-map: { x: 886.1, y: 407.5, terrain: beach, size: continent }
+map: { x: 1329.2, y: 611.3, terrain: beach, size: continent, tiles: 180 }
 ---
 
 ## 설정
@@ -28,7 +28,7 @@ map: { x: 886.1, y: 407.5, terrain: beach, size: continent }
 
 ## 게임에서의 역할
 
-- 지도 북쪽 (886.1, 407.5)의 지역이다 (지형 `beach`, 청색 땅, 섬) ([결정] 2026-09-30). 온두까지 약 21시간, 아쿰까지 약 29시간 (2026-09-30 원을 두 배로 키우고 대륙 사이를 더 벌림). 대륙이라 지도에 크게 그린다 (`size: continent`).
+- 지도 북쪽 (1329.2, 611.3)의 지역이다 (지형 `beach`, 청색 땅, 섬) ([결정] 2026-09-30), 180칸 (내륙 대부분을 오란리프가 덮는다 [배경]). 해안에서 해안까지 온두 약 15시간, 아쿰 약 24시간 (2026-10-01 칸). 대륙이라 지도에 크게 그린다 (`size: continent`).
 - 안에 구역 에메리아(`loc-emeria`, 비행하지 못하는 이도 밧줄로 오를 수 있다)와 마고시(`loc-magosi`, 하루를 맡기고 되찾는 폭포), 오란리프(`loc-oran-rief`, 새로 난 녹색 생물을 북돋우는 숲), 솟아오른 바다절벽(`loc-soaring-seacliff`, 유대를 맺을 때 곁의 하나에게 하루 날개)이 있다.
 - 뒤틀림이 모습을 얻은 뒤틀림 정령(`cre-roil-elemental`, ZEN-62)이 타짐을 떠돈다 ([결정] 2026-09-30).
 

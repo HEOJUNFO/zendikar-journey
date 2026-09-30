@@ -24,7 +24,7 @@ links:
   - { to: loc-jwar-isle, rel: 남쪽 앞바다의 섬 }
   - { to: loc-akoum, rel: 동쪽의 대륙 }
   - { to: itm-eternity-vessel, rel: 언덕 위의 유물 }
-map: { x: 1010.4, y: 888, terrain: grassland, size: continent }
+map: { x: 1515.6, y: 1332, terrain: grassland, size: continent, tiles: 200 }
 ---
 
 ## 설정

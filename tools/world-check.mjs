@@ -6,6 +6,7 @@ import { fileURLToPath } from 'node:url';
 import { parse } from 'yaml';
 
 import { buildWorld } from '../sim/world.ts';
+import { tooSmall } from '../sim/tiles.ts';
 
 const root = join(fileURLToPath(new URL('.', import.meta.url)), '..', 'world');
 
@@ -86,8 +87,10 @@ for (const [kind, { prefix, dir }] of Object.entries(KINDS)) {
 // Game data: location `map` and character/event `sim` blocks (see world/README.md: 게임 데이터).
 // Checked as the game loads them: canon only. A draft may wait for a place that doesn't exist
 // yet (e.g. after the map was reset); it is checked when it becomes canon.
-const { errors: simErrors } = buildWorld([...entities.values()].map((e) => e.fm).filter((fm) => fm.status === 'canon'));
-for (const msg of simErrors) {
+const { world: built, errors: simErrors } = buildWorld([...entities.values()].map((e) => e.fm).filter((fm) => fm.status === 'canon'));
+// Lands at least as large as the world's rule (user decision 2026-10-01): a continent 100 tiles
+// with its areas, any other land 10 (sim/tiles.ts).
+for (const msg of [...simErrors, ...tooSmall(built)]) {
   const id = msg.slice(0, msg.indexOf(':'));
   err(entities.get(id)?.rel ?? id, msg.slice(id.length + 2));
 }

@@ -11,14 +11,18 @@ import type { Region, World } from './world.ts';
 export const TILE = TRAVEL_UNITS_PER_HOUR;
 export type Tile = [number, number];
 
-// Tiles a continent's open ground keeps besides its areas, and an island's; how many an area
-// has unless it says (`map.tiles`).
-export const CONTINENT_GROUND = 12;
-export const ISLAND_GROUND = 3;
-export const AREA_TILES = 1;
-// The circles lands were drawn as before tiles, to size them at least as large.
-const SIZE_RADIUS = { continent: 60, island: 20 } as const;
-const SEA_RADIUS = 21;
+// The least a land holds (user decision 2026-10-01: at least; how large beyond that is the
+// lore's, `map.tiles`): a continent, with its areas; an area; an island or another land.
+// A continent keeps open ground of its own besides its areas, an island or a land with areas
+// some too.
+export const CONTINENT_MIN = 100;
+export const LAND_MIN = 10;
+export const CONTINENT_GROUND = 40;
+export const ISLAND_GROUND = 5;
+// A named sea's waters, in tiles, unless the lore says (`map.tiles`), and how far out they may
+// be sought.
+export const SEA_TILES = 40;
+const SEA_REACH = 12;
 
 export function tileKey(t: Tile) {
   return `${t[0]},${t[1]}`;
@@ -37,18 +41,34 @@ export function tileSteps(a: Tile, b: Tile) {
   return Math.max(Math.abs(a[0] - b[0]), Math.abs(a[1] - b[1]));
 }
 
-function circleTiles(r: number) {
-  return Math.max(1, Math.round((Math.PI * r * r) / (TILE * TILE)));
+function areaTiles(r: Region) {
+  return r.tileCount ?? LAND_MIN;
 }
 
-// How many tiles a top land holds: its areas' and some open ground of its own, at least as
-// much as its old circle.
+// How many tiles a land holds: as many as the lore gives it (`map.tiles`; the least for its kind
+// when it doesn't say), with room for its areas and some open ground of its own. The least is
+// the world's rule, checked by `world:check` (`tooSmall`), not forced here.
 function tilesWanted(world: World, r: Region) {
-  const areas = world.regions.filter((x) => x.parent === r.id).reduce((n, x) => n + (x.tileCount ?? AREA_TILES), 0);
-  if (r.size === 'continent') return Math.max(circleTiles(SIZE_RADIUS.continent), CONTINENT_GROUND + areas);
-  if (r.size === 'island') return Math.max(circleTiles(SIZE_RADIUS.island), ISLAND_GROUND + areas);
-  if (areas) return ISLAND_GROUND + areas;
-  return r.terrain === 'deepsea' ? circleTiles(SEA_RADIUS) : 1;
+  const areas = world.regions.filter((x) => x.parent === r.id).reduce((n, x) => n + areaTiles(x), 0);
+  if (r.size === 'continent') return Math.max(r.tileCount ?? CONTINENT_MIN, areas ? CONTINENT_GROUND + areas : 0);
+  return Math.max(r.tileCount ?? LAND_MIN, areas ? ISLAND_GROUND + areas : 0);
+}
+
+// Lands smaller than the least for their kind (a continent with its areas, any other land; a
+// sea holds water, not land).
+export function tooSmall(world: World) {
+  return world.regions
+    .filter((r) => !r.wanders && !isSea(r))
+    .map((r) => {
+      const n = tilesOf(world, r.id).length + (r.parent ? 0 : world.regions.filter((x) => x.parent === r.id).reduce((m, x) => m + tilesOf(world, x.id).length, 0));
+      const least = r.size === 'continent' ? CONTINENT_MIN : LAND_MIN;
+      return n < least ? `${r.id}: 칸 ${n}개 (최소 ${least})` : null;
+    })
+    .filter((x): x is string => !!x);
+}
+
+function isSea(r: Region) {
+  return r.terrain === 'deepsea' && !r.parent;
 }
 
 // The radius of a circle as large as `n` tiles: how large a land is drawn, and how far out its
@@ -64,7 +84,7 @@ export function radiusOf(n: number) {
 // tile.
 export function layTiles(world: World) {
   const owner: Record<string, string> = {};
-  const tops = world.regions.filter((r) => !r.parent && !r.wanders);
+  const tops = world.regions.filter((r) => !r.parent && !r.wanders && !isSea(r));
   const wanted = new Map(tops.map((r) => [r.id, tilesWanted(world, r)]));
   const order = [...tops].sort((a, b) => wanted.get(a.id)! - wanted.get(b.id)! || a.id.localeCompare(b.id));
   // `n` tiles for `id` nearest `from`, of those in `pool` it may take.
@@ -83,14 +103,27 @@ export function layTiles(world: World) {
   }
   for (const top of tops) {
     const R = top.radius!;
-    const areas = world.regions.filter((x) => x.parent === top.id).sort((a, b) => (b.tileCount ?? AREA_TILES) - (a.tileCount ?? AREA_TILES) || a.id.localeCompare(b.id));
+    const areas = world.regions.filter((x) => x.parent === top.id).sort((a, b) => areaTiles(b) - areaTiles(a) || a.id.localeCompare(b.id));
     for (const a of areas) {
       const at = a.pos ? { x: top.x + a.pos[0] * R * 0.8, y: top.y + a.pos[1] * R * 0.8 } : { x: top.x, y: top.y };
-      tiles[a.id] = claim(a.id, at, a.tileCount ?? AREA_TILES, tiles[top.id], (t) => owner[tileKey(t)] === top.id);
+      tiles[a.id] = claim(a.id, at, areaTiles(a), tiles[top.id], (t) => owner[tileKey(t)] === top.id);
       a.radius = radiusOf(tiles[a.id].length);
     }
     tiles[top.id] = tiles[top.id].filter((t) => owner[tileKey(t)] === top.id);
   }
+  // The seas: the water no land holds, as much as the lore gives each (`map.tiles`), the water
+  // nearest each; the rest is the open sea, no one's.
+  const seas = world.regions.filter(isSea);
+  const pairs = seas
+    .flatMap((r) => nearTiles(r, (2 * SEA_REACH) ** 2).filter((t) => !owner[tileKey(t)]).map((t) => ({ r, t, d: dist(tileCenter(t), r) })))
+    .sort((a, b) => a.d - b.d || a.r.id.localeCompare(b.r.id));
+  for (const r of seas) tiles[r.id] = [];
+  for (const { r, t } of pairs) {
+    if (owner[tileKey(t)] || tiles[r.id].length >= (r.tileCount ?? SEA_TILES)) continue;
+    owner[tileKey(t)] = r.id;
+    tiles[r.id].push(t);
+  }
+  for (const r of seas) r.radius = radiusOf(Math.max(1, tiles[r.id].length));
   // A wandering place: one tile of its own, where it starts.
   for (const r of world.regions.filter((x) => x.wanders)) {
     tiles[r.id] = [tileAt(r.x, r.y)];

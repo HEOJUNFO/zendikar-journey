@@ -10,7 +10,7 @@ tags: [야영지, 피난처, 숲, 녹색, 백색]
 links:
   - { to: loc-ondu, rel: 바깥 지역 }
   - { to: law-life, rel: 들어서면 생명 }
-map: { in: loc-ondu, terrain: forest, color: [G, W], pos: [0.45, -0.4], tiles: 1 }
+map: { in: loc-ondu, terrain: forest, color: [G, W], pos: [0.45, -0.4], tiles: 10 }
 sim:
   nonbasic: true                          # 이름 있는 대지: 숲이 아니다
   enters_tapped: true                     # [카드] 탭된 채 들어온다

@@ -10,7 +10,7 @@ tags: [야영지, 피난처, 흑색, 적색]
 links:
   - { to: loc-akoum, rel: 바깥 지역 }
   - { to: law-life, rel: 들어서면 생명 }
-map: { in: loc-akoum, terrain: settlement, color: [B, R], pos: [-0.25, -0.15], tiles: 1 }
+map: { in: loc-akoum, terrain: settlement, color: [B, R], pos: [-0.25, -0.15], tiles: 10 }
 sim:
   nonbasic: true                          # 이름 있는 대지: 기본 대지 종류가 없다
   enters_tapped: true                     # [카드] 탭된 채 들어온다

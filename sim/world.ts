@@ -10,8 +10,8 @@ import type { Color, Hybrid, Mana, ManaCost } from './mana.ts';
 import { LIFE_KINDS, NEEDS } from './types.ts';
 import type { Need } from './types.ts';
 
-export const MAP_WIDTH = 1920;
-export const MAP_HEIGHT = 1440;
+export const MAP_WIDTH = 2880;
+export const MAP_HEIGHT = 2160;
 
 // fly: can reach sky islands. aquatic: lives in the sea, and only there.
 export const ABILITIES = ['fly', 'aquatic', 'lifelink', 'vigilance', 'haste', 'trample', 'defender', 'shroud', 'swampwalk', 'indestructible', 'intimidate', 'first_strike'] as const;
@@ -168,6 +168,9 @@ export const MapSchema = z.union([
     size: z.enum(['continent', 'island']).optional(),
     // The continent an island belongs to: drawn joined to it by shallow water.
     of: z.string().optional(),
+    // How many tiles it holds, as large as the lore has it (sim/tiles.ts; at least 100 for a
+    // continent, 10 for any other land). A sea holds the water around it instead.
+    tiles: z.number().int().min(1).optional(),
   }),
   // An area inside a region: a land of its own at the region's place.
   z.strictObject({
@@ -785,7 +788,7 @@ export function buildWorld(entities: RawEntity[]): { world: World; errors: strin
           name: e.name,
           nameEn: e.name_en ?? '',
           summary: e.summary ?? '',
-          ...('in' in map.data ? { x: 0, y: 0, parent: map.data.in, order: map.data.order, ...(map.data.pos ? { pos: map.data.pos } : {}), ...(map.data.tiles ? { tileCount: map.data.tiles } : {}) } : { x: map.data.x, y: map.data.y, size: map.data.size, of: map.data.of }),
+          ...('in' in map.data ? { x: 0, y: 0, parent: map.data.in, order: map.data.order, ...(map.data.pos ? { pos: map.data.pos } : {}), ...(map.data.tiles ? { tileCount: map.data.tiles } : {}) } : { x: map.data.x, y: map.data.y, size: map.data.size, of: map.data.of, ...(map.data.tiles ? { tileCount: map.data.tiles } : {}) }),
           terrain: map.data.terrain,
           color: c === 'C' ? null : Array.isArray(c) ? (`${c[0]}/${c[1]}` as Hybrid) : (c ?? TERRAINS[map.data.terrain].mana),
           entersTapped: land.data?.enters_tapped ?? false,
