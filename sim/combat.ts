@@ -170,11 +170,11 @@ export function destroy(state: State, target: Actor, t: number, cause: string) {
 export function clash(state: State, world: World, attacker: Actor, defender: Actor, t: number, unblocked: string | null = null) {
   // Protection from a color: no damage from one of that color.
   const shielded = (from: Actor, to: Actor) => protectedFrom(to, actorColors(state, world, from), t);
-  const [ap] = shielded(attacker, defender) ? [0] : ptOf(attacker);
+  let [ap] = shielded(attacker, defender) ? [0] : ptOf(attacker);
   // A tapped (bound) or knocked-out defender can't strike back, nor one who can't block the attacker.
   const helpless = defender.boundUntil !== undefined ? '묶여 있어' : knockedOut(defender) ? '기절해 있어' : unblocked;
   const tapped = !!helpless;
-  const [dp] = tapped || shielded(defender, attacker) ? [0] : ptOf(defender);
+  let [dp] = tapped || shielded(defender, attacker) ? [0] : ptOf(defender);
   const a = shortName(attacker.name);
   const d = shortName(defender.name);
   addLog(state, {
@@ -208,9 +208,28 @@ export function clash(state: State, world: World, attacker: Actor, defender: Act
     return others.length ? { who: others[Math.floor(random(state) * others.length)], excess } : null;
   };
   const spills = [spill(attacker, defender, ap), tapped ? null : spill(defender, attacker, dp)];
-  // Simultaneous: both blows land before either death counts.
-  dealDamage(state, defender, ap, t, `${josa(a, '과', '와')}의 싸움`, !lethal(attacker, defender));
-  dealDamage(state, attacker, dp, t, `${josa(d, '과', '와')}의 싸움`, !lethal(attacker, defender));
+  // First strike: if only one side has it, their blow lands first, and one it fells (dead or
+  // knocked out) never strikes back. Both or neither: simultaneous.
+  const aFirst = hasAbility(attacker, 'first_strike', t);
+  const dFirst = !tapped && hasAbility(defender, 'first_strike', t);
+  const hit = (to: Actor, n: number, by: string) => dealDamage(state, to, n, t, `${josa(by, '과', '와')}의 싸움`, !lethal(attacker, defender));
+  const firstBlow = (from: Actor, to: Actor, n: number) => {
+    hit(to, n, shortName(from.name));
+    if (!down(to)) return false;
+    addLog(state, { kind: 'combat', text: `${josa(shortName(from.name), '이', '가')} 먼저 쳐 ${josa(shortName(to.name), '은', '는')} 되받아치지 못했다 (선제공격).`, regions: [attacker.region], actors: [from.id, to.id] });
+    return true;
+  };
+  if (aFirst && !dFirst) {
+    if (firstBlow(attacker, defender, ap)) [dp, spills[1]] = [0, null];
+    else hit(attacker, dp, d);
+  } else if (dFirst && !aFirst) {
+    if (firstBlow(defender, attacker, dp)) [ap, spills[0]] = [0, null];
+    else hit(defender, ap, a);
+  } else {
+    // Simultaneous: both blows land before either death counts.
+    hit(defender, ap, a);
+    hit(attacker, dp, d);
+  }
   // An aura that doubles its controller's life when its bearer deals combat damage.
   for (const [x, dealt] of [[attacker, ap], [defender, dp]] as const) {
     if (dealt <= 0) continue;

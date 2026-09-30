@@ -2710,6 +2710,42 @@ test('intimidate: one who shares none of its colors can\'t strike back at it, no
   assert.equal(intimidated(state, world, d, x, state.minutes), false);
 });
 
+test('first strike: one who has it strikes first, and one it fells never strikes back; both have it, simultaneous', () => {
+  const fs = (pt: [number, number]) => ({ ...npcSim('loc-a', 'work', pt), needs: [], abilities: ['first_strike'] });
+  const world = fixture([npc('chr-s', fs([3, 3])), npc('chr-s2', fs([3, 3])), npc('chr-x', npcSim('loc-a', 'work', [3, 3])), npc('chr-y', npcSim('loc-a', 'work', [3, 3])), npc('chr-big', npcSim('loc-a', 'work', [2, 9]))]);
+  const state = newState(world, { seed: 1, mode: 'observer' });
+  const [s, s2, x, y, big] = ['chr-s', 'chr-s2', 'chr-x', 'chr-y', 'chr-big'].map((id) => state.actors[id]);
+  const t = state.minutes;
+  // It attacks: its blow fells the other first.
+  clash(state, world, s, x, t);
+  assert.ok(knockedOut(x));
+  assert.equal(woundsOf(s, t), 0);
+  assert.ok(texts(state).some((l) => l.includes('먼저 쳐') && l.includes('선제공격')));
+  // It is attacked: the attacker falls before its blow lands.
+  clash(state, world, y, s2, t);
+  assert.ok(knockedOut(y));
+  assert.equal(woundsOf(s2, t), 0);
+  // One it doesn't fell strikes back.
+  clash(state, world, big, s, t);
+  assert.equal(woundsOf(big, t), 3);
+  assert.equal(woundsOf(s, t), 2);
+  // Both have it: simultaneous.
+  s.forced = undefined;
+  const [a1, b1] = [state.actors['chr-s'], state.actors['chr-s2']];
+  a1.wounds = undefined; b1.wounds = undefined;
+  clash(state, world, a1, b1, t + 60);
+  assert.ok(knockedOut(a1) && knockedOut(b1));
+});
+
+test('the real Shepherd of the Lost keeps Emeria: a 3/3 Angel with flying, first strike, vigilance', () => {
+  const world = loadWorld();
+  const state = newState(world, { seed: 1, mode: 'observer' });
+  const s = state.actors['cre-shepherd-of-the-lost'];
+  assert.equal(s.region, 'loc-emeria');
+  for (const ab of ['fly', 'first_strike', 'vigilance'] as const) assert.ok(hasAbility(s, ab, state.minutes));
+  assert.deepEqual(npcDef(state, world, s.id)?.types, ['angel']);
+});
+
 test('enter_destroy: arriving where an Angel is, the hunter may destroy it; shroud and indestructible are spared', async () => {
   const hunter = { ...npcSim('loc-c', 'work', [6, 3]), home: 'loc-a', mana: { B: 5 }, needs: [], types: ['demon'], enter_destroy: 'angel' };
   const angel = (extra: object = {}) => ({ ...npcSim('loc-c', 'work', [7, 7]), needs: [], types: ['angel'], ...extra });

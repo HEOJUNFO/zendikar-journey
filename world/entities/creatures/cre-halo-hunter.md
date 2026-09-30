@@ -5,9 +5,10 @@ name: 후광 사냥꾼
 name_en: Halo Hunter
 summary: 천사를 사냥해 떨어진 후광을 굴 벽에 거는 가시 돋친 악마. 아쿰의 산속 굴에 산다
 status: canon
-sources: [ZEN-96]
+sources: [ZEN-96, ZEN-34]
 tags: [악마, 흑색, 천사 사냥]
 links:
+  - { to: cre-shepherd-of-the-lost, rel: 노리는 또 하나의 천사 }
   - { to: law-mana-colors, rel: 흑색의 존재 }
   - { to: loc-akoum, rel: 굴이 있는 곳 }
   - { to: chr-iona, rel: 노리는 천사 }
