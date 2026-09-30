@@ -760,13 +760,14 @@ export function buildWorld(entities: RawEntity[]): { world: World; errors: strin
     if (!c) err(r.id, `map.of ${r.of} 가 맵에 없음`);
     else if (c.parent || c.id === r.id) err(r.id, `map.of ${r.of} 는 다른 지역이어야 함 (구역이나 자기 자신은 안 됨)`);
   }
-  // Areas sit where their region is. One level only, and never at sea.
+  // Areas sit where their region is. One level only, and never in a sea region (a sea may be
+  // an area of a land region, as a bay: Thunder Bay in Murasa, user decision 2026-09-30).
   for (const r of world.regions) {
     if (!r.parent) continue;
     const p = world.regions.find((x) => x.id === r.parent);
     if (!p) err(r.id, `map.in ${r.parent} 가 맵에 없음`);
     else if (p.parent) err(r.id, `map.in ${r.parent} 도 구역임 (구역 안에 구역은 둘 수 없음)`);
-    else if (TERRAINS[p.terrain].sea || TERRAINS[r.terrain].sea) err(r.id, '바다에는 구역을 둘 수 없음');
+    else if (TERRAINS[p.terrain].sea) err(r.id, '바다 지역 안에는 구역을 둘 수 없음 (바다 구역은 뭍 지역 안에 둔다)');
     else Object.assign(r, { x: p.x, y: p.y });
   }
 

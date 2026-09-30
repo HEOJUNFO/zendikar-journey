@@ -494,7 +494,7 @@ test('areas: a land inside a region, an hour from it, reached by events on the r
   assert.deepEqual(affectedRegions(world, { region: 'loc-in', range: 0 } as never).map((r) => r.id), ['loc-in']);
 });
 
-test('buildWorld rejects areas in nowhere, in areas, or at sea', () => {
+test('buildWorld rejects areas in nowhere, in areas, or in a sea; a sea may be an area of a land (a bay)', () => {
   const area = (id: string, parent: string, terrain = 'swamp'): RawEntity => ({ id, kind: 'location', name: id, status: 'canon', map: { in: parent, terrain } });
   const { errors } = buildWorld([
     loc('loc-a', 10, 10, 'grassland'),
@@ -503,12 +503,14 @@ test('buildWorld rejects areas in nowhere, in areas, or at sea', () => {
     area('loc-nowhere', 'loc-moon'),
     area('loc-nested', 'loc-in'),
     area('loc-wet', 'loc-sea', 'deepsea'),
+    area('loc-bay', 'loc-a', 'deepsea'),
   ]);
   const has = (id: string) => errors.some((e) => e.startsWith(`${id}:`));
   assert.ok(!has('loc-in'));
   assert.ok(has('loc-nowhere'));
   assert.ok(has('loc-nested'));
   assert.ok(has('loc-wet'));
+  assert.ok(!has('loc-bay'));
 });
 
 const needle: RawEntity = {
@@ -1396,7 +1398,8 @@ test('the real deepwater realm: Lorthos\'s tides reach Tazeem and Murasa and the
   const coast = affectedRegions(world, ev).map((r) => r.id);
   for (const id of ['loc-tazeem', 'loc-emeria', 'loc-magosi', 'loc-murasa', 'loc-misty-rainforest', 'loc-kazandu-refuge']) assert.ok(coast.includes(id), id);
   assert.ok(!coast.includes('loc-ondu'));
-  assert.equal(world.npcs.find((n) => n.id === 'chr-lorthos')?.home, 'loc-deepwater-realm');
+  assert.equal(world.npcs.find((n) => n.id === 'chr-lorthos')?.home, 'loc-thunder-bay');
+  assert.equal(region(world, 'loc-thunder-bay').parent, 'loc-murasa');
 });
 
 test('the real Malakir: one who gained life today walks in and the needlebite trap bites; one who did not walks in freely', async () => {
@@ -3081,7 +3084,7 @@ test('drawing is coming to know secrets of the world: traps and what sets them o
 test('both seas count as islands', () => {
   const world = loadWorld();
   assert.deepEqual(landTypes(region(world, 'loc-silundi-sea')), ['island']);
-  assert.deepEqual(landTypes(region(world, 'loc-deepwater-realm')), ['island']);
+  assert.deepEqual(landTypes(region(world, 'loc-thunder-bay')), ['island']);
   assert.deepEqual(landTypes(region(world, 'loc-malakir')), ['swamp']);
   assert.deepEqual(landTypes(region(world, 'loc-turntimber-grove')), ['forest']);
 });

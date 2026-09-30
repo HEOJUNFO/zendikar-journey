@@ -11,7 +11,6 @@ links:
   - { to: loc-sea-gate, rel: 안의 구역 }
   - { to: cre-roil-elemental, rel: 떠도는 뒤틀림 }
   - { to: loc-emeria, rel: 하늘의 구역 }
-  - { to: loc-deepwater-realm, rel: 서쪽 바다 }
   - { to: loc-magosi, rel: 우마라 강의 폭포 }
   - { to: loc-oran-rief, rel: 산호 바위 숲 }
   - { to: loc-soaring-seacliff, rel: 해안의 바다절벽 }

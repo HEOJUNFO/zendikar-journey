@@ -5,7 +5,7 @@ name: 무라사
 name_en: Murasa
 summary: 온두 북서쪽, 타짐 서쪽의 거목 대륙. 뒤틀린 거목이 벼랑 끝까지 뻗고, 깊은 협곡 사이로 잿빛 호수가 고여 있다
 status: canon
-sources: [ZEN-217, ZEN-220, ZEN-139, ZEN-157, ZEN-134]
+sources: [ZEN-217, ZEN-220, ZEN-139, ZEN-157, ZEN-134, ZEN-53]
 tags: [대륙, 숲, 거목, 협곡, 녹색]
 links:
   - { to: loc-kazuul-cliffs, rel: 안의 구역 }
@@ -13,7 +13,7 @@ links:
   - { to: chr-murasa-pyromancer, rel: 떠도는 용병 }
   - { to: loc-kazandu-refuge, rel: 안의 구역 }
   - { to: loc-misty-rainforest, rel: 안의 구역 }
-  - { to: loc-deepwater-realm, rel: 동쪽 바다 }
+  - { to: loc-thunder-bay, rel: 안의 바다 구역 }
   - { to: loc-tazeem, rel: 동쪽의 대륙 }
   - { to: loc-ondu, rel: 남동쪽의 대륙 }
 map: { x: 172, y: 165, terrain: forest, size: continent }
@@ -34,6 +34,7 @@ map: { x: 172, y: 165, terrain: forest, size: continent }
 - 안에 구역 카잔두 피난처(`loc-kazandu-refuge`)와 안개 낀 우림(`loc-misty-rainforest`, 숲이나 섬을 찾아오는 페치랜드, [결정] 2026-09-30 타짐에서 옮김)이 있다.
 - 돈을 받고 불을 빌려주는 용병 무라사의 화염술사(`chr-murasa-pyromancer`, ZEN-139)가 이 대륙을 떠돈다 ([결정] 2026-09-30).
 - 발로스 숲파괴자(`cre-baloth`, ZEN-157)가 무라사의 밀림을 사냥터로 삼는다 ([결정] 2026-09-30, 발라 게드에서 옮김).
+- 해안에 깊게 파고든 바다 구역 선더만(`loc-thunder-bay`, 기본 섬)이 있다. 거대한 문어 로르토스(`chr-lorthos`, ZEN-53)가 살고, 그가 떠오르면 무라사와 타짐의 해안을 조수가 덮친다 ([결정] 2026-09-30).
 - 무라사로 드는 길목의 절벽 카주울의 절벽(`loc-kazuul-cliffs`, 기본 산)이 안의 구역이다. 미노타우로스 용병 카주울 전쟁군주(`chr-kazuul-warlord`, ZEN-134)가 산다 ([결정] 2026-09-30).
 
 ## 미정/질문
