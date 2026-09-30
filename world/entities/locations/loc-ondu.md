@@ -5,11 +5,12 @@ name: 온두
 name_en: Ondu
 summary: 아쿰 서쪽의 섬 대륙. 바람 부는 고원이 펼쳐지고, 아쿰 쪽 끝에는 메마른 메사, 서쪽 숲에는 그레이펠트 피난처가 있다. 서쪽 바다에 아게딤 섬, 남쪽 앞바다에 즈와르 섬이 붙어 있다
 status: canon
-sources: [ZEN-212, ZEN-211, ZEN-214, ZEN-215, ZEN-227, ZEN-200, ZEN-2, ZEN-8, ZEN-124]
+sources: [ZEN-212, ZEN-211, ZEN-214, ZEN-215, ZEN-227, ZEN-200, ZEN-2, ZEN-8, ZEN-124, ZEN-24]
 tags: [대륙, 섬, 고원, 백색]
 links:
   - { to: loc-makindi, rel: 안의 구역 (협곡) }
   - { to: spl-conquerors-pledge, rel: 배우는 주문 }
+  - { to: spl-landbind-ritual, rel: 배우는 주문 }
   - { to: evt-arrow-volley-trap, rel: 풀 언덕에 숨은 보석 제단의 함정 }
   - { to: loc-arid-mesa, rel: 안의 구역 }
   - { to: loc-graypelt-refuge, rel: 안의 구역 }
@@ -37,6 +38,7 @@ map: { x: 345, y: 285, terrain: grassland, size: continent }
 - 풀 언덕 어딘가의 옛 보석 제단에 화살 세례 함정(`evt-arrow-volley-trap`, ZEN-2)이 숨어 있다. 같은 시간에 넷 이상이 온두에서 덤비면 화살이 쏟아진다.
 
 - 정복자의 서약(`spl-conquerors-pledge`, ZEN-8)을 여기서 배운다. 코르 병사 여섯(킥커면 열둘)이 시전자에게 서약하는 주문이다.
+- 대지 결속 의식(`spl-landbind-ritual`, ZEN-24)도 여기서 배운다. 코르 사제들이 땅 덩이를 들어 성지를 기리는 의식으로, 유대를 맺은 평원마다 생명 2를 얻는다 ([결정] 2026-09-30).
 
 - 안의 구역 마킨디 협곡(`loc-makindi`, ZEN-124): 옛 코르 제국의 수도가 무너진 협곡 미로. 기본 평원이다 (백 마나). 간헐천 활공자가 산다.
 

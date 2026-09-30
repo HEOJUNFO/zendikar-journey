@@ -16,7 +16,8 @@ import { addLog, present, ptOf, targetable } from './state.ts';
 import type { Actor, State } from './state.ts';
 import { sealedBy, sealText } from './seal.ts';
 import { josa, shortName } from './text.ts';
-import { placeName, region } from './world.ts';
+import { LAND_TYPE_LABELS, landTypes, placeName, region } from './world.ts';
+import type { LandType } from './world.ts';
 import type { SpellDef, World } from './world.ts';
 
 export function spellDef(world: World, id: string) {
@@ -109,6 +110,14 @@ export function learnableSpells(world: World, a: Actor) {
   return world.spells.filter((s) => !a.spells?.includes(s.id));
 }
 
+// The lands of `type` they hold ("each Plains you control"): bonded with, not destroyed.
+export function landsOfType(state: State, world: World, a: Actor, type: LandType) {
+  return (a.bonds ?? []).filter((id) => {
+    const r = world.regions.find((x) => x.id === id);
+    return !!r && !state.regions[id]?.destroyed && landTypes(r).includes(type);
+  });
+}
+
 // Spells an NPC holds and could pay for today.
 export function castableSpells(state: State, world: World, a: Actor, t: number) {
   return world.spells.filter((s) => a.spells?.includes(s.id) && planPayment(manaCapacity(state, world, a, t), s.cost));
@@ -166,6 +175,10 @@ export function castSpell(state: State, world: World, a: Actor, spellId: string,
       if (land) destroyLand(state, world, land, [a.id], t, s.id);
     } else if (eff.type === 'discard') {
       owesDiscard(state, world, target, s.name, t);
+    } else if (eff.type === 'gain_life_per_land') {
+      const n = landsOfType(state, world, target, eff.land).length;
+      if (n > 0) gainLife(state, target, n * eff.amount, t, s.name);
+      else addLog(state, { kind: 'status', text: `${josa(shortName(target.name), '은', '는')} ${josa(LAND_TYPE_LABELS[eff.land], '과', '와')} 이어져 있지 않아 얻은 것이 없다.`, regions: [target.region], actors: [target.id], t });
     } else if (eff.type === 'create_retainers') {
       const n = kicked && eff.kicked_count ? eff.kicked_count : eff.count;
       const born = spawnWild(state, world, eff.creature, eff.pt, n, a.region, eff.colors);

@@ -439,6 +439,9 @@ export const SpellSimSchema = z.strictObject({
         z.strictObject({ type: z.literal('destroy_land') }),
         // "Its controller discards a card": the target lets go of a spell they hold, their pick.
         z.strictObject({ type: z.literal('discard') }),
+        // "You gain N life for each <land type> you control" (Landbind Ritual: Plains): per land
+        // of that type the target has bonded with, not destroyed.
+        z.strictObject({ type: z.literal('gain_life_per_land'), land: z.enum(LAND_TYPES), amount: z.number().int().positive() }),
         // "Create N P/T <color> <kind> creature tokens" (kicked: `kicked_count` instead): born
         // at the caster's side, their retainers (Conqueror's Pledge).
         z.strictObject({

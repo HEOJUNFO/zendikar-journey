@@ -2799,3 +2799,30 @@ test('the real Kazuul Warlord lives on Kazuul\'s Cliffs, a mountain in Murasa, f
   assert.equal(hirePrice(def), 50);
   assert.deepEqual(def.rally, [{ type: 'counters_allies' }]);
 });
+
+test('a ritual of the land: the caster gains 2 life for each plains they hold (not a destroyed one); an NPC too', async () => {
+  const ritual: RawEntity = { id: 'spl-r', kind: 'spell', name: '의식', status: 'canon', sim: { cost: '{1}', learn_at: 'loc-a', target: 'self', effects: [{ type: 'gain_life_per_land', land: 'plains', amount: 2 }] } };
+  const world = fixture([ritual, loc('loc-p2', 14, 10, 'grassland'), npc('chr-c', { ...npcSim('loc-a'), mana: { W: 1 } })]);
+  assert.deepEqual(landTypes(region(world, 'loc-a')), ['plains']);
+  const state = character(world, 'loc-a');
+  const p = state.actors[PLAYER_ID];
+  p.spells = ['spl-r'];
+  p.bonds = ['loc-a', 'loc-p2', 'loc-b']; // two plains, a forest
+  state.regions['loc-p2'] = { conditions: [], destroyed: { at: 0, source: 'x', until: 99999 } };
+  await act(state, world, { type: 'cast', spell: 'spl-r', to: p.id, kick: false });
+  assert.equal(lifeOf(p), 22); // one standing plains
+  // No plains: nothing.
+  const c = state.actors['chr-c'];
+  c.spells = ['spl-r'];
+  readyCast(state, world, c, 'spl-r', state.minutes);
+  assert.equal(lifeOf(c), 20);
+  assert.ok(texts(state).some((t) => t.includes('평원과 이어져 있지 않아')));
+});
+
+test('the real Landbind Ritual is taught in Ondu: 2 life per plains', () => {
+  const world = loadWorld();
+  const s = world.spells.find((x) => x.id === 'spl-landbind-ritual')!;
+  assert.equal(s.learnAt, 'loc-ondu');
+  assert.equal(s.target, 'self');
+  assert.deepEqual(s.effects, [{ type: 'gain_life_per_land', land: 'plains', amount: 2 }]);
+});
