@@ -27,6 +27,7 @@ export const TERRAIN_IDS = [
   'swamp',
   'ruins',
   'river',
+  'tundra',
   'deepsea',
 ] as const;
 export type Terrain = (typeof TERRAIN_IDS)[number];
@@ -57,6 +58,7 @@ export const TERRAINS: Record<Terrain, TerrainInfo> = {
   swamp: { label: '늪', color: '#4f4a5e', mana: 'B', type: 'swamp' },
   ruins: { label: '폐허', color: '#6a5a82', mana: null },
   river: { label: '강·폭포', color: '#4f8fb8', mana: 'U', type: 'island' },
+  tundra: { label: '설원', color: '#dfe6ee', mana: 'W', type: 'plains' },
   deepsea: { label: '심해', color: '#1d3b66', mana: 'U', sea: true },
 };
 

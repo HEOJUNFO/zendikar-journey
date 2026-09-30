@@ -38,7 +38,7 @@
 | "{T}: Add {B} or {R}" | 두 색 땅 `map.color: [B, R]`. 하루 마나 1을 쓸 때 둘 중 필요한 색으로 (`B/R`) |
 | 대지가 탭된 채 들어온다 | 유대를 맺은 그날은 그 땅의 마나가 나오지 않는다 (location `sim.enters_tapped`). 땅이 모두에게 묶이지는 않는다 |
 | "이 대지가 들어올 때" | 누군가 그 땅과 유대를 맺을 때 (location `sim.on_bond`) |
-| 기본 대지 종류 (산, 평원, 섬, 늪, 숲) | 지형으로: 바위·화산 산, 초원 평원, 해변 섬, 늪 늪, 숲 숲. 이름 있는 대지 카드(`sim.nonbasic`)는 종류가 없다 |
+| 기본 대지 종류 (산, 평원, 섬, 늪, 숲) | 지형으로: 바위·화산 산, 초원·설원 평원, 해변·강 섬, 늪 늪, 숲 숲. 이름 있는 대지 카드(`sim.nonbasic`)는 종류가 없다 |
 | 마나 능력이 없는 대지 | `sim.no_mana`. 유대는 맺지만 마나를 내지 않는다 |
 | "당신의 무덤에 있는 생물 카드" | 그 이를 섬기다 죽은 권속 (`Actor.fallen`). 생물의 색은 `colors`, 없으면 마나 색 |
 | "{2}, {T}: 무덤의 흑색 생물마다 {B}" | location `sim.fallen_mana: { color, cost }`. 그 땅은 하루 max(1, N − cost)를 낸다 (순이익으로 단순화) |
@@ -100,7 +100,7 @@ map: { x: 96, y: 72, terrain: forest }
 - `size`: 선택. 지도에 그리는 크기. `continent`(대륙, 큰 원) | `island`(대륙에 딸린 작은 섬, 작은 원). 없으면 구역을 가진 지역은 중간 원, 아니면 작은 노드. 작은 섬은 구역이 하나 늘 때마다 조금 커진다.
 - 지도에서 땅은 마나 색으로 칠한다 (백 크림색, 청 파랑, 흑 검정, 적 빨강, 녹 초록, 마나 없음·무색은 회색, 두 색 땅은 반반). 지형은 이름 아래 글로 적는다.
 - `of`: 선택. 섬이 딸린 대륙의 id (예: 아게딤은 `of: loc-ondu`). 지도에서 대륙과 섬을 얕은 바다로 이어 그리고, 섬의 이름은 대륙 반대쪽에 쓴다. 게임 규칙에는 영향이 없다.
-- `terrain`: `grassland` | `forest` | `rocky` | `beach` | `settlement` | `sky` | `volcanic` | `swamp` | `ruins` | `river` | `deepsea`. (`ruins` 폐허: 기본 색 없음, 기본 대지 종류 없음. `river` 강·폭포: 청색, 섬)
+- `terrain`: `grassland` | `forest` | `rocky` | `beach` | `settlement` | `sky` | `volcanic` | `swamp` | `ruins` | `river` | `tundra` | `deepsea`. (`ruins` 폐허: 기본 색 없음, 기본 대지 종류 없음. `river` 강·폭포: 청색, 섬. `tundra` 설원: 백색, 평원)
   - `sky` 는 공중섬이다. 비행(`fly`)할 수 있는 이만 오가고 머물 수 있다. 오를 길이 있는 곳(`sim.climb_hours`, 예: 에메리아)은 비행하지 못해도 그만큼 더 들여 오른다.
   - `deepsea` 는 바다 지역이다. 물에 사는 이(`aquatic`)만 머물 수 있고, 다른 이는 들어가거나 지나갈 수 없다. 바다에서 시작하는 사건의 기준점이 된다.
   - 정글, 설원처럼 젠디카르다운 다른 지형은 해당 카드가 나올 때 `sim/world.ts` 의 `TERRAINS` 에 더한다.
