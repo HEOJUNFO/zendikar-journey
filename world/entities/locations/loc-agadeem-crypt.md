@@ -5,9 +5,10 @@ name: 아게딤의 묘실
 name_en: Crypt of Agadeem
 summary: 아게딤 섬의 땅 밑에 잠든 고대 도시 아게딤의 묘역. 부서진 석조 기둥 사이로 보랏빛이 흘러넘치고, 섬기던 이를 잃은 자의 망자들이 이곳에서 힘이 된다
 status: canon
-sources: [ZEN-212, ZEN-216]
+sources: [ZEN-212, ZEN-216, ZEN-86]
 tags: [폐허, 묘역, 지하, 흑색]
 links:
+  - { to: spl-desecrated-earth, rel: 배우는 주문 }
   - { to: loc-agadeem, rel: 바깥 지역 }
   - { to: loc-kabira-crossroads, rel: 길이 이어지는 도시 }
   - { to: law-retainers, rel: 죽은 권속의 힘 }
@@ -30,6 +31,8 @@ sim:
 - **탭된 채 들어온다** ([카드]): 유대를 맺은 날은 마나를 내지 않는다.
 - **{T}: {B}** ([카드]): 하루 흑 마나 1.
 - **{2}, {T}: 무덤의 흑색 생물마다 {B}** ([카드]): 무덤 = 유대를 맺은 이를 섬기다 죽은 권속 ([결정] 2026-09-30). 그중 흑색(칼리타스가 되살린 흑색 흡혈귀 등)이 N이면 이 땅은 하루 흑 마나 max(1, N−2)를 낸다. {2}를 치르고 N을 얻는 순이익으로 단순화했다 ([가공]).
+
+- 더럽혀진 대지(`spl-desecrated-earth`, ZEN-86)를 여기서 배운다. 상대가 쥔 땅을 부수고 주문 하나를 잊게 하는 주문이다.
 
 ## 미정/질문
 

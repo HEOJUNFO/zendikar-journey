@@ -411,6 +411,11 @@ export const SpellSimSchema = z.strictObject({
           pt: z.tuple([z.number().int(), z.number().int()]).default([0, 0]),
           double_life_on_hit: z.boolean().default(false),
         }),
+        // "Destroy target land" (Desecrated Earth): the land the target most lately bonded with
+        // (not already destroyed) is destroyed for everyone for a while (law-permanents).
+        z.strictObject({ type: z.literal('destroy_land') }),
+        // "Its controller discards a card": the target lets go of a spell they hold, their pick.
+        z.strictObject({ type: z.literal('discard') }),
         // "Create N P/T <color> <kind> creature tokens" (kicked: `kicked_count` instead): born
         // at the caster's side, their retainers (Conqueror's Pledge).
         z.strictObject({

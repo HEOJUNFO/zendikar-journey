@@ -199,6 +199,23 @@ function attackEvents(state: State, world: World, t: number) {
   }
 }
 
+// Land destruction: the land is destroyed for everyone for DESTROYED_DAYS (bonds with it are
+// kept and give mana again when it comes back). `by`: whose doing (its `destroyed` events
+// answer, e.g. the Cobra Trap).
+export function destroyLand(state: State, world: World, id: string, by: string[], t: number, source: string, scope: 'region' | 'world' = 'region') {
+  state.regions[id] ??= { conditions: [] };
+  if (state.regions[id].destroyed) return false;
+  state.regions[id].destroyed = { at: t, source, until: ruinsUntil(t) };
+  addLog(state, {
+    kind: 'condition',
+    text: `${region(world, id).name}: 땅이 부서졌다. ${formatClock(ruinsUntil(t))}까지 이곳에서는 아무것도 얻을 수 없다.`,
+    regions: [id],
+    scope,
+  });
+  permanentDestroyed(state, world, id, by, t);
+  return true;
+}
+
 // A noncreature permanent in `regionId` (for now the land itself) was destroyed by `by`'s
 // doing: the land's `destroyed` events answer.
 function permanentDestroyed(state: State, world: World, regionId: string, by: string[], t: number) {
@@ -291,18 +308,7 @@ function fire(state: State, world: World, ev: EventDef, t: number, omened: boole
         if (a && regions.includes(a.region) && !a.travel) loseLife(state, a, eff.amount, t, ev.name);
       }
     } else if (eff.type === 'destroy_lands') {
-      for (const id of (cause.lands ?? []).slice(0, eff.count)) {
-        state.regions[id] ??= { conditions: [] };
-        if (state.regions[id].destroyed) continue;
-        state.regions[id].destroyed = { at: t, source: ev.id, until: ruinsUntil(t) };
-        addLog(state, {
-          kind: 'condition',
-          text: `${region(world, id).name}: 땅이 부서졌다. ${formatClock(ruinsUntil(t))}까지 이곳에서는 아무것도 얻을 수 없다.`,
-          regions: [id],
-          scope: ev.scope,
-        });
-        permanentDestroyed(state, world, id, cause.by ?? [], t);
-      }
+      for (const id of (cause.lands ?? []).slice(0, eff.count)) destroyLand(state, world, id, cause.by ?? [], t, ev.id, ev.scope);
     } else if (eff.type === 'create') {
       const born = spawnWild(state, world, eff.creature, eff.pt, eff.count, ev.region, eff.colors);
       const kind = world.lore.find((l) => l.id === eff.creature)?.name ?? eff.creature;

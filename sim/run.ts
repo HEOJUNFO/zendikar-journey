@@ -13,6 +13,7 @@ import { claimableItems } from './items.ts';
 import { lifeOf } from './life.ts';
 import { foresightText } from './foresight.ts';
 import { setOff, wandersDue, withPositions } from './wander.ts';
+import { letGo } from './discard.ts';
 import { strandedText } from './stranded.ts';
 import { applyRally, hireableFor, hireMerc, hirePrice, rallyText } from './allies.ts';
 import { answerAsk, askText, canServe } from './asks.ts';
@@ -59,6 +60,8 @@ export type ChooseInput = { world: World; state: State; npc: Speaker; what: stri
 export type ChooseColorInput = { world: World; state: State; npc: Speaker; opponents: Actor[] };
 // A trap (`trap`) sprung by `intruders` picks one of `creatures` (anywhere in the world) to draw there.
 export type SummonInput = { world: World; state: State; trap: EventDef; creatures: Actor[]; intruders: Actor[] };
+// An NPC (`npc`) must let go of one of `spells` (their hand), for `cause`.
+export type DiscardInput = { world: World; state: State; npc: Speaker; spells: SpellDef[]; cause: string };
 // A wandering place (`place`), at stop `at` (if any), picks the next of `stops`.
 export type WanderInput = { world: World; state: State; place: Region; at?: string; stops: string[] };
 // A trap (`trap`) divides `amount` damage among `targets`, the attackers who set it off.
@@ -82,6 +85,8 @@ export type Llm = {
   chooseColor?: (input: ChooseColorInput) => Promise<Color | null>;
   // A summoning trap sprung (Summoning Trap): which of `creatures` it draws there, or none.
   summon?: (input: SummonInput) => Promise<string | null>;
+  // One who must let go of a spell (discard): which of `spells` they give up.
+  discard?: (input: DiscardInput) => Promise<string | null>;
   // A wandering place (Goma Fada) at a stop: which of `stops` it heads for next.
   wander?: (input: WanderInput) => Promise<string | null>;
   // An arrow volley (Arrow Volley Trap): how much of `amount` falls on each of `targets`, by id.
@@ -235,6 +240,23 @@ async function conversations(state: State, world: World, since: number, llm: Llm
   }
 }
 
+// An NPC lets go of one of the spells they hold (sim/discard.ts): the LLM picks, as them; with
+// no usable answer, one at random.
+async function discardChoice(state: State, world: World, llm: Llm, a: Actor, npc: Speaker, ids: string[], cause: string) {
+  const spells = ids.filter((id) => a.spells?.includes(id)).map((id) => spellDef(world, id)).filter((s) => !!s);
+  if (!spells.length) return;
+  let pick: string | null = null;
+  if (llm.discard) {
+    try {
+      pick = await llm.discard({ world, state, npc, spells, cause });
+    } catch (e) {
+      console.warn(`discard for ${a.id} failed:`, e);
+    }
+  }
+  if (!pick || !spells.some((s) => s.id === pick)) pick = spells[Math.floor(random(state) * spells.length)].id;
+  letGo(state, world, a, pick, state.minutes);
+}
+
 // Wandering places at a stop (sim/wander.ts): the LLM, for the place's folk, picks where it
 // goes next. With no answer, a stop at random (not the one it is at).
 async function wanderings(state: State, world: World, llm: Llm) {
@@ -366,6 +388,11 @@ async function choices(state: State, world: World, llm: Llm) {
       continue;
     }
     const npc = speakerDef(state, world, c.by);
+    // A discard: which spell they let go of (candidates are spells, not people).
+    if (c.effect.type === 'discard') {
+      if (by && !by.dead && npc) await discardChoice(state, world, llm, by, npc, c.candidates, c.effect.cause);
+      continue;
+    }
     const land = world.regions.find((r) => r.id === c.land);
     const candidates = c.candidates.map((id) => state.actors[id]).filter((x) => x && !x.dead);
     if (!by || by.dead || !npc || !land || !candidates.length) continue;

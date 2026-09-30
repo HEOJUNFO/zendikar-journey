@@ -72,7 +72,7 @@ export async function interpret({ world, state, text }: InterpretInput): Promise
   // A pick they owe comes before anything else: the only action now.
   const ask = state.asks?.[0];
   if (ask) {
-    const options = askOptions(state, ask).map((o) => `- {"type":"choose","pick":${o.pick ? `"${o.pick}"` : 'null'}}  (${o.label})`);
+    const options = askOptions(state, world, ask).map((o) => `- {"type":"choose","pick":${o.pick ? `"${o.pick}"` : 'null'}}  (${o.label})`);
     const content = await chatCompletion(
       [
         { role: 'system', content: SYSTEM_PROMPT },

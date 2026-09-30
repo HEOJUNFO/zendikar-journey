@@ -5,6 +5,7 @@
 import { untapTime } from './clock.ts';
 import { applyRally, rallyText } from './allies.ts';
 import { bindRetainer, refuse } from './retainers.ts';
+import { letGo } from './discard.ts';
 import { addLog, player } from './state.ts';
 import type { Actor, Choice, State } from './state.ts';
 import { josa, shortName } from './text.ts';
@@ -16,11 +17,13 @@ export function askText(state: State, world: World, c: Choice) {
   if (c.effect.type === 'rally') return `${rallyText(state, world, c.effect.source)}. 누구에게?`;
   if (c.effect.type === 'pledge') return `${josa(shortName(from?.name ?? ''), '이', '가')} 자신을 따르고 섬기라 한다`;
   if (c.effect.type === 'evade') return `날지 못하는 ${josa(shortName(from?.name ?? ''), '이', '가')} 덤벼든다. 날아올라 피하면 자정까지 닿지 않는다`;
+  if (c.effect.type === 'discard') return `${c.effect.cause}: 지닌 주문 하나를 잊어야 한다. 무엇을?`;
   return '';
 }
 
 // The answers they may give: a pick (someone's id), or null.
-export function askOptions(state: State, c: Choice): { pick: string | null; label: string }[] {
+export function askOptions(state: State, world: World, c: Choice): { pick: string | null; label: string }[] {
+  if (c.effect.type === 'discard') return c.candidates.map((id) => ({ pick: id, label: world.spells.find((s) => s.id === id)?.name ?? id }));
   if (c.effect.type === 'pledge') return [{ pick: c.effect.from, label: '따른다' }, { pick: null, label: '거절한다' }];
   if (c.effect.type === 'evade') return [{ pick: c.effect.from, label: '날아올라 피한다' }, { pick: null, label: '맞선다' }];
   return [...c.candidates.map((id) => ({ pick: id, label: shortName(state.actors[id]?.name ?? id) })), { pick: null, label: '하지 않는다' }];
@@ -47,6 +50,9 @@ export function answerAsk(state: State, world: World, pick: string | null, t: nu
       addLog(state, { kind: 'status', text: `${josa(shortName(master.name), '을', '를')} 따르기를 거절했다.`, regions: [p.region], actors: [p.id, master.id], t });
       refuse(state, master, t);
     }
+  } else if (c.effect.type === 'discard') {
+    // One they must give up: an answer that isn't one of theirs gives up the first.
+    letGo(state, world, p, pick && c.candidates.includes(pick) ? pick : c.candidates[0], t);
   } else if (c.effect.type === 'evade') {
     const from = state.actors[c.effect.from];
     if (!from) return;

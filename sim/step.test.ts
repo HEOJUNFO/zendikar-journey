@@ -2450,3 +2450,62 @@ test('the real Conqueror\'s Pledge is taught in Ondu: six Kor Soldiers, twelve k
   assert.equal(s.kicker?.manaText, '{6}');
   assert.deepEqual(s.effects[0], { type: 'create_retainers', creature: 'cre-kor-soldier', count: 6, kicked_count: 12, pt: [1, 1], colors: ['W'] });
 });
+
+const desecrate: RawEntity = {
+  id: 'spl-d',
+  kind: 'spell',
+  name: '더럽힘',
+  status: 'canon',
+  sim: { cost: '{1}', learn_at: 'loc-a', effects: [{ type: 'destroy_land' }, { type: 'discard' }] },
+};
+
+test('desecrated earth: the target\'s latest land is destroyed (its destroyed events answer), and they let go of a spell of their pick', async () => {
+  const snakes: RawEntity = {
+    id: 'evt-sn',
+    kind: 'event',
+    name: '뱀 함정',
+    status: 'canon',
+    sim: { region: 'loc-c', trigger: 'destroyed', text: '뱀들이 쏟아졌다.', effects: [{ type: 'create', creature: 'cre-sn', count: 1, pt: [1, 1], colors: ['G'] }] },
+  };
+  const world = fixture([desecrate, tribute('loc-a'), mantle, lore('cre-v', 'creature'), lore('cre-sn', 'creature'), snakes, npc('chr-x', npcSim('loc-a'))]);
+  const state = character(world, 'loc-a');
+  const [p, x] = [state.actors[PLAYER_ID], state.actors['chr-x']];
+  p.spells = ['spl-d'];
+  p.bonds = ['loc-a'];
+  p.pt = [0, 30]; // x turns on them for it
+  assert.match(castBlocked(state, world, p, 'spl-d', 'chr-x', false, state.minutes)!, /부술 땅/);
+  x.bonds = ['loc-b', 'loc-c'];
+  x.spells = ['spl-t', 'spl-m'];
+  const asked: string[][] = [];
+  await act(state, world, { type: 'cast', spell: 'spl-d', to: 'chr-x', kick: false }, { discard: async ({ spells }) => (asked.push(spells.map((s) => s.id)), 'spl-m') });
+  assert.ok(state.regions['loc-c']?.destroyed);
+  assert.equal(state.regions['loc-b']?.destroyed, undefined);
+  assert.ok(texts(state).some((t) => t.includes('뱀들이 쏟아졌다'))); // destroyed by someone: its trap answers
+  await act(state, world, { type: 'wait', hours: 1 }, { discard: async ({ spells }) => (asked.push(spells.map((s) => s.id)), 'spl-m') });
+  assert.deepEqual(asked, [['spl-t', 'spl-m']]);
+  assert.deepEqual(x.spells, ['spl-t']);
+  assert.deepEqual(x.graveyard, ['spl-m']);
+});
+
+test('desecrated earth on the player: they pick which spell to let go of', async () => {
+  const world = fixture([desecrate, tribute('loc-a'), mantle, lore('cre-v', 'creature'), npc('chr-c', { ...npcSim('loc-a'), mana: { B: 1 } })]);
+  const state = character(world, 'loc-a');
+  const [p, c] = [state.actors[PLAYER_ID], state.actors['chr-c']];
+  p.bonds = ['loc-b'];
+  p.spells = ['spl-t', 'spl-m'];
+  c.spells = ['spl-d'];
+  castSpell(state, world, c, 'spl-d', PLAYER_ID, false, state.minutes);
+  assert.ok(state.regions['loc-b']?.destroyed);
+  await act(state, world, { type: 'wait', hours: 1 });
+  assert.equal(state.asks?.[0]?.effect.type, 'discard');
+  assert.match(askText(state, world, state.asks![0]), /주문 하나를 잊어야/);
+  await act(state, world, { type: 'choose', pick: 'spl-t' });
+  assert.deepEqual(p.spells, ['spl-m']);
+});
+
+test('the real Desecrated Earth is taught in Agadeem\'s Crypt', () => {
+  const world = loadWorld();
+  const s = world.spells.find((x) => x.id === 'spl-desecrated-earth')!;
+  assert.equal(s.learnAt, 'loc-agadeem-crypt');
+  assert.deepEqual(s.effects.map((e) => e.type), ['destroy_land', 'discard']);
+});

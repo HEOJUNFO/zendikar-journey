@@ -425,6 +425,10 @@ function spellEffectText(e: SpellEffect) {
       return `잃은 만큼 시전자가 생명을 얻음${e.if_kicked ? ' (킥커 시)' : ''}`;
     case 'aura':
       return `오라: ${signed(e.pt[0])}/${signed(e.pt[1])}${e.double_life_on_hit ? ', 전투 피해를 주면 조종자의 생명 두 배' : ''}`;
+    case 'destroy_land':
+      return '대상이 가장 최근에 유대를 맺은 땅이 부서짐';
+    case 'discard':
+      return '대상이 지닌 주문 하나를 잊음 (본인이 고름)';
     case 'create_retainers':
       return `${e.pt.join('/')} 권속 ${e.count}${e.kicked_count ? ` (킥커 시 ${e.kicked_count})` : ''}`;
   }

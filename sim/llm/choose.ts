@@ -5,7 +5,7 @@ import { ptOf } from '../state.ts';
 import { COLOR_LABELS, COLORS, manaCapacity } from '../mana.ts';
 import type { Color } from '../mana.ts';
 import { region, spellColors } from '../world.ts';
-import type { ChooseColorInput, ChooseInput, SummonInput, VolleyInput, WanderInput } from '../run.ts';
+import type { ChooseColorInput, ChooseInput, DiscardInput, SummonInput, VolleyInput, WanderInput } from '../run.ts';
 import { loreText } from './context.ts';
 import { recentNews } from '../run.ts';
 import { relationsText } from '../relations.ts';
@@ -178,4 +178,36 @@ Where does it go next?`,
     return null;
   }
   return parsed.data.stop;
+}
+
+// One who must let go of a spell they hold (a discard) picks which, in character.
+export async function chooseDiscard({ state, npc, spells, cause }: DiscardInput): Promise<string | null> {
+  const me = state.actors[npc.id];
+  const content = await chatCompletion(
+    [
+      {
+        role: 'system',
+        content: `You are ${npc.name}, a character in the plane of Zendikar.
+Who you are: ${npc.persona}
+Your goal: ${npc.goal}
+You must let go of one spell you hold (you forget it). Pick the one you would give up. Answer with JSON only: {"pick": "<id>"}.`,
+      },
+      {
+        role: 'user',
+        content: `Why: ${cause}.${me ? ` You are in ${me.region}.` : ''}
+
+Spells you hold:
+${spells.map((s) => `- ${s.id}: ${s.name} (${s.summary}), costs ${s.costText}`).join('\n')}
+
+Which do you let go of?`,
+      },
+    ],
+    200,
+  );
+  const parsed = z.object({ pick: z.string() }).safeParse(extractJson(content));
+  if (!parsed.success || !spells.some((s) => s.id === parsed.data.pick)) {
+    console.warn(`Unusable discard from ${npc.id}:`, content);
+    return null;
+  }
+  return parsed.data.pick;
 }

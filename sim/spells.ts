@@ -8,6 +8,8 @@ import { addFoe } from './combat.ts';
 import { gainLife, lifeOf, loseLife } from './life.ts';
 import { addCosts, formatMana, manaAvailable, manaCapacity, payMana, planPayment } from './mana.ts';
 import { spawnWild } from './abilities.ts';
+import { destroyLand } from './step.ts';
+import { owesDiscard } from './discard.ts';
 import { remember } from './relations.ts';
 import { creatureOf, retainersOf } from './retainers.ts';
 import { addLog, present, ptOf, targetable } from './state.ts';
@@ -56,6 +58,8 @@ export function castBlocked(state: State, world: World, a: Actor, spellId: strin
   if (!target || target.dead || (target.id === a.id && s.target === 'other_here') || (s.target === 'self' && target.id !== a.id)) return '그런 대상은 없다.';
   if (target.id !== a.id && !present(state, a.region).some((x) => x.id === target.id))
     return `${josa(shortName(target.name), '은', '는')} 여기 없다.`;
+  if (s.effects.some((e) => e.type === 'destroy_land') && !landToDestroy(state, target))
+    return `${josa(shortName(target.name), '은', '는')} 부술 땅을 쥐고 있지 않다.`;
   if (s.target !== 'self' && !targetable(target, t)) return `${josa(shortName(target.name), '은', '는')} 방어막에 싸여 대상이 될 수 없다.`;
   if (!planPayment(manaAvailable(state, world, a, t), s.cost))
     return `마나가 모자라다 (${s.costText}, 지금 ${formatMana(manaAvailable(state, world, a, t))}).`;
@@ -69,7 +73,13 @@ export function castBlocked(state: State, world: World, a: Actor, spellId: strin
 // Whom `a` could cast `s` on where they stand: anyone else there, or themselves too.
 export function castTargets(state: State, a: Actor, s: SpellDef) {
   if (s.target === 'self') return [a];
-  return present(state, a.region).filter((x) => (x.id !== a.id || s.target === 'any_here') && targetable(x, state.minutes));
+  const needsLand = s.effects.some((e) => e.type === 'destroy_land');
+  return present(state, a.region).filter((x) => (x.id !== a.id || s.target === 'any_here') && targetable(x, state.minutes) && (!needsLand || !!landToDestroy(state, x)));
+}
+
+// The land "target land" falls on for one: the one they most lately bonded with, standing.
+export function landToDestroy(state: State, a: Actor) {
+  return [...(a.bonds ?? [])].reverse().find((id) => !state.regions[id]?.destroyed);
 }
 
 // An NPC's cast block: why they can't cast `spellId` now (before picking whom), or null.
@@ -106,7 +116,7 @@ export function castableSpells(state: State, world: World, a: Actor, t: number) 
 
 // Whether a spell does harm (the target takes it as an attack).
 export function harmful(s: SpellDef) {
-  return s.effects.some((e) => e.type === 'lose_half_life');
+  return s.effects.some((e) => e.type === 'lose_half_life' || e.type === 'destroy_land' || e.type === 'discard');
 }
 
 // Pays and resolves. A harmful spell's target (if an NPC) takes it as an attack.
@@ -147,6 +157,11 @@ export function castSpell(state: State, world: World, a: Actor, spellId: string,
       loseLife(state, target, lost, t, s.name, a);
     } else if (eff.type === 'gain_life_lost' && (!eff.if_kicked || kicked) && lost > 0) {
       gainLife(state, a, lost, t, s.name);
+    } else if (eff.type === 'destroy_land') {
+      const land = landToDestroy(state, target);
+      if (land) destroyLand(state, world, land, [a.id], t, s.id);
+    } else if (eff.type === 'discard') {
+      owesDiscard(state, world, target, s.name, t);
     } else if (eff.type === 'create_retainers') {
       const n = kicked && eff.kicked_count ? eff.kicked_count : eff.count;
       const born = spawnWild(state, world, eff.creature, eff.pt, n, a.region, eff.colors);
