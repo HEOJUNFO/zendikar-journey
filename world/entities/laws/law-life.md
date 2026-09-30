@@ -5,10 +5,11 @@ name: 생명
 name_en: Life
 summary: 생명은 몸의 기운(기력)이다. 생명을 잃으면 기운이 빠지고, 생명을 얻으면 기운이 차오른다
 status: canon
-sources: [ZEN-105, ZEN-81, ZEN-6, ZEN-200, ZEN-210]
+sources: [ZEN-105, ZEN-81, ZEN-6, ZEN-200, ZEN-210, ZEN-214]
 tags: [규칙, 생명]
 links:
   - { to: loc-akoum-refuge, rel: 들어서면 생명 }
+  - { to: loc-graypelt-refuge, rel: 들어서면 생명 }
   - { to: evt-needlebite-trap, rel: 생명을 빼앗는 함정 }
   - { to: spl-blood-tribute, rel: 생명을 빼앗고 얻는 주문 }
   - { to: spl-celestial-mantle, rel: 생명을 두 배로 }
