@@ -5,7 +5,7 @@ name: 칼리타스, 게트의 혈족장
 name_en: Kalitas, Bloodchief of Ghet
 summary: 게트 혈족을 이끄는 전설의 흡혈귀 전사. 죽인 자를 흡혈귀로 되살려 혈족을 늘린다
 status: canon
-sources: [ZEN-99]
+sources: [ZEN-99, ZEN-102]
 tags: [흡혈귀, 전설, 흑색, 전사]
 links:
   - { to: fac-ghet, rel: 우두머리 }

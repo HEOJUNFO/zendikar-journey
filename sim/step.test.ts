@@ -2884,3 +2884,48 @@ test('the real Malakir Bloodwitch flies over Malakir, a Vampire shielded from wh
   assert.deepEqual(npcDef(state, world, w.id)?.enterDrain, { per: 'cre-vampire' });
   assert.equal(npcDef(state, world, w.id)?.creature, 'cre-vampire');
 });
+
+const sludge: RawEntity = { id: 'spl-s', kind: 'spell', name: '오물', status: 'canon', sim: { cost: '{1}', learn_at: 'loc-a', effects: [{ type: 'discard_per_land', land: 'swamp' }] } };
+
+test('mind sludge: the target lets go of a spell for each swamp the caster holds, one pick at a time', async () => {
+  const world = fixture([sludge, desecrate, tribute('loc-a'), mantle, lore('cre-v', 'creature'), loc('loc-s1', 12, 10, 'swamp'), loc('loc-s2', 14, 10, 'swamp'), npc('chr-x', npcSim('loc-a')), npc('chr-c', { ...npcSim('loc-a'), mana: { B: 1 } })]);
+  // The player casts it on an NPC: the LLM picks twice, from what is left.
+  const state = character(world, 'loc-a');
+  const [p, x] = [state.actors[PLAYER_ID], state.actors['chr-x']];
+  p.spells = ['spl-s'];
+  p.bonds = ['loc-a', 'loc-s1', 'loc-s2'];
+  p.pt = [0, 30];
+  x.spells = ['spl-t', 'spl-m', 'spl-d'];
+  const asked: string[][] = [];
+  const discard = async ({ spells }: { spells: { id: string }[] }) => (asked.push(spells.map((s) => s.id)), spells[0].id);
+  await act(state, world, { type: 'cast', spell: 'spl-s', to: 'chr-x', kick: false }, { discard });
+  await act(state, world, { type: 'wait', hours: 1 }, { discard });
+  assert.deepEqual(asked, [['spl-t', 'spl-m', 'spl-d'], ['spl-m', 'spl-d']]);
+  assert.deepEqual(x.spells, ['spl-d']);
+  // An NPC casts it on the player: two picks they owe, one after the other.
+  const s2 = character(world, 'loc-a');
+  const [p2, c] = [s2.actors[PLAYER_ID], s2.actors['chr-c']];
+  p2.spells = ['spl-t', 'spl-m', 'spl-d'];
+  c.spells = ['spl-s'];
+  c.bonds = ['loc-s1', 'loc-s2'];
+  castSpell(s2, world, c, 'spl-s', PLAYER_ID, false, s2.minutes);
+  await act(s2, world, { type: 'wait', hours: 1 });
+  assert.match(askText(s2, world, s2.asks![0]), /주문 2개를 잊어야/);
+  await act(s2, world, { type: 'choose', pick: 'spl-m' });
+  assert.equal(s2.asks?.[0]?.effect.type, 'discard');
+  assert.deepEqual(s2.asks![0].candidates, ['spl-t', 'spl-d']);
+  await act(s2, world, { type: 'choose', pick: 'spl-d' });
+  assert.deepEqual(p2.spells, ['spl-t']);
+  // No swamps: nothing.
+  c.bonds = ['loc-a'];
+  castSpell(s2, world, c, 'spl-s', PLAYER_ID, false, s2.minutes);
+  assert.deepEqual(p2.spells, ['spl-t']);
+  assert.ok(texts(s2).some((t) => t.includes('늪과 이어져 있지 않아')));
+});
+
+test('the real Mind Sludge is taught at the Ghet estate: a discard per swamp', () => {
+  const world = loadWorld();
+  const s = world.spells.find((x) => x.id === 'spl-mind-sludge')!;
+  assert.equal(s.learnAt, 'loc-ghet-estate');
+  assert.deepEqual(s.effects, [{ type: 'discard_per_land', land: 'swamp' }]);
+});

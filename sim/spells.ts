@@ -125,7 +125,7 @@ export function castableSpells(state: State, world: World, a: Actor, t: number) 
 
 // Whether a spell does harm (the target takes it as an attack).
 export function harmful(s: SpellDef) {
-  return s.effects.some((e) => e.type === 'lose_half_life' || e.type === 'destroy_land' || e.type === 'discard');
+  return s.effects.some((e) => e.type === 'lose_half_life' || e.type === 'destroy_land' || e.type === 'discard' || e.type === 'discard_per_land');
 }
 
 // Pays and resolves. A harmful spell's target (if an NPC) takes it as an attack.
@@ -175,6 +175,10 @@ export function castSpell(state: State, world: World, a: Actor, spellId: string,
       if (land) destroyLand(state, world, land, [a.id], t, s.id);
     } else if (eff.type === 'discard') {
       owesDiscard(state, world, target, s.name, t);
+    } else if (eff.type === 'discard_per_land') {
+      const n = landsOfType(state, world, a, eff.land).length;
+      if (n > 0) owesDiscard(state, world, target, s.name, t, n);
+      else addLog(state, { kind: 'status', text: `${josa(shortName(a.name), '은', '는')} ${josa(LAND_TYPE_LABELS[eff.land], '과', '와')} 이어져 있지 않아 아무 일도 없었다.`, regions: [a.region], actors: [a.id], t });
     } else if (eff.type === 'gain_life_per_land') {
       const n = landsOfType(state, world, target, eff.land).length;
       if (n > 0) gainLife(state, target, n * eff.amount, t, s.name);

@@ -13,7 +13,7 @@ import { claimableItems } from './items.ts';
 import { lifeOf } from './life.ts';
 import { foresightText } from './foresight.ts';
 import { setOff, wandersDue, withPositions } from './wander.ts';
-import { letGo } from './discard.ts';
+import { discardOwed, letGo } from './discard.ts';
 import { sacrifice } from './monument.ts';
 import { strandedText } from './stranded.ts';
 import { applyRally, hireableFor, hireMerc, hirePrice, rallyText } from './allies.ts';
@@ -391,7 +391,12 @@ async function choices(state: State, world: World, llm: Llm) {
     const npc = speakerDef(state, world, c.by);
     // A discard: which spell they let go of (candidates are spells, not people).
     if (c.effect.type === 'discard') {
-      if (by && !by.dead && npc) await discardChoice(state, world, llm, by, npc, c.candidates, c.effect.cause);
+      // One at a time, from what they still hold.
+      for (let i = 0; i < (c.effect.count ?? 1); i++) {
+        const next = i === 0 ? c : discardOwed(state, world, by!, c.effect.cause, state.minutes, (c.effect.count ?? 1) - i);
+        if (!next || !by || by.dead || !npc) break;
+        await discardChoice(state, world, llm, by, npc, next.candidates, c.effect.cause);
+      }
       continue;
     }
     const land = world.regions.find((r) => r.id === c.land);

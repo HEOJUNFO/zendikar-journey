@@ -5,12 +5,13 @@ name: 게트 혈족의 영지
 name_en: Ghet Estate
 summary: 굴 드라즈의 늪 깊은 곳, 게트 혈족이 모여 사는 구역. 혈족장 칼리타스의 거처
 status: canon
-sources: [ZEN-99]
+sources: [ZEN-99, ZEN-102]
 tags: [늪, 흑색, 흡혈귀, 구역]
 links:
   - { to: loc-guul-draz, rel: 바깥 지역 }
   - { to: chr-kalitas, rel: 거처 }
   - { to: fac-ghet, rel: 혈족의 거점 }
+  - { to: spl-mind-sludge, rel: 가르치는 주문 }
 map: { in: loc-guul-draz, terrain: swamp }
 ---
 
@@ -22,6 +23,7 @@ map: { in: loc-guul-draz, terrain: swamp }
 
 - 굴 드라즈 안의 구역이다 (지형 `swamp`). 이름 있는 대지 카드가 아니라서 **기본 늪**이다: 흑 마나 1을 내고, 늪을 찾는 페치랜드(습지 평원, 푸른 지하묘지)로 찾아올 수 있다. 굴 드라즈 다음 두 번째 기본 늪이다.
 - 칼리타스(`chr-kalitas`)의 거처다. 그를 만나려면 이 구역에 들어와야 한다.
+- 정신 오물(`spl-mind-sludge`, ZEN-102)을 배울 수 있다 (4시간). 시전자가 쥔 늪마다 대상이 주문 하나를 잊는다 ([결정] 2026-09-30).
 - 굴 드라즈 전체에 일어나는 사건은 이 구역에도 미친다.
 
 ## 미정/질문

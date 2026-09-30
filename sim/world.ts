@@ -446,6 +446,9 @@ export const SpellSimSchema = z.strictObject({
         z.strictObject({ type: z.literal('destroy_land') }),
         // "Its controller discards a card": the target lets go of a spell they hold, their pick.
         z.strictObject({ type: z.literal('discard') }),
+        // "Target player discards a card for each <land type> you control" (Mind Sludge: Swamp):
+        // as many as the caster holds of that type, not destroyed.
+        z.strictObject({ type: z.literal('discard_per_land'), land: z.enum(LAND_TYPES) }),
         // "You gain N life for each <land type> you control" (Landbind Ritual: Plains): per land
         // of that type the target has bonded with, not destroyed.
         z.strictObject({ type: z.literal('gain_life_per_land'), land: z.enum(LAND_TYPES), amount: z.number().int().positive() }),
