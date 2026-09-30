@@ -7,9 +7,10 @@
 // fetch: giving up a fetch land they hold to bond with the block's `land` from afar (abilities.ts).
 // learn / cast: learning the block's `spell` where it is taught, or casting one they hold on
 // someone there (spells.ts).
+// recall: tapping a Sea Gate Loremaster they control to draw a spell per Ally (sim/loremaster.ts).
 // attack: going after the block's `who` (wherever they are) and falling on them: they become
 // foes and fight from the next hour (sim/combat.ts), as the player's attack.
-export const LIFE_KINDS = ['sleep', 'eat', 'work', 'social', 'leisure', 'bond', 'claim', 'store_day', 'spend_day', 'grow', 'fetch', 'learn', 'cast', 'court', 'hire', 'attack'] as const;
+export const LIFE_KINDS = ['sleep', 'eat', 'work', 'social', 'leisure', 'bond', 'claim', 'store_day', 'spend_day', 'grow', 'fetch', 'learn', 'cast', 'court', 'hire', 'attack', 'recall'] as const;
 export type LifeKind = (typeof LIFE_KINDS)[number];
 
 // start/end are minutes of the game day, 0..1440, end exclusive.

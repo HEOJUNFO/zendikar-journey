@@ -10,6 +10,7 @@ import { travelBlocked } from '../step.ts';
 import { shortName } from '../text.ts';
 import { bondEffectText, placeName, region, TERRAINS, travelHours } from '../world.ts';
 import { itemsAt, itemOwner } from '../items.ts';
+import { loremastersOf, recallBlocked, recallCount } from '../loremaster.ts';
 import { enteredToday, fetchTargets, fireTargets, growBlocked, growLand, targetedBondEffect } from '../abilities.ts';
 import { eonLand, spendBlocked, storeBlocked } from '../eons.ts';
 import { spellsTaughtAt } from '../spells.ts';
@@ -52,6 +53,10 @@ export async function interpret({ world, state, text }: InterpretInput): Promise
   if (grower && !growBlocked(state, world, p, grower.id, state.minutes)) {
     const who = enteredToday(state, world, grower.growEntered!.color, state.minutes).map((x) => shortName(x.name));
     days.push(`- {"type":"grow","land":"${grower.id}"}  (call on ${grower.name}: a +1/+1 counter on each creature of its color that came into the world today, whoever they belong to: ${who.join(', ')}; 1 hour)`);
+  }
+  // A Sea Gate Loremaster they control: draw a spell per Ally of their party.
+  if (!recallBlocked(state, world, p, state.minutes)) {
+    days.push(`- {"type":"recall"}  (tap ${shortName(loremastersOf(state, world, p)[0].name)}: come to hold ${recallCount(state, world, p)} spell(s) of the world, one per Ally of their party; 1 hour)`);
   }
   // A Valakut they hold: bonding with (or seeking out) a mountain may wake it.
   const valakut = world.regions.find((r) => r.mountainFire && p.bonds?.includes(r.id));

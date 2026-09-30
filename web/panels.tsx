@@ -8,6 +8,7 @@ import { hireBlocked, hirePrice } from '../sim/allies.ts';
 import { askOptions, askText } from '../sim/asks.ts';
 import { woundsOf } from '../sim/combat.ts';
 import { COLOR_LABELS, formatMana, manaAvailable, manaCapacity, manaLabel } from '../sim/mana.ts';
+import { loremastersOf, recallBlocked, recallCount } from '../sim/loremaster.ts';
 import { bondBlocked, bondTargets, enteredToday, fetchTargets, fireTargets, firesOnBond, growBlocked, growLand, targetedBondEffect } from '../sim/abilities.ts';
 import { BOND_HOURS } from '../sim/actions.ts';
 import { CLAIM_HOURS, claimBlocked, itemsAt, itemsOf } from '../sim/items.ts';
@@ -575,6 +576,18 @@ export function CharacterControls(props: {
             onClick={() => onAct({ type: 'grow', land: grower.id })}
           >
             숲의 힘 불러내기
+          </button>
+        </div>
+      )}
+      {loremastersOf(state, world, p).length > 0 && (
+        <div className="row">
+          <span className="muted">📜 {shortName(loremastersOf(state, world, p)[0].name)}:</span>
+          <button
+            disabled={busy || !!stuck || !!recallBlocked(state, world, p, state.minutes)}
+            title={recallBlocked(state, world, p, state.minutes) ?? `동료 ${recallCount(state, world, p)}만큼 주문을 떠올린다`}
+            onClick={() => onAct({ type: 'recall' })}
+          >
+            기억 빌리기
           </button>
         </div>
       )}

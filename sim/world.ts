@@ -293,6 +293,9 @@ export const CharacterSimSchema = z.strictObject({
   landfall_lose: z.array(z.enum(ABILITIES)).default([]),
   // "Landfall — this gains <ability> until end of turn" (Geyser Glider: flying).
   landfall_grant: z.array(z.enum(ABILITIES)).default([]),
+  // "{T}: Draw a card for each Ally you control" (Sea Gate Loremaster): a power of whoever
+  // controls them (sim/loremaster.ts).
+  tap_draw_allies: z.boolean().default(false),
   // The creature kind a character is (e.g. cre-vampire). A creature entity's sim is its own kind.
   creature: z.string().optional(),
   // A planeswalker's loyalty (law-planeswalkers): their momentum. Loyalty abilities raise
@@ -604,6 +607,7 @@ export type NpcDef = {
   landfallLose?: Ability[];
   landfallGrant?: Ability[];
   landfallDrain?: { life: number; counters: number };
+  tapDrawAllies?: boolean;
   types?: CreatureType[];
   enterDestroy?: CreatureType;
   enterDrain?: { per: string };
@@ -772,7 +776,7 @@ export function buildWorld(entities: RawEntity[]): { world: World; errors: strin
         err(e.id, `sim 오류: ${issues(sim.error)}`);
         continue;
       }
-      const { knows_colors, activated, wins_at_life, extra_combat, landfall_token, landfall_seize, landfall_lose, landfall_grant, landfall_drain, enter_destroy, enter_drain, name, ...rest } = sim.data;
+      const { knows_colors, activated, wins_at_life, extra_combat, landfall_token, landfall_seize, landfall_lose, landfall_grant, landfall_drain, enter_destroy, enter_drain, tap_draw_allies, name, ...rest } = sim.data;
 
       world.npcs.push({
         id: e.id,
@@ -789,6 +793,7 @@ export function buildWorld(entities: RawEntity[]): { world: World; errors: strin
         ...(enter_destroy ? { enterDestroy: enter_destroy } : {}),
         ...(enter_drain ? { enterDrain: enter_drain } : {}),
         ...(landfall_drain ? { landfallDrain: landfall_drain } : {}),
+        ...(tap_draw_allies ? { tapDrawAllies: true } : {}),
         ...(extra_combat ? { extraCombat: { cost: parseManaCost(extra_combat.cost)!, costText: extra_combat.cost } } : {}),
         activated: activated.map((x) => ({ ...x, cost: parseManaCost(x.cost)!, costText: x.cost })),
       });

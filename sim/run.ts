@@ -15,6 +15,7 @@ import { foresightText } from './foresight.ts';
 import { setOff, wandersDue, withPositions } from './wander.ts';
 import { discardOwed, letGo } from './discard.ts';
 import { crushRelic, relicsHere } from './relics.ts';
+import { loremastersOf, recallBlocked, recallCount } from './loremaster.ts';
 import { sacrifice } from './monument.ts';
 import { strandedText } from './stranded.ts';
 import { applyRally, hireableFor, hireMerc, hirePrice, rallyText } from './allies.ts';
@@ -757,6 +758,7 @@ async function prepare(state: State, world: World, llm: Llm): Promise<string | n
           items: claimableItems(state, world, a, state.minutes).map((x) => `  - ${x.id} in ${x.at}: ${x.name} (${x.summary}), costs ${x.costText}`),
           days: daysInput(state, world, a),
           grow: growInput(state, world, a),
+          recall: recallInput(state, world, a),
           fetch: fetchInput(state, world, a),
           court: courtInput(state, world, a),
           hire: hireInput(state, world, a),
@@ -782,6 +784,12 @@ export function usableAbilities(state: State, world: World, t: number) {
   return world.npcs
     .filter((being) => state.actors[being.id] && !outOfTime(state, state.actors[being.id], t))
     .flatMap((being) => (being.activated ?? []).filter((x) => !abilityBlocked(state, world, being.id, x, t)).map((ability) => ({ being, ability })));
+}
+
+// A Sea Gate Loremaster they control they could tap today, for their plan.
+function recallInput(state: State, world: World, a: Actor): PlanDayInput['recall'] {
+  if (recallBlocked(state, world, a, state.minutes)) return undefined;
+  return { who: shortName(loremastersOf(state, world, a)[0].name), count: recallCount(state, world, a) };
 }
 
 // A land like Oran-Rief they could tap today, and whom it would strengthen, for their plan.

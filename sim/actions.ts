@@ -8,6 +8,7 @@ import { HIRE_HOURS, hireBlocked, hirePrice } from './allies.ts';
 import { masterOf } from './retainers.ts';
 import type { State, Task } from './state.ts';
 import { startTravel, travelBlocked } from './step.ts';
+import { RECALL_HOURS, recallBlocked, recallCount } from './loremaster.ts';
 import { bondBlocked, bondTargets, FETCH_HOURS, fetchBlocked, firesOnBond, growBlocked, targetedBondEffect } from './abilities.ts';
 import { CLAIM_HOURS, claimBlocked, itemDef } from './items.ts';
 import { EON_HOURS, spendBlocked, storeBlocked } from './eons.ts';
@@ -41,6 +42,7 @@ export const ActionSchema = z.discriminatedUnion('type', [
   z.object({ type: z.literal('spend_day'), land: z.string() }),
   // Tap a land like Oran-Rief: every creature of its color that came into play today grows.
   z.object({ type: z.literal('grow'), land: z.string() }),
+  z.object({ type: z.literal('recall') }),
   // Hire a mercenary here: pay their price and they serve you for good (sim/allies.ts).
   z.object({ type: z.literal('hire'), to: z.string() }),
   // Answer the pick you owe (an Ally's rally in your party): someone's id, or null for no one.
@@ -180,6 +182,13 @@ export function startAction(state: State, world: World, action: Action): string 
       const r = region(world, action.land);
       task = { kind: 'grow', activity: `${r.name}의 힘 불러내기`, emoji: '🌿', until: until(1), land: r.id };
       text = `${r.name}의 힘을 불러내 오늘 새로 난 생물들을 북돋운다.`;
+      break;
+    }
+    case 'recall': {
+      const why = recallBlocked(state, world, p, t);
+      if (why) return why;
+      task = { kind: 'recall', activity: '전승술사의 기억 빌리기', emoji: '📜', until: until(RECALL_HOURS) };
+      text = `전승술사가 기억하는 것을 함께 짚어 본다. 동료 ${recallCount(state, world, p)}만큼 주문을 떠올린다.`;
       break;
     }
     case 'hire': {

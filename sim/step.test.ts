@@ -19,6 +19,7 @@ import { hasAbility, newState, npcDef, outOfTime, PLAYER_ID, present, ptOf, sync
 import { foresightText } from './foresight.ts';
 import { withPositions } from './wander.ts';
 import { crushRelic, relicsHere } from './relics.ts';
+import { recallBlocked, recallCount } from './loremaster.ts';
 import { claimBlocked } from './items.ts';
 import { spendBlocked, storeBlocked } from './eons.ts';
 import { applyEnterDestroy, bondBlocked, enterDestroy, onEnter, bondLand, bondTargets, callForth, fetchTargets, fireTargets, firesOnBond, growBlocked, spawnWild, summonLibrary, useAbility } from './abilities.ts';
@@ -3020,4 +3021,39 @@ test('relic crush reaches an enchantment that is no aura, standing in a place', 
   assert.deepEqual(relicsHere(state, world, 'loc-a'), [{ id: 'item:itm-e', label: '결계 (부여마법)' }]);
   assert.ok(crushRelic(state, world, 'item:itm-e', state.actors['chr-c'], state.minutes));
   assert.ok(state.items?.['itm-e']?.gone);
+});
+
+test('a loremaster: whoever controls him taps him to come to hold a spell per Ally of their party', async () => {
+  const lore1 = { ...npcSim('loc-a', 'work', [1, 3]), mana: { U: 5 }, ally: true, hireable: true, tap_draw_allies: true };
+  const ogre = { ...npcSim('loc-a', 'work', [3, 2]), mana: { B: 5 }, ally: true, hireable: true };
+  const world = fixture([tribute('loc-a'), mantle, desecrate, sludge, lore('cre-v', 'creature'), npc('chr-l', lore1), npc('chr-o', ogre)]);
+  const state = character(world, 'loc-a');
+  const [p, l] = [state.actors[PLAYER_ID], state.actors['chr-l']];
+  assert.match(recallBlocked(state, world, p, state.minutes)!, /부릴 전승술사가 없다/);
+  p.stats.coin = 200;
+  await act(state, world, { type: 'hire', to: 'chr-l' });
+  await act(state, world, { type: 'hire', to: 'chr-o' });
+  assert.equal(recallCount(state, world, p), 2);
+  await act(state, world, { type: 'recall' });
+  assert.equal(p.spells?.length, 2);
+  assert.equal(p.drawn?.count, 2);
+  assert.ok(l.boundUntil !== undefined); // tapped until midnight
+  assert.match(recallBlocked(state, world, p, state.minutes)!, /지금 쓸 수 없다/);
+  assert.ok(texts(state).some((t) => t.includes('기억을 빌려')));
+  // Alone, he draws on himself: his own plan's recall block.
+  const w2 = fixture([tribute('loc-a'), mantle, lore('cre-v', 'creature'), npc('chr-l', { ...lore1, plan: [['00:00', '24:00', 'loc-a', 'recall', '기억 빌리기', '📜']] })]);
+  const s2 = newState(w2, { seed: 1, mode: 'observer' });
+  await advance(s2, w2, 2);
+  assert.equal(s2.actors['chr-l'].spells?.length, 1);
+});
+
+test('the real Sea Gate Loremaster lives in Sea Gate, an island in Tazeem, for 50 coin', () => {
+  const world = loadWorld();
+  const state = newState(world, { seed: 1, mode: 'observer' });
+  assert.equal(state.actors['chr-sea-gate-loremaster']?.region, 'loc-sea-gate');
+  assert.equal(region(world, 'loc-sea-gate').parent, 'loc-tazeem');
+  assert.deepEqual(landTypes(region(world, 'loc-sea-gate')), ['island']);
+  const def = world.npcs.find((x) => x.id === 'chr-sea-gate-loremaster')!;
+  assert.equal(hirePrice(def), 50);
+  assert.ok(def.tapDrawAllies && def.ally);
 });

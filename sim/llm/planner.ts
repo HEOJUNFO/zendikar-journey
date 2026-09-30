@@ -51,6 +51,8 @@ export type PlanDayInput = {
   days?: { land: string; cost: string; held: number; store: boolean; spend: boolean };
   // A land they hold like Oran-Rief, and the creatures it would strengthen today (when any).
   grow?: { land: string; creatures: string[] };
+  // A Sea Gate Loremaster they control they could tap today, and how many spells it would bring.
+  recall?: { who: string; count: number };
   // Lands they could seek out today by giving up a fetch land they hold (Arid Mesa...).
   fetch?: { id: string; text: string }[];
   // Spells they could learn (where each is taught), and spells they hold and could pay for.
@@ -67,7 +69,7 @@ export type PlanDayInput = {
 
 // Kinds of blocks they may plan: no meals without hunger, taming only if there is an item for
 // them to tame, keeping days only with a land that keeps them.
-function kindsFor(input: Pick<PlanDayInput, 'needs' | 'items' | 'days' | 'grow' | 'fetch' | 'learn' | 'cast' | 'court' | 'hire' | 'people'>) {
+function kindsFor(input: Pick<PlanDayInput, 'needs' | 'items' | 'days' | 'grow' | 'recall' | 'fetch' | 'learn' | 'cast' | 'court' | 'hire' | 'people'>) {
   return LIFE_KINDS.filter(
     (k) =>
       (k !== 'eat' || input.needs.includes('hunger')) &&
@@ -75,6 +77,7 @@ function kindsFor(input: Pick<PlanDayInput, 'needs' | 'items' | 'days' | 'grow' 
       (k !== 'store_day' || !!input.days?.store) &&
       (k !== 'spend_day' || !!input.days?.spend) &&
       (k !== 'grow' || !!input.grow) &&
+      (k !== 'recall' || !!input.recall) &&
       (k !== 'fetch' || !!input.fetch?.length) &&
       (k !== 'learn' || !!input.learn?.length) &&
       (k !== 'cast' || !!input.cast?.length) &&
@@ -124,7 +127,7 @@ role and goals, their needs, what they know happened, and the people they know.
 Answer with JSON only, no prose.`;
 
 function userPrompt(input: PlanDayInput) {
-  const { day, now, name, persona, goal, role, home, here, stats, life, needs, regions, news, foresight, stranded, relations = [], items = [], days, grow, fetch = [], learn = [], cast = [], court = [], hire = [], people = [] } = input;
+  const { day, now, name, persona, goal, role, home, here, stats, life, needs, regions, news, foresight, stranded, relations = [], items = [], days, grow, recall, fetch = [], learn = [], cast = [], court = [], hire = [], people = [] } = input;
   const kinds = kindsFor(input);
   const state = [
     needs.includes('energy') && `energy ${Math.round(stats.energy)}/100 (low = tired; sleep restores it)`,
@@ -169,6 +172,10 @@ Rules:
   }${
     kinds.includes('grow')
       ? `\n- "grow" takes 1 hour, anywhere: they call on ${grow!.land} (no mana from it today) to make stronger, for good, every creature of its color that came into the world today, whoever they belong to: ${grow!.creatures.join(', ')}.`
+      : ''
+  }${
+    kinds.includes('recall')
+      ? `\n- "recall" takes 1 hour, anywhere: ${recall!.who}, who remembers everything their band has seen, is tapped (bound until midnight) and they come to hold ${recall!.count} spell(s) of the world they don't know yet (one per Ally of their party), at random.`
       : ''
   }${
     kinds.includes('fetch')
