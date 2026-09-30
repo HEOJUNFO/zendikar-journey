@@ -15,7 +15,7 @@ import { actorColors, COLORS, formatMana, manaAvailable, manaCapacity, parseMana
 import { MAX_TALKS_PER_DAY, usableAbilities, volleyShares } from './run.ts';
 import { eligibleGmEvents, travelBlocked } from './step.ts';
 import { gainLife, lifeOf } from './life.ts';
-import { hasAbility, newState, npcDef, outOfTime, PLAYER_ID, present, ptOf, syncWorld, targetable } from './state.ts';
+import { hasAbility, needsOf, newState, npcDef, outOfTime, PLAYER_ID, present, ptOf, syncWorld, targetable } from './state.ts';
 import { foresightText } from './foresight.ts';
 import { withPositions } from './wander.ts';
 import { nodeAt } from '../web/view.ts';
@@ -2736,6 +2736,16 @@ test('first strike: one who has it strikes first, and one it fells never strikes
   a1.wounds = undefined; b1.wounds = undefined;
   clash(state, world, a1, b1, t + 60);
   assert.ok(knockedOut(a1) && knockedOut(b1));
+});
+
+test('the real Sky Ruin Drake hunts from the Soaring Seacliff, a flying beast', () => {
+  const world = loadWorld();
+  const state = newState(world, { seed: 1, mode: 'observer' });
+  const d = state.actors['cre-sky-ruin-drake'];
+  assert.equal(d.region, 'loc-soaring-seacliff');
+  assert.ok(hasAbility(d, 'fly', state.minutes));
+  assert.ok(npcDef(state, world, d.id)?.beast);
+  assert.deepEqual(needsOf(d), ['energy', 'hunger']);
 });
 
 test('caught asleep: one sleeping can\'t strike back (nor fly) the first exchange; vigilance is never caught asleep', () => {

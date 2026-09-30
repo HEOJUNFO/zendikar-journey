@@ -5,11 +5,12 @@ name: 솟아오른 바다절벽
 name_en: Soaring Seacliff
 summary: 타짐 해안의 깎아지른 바다절벽. 파도가 바위에 부서지고, 절벽을 타고 치솟는 바람에 날개 가진 것들이 미끄러져 내린다
 status: canon
-sources: [ZEN-225]
+sources: [ZEN-225, ZEN-66]
 tags: [절벽, 해안, 바람, 청색]
 links:
   - { to: loc-tazeem, rel: 바깥 지역 }
   - { to: loc-emeria, rel: 바람을 타고 닿는 하늘 }
+  - { to: cre-sky-ruin-drake, rel: 바람을 타고 사냥하는 드레이크 }
 map: { in: loc-tazeem, terrain: beach, color: U, pos: [0.55, 0.2] }
 sim:
   nonbasic: true                          # 이름 있는 대지: 섬이 아니다
@@ -36,4 +37,4 @@ sim:
 
 ## 미정/질문
 
-- 그림의 날개 가진 것 (드레이크 등): 그 생물 카드가 나오면.
+- 그림의 날개 가진 것: 하늘 폐허의 드레이크(`cre-sky-ruin-drake`, ZEN-66)가 여기 산다 (2026-09-30).
