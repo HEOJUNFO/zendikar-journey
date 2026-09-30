@@ -5,9 +5,10 @@ name: 메마른 메사
 name_en: Arid Mesa
 summary: 온두의 아쿰 쪽 끝, 층층이 깎인 거대한 탁상지가 늘어선 메마른 땅. 먼지 낀 금빛 하늘 아래 검은 가시덤불이 엉켜 있고, 오래된 길이 산과 평원으로 갈라져 나간다
 status: canon
-sources: [ZEN-211, ZEN-212, ZEN-229]
+sources: [ZEN-211, ZEN-212, ZEN-229, ZEN-24]
 tags: [메사, 황무지, 길, 페치]
 links:
+  - { to: spl-landbind-ritual, rel: 배우는 주문 }
   - { to: loc-ondu, rel: 바깥 지역 }
   - { to: loc-akoum, rel: 동쪽의 산 }
   - { to: law-life, rel: 길을 여는 값 }

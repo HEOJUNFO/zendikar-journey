@@ -5,9 +5,10 @@ name: 타짐
 name_en: Tazeem
 summary: 젠디카르 북쪽의 물가 대륙. 깎아지른 절벽과 해안이 이어지고, 하늘에는 에메리아의 폐허가 떠 있으며, 우마라 강에는 거대한 폭포 마고시가 쏟아지고, 오란리프의 숲이 끝없이 자란다
 status: canon
-sources: [ZEN-213, ZEN-218, ZEN-220, ZEN-221, ZEN-225, ZEN-62, ZEN-63, ZEN-77]
+sources: [ZEN-213, ZEN-218, ZEN-220, ZEN-221, ZEN-225, ZEN-62, ZEN-63, ZEN-77, ZEN-96]
 tags: [대륙, 해안, 절벽, 청색]
 links:
+  - { to: cre-halo-hunter, rel: 에메리아 아래 절벽 굴의 악마 }
   - { to: evt-whiplash-trap, rel: 숨은 함정 }
   - { to: loc-sea-gate, rel: 안의 구역 }
   - { to: cre-roil-elemental, rel: 떠도는 뒤틀림 }

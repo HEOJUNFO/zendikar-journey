@@ -8,7 +8,7 @@ status: canon
 sources: [ZEN-213, ZEN-13, ZEN-6, ZEN-199, ZEN-34, ZEN-66]
 tags: [하늘, 폐허, 천사, 백색]
 links:
-  - { to: cre-sky-ruin-drake, rel: 폐허 둘레를 나는 드레이크 }
+  - { to: cre-sky-ruin-drake, rel: 폐허 둘레에 사는 드레이크 }
   - { to: cre-shepherd-of-the-lost, rel: 쓰러진 이를 구하러 내려가는 천사 }
   - { to: itm-eldrazi-monument, rel: 폐허 깊은 곳의 신상 }
   - { to: loc-tazeem, rel: 아래의 땅 }

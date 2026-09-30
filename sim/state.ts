@@ -323,7 +323,7 @@ export function newState(world: World, opts: NewGame): State {
     state.actors[npc.id] = { ...npcActor(npc), tile: homeTile(world, npc) };
     refreshHand(state, world, npc);
   }
-  state.spread = 1;
+  state.spread = SPREAD;
   if (opts.mode === 'character') {
     if (!opts.player) throw new Error('character mode needs a player');
     state.playerId = PLAYER_ID;
@@ -413,13 +413,14 @@ export function syncWorld(state: State, world: World) {
     a.travel = undefined;
     a.schedule = undefined;
   }
-  // Saves from when everyone in a land stood on its middle tile: those at home, on their own.
-  if (!state.spread) {
+  // Saves from when everyone in a land stood on its middle tile, or before their own tiles last
+  // moved (the lore's places): those at home, on their own.
+  if (state.spread !== SPREAD) {
     for (const a of Object.values(state.actors)) {
       const def = world.npcs.find((n) => n.id === a.id);
       if (def && !a.dead && !a.master && !a.travel && a.region === def.home) a.tile = homeTile(world, def);
     }
-    state.spread = 1;
+    state.spread = SPREAD;
   }
   // Saves from before tiles, and tiles the map took away: the nearest tile of their land.
   for (const a of Object.values(state.actors)) {
@@ -503,6 +504,10 @@ export function outOfTime(state: State, a: Actor, t = state.minutes) {
 }
 
 // Living actors standing in a region (not on the road, not out of time).
+// Raised when the places people live in their homes move (sim/tiles.ts homeTile): a save
+// puts those at home on their own tile again.
+const SPREAD = 2;
+
 // Those standing on `tile` of `regionId` (null: anywhere in it), not on the way, not out of time.
 export function present(state: State, regionId: string, tile: Tile | undefined | null) {
   return alive(state).filter((a) => a.region === regionId && (tile === null || sameTile(a.tile, tile)) && !a.travel && !outOfTime(state, a));

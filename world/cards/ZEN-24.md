@@ -11,7 +11,7 @@ rarity: uncommon
 artist: "Steve Prescott"
 scryfall: https://scryfall.com/card/zen/24/landbind-ritual
 added: 2026-09-30
-entities: [spl-landbind-ritual, loc-ondu, law-life]
+entities: [spl-landbind-ritual, loc-arid-mesa, law-life]
 ---
 
 ## 카드 원문

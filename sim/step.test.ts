@@ -1489,10 +1489,10 @@ test('the real Chandra wanders Akoum', () => {
   assert.equal(state.actors['chr-chandra']?.loyalty, 5);
 });
 
-test('the real cobra trap lies in Verdant Catacombs: laid waste, it looses four snakes on the one who did it', () => {
+test('the real cobra trap lies in the Turntimber Grove (the serpentine forest): laid waste, it looses four snakes on the one who did it', () => {
   const world = loadWorld();
   const ev = world.events.find((e) => e.id === 'evt-cobra-trap')!;
-  assert.equal(ev.region, 'loc-verdant-catacombs');
+  assert.equal(ev.region, 'loc-turntimber-grove');
   assert.equal(ev.trigger, 'destroyed');
 });
 
@@ -1958,11 +1958,11 @@ test('Sorin: +2 strikes and drinks, −3 sets a life to 10, −7 takes someone\'
   assert.ok(texts(state).some((t) => t.includes('지배가 끝남')));
 });
 
-test('the real Sorin Markov walks Guul Draz; Chandra has life too', () => {
+test('the real Sorin Markov walks Ondu by Graypelt; Chandra has life too', () => {
   const world = loadWorld();
   const state = newState(world, { seed: 1, mode: 'observer' });
   const so = state.actors['chr-sorin-markov'];
-  assert.equal(so?.region, 'loc-guul-draz');
+  assert.equal(so?.region, 'loc-ondu');
   assert.equal(so.loyalty, 4);
   assert.equal(lifeOf(so), 20);
   assert.equal(lifeOf(state.actors['chr-chandra']), 20);
@@ -2930,11 +2930,11 @@ test('first strike: one who has it strikes first, and one it fells never strikes
   assert.ok(knockedOut(a1) && knockedOut(b1));
 });
 
-test('the real Sky Ruin Drake hunts from the Soaring Seacliff, a flying beast', () => {
+test('the real Sky Ruin Drake hunts about Emeria, the sky ruin, a flying beast', () => {
   const world = loadWorld();
   const state = newState(world, { seed: 1, mode: 'observer' });
   const d = state.actors['cre-sky-ruin-drake'];
-  assert.equal(d.region, 'loc-soaring-seacliff');
+  assert.equal(d.region, 'loc-emeria');
   assert.ok(hasAbility(d, 'fly', state.minutes));
   assert.ok(npcDef(state, world, d.id)?.beast);
   assert.deepEqual(needsOf(d), ['energy', 'hunger']);
@@ -2998,11 +2998,11 @@ test('enter_destroy: arriving where an Angel is, the hunter may destroy it; shro
   assert.equal(state.choices.at(-1)?.effect.type, 'destroy');
 });
 
-test('the real Halo Hunter lairs in Akoum, intimidating, hunting Iona the Angel', () => {
+test('the real Halo Hunter lairs in Tazeem below Emeria, intimidating, hunting Iona the Angel', () => {
   const world = loadWorld();
   const state = newState(world, { seed: 1, mode: 'observer' });
   const h = state.actors['cre-halo-hunter'];
-  assert.equal(h.region, 'loc-akoum');
+  assert.equal(h.region, 'loc-tazeem');
   assert.ok(hasAbility(h, 'intimidate', state.minutes));
   assert.equal(npcDef(state, world, h.id)?.enterDestroy, 'angel');
   assert.deepEqual(npcDef(state, world, 'chr-iona')?.types, ['angel']);
@@ -3149,10 +3149,10 @@ test('a ritual of the land: the caster gains 2 life for each plains they hold (n
   assert.ok(texts(state).some((t) => t.includes('평원과 이어져 있지 않아')));
 });
 
-test('the real Landbind Ritual is taught in Ondu: 2 life per plains', () => {
+test('the real Landbind Ritual is taught on the Arid Mesa of Ondu: 2 life per plains', () => {
   const world = loadWorld();
   const s = world.spells.find((x) => x.id === 'spl-landbind-ritual')!;
-  assert.equal(s.learnAt, 'loc-ondu');
+  assert.equal(s.learnAt, 'loc-arid-mesa');
   assert.equal(s.target, 'self');
   assert.deepEqual(s.effects, [{ type: 'gain_life_per_land', land: 'plains', amount: 2 }]);
 });

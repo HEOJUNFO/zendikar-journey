@@ -10,7 +10,7 @@ tags: [절벽, 해안, 바람, 청색]
 links:
   - { to: loc-tazeem, rel: 바깥 지역 }
   - { to: loc-emeria, rel: 바람을 타고 닿는 하늘 }
-  - { to: cre-sky-ruin-drake, rel: 바람을 타고 사냥하는 드레이크 }
+  - { to: cre-sky-ruin-drake, rel: 바람을 타는 에메리아의 드레이크 }
 map: { in: loc-tazeem, terrain: beach, color: U, pos: [0.55, 0.2], tiles: 10 }
 sim:
   nonbasic: true                          # 이름 있는 대지: 섬이 아니다
@@ -37,4 +37,4 @@ sim:
 
 ## 미정/질문
 
-- 그림의 날개 가진 것: 하늘 폐허의 드레이크(`cre-sky-ruin-drake`, ZEN-66)가 여기 산다 (2026-09-30).
+- 그림의 날개 가진 것: 하늘 폐허의 드레이크(`cre-sky-ruin-drake`, ZEN-66). 곁의 에메리아에 살며 이 절벽의 바람을 탄다 (2026-10-01 에메리아로).
