@@ -13,7 +13,7 @@ import { eligibleGmEvents, travelBlocked } from './step.ts';
 import { gainLife } from './life.ts';
 import { newState, outOfTime, PLAYER_ID, present, ptOf, syncWorld } from './state.ts';
 import { spendBlocked, storeBlocked } from './eons.ts';
-import { bondBlocked, bondLand, fetchTargets, growBlocked, spawnWild, useAbility } from './abilities.ts';
+import { bondBlocked, bondLand, bondVictims, fetchTargets, growBlocked, spawnWild, useAbility } from './abilities.ts';
 import { DEPLETED_LABEL } from './rules.ts';
 import { swayBlocked } from './retainers.ts';
 import type { State } from './state.ts';
@@ -1152,6 +1152,8 @@ test('a land that takes a life: the player picks someone there as they bond, and
   const x = state.actors['chr-x'];
   x.stats.energy = 50;
   assert.match((await act(state, world, { type: 'bond' })).error!, /골라야 한다/);
+  const [snake] = spawnWild(state, world, 'cre-snake', [1, 1], 1, 'loc-piranha', ['G']);
+  assert.ok(bondVictims(state, world, state.actors[PLAYER_ID], 'loc-piranha').includes(snake)); // a beast may be picked too
   await act(state, world, { type: 'bond', target: 'chr-x' });
   assert.deepEqual(state.actors[PLAYER_ID].bonds, ['loc-piranha']);
   assert.equal(x.stats.energy, 36); // -10 for the life, -1 an hour of leisure for 4 hours

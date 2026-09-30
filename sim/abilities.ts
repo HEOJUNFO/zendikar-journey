@@ -28,10 +28,10 @@ export function bondBlocked(state: State, world: World, a: Actor, t: number): st
 
 // Landfall: the land comes under their control (the one they stand on, or one sought out from
 // afar with a fetch land).
-// Who a land's "target player loses N life" may fall on as `a` bonds with it: the people
-// standing there with them (not beasts, not `a`).
+// Who a land's "target player loses N life" may fall on as `a` bonds with it: anyone standing
+// there with them, beasts too (user decision 2026-09-30).
 export function bondVictims(state: State, world: World, a: Actor, regionId: string) {
-  return present(state, regionId).filter((x) => x.id !== a.id && !npcDef(state, world, x.id)?.beast);
+  return present(state, regionId).filter((x) => x.id !== a.id);
 }
 
 // `target` loses the land's life, if they are still there.
