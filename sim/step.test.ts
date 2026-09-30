@@ -1388,3 +1388,9 @@ test('the real Malakir: one who gained life today walks in and the needlebite tr
   assert.ok(texts(state).some((x) => x.includes('가시가 튀어나와')));
   assert.ok(p.stats.energy <= before - 50);
 });
+
+test('the real baloth starts out in the jungle of Bala Ged', () => {
+  const world = loadWorld();
+  const state = newState(world, { seed: 1, mode: 'observer' });
+  assert.equal(state.actors['cre-baloth']?.region, 'loc-bala-ged');
+});
