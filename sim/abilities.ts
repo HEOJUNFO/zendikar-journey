@@ -7,7 +7,7 @@ import { itemsOnLandfall } from './items.ts';
 import { gainLife, loseLife } from './life.ts';
 import { DEPLETED_LABEL } from './rules.ts';
 import { castSpell, spellDef } from './spells.ts';
-import { addLog, npcDef, present, ptOf, random } from './state.ts';
+import { addLog, npcDef, outOfTime, present, ptOf, random } from './state.ts';
 import type { Actor, State } from './state.ts';
 import { josa, shortName, toward } from './text.ts';
 import { LAND_TYPE_LABELS, landTypes, region, spellColors } from './world.ts';
@@ -110,7 +110,8 @@ export function fetchLand(state: State, world: World, a: Actor, fromId: string, 
 // the battlefield"), at their side and theirs again.
 export function upkeepRevive(state: State, world: World, t: number) {
   for (const holder of Object.values(state.actors)) {
-    if (holder.dead) continue;
+    // Out of time: no upkeep for them today.
+    if (holder.dead || outOfTime(state, holder, t)) continue;
     const held = (holder.bonds ?? []).map((id) => world.regions.find((r) => r.id === id)).filter((r) => r && !state.regions[r.id]?.destroyed);
     const plains = held.filter((r) => landTypes(r!).includes('plains')).length;
     const land = held.find((r) => r!.upkeepRevive && plains >= r!.upkeepRevive.plains);

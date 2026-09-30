@@ -1,7 +1,8 @@
 // Mana (world/README.md: MTG 규칙 → 게임 대응). Characters from cards hold their card's mana
 // value in its colors; anyone gets one mana of a land's color per land they have bonded with.
-// Everything refills when a turn starts (00:00). Destroyed and tapped lands give none, nor
-// does a land that enters tapped on the day it is bonded with.
+// Everything refills when a turn starts (00:00). Destroyed and tapped lands give none (nor one
+// its holder tapped for an ability today), nor does a land that enters tapped on the day it
+// is bonded with.
 import { gameDay } from './clock.ts';
 import type { State } from './state.ts';
 import type { NpcDef, World } from './world.ts';
@@ -55,7 +56,13 @@ export function creatureColors(def: NpcDef | undefined): Color[] {
   return def?.colors ?? (Object.keys(def?.mana ?? {}) as Color[]);
 }
 
-type Holder = { id: string; bonds?: string[]; landfalls?: { day: number; regions: string[] }; fallen?: string[] };
+type Holder = {
+  id: string;
+  bonds?: string[];
+  landfalls?: { day: number; regions: string[] };
+  fallen?: string[];
+  landsTapped?: { day: number; ids: string[] };
+};
 
 // What someone can draw on each turn (at `t`: a land that enters tapped gives nothing the day
 // they bonded with it).
@@ -68,6 +75,7 @@ export function manaCapacity(state: State, world: World, a: Holder, t?: number):
     const rs = state.regions[id];
     if (!r || r.noMana || rs?.destroyed || rs?.conditions.some((c) => c.tapped)) continue;
     if (r.entersTapped && t !== undefined && a.landfalls?.day === gameDay(t) && a.landfalls.regions.includes(id)) continue;
+    if (t !== undefined && a.landsTapped?.day === gameDay(t) && a.landsTapped.ids.includes(id)) continue;
     if (r.fallenMana) {
       const { color, cost } = r.fallenMana;
       const n = (a.fallen ?? []).filter((id) => creatureColors(world.npcs.find((x) => x.id === id) ?? state.tokens?.[id]).includes(color)).length;

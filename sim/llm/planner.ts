@@ -37,12 +37,21 @@ export type PlanDayInput = {
   relations?: string[];
   // Items no one holds that they could tame today ("- itm-… in loc-…: …").
   items?: string[];
+  // A land they hold that keeps days (Magosi, sim/eons.ts): days left in it, and whether they
+  // can leave one or take one back today.
+  days?: { land: string; cost: string; held: number; store: boolean; spend: boolean };
 };
 
 // Kinds of blocks they may plan: no meals without hunger, taming only if there is an item for
-// them to tame.
-function kindsFor(input: Pick<PlanDayInput, 'needs' | 'items'>) {
-  return LIFE_KINDS.filter((k) => (k !== 'eat' || input.needs.includes('hunger')) && (k !== 'claim' || !!input.items?.length));
+// them to tame, keeping days only with a land that keeps them.
+function kindsFor(input: Pick<PlanDayInput, 'needs' | 'items' | 'days'>) {
+  return LIFE_KINDS.filter(
+    (k) =>
+      (k !== 'eat' || input.needs.includes('hunger')) &&
+      (k !== 'claim' || !!input.items?.length) &&
+      (k !== 'store_day' || !!input.days?.store) &&
+      (k !== 'spend_day' || !!input.days?.spend),
+  );
 }
 
 // Asks the chat model for today's schedule. Returns null when the answer isn't a usable
@@ -68,7 +77,7 @@ role and goals, their needs, what they know happened, and the people they know.
 Answer with JSON only, no prose.`;
 
 function userPrompt(input: PlanDayInput) {
-  const { day, now, name, persona, goal, role, home, here, stats, needs, regions, news, relations = [], items = [] } = input;
+  const { day, now, name, persona, goal, role, home, here, stats, needs, regions, news, relations = [], items = [], days } = input;
   const kinds = kindsFor(input);
   const state = [
     needs.includes('energy') && `energy ${Math.round(stats.energy)}/100 (low = tired)`,
@@ -98,6 +107,14 @@ Rules:
 - "bond" takes 4 hours in one region: they make that land theirs and draw its mana each day (at most one land a day; not one already theirs or hunted out). Only if it fits who they are.${
     kinds.includes('claim')
       ? `\n- "claim" takes 1 hour where an item stands: they pay its mana and it becomes theirs (only if they would want it). Items no one holds:\n${items.join('\n')}`
+      : ''
+  }${
+    kinds.includes('store_day')
+      ? `\n- "store_day" takes 1 hour, anywhere: they pay ${days!.cost} and leave a day in ${days!.land}. Tomorrow is lost to them: they stand out of time all day, doing nothing. The day stays there for later (${days!.held} left in it now).`
+      : ''
+  }${
+    kinds.includes('spend_day')
+      ? `\n- "spend_day" takes 1 hour, anywhere: they take back a day left in ${days!.land}; the land leaves them (their bond with it ends). Tomorrow the whole world stands still and only they move: a day no one else has.`
       : ''
   }
 - Travel between regions takes hours; only change region when there is a reason.

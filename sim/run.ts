@@ -4,12 +4,13 @@
 import { formatClock, gameDay } from './clock.ts';
 import { startAction } from './actions.ts';
 import type { Action } from './actions.ts';
-import { addLog, npcDef, player, speakerDef } from './state.ts';
+import { addLog, npcDef, outOfTime, player, speakerDef } from './state.ts';
 import type { Actor, GmPlan, LogEntry, State } from './state.ts';
 import { eligibleGmEvents, step } from './step.ts';
 import { addFoe, clash } from './combat.ts';
 import { relationsText, remember } from './relations.ts';
 import { claimableItems } from './items.ts';
+import { eonLand, eonsIn, spendBlocked, storeBlocked } from './eons.ts';
 import { castSpell } from './spells.ts';
 import { abilityBlocked } from './abilities.ts';
 import { bindRetainer, swayBlocked } from './retainers.ts';
@@ -86,6 +87,20 @@ export async function act(state: State, world: World, input: Action | string, ll
   const halted = await prepare(state, world, llm);
   if (halted) return { error: halted, entries: [] };
   const firstId = state.nextLogId;
+  // Out of time (their day left in Magosi, or someone else's extra day): the day passes them by.
+  if (outOfTime(state, p)) {
+    let n = 0;
+    for (; outOfTime(state, p) && !state.over && n < MAX_ACT_HOURS; n++) {
+      const stop = await prepare(state, world, llm);
+      if (stop) return { error: stop, entries: state.log.filter((e) => e.id >= firstId) };
+      const before = state.nextLogId;
+      step(state, world);
+      await conversations(state, world, before, llm);
+    }
+    addLog(state, { kind: 'system', text: `시간 밖에서 ${n}시간이 흘렀다. 이제 다시 움직일 수 있다.`, regions: [p.region], actors: [p.id] });
+    await narrate(state, world, firstId, llm);
+    return { entries: state.log.filter((e) => e.id >= firstId) };
+  }
   const error = startAction(state, world, action);
   if (error) return { error, entries: [] };
   if (action.type === 'talk') await talk(state, world, p, action.to, action.say, llm);
@@ -93,7 +108,7 @@ export async function act(state: State, world: World, input: Action | string, ll
   if (action.type === 'cast') castSpell(state, world, p, action.spell, action.to, action.kick, state.minutes);
 
   let halt: string | undefined;
-  for (let n = 0; busy(p) && !state.over && n < MAX_ACT_HOURS; n++) {
+  for (let n = 0; busy(state, p) && !state.over && n < MAX_ACT_HOURS; n++) {
     halt = (await prepare(state, world, llm)) ?? undefined;
     if (halt) break;
     const before = state.nextLogId;
@@ -153,8 +168,9 @@ async function conversations(state: State, world: World, since: number, llm: Llm
   }
 }
 
-function busy(p: Actor) {
-  return !!(p.task || p.travel || p.forced || p.boundUntil !== undefined);
+// Still doing something, or out of time (their action waits until they are back).
+function busy(state: State, p: Actor) {
+  return !!(p.task || p.travel || p.forced || p.boundUntil !== undefined || outOfTime(state, p));
 }
 
 async function talk(state: State, world: World, p: Actor, npcId: string, say: string, llm: Llm) {
@@ -223,7 +239,8 @@ const PLAN_TRIES = 2;
 // why it halts, or null. The events plan may fail: then nothing is raised that day.
 async function prepare(state: State, world: World, llm: Llm): Promise<string | null> {
   const day = gameDay(state.minutes);
-  const unplanned = Object.values(state.actors).filter((a) => a.kind === 'npc' && !a.dead && a.schedule?.day !== day);
+  // Those out of time today have no day to plan.
+  const unplanned = Object.values(state.actors).filter((a) => a.kind === 'npc' && !a.dead && a.schedule?.day !== day && !outOfTime(state, a));
   if (unplanned.length && !llm.planDay) return 'LLM 설정이 없어 인물들의 하루를 짤 수 없다. 세계가 멈춰 있다.';
   const news = recentNews(state, world);
   const jobs: Promise<void>[] = unplanned.map(async (a) => {
@@ -246,6 +263,7 @@ async function prepare(state: State, world: World, llm: Llm): Promise<string | n
           relations: relationsText(a),
           regions: world.regions.filter((r) => canStay(r, npc.abilities)).map((r) => ({ ...r, name: placeName(world, r) })),
           items: claimableItems(state, world, a, state.minutes).map((x) => `  - ${x.id} in ${x.at}: ${x.name} (${x.summary}), costs ${x.costText}`),
+          days: daysInput(state, world, a),
           news,
         });
         if (blocks) a.schedule = { day, source: 'llm', blocks };
@@ -259,7 +277,9 @@ async function prepare(state: State, world: World, llm: Llm): Promise<string | n
     const gmDay = llm.gmDay;
     jobs.push(
       (async () => {
-        const eligible = eligibleGmEvents(state, world, state.minutes);
+        // Someone's extra day: the world stands still, nothing is raised; only they may use a power.
+        const extra = state.extraDays?.find((x) => x.day === day);
+        const eligible = extra ? [] : eligibleGmEvents(state, world, state.minutes);
         const abilities = usableAbilities(state, world, state.minutes);
         if (!eligible.length && !abilities.length) return void (state.gm = { day, source: 'llm', fires: [] });
         try {
@@ -280,9 +300,23 @@ async function prepare(state: State, world: World, llm: Llm): Promise<string | n
 
 // Activated abilities characters could use today: untapped and able to pay.
 export function usableAbilities(state: State, world: World, t: number) {
-  return world.npcs.flatMap((being) =>
-    (being.activated ?? []).filter((x) => !abilityBlocked(state, world, being.id, x, t)).map((ability) => ({ being, ability })),
-  );
+  return world.npcs
+    .filter((being) => state.actors[being.id] && !outOfTime(state, state.actors[being.id], t))
+    .flatMap((being) => (being.activated ?? []).filter((x) => !abilityBlocked(state, world, being.id, x, t)).map((ability) => ({ being, ability })));
+}
+
+// What they can do with a land that keeps days (Magosi) today, for their plan.
+function daysInput(state: State, world: World, a: Actor): PlanDayInput['days'] {
+  const land = eonLand(world, a);
+  if (!land) return undefined;
+  const t = state.minutes;
+  return {
+    land: land.name,
+    cost: land.eon!.costText,
+    held: eonsIn(a, land.id),
+    store: !storeBlocked(state, world, a, land.id, t),
+    spend: !spendBlocked(state, world, a, land.id, t),
+  };
 }
 
 // What happened in the last day, for planning prompts.

@@ -1,5 +1,5 @@
 // Everything that changes while the world runs. Plain JSON so it saves as-is.
-import { START_MINUTES } from './clock.ts';
+import { gameDay, START_MINUTES } from './clock.ts';
 import { INITIAL_STATS } from './rules.ts';
 import { NEEDS } from './types.ts';
 import type { LifeKind, Need, Pace, Schedule, Stats } from './types.ts';
@@ -19,7 +19,8 @@ export type Task = {
   spell?: string;
   // claim: the item being tamed.
   item?: string;
-  // fetch: the land given up, and the land sought.
+  // fetch: the land given up, and the land sought. store_day / spend_day: the land that
+  // keeps days (sim/eons.ts).
   from?: string;
   land?: string;
 };
@@ -60,6 +61,12 @@ export type Actor = {
   fetched?: string[];
   // Their retainers who died serving them: their "graveyard" of creatures.
   fallen?: string[];
+  // Lands they tapped for an ability today: they give no mana until 00:00.
+  landsTapped?: { day: number; ids: string[] };
+  // Days left in a land that keeps them (Magosi's eon counters), by land (sim/eons.ts).
+  eons?: Record<string, number>;
+  // The game day they skip ("skip your next turn"): out of time all that day.
+  skipDay?: number;
   // Spells they know (world/entities/spells): their hand.
   spells?: string[];
   // Spells they let go of (discarded): their graveyard.
@@ -170,6 +177,8 @@ export type State = {
   talks?: { day: number; count: number };
   // Items (sim/items.ts): who holds each, and the charge counters on it.
   items?: Record<string, { name: string; owner?: string; counters: number }>;
+  // Extra turns (sim/eons.ts): on that game day only `actor` moves; everyone else is out of time.
+  extraDays?: { actor: string; day: number }[];
   nextLogId: number;
   log: LogEntry[];
 };
@@ -326,9 +335,18 @@ export function alive(state: State) {
   return Object.values(state.actors).filter((a) => !a.dead);
 }
 
-// Living actors standing in a region (not on the road).
+// Out of time at `t`: skipping this day, or it is someone else's extra day (sim/eons.ts).
+// They stand where they are, untouched and unchanged, until the day ends.
+export function outOfTime(state: State, a: Actor, t = state.minutes) {
+  const day = gameDay(t);
+  if (a.skipDay === day) return true;
+  const extra = state.extraDays?.find((x) => x.day === day);
+  return !!extra && extra.actor !== a.id;
+}
+
+// Living actors standing in a region (not on the road, not out of time).
 export function present(state: State, regionId: string) {
-  return alive(state).filter((a) => a.region === regionId && !a.travel);
+  return alive(state).filter((a) => a.region === regionId && !a.travel && !outOfTime(state, a));
 }
 
 // Power / toughness now, with this turn's boost and their auras.

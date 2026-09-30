@@ -3,12 +3,13 @@ import type { ReactNode } from 'react';
 import type { Action } from '../sim/actions.ts';
 import { PACE_LABELS } from '../sim/actions.ts';
 import { formatClock, formatTimeOfDay, gameDay, minuteOfDay } from '../sim/clock.ts';
-import { isPerson, needsOf, player, present, ptOf } from '../sim/state.ts';
+import { isPerson, needsOf, outOfTime, player, present, ptOf } from '../sim/state.ts';
 import { woundsOf } from '../sim/combat.ts';
 import { formatMana, manaAvailable, manaCapacity, manaLabel } from '../sim/mana.ts';
 import { bondBlocked, fetchTargets } from '../sim/abilities.ts';
 import { BOND_HOURS } from '../sim/actions.ts';
 import { CLAIM_HOURS, claimBlocked, itemsAt, itemsOf } from '../sim/items.ts';
+import { eonLand, eonsIn, spendBlocked, storeBlocked } from '../sim/eons.ts';
 import { castBlocked, harmful, learnBlocked, spellsTaughtAt } from '../sim/spells.ts';
 import type { Actor, LogEntry, State } from '../sim/state.ts';
 import { travelBlocked } from '../sim/step.ts';
@@ -137,12 +138,13 @@ export function RegionCard(props: {
       </h2>
       {parent && <p className="muted">{parent.name} 안의 구역</p>}
       <p>{r.summary}</p>
-      {(r.entersTapped || r.onBond.length > 0 || r.fetch) && (
+      {(r.entersTapped || r.onBond.length > 0 || r.fetch || r.eon) && (
         <p className="muted">
           {[
             r.entersTapped && '유대를 맺은 날은 마나를 내지 않음',
             ...r.onBond.map((x) => `유대를 맺으면 생명 ${x.amount}`),
             r.fetch && `내어 주면 ${r.fetch.types.map((x) => LAND_TYPE_LABELS[x]).join('·')} 땅 하나와 멀리서 유대 (생명 ${r.fetch.life})`,
+            r.eon && `하루를 맡기면 (${r.eon.costText}) 내일을 잃고, 되찾으면 세상이 멈춘 하루를 얻음`,
           ].filter(Boolean).join(' · ')}
         </p>
       )}
@@ -351,6 +353,7 @@ export function CharacterControls(props: {
   const [talkTo, setTalkTo] = useState('');
   const [line, setLine] = useState('');
   const people = present(state, p.region).filter((a) => isPerson(a) && a.boundUntil === undefined);
+  const keeper = eonLand(world, p);
   const stuck = p.travel || p.forced || p.boundUntil !== undefined;
   const target = people.find((a) => a.id === talkTo) ?? people[0];
   if (state.over) {
@@ -359,6 +362,18 @@ export function CharacterControls(props: {
         <p className="over">
           {p.name}의 인생은 {formatClock(state.over.at)}에 끝났다 ({state.over.cause}). 새 게임으로 다시 시작할 수 있다.
         </p>
+      </div>
+    );
+  }
+
+  // Out of time (a day left in Magosi, or someone else's extra day): nothing to do but let it pass.
+  if (outOfTime(state, p)) {
+    return (
+      <div className="controls controls-player">
+        <p className="muted">⏳ 시간 밖에 있다. 오늘 하루는 당신의 것이 아니다.</p>
+        <button disabled={busy} onClick={() => onAct({ type: 'wait', hours: 1 })}>
+          시간 밖의 하루 흘려보내기
+        </button>
       </div>
     );
   }
@@ -426,6 +441,27 @@ export function CharacterControls(props: {
             {fetchTargets(state, world, p, r.id).length === 0 && <span className="muted">찾을 땅이 없다</span>}
           </div>
         ))}
+      {keeper && (
+        <div className="row">
+          <span className="muted">
+            ⏳ {keeper.name} (맡겨 둔 날 {eonsIn(p, keeper.id)}):
+          </span>
+          <button
+            disabled={busy || !!stuck || !!storeBlocked(state, world, p, keeper.id, state.minutes)}
+            title={storeBlocked(state, world, p, keeper.id, state.minutes) ?? `${keeper.eon!.costText}. 내일 하루를 시간 밖에서 보낸다`}
+            onClick={() => onAct({ type: 'store_day', land: keeper.id })}
+          >
+            하루 맡기기
+          </button>
+          <button
+            disabled={busy || !!stuck || !!spendBlocked(state, world, p, keeper.id, state.minutes)}
+            title={spendBlocked(state, world, p, keeper.id, state.minutes) ?? `${keeper.name}과의 유대가 끊기고, 내일은 나만 움직이는 하루`}
+            onClick={() => onAct({ type: 'spend_day', land: keeper.id })}
+          >
+            하루 되찾기
+          </button>
+        </div>
+      )}
       {people.length > 0 && (
         <form
           className="row"

@@ -7,11 +7,12 @@ import type { Llm } from './run.ts';
 import type { Action } from './actions.ts';
 import type { World } from './world.ts';
 import { die, knockedOut, woundsOf } from './combat.ts';
-import { manaAvailable, manaCapacity, parseManaCost, planPayment } from './mana.ts';
+import { formatMana, manaAvailable, manaCapacity, parseManaCost, planPayment } from './mana.ts';
 import { MAX_TALKS_PER_DAY, usableAbilities } from './run.ts';
 import { eligibleGmEvents, travelBlocked } from './step.ts';
 import { gainLife } from './life.ts';
-import { newState, PLAYER_ID, ptOf, syncWorld } from './state.ts';
+import { newState, outOfTime, PLAYER_ID, present, ptOf, syncWorld } from './state.ts';
+import { spendBlocked, storeBlocked } from './eons.ts';
 import { bondBlocked, bondLand, fetchTargets, useAbility } from './abilities.ts';
 import { DEPLETED_LABEL } from './rules.ts';
 import { swayBlocked } from './retainers.ts';
@@ -1029,4 +1030,81 @@ test('at dawn, one holding the ruin and enough plains gets back the last retaine
   assert.equal(y.master, PLAYER_ID);
   assert.ok(state.actors['chr-x'].dead); // one a day
   assert.deepEqual(p.fallen, ['chr-x']);
+});
+
+const magosi: RawEntity = {
+  id: 'loc-magosi',
+  kind: 'location',
+  name: '마고시',
+  status: 'canon',
+  map: { in: 'loc-a', terrain: 'river' },
+  sim: { nonbasic: true, enters_tapped: true, eon: { cost: '{U}' } },
+};
+const blue = loc('loc-u', 20, 20, 'beach');
+
+test('a day left in Magosi (its tap and {U}): the next day is lost, out of time and unchanged', async () => {
+  const world = fixture([magosi, blue]);
+  const state = character(world, 'loc-magosi');
+  const p = state.actors[PLAYER_ID];
+  p.bonds = ['loc-magosi'];
+  // Magosi's own mana can't pay: tapping it is the cost.
+  assert.match(storeBlocked(state, world, p, 'loc-magosi', state.minutes)!, /마나가 모자라다/);
+  p.bonds.push('loc-u');
+  await act(state, world, { type: 'store_day', land: 'loc-magosi' });
+  assert.deepEqual(p.eons, { 'loc-magosi': 1 });
+  assert.equal(p.skipDay, 1);
+  assert.equal(formatMana(manaAvailable(state, world, p, state.minutes)), '없음'); // Magosi tapped, {U} paid
+  assert.match(storeBlocked(state, world, p, 'loc-magosi', state.minutes)!, /오늘 이미 마고시를 썼다/);
+  await advance(state, world, 17); // to 2일차 00:00
+  assert.ok(outOfTime(state, p));
+  assert.ok(!present(state, 'loc-magosi').includes(p));
+  const energy = p.stats.energy;
+  await advance(state, world, 24);
+  assert.equal(formatClock(state.minutes), '3일차 00:00');
+  assert.equal(p.stats.energy, energy); // time didn't touch them
+  assert.ok(!outOfTime(state, p));
+  assert.ok(texts(state).some((x) => x.includes('시간 밖에 있다')));
+});
+
+test('a day taken back from Magosi: the land leaves, and the next day the world stands still for them alone', async () => {
+  const world = fixture([magosi, npc('chr-x', { ...npcSim('loc-a'), plan: allDay('loc-b', 'work') }), npc('chr-y', npcSim('loc-a'))]);
+  const state = character(world, 'loc-a');
+  const p = state.actors[PLAYER_ID];
+  p.bonds = ['loc-magosi'];
+  assert.match(spendBlocked(state, world, p, 'loc-magosi', state.minutes)!, /맡겨 둔 하루가 없다/);
+  p.eons = { 'loc-magosi': 2 };
+  const y = state.actors['chr-y'];
+  y.skipDay = 1; // meant to lose tomorrow: now the day after, as tomorrow is no one's turn but the player's
+  await act(state, world, { type: 'spend_day', land: 'loc-magosi' });
+  assert.deepEqual(p.bonds, []);
+  assert.deepEqual(p.eons, {}); // gone with the land
+  assert.deepEqual(state.extraDays, [{ actor: PLAYER_ID, day: 1 }]);
+  assert.equal(y.skipDay, 2);
+  await advance(state, world, 17); // 2일차 00:00: the extra day
+  const x = state.actors['chr-x'];
+  const [where, energy] = [x.region, x.stats.energy];
+  assert.ok(outOfTime(state, x));
+  await act(state, world, { type: 'move', to: 'loc-c' });
+  assert.equal(p.region, 'loc-c');
+  await advance(state, world, 20);
+  assert.equal(x.region, where);
+  assert.equal(x.stats.energy, energy);
+  assert.equal(x.schedule?.day, 0); // no day planned for them
+  assert.ok(texts(state).some((t) => t.startsWith('세상이 멈췄다')));
+  await advance(state, world, 4); // 3일차: everyone's turn again (but chr-y's, lost)
+  assert.ok(!outOfTime(state, x));
+  assert.ok(outOfTime(state, y));
+});
+
+test('an NPC leaves a day in Magosi by a store_day block, and loses the next day', async () => {
+  const world = fixture([magosi, blue, npc('chr-m', { ...npcSim('loc-a'), plan: [['00:00', '24:00', 'loc-a', 'store_day', '폭포에 하루 맡기기', '⏳']] })]);
+  const state = character(world, 'loc-a');
+  const m = state.actors['chr-m'];
+  m.bonds = ['loc-magosi', 'loc-u'];
+  await advance(state, world, 2);
+  assert.deepEqual(m.eons, { 'loc-magosi': 1 });
+  assert.equal(m.skipDay, 1);
+  await advance(state, world, 20); // into 2일차
+  assert.ok(outOfTime(state, m));
+  assert.equal(m.schedule?.day, 0); // not planned: the day isn't theirs
 });

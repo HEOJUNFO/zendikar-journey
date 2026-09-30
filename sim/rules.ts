@@ -12,6 +12,8 @@ export const KIND_EFFECTS: Record<LifeKind, Effect> = {
   leisure: { energy: -1, hunger: 3, coin: 0 },
   bond: { energy: -1, hunger: 3, coin: 0 },
   claim: { energy: -1, hunger: 3, coin: 0 },
+  store_day: { energy: -1, hunger: 3, coin: 0 },
+  spend_day: { energy: -1, hunger: 3, coin: 0 },
 };
 // Change per game hour while travelling between regions.
 export const TRAVEL_EFFECT: Effect = { energy: -3, hunger: 4, coin: 0 };

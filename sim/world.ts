@@ -26,6 +26,7 @@ export const TERRAIN_IDS = [
   'volcanic',
   'swamp',
   'ruins',
+  'river',
   'deepsea',
 ] as const;
 export type Terrain = (typeof TERRAIN_IDS)[number];
@@ -55,6 +56,7 @@ export const TERRAINS: Record<Terrain, TerrainInfo> = {
   volcanic: { label: '화산 지대', color: '#b5462c', mana: 'R', type: 'mountain' },
   swamp: { label: '늪', color: '#4f4a5e', mana: 'B', type: 'swamp' },
   ruins: { label: '폐허', color: '#6a5a82', mana: null },
+  river: { label: '강·폭포', color: '#4f8fb8', mana: 'U', type: 'island' },
   deepsea: { label: '심해', color: '#1d3b66', mana: 'U', sea: true },
 };
 
@@ -63,6 +65,8 @@ export const TERRAINS: Record<Terrain, TerrainInfo> = {
 // Mana color of a land (C = colorless; [B, R] = one of the two, chosen when spent). Default:
 // from the terrain.
 const LandColor = z.union([z.enum([...COLORS, 'C']), z.tuple([z.enum(COLORS), z.enum(COLORS)])]).optional();
+
+const CostSchema = z.string().refine((s) => parseManaCost(s) !== null, '마나 비용 형식: "{5}{B}{B}"');
 
 // What a land does of its own (a location's `sim`): "enters tapped" (bonded with, it gives no
 // mana that day) and what bonding with it brings ("When this land enters, you gain 1 life").
@@ -88,6 +92,11 @@ export const LandSimSchema = z.strictObject({
   // plains or more gets back the last retainer who died serving them.
   upkeep_revive: z.strictObject({ plains: z.number().int().positive() }).optional(),
   on_bond: z.array(z.discriminatedUnion('type', [z.strictObject({ type: z.literal('gain_life'), amount: z.number().int().positive() })])).default([]),
+  // "{U}, {T}: Put an eon counter on this land. Skip your next turn" and "{T}, Remove an eon
+  // counter and return it to its owner's hand: Take an extra turn after this one" (Magosi):
+  // whoever holds it may leave a day in it (losing their next day) and later take it back
+  // (the bond ends, and the next day the world stands still for them alone). sim/eons.ts.
+  eon: z.strictObject({ cost: CostSchema }).optional(),
 });
 export type BondEffect = z.infer<typeof LandSimSchema>['on_bond'][number];
 
@@ -113,7 +122,6 @@ export const MapSchema = z.union([
 
 // Mana a character holds, from its card: { B: 7 } for {5}{B}{B}.
 const ManaSchema = z.partialRecord(z.enum(COLORS), z.number().int().min(1));
-const CostSchema = z.string().refine((s) => parseManaCost(s) !== null, '마나 비용 형식: "{5}{B}{B}"');
 
 // Power / toughness, as on the card. Combat damage piles up against toughness until the turn
 // ends; reaching it is death.
@@ -357,6 +365,8 @@ export type Region = {
   fallenMana?: { color: Color; cost: number };
   climbHours?: number;
   upkeepRevive?: { plains: number };
+  // Keeps days (sim/eons.ts): what leaving one costs, besides tapping the land.
+  eon?: { cost: ManaCost; costText: string };
   // An area inside this region (its x, y are the region's). Areas are lands of their own:
   // people meet, bond, and get hit by events there, but an event on the region reaches them.
   parent?: string;
@@ -497,6 +507,7 @@ export function buildWorld(entities: RawEntity[]): { world: World; errors: strin
           fallenMana: land.data?.fallen_mana,
           climbHours: land.data?.climb_hours,
           upkeepRevive: land.data?.upkeep_revive,
+          eon: land.data?.eon && { cost: parseManaCost(land.data.eon.cost)!, costText: land.data.eon.cost },
         });
       }
     }

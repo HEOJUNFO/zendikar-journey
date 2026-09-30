@@ -9,7 +9,7 @@ import { masterOf, releaseRetainer, retainersOf } from './retainers.ts';
 import { releaseItems } from './items.ts';
 import { doubleLife } from './life.ts';
 import { HUNT_HUNGER, KILL_FEED, KO_ACTIVITY, KO_HOURS } from './rules.ts';
-import { addLog, needsOf, npcDef, present, ptOf, random } from './state.ts';
+import { addLog, needsOf, npcDef, outOfTime, present, ptOf, random } from './state.ts';
 import type { Actor, State } from './state.ts';
 import { hasPowers } from './world.ts';
 import type { World } from './world.ts';
@@ -192,7 +192,7 @@ function prey(state: State, world: World, a: Actor, t: number) {
 // to fighting. A hungry beast makes a foe of its prey; if it kills, it feeds.
 export function hostileNpcs(state: State, world: World, t: number) {
   for (const a of Object.values(state.actors)) {
-    if (a.kind === 'player' || a.dead || a.travel || a.boundUntil !== undefined) continue;
+    if (a.kind === 'player' || a.dead || a.travel || a.boundUntil !== undefined || outOfTime(state, a, t)) continue;
     if (a.forced && a.forced.kind !== 'fight') continue; // collapsed
     if (a.lastClash === t) continue; // already fought this hour
     // Their own foes, and (a retainer) whoever their master is fighting right here.

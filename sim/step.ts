@@ -19,10 +19,11 @@ import {
   TRAVEL_EFFECT,
 } from './rules.ts';
 import { gainedLifeToday, loseLife } from './life.ts';
-import { addLog, alive, landUnusable, needsOf, npcDef, present, ptOf, random } from './state.ts';
+import { addLog, alive, landUnusable, needsOf, npcDef, outOfTime, present, ptOf, random } from './state.ts';
 import { addFoe, dealDamage, hostileNpcs } from './combat.ts';
 import { bondBlocked, bondLand, fetchLand, spawnWild, upkeepRevive, useAbility } from './abilities.ts';
 import { CLAIM_HOURS, claimBlocked, claimItem, itemsAt } from './items.ts';
+import { EON_HOURS, eonLand, holdStill, spendBlocked, spendDay, storeBlocked, storeDay, timeNews } from './eons.ts';
 import { learnSpell } from './spells.ts';
 import { masterOf } from './retainers.ts';
 import { payMana } from './mana.ts';
@@ -40,14 +41,23 @@ export function step(state: State, world: World) {
   regionLayer(state, world, t);
   hostileNpcs(state, world, t);
   for (const a of alive(state)) {
+    // Out of time (a day left in Magosi, or someone else's extra day): nothing moves for them.
+    if (outOfTime(state, a, t)) {
+      holdStill(a);
+      continue;
+    }
     actorHour(state, world, a, t);
-    // A timed task done: the player's action, or an NPC's bonding or taming.
+    // A timed task done: the player's action, or an NPC's bonding, taming or keeping days.
     const done = a.task?.until !== undefined && a.task.until <= t + STEP_MINUTES && !a.travel;
-    if (done && (a.kind === 'player' || a.task!.kind === 'bond' || a.task!.kind === 'claim')) {
-      if (a.task!.kind === 'bond') bondLand(state, world, a, t + STEP_MINUTES);
-      if (a.task!.kind === 'learn' && a.task!.spell) learnSpell(state, world, a, a.task!.spell, t + STEP_MINUTES);
-      if (a.task!.kind === 'claim' && a.task!.item) claimItem(state, world, a, a.task!.item, t + STEP_MINUTES);
-      if (a.task!.kind === 'fetch' && a.task!.from && a.task!.land) fetchLand(state, world, a, a.task!.from, a.task!.land, t + STEP_MINUTES);
+    const timed = ['bond', 'claim', 'store_day', 'spend_day'];
+    if (done && (a.kind === 'player' || timed.includes(a.task!.kind))) {
+      const at = t + STEP_MINUTES;
+      if (a.task!.kind === 'bond') bondLand(state, world, a, at);
+      if (a.task!.kind === 'learn' && a.task!.spell) learnSpell(state, world, a, a.task!.spell, at);
+      if (a.task!.kind === 'claim' && a.task!.item) claimItem(state, world, a, a.task!.item, at);
+      if (a.task!.kind === 'fetch' && a.task!.from && a.task!.land) fetchLand(state, world, a, a.task!.from, a.task!.land, at);
+      if (a.task!.kind === 'store_day' && a.task!.land) storeDay(state, world, a, a.task!.land, at);
+      if (a.task!.kind === 'spend_day' && a.task!.land) spendDay(state, world, a, a.task!.land, at);
       a.task = undefined;
     }
   }
@@ -60,8 +70,11 @@ export function step(state: State, world: World) {
 
 function startDay(state: State, world: World, t: number) {
   const day = gameDay(t);
-  // The upkeep: at a turn's start.
-  if (minuteOfDay(t) === 0) upkeepRevive(state, world, t);
+  // The upkeep: at a turn's start. Who is out of time today hears so first.
+  if (minuteOfDay(t) === 0) {
+    timeNews(state, world, t);
+    upkeepRevive(state, world, t);
+  }
   if (state.gm.day !== day) state.gm = { day, source: 'none', fires: [] };
   if (state.met.day !== day) state.met = { day, pairs: [] };
   // "Until end of turn" wears off.
@@ -106,6 +119,8 @@ function gmLayer(state: State, world: World, t: number) {
     }
     for (const u of state.gm.uses ?? []) {
       if (u.hour !== hour) continue;
+      const [by, on] = [state.actors[u.being], u.target ? state.actors[u.target] : undefined];
+      if ((by && outOfTime(state, by, t)) || (on && outOfTime(state, on, t))) continue;
       const why = useAbility(state, world, u.being, u.ability, u.target, t);
       if (why) console.warn(`Ability ${u.being}/${u.ability} on ${u.target} skipped: ${why}`);
     }
@@ -164,7 +179,7 @@ function trigger(state: State, world: World, ev: EventDef, t: number, cause: Cau
 
 function fire(state: State, world: World, ev: EventDef, t: number, omened: boolean, cause: Partial<Cause>) {
   const regions = affectedRegions(world, ev).map((r) => r.id);
-  const targets = alive(state).filter((a) => !a.travel && regions.includes(a.region));
+  const targets = alive(state).filter((a) => !a.travel && regions.includes(a.region) && !outOfTime(state, a, t));
   addLog(state, {
     kind: 'event',
     text: ev.text,
@@ -361,13 +376,19 @@ function npcTask(state: State, world: World, a: Actor, t: number): Task | undefi
     return a.task;
   }
   // Can't get there (or already there): do it here. Nothing can be worked on a destroyed or
-  // tapped land. Bonding takes BOND_HOURS and taming CLAIM_HOURS; both carry on until done (step).
+  // tapped land. Bonding takes BOND_HOURS, taming CLAIM_HOURS and keeping a day EON_HOURS; each
+  // carries on until done (step).
   const item = block.kind === 'claim' ? itemsAt(world, a.region).find((x) => !claimBlocked(state, world, a, x.id, t)) : undefined;
+  const keeper = block.kind === 'store_day' || block.kind === 'spend_day' ? eonLand(world, a) : undefined;
   const cannot =
     block.kind === 'bond' ? bondBlocked(state, world, a, t)
     : block.kind === 'claim' && !item ? (itemsAt(world, a.region).map((x) => claimBlocked(state, world, a, x.id, t))[0] ?? '길들일 것이 없다.')
+    : (block.kind === 'store_day' || block.kind === 'spend_day') && !keeper ? '날을 맡길 땅이 없다.'
+    : block.kind === 'store_day' ? storeBlocked(state, world, a, keeper!.id, t)
+    : block.kind === 'spend_day' ? spendBlocked(state, world, a, keeper!.id, t)
     : null;
-  if (!cannot && (block.kind === 'bond' || block.kind === 'claim') && a.task?.kind === block.kind) return a.task;
+  const timed = ['bond', 'claim', 'store_day', 'spend_day'];
+  if (!cannot && timed.includes(block.kind) && a.task?.kind === block.kind) return a.task;
   const task: Task =
     block.kind === 'work' && landUnusable(state, a.region)
       ? { kind: 'leisure', activity: `${block.activity} (${landUnusable(state, a.region)}, 손을 놓음)`, emoji: '🥀' }
@@ -377,7 +398,9 @@ function npcTask(state: State, world: World, a: Actor, t: number): Task | undefi
           ? { kind: 'bond', activity: block.activity, emoji: block.emoji, until: t + BOND_HOURS * 60 }
           : item
             ? { kind: 'claim', activity: block.activity, emoji: block.emoji, until: t + CLAIM_HOURS * 60, item: item.id }
-            : { kind: block.kind, activity: block.activity, emoji: block.emoji };
+            : keeper
+              ? { kind: block.kind, activity: block.activity, emoji: block.emoji, until: t + EON_HOURS * 60, land: keeper.id }
+              : { kind: block.kind, activity: block.activity, emoji: block.emoji };
   if (a.task?.activity !== task.activity || a.task?.kind !== task.kind) {
     addLog(state, {
       kind: 'activity',
@@ -408,7 +431,8 @@ function travelHour(state: State, world: World, a: Actor, t: number) {
 // NPCs who are both eating or socialising in the same region meet once a day.
 function meetings(state: State, world: World) {
   const open = alive(state).filter(
-    (a) => a.kind === 'npc' && !a.travel && a.boundUntil === undefined && (a.task?.kind === 'social' || a.task?.kind === 'eat'),
+    (a) =>
+      a.kind === 'npc' && !a.travel && a.boundUntil === undefined && !outOfTime(state, a) && (a.task?.kind === 'social' || a.task?.kind === 'eat'),
   );
   for (let i = 0; i < open.length; i++) {
     for (let j = i + 1; j < open.length; j++) {

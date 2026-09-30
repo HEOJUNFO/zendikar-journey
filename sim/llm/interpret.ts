@@ -9,6 +9,7 @@ import { shortName } from '../text.ts';
 import { placeName, region, TERRAINS, travelHours } from '../world.ts';
 import { itemsAt, itemOwner } from '../items.ts';
 import { fetchTargets } from '../abilities.ts';
+import { eonLand, spendBlocked, storeBlocked } from '../eons.ts';
 import { spellsTaughtAt } from '../spells.ts';
 import { chatCompletion, extractJson } from './chat.ts';
 import { playerText } from './context.ts';
@@ -36,6 +37,15 @@ export async function interpret({ world, state, text }: InterpretInput): Promise
   const fetches = world.regions
     .filter((r) => r.fetch && p.bonds?.includes(r.id))
     .flatMap((r) => fetchTargets(state, world, p, r.id).map((to) => `- {"type":"fetch","from":"${r.id}","to":"${to.id}"}  (give up ${r.name} and ${r.fetch!.life} life to bond with ${placeName(world, to)} from afar)`));
+  const keeper = eonLand(world, p);
+  const days = keeper
+    ? [
+        !storeBlocked(state, world, p, keeper.id, state.minutes) &&
+          `- {"type":"store_day","land":"${keeper.id}"}  (pay ${keeper.eon!.costText} and leave a day in ${keeper.name}: tomorrow is lost to them, out of time; 1 hour)`,
+        !spendBlocked(state, world, p, keeper.id, state.minutes) &&
+          `- {"type":"spend_day","land":"${keeper.id}"}  (take back a day left in ${keeper.name}, which leaves them: tomorrow the world stands still and only they move; 1 hour)`,
+      ].filter(Boolean)
+    : [];
   const people = present(state, p.region)
     .filter(isPerson)
     .map((a) => `- ${a.id}: ${shortName(a.name)} (power/toughness ${ptOf(a).join('/')})`);
@@ -66,7 +76,7 @@ ${taught.length ? taught.map((s) => `- {"type":"learn","spell":"${s.id}"}  (lear
           known.length
             ? known.map((s) => `- {"type":"cast","spell":"${s.id}","to":"<person id${s.target === 'any_here' ? ` or ${p.id} for themselves` : ''}>","kick":false}  (cast ${s.name} ${s.costText} on someone here: ${s.summary})`).join('\n') + '\n'
             : ''
-        }${[...items.map((x) => `- {"type":"claim","item":"${x.id}"}  (tame ${x.name} ${x.costText}, making it theirs: ${x.summary})`), ...fetches].join('\n')}
+        }${[...items.map((x) => `- {"type":"claim","item":"${x.id}"}  (tame ${x.name} ${x.costText}, making it theirs: ${x.summary})`), ...fetches, ...days].join('\n')}
 Player typed: ${text}
 
 Answer: {"action": {...}}`,

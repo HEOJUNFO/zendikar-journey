@@ -3,11 +3,12 @@
 import { z } from 'zod';
 import { STEP_MINUTES } from './clock.ts';
 import { BOND_HOURS, KIND_EFFECTS } from './rules.ts';
-import { addLog, isPerson, landUnusable, player } from './state.ts';
+import { addLog, isPerson, landUnusable, outOfTime, player } from './state.ts';
 import type { State, Task } from './state.ts';
 import { startTravel, travelBlocked } from './step.ts';
 import { bondBlocked, fetchBlocked } from './abilities.ts';
 import { CLAIM_HOURS, claimBlocked, itemDef } from './items.ts';
+import { EON_HOURS, spendBlocked, storeBlocked } from './eons.ts';
 import { castBlocked, learnBlocked, spellDef } from './spells.ts';
 import { josa, shortName, toward } from './text.ts';
 import { PACES } from './types.ts';
@@ -31,6 +32,9 @@ export const ActionSchema = z.discriminatedUnion('type', [
   z.object({ type: z.literal('claim'), item: z.string() }),
   // Give up a fetch land you hold to seek out a land of its types, from wherever you are.
   z.object({ type: z.literal('fetch'), from: z.string(), to: z.string() }),
+  // Leave a day in a land that keeps days (losing tomorrow), or take one back (an extra day).
+  z.object({ type: z.literal('store_day'), land: z.string() }),
+  z.object({ type: z.literal('spend_day'), land: z.string() }),
 ]);
 export type Action = z.infer<typeof ActionSchema>;
 
@@ -91,6 +95,7 @@ export function startAction(state: State, world: World, action: Action): string 
       if (!npc || !isPerson(npc) || npc.dead) return '그런 인물은 없다.';
       const name = shortName(npc.name);
       if (npc.travel || npc.region !== p.region) return `${josa(name, '은', '는')} 여기 없다.`;
+      if (outOfTime(state, npc)) return `${josa(name, '은', '는')} 시간 밖에 있다. 닿지 않는다.`;
       task = { kind: 'fight', activity: `${josa(name, '과', '와')} 싸움`, emoji: '⚔️', until: until(1) };
       text = `${name}에게 덤벼든다.`;
       break;
@@ -127,12 +132,29 @@ export function startAction(state: State, world: World, action: Action): string 
       text = `${josa(from.name, '을', '를')} 내어 주고 ${toward(to.name)} 이어지는 길을 찾는다 (생명 ${from.fetch!.life}).`;
       break;
     }
+    case 'store_day': {
+      const why = storeBlocked(state, world, p, action.land, t);
+      if (why) return why;
+      const r = region(world, action.land);
+      task = { kind: 'store_day', activity: `${r.name}에 하루 맡기기`, emoji: '⏳', until: until(EON_HOURS), land: r.id };
+      text = `${r.name}에 하루를 맡긴다 (${r.eon!.costText}). 내일 하루는 시간 밖에서 보내게 된다.`;
+      break;
+    }
+    case 'spend_day': {
+      const why = spendBlocked(state, world, p, action.land, t);
+      if (why) return why;
+      const r = region(world, action.land);
+      task = { kind: 'spend_day', activity: `${r.name}에서 하루 되찾기`, emoji: '⌛', until: until(EON_HOURS), land: r.id };
+      text = `${r.name}에 맡겨 둔 하루를 되찾는다. ${josa(r.name, '은', '는')} 떠나고, 내일은 나만의 하루가 된다.`;
+      break;
+    }
     case 'talk': {
       const npc = state.actors[action.to];
       if (!npc || !isPerson(npc) || npc.dead) return '그런 인물은 없다.';
       const name = shortName(npc.name);
       if (npc.travel || npc.region !== p.region) return `${josa(name, '은', '는')} 여기 없다.`;
       if (npc.boundUntil !== undefined) return `${josa(name, '은', '는')} 묶여 있다.`;
+      if (outOfTime(state, npc)) return `${josa(name, '은', '는')} 시간 밖에 있다. 대답이 없다.`;
       task = { kind: 'social', activity: `${josa(name, '과', '와')} 대화`, emoji: '💬', until: until(1) };
       text = `${name}에게 말을 건다.`;
       break;
