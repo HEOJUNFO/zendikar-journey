@@ -2764,3 +2764,38 @@ test('a sealed color is sealed itself: a being of it has no powers against the s
   // Until midnight.
   assert.ok(hasAbility(d, 'fly', t + 24 * 60));
 });
+
+test('an Ally\'s war cry: each Ally joining puts a +1/+1 counter on every Ally of the party, not other retainers', async () => {
+  const minotaur = { ...npcSim('loc-a', 'work', [3, 3]), mana: { R: 5 }, ally: true, hireable: true, rally: [{ type: 'counters_allies' }] };
+  const ogre = { ...npcSim('loc-a', 'work', [3, 2]), mana: { B: 5 }, ally: true, hireable: true, rally: [{ type: 'lose_life_allies' }] };
+  const world = fixture([npc('chr-m', minotaur), npc('chr-o', ogre), npc('chr-x', npcSim('loc-a'))]);
+  const state = character(world, 'loc-a');
+  const p = state.actors[PLAYER_ID];
+  const [m, o, x] = [state.actors['chr-m'], state.actors['chr-o'], state.actors['chr-x']];
+  x.master = PLAYER_ID; // one who serves, no Ally
+  p.stats.coin = 100;
+  await act(state, world, { type: 'hire', to: 'chr-m' });
+  assert.equal(m.plusCounters, 1);
+  assert.deepEqual(ptOf(m), [4, 4]);
+  assert.equal(state.asks?.length ?? 0, 0); // nothing to pick
+  await act(state, world, { type: 'hire', to: 'chr-o' });
+  assert.equal(m.plusCounters, 2);
+  assert.equal(o.plusCounters, 1);
+  assert.equal(x.plusCounters, undefined);
+  assert.equal(p.plusCounters, undefined);
+  assert.ok(texts(state).some((t) => t.includes('함성에 무리의 동료들이 힘을 얻었다')));
+  // The ogre's curse still asks whom.
+  assert.equal(state.asks?.[0]?.effect.type, 'rally');
+  assert.doesNotMatch(askText(state, world, state.asks![0]), /함성/);
+});
+
+test('the real Kazuul Warlord lives on Kazuul\'s Cliffs, a mountain in Murasa, for 50 coin', () => {
+  const world = loadWorld();
+  const state = newState(world, { seed: 1, mode: 'observer' });
+  assert.equal(state.actors['chr-kazuul-warlord']?.region, 'loc-kazuul-cliffs');
+  assert.equal(region(world, 'loc-kazuul-cliffs').parent, 'loc-murasa');
+  assert.deepEqual(landTypes(region(world, 'loc-kazuul-cliffs')), ['mountain']);
+  const def = world.npcs.find((x) => x.id === 'chr-kazuul-warlord')!;
+  assert.equal(hirePrice(def), 50);
+  assert.deepEqual(def.rally, [{ type: 'counters_allies' }]);
+});

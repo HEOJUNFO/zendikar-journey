@@ -5,9 +5,10 @@ name: 무라사
 name_en: Murasa
 summary: 온두 북서쪽, 타짐 서쪽의 거목 대륙. 뒤틀린 거목이 벼랑 끝까지 뻗고, 깊은 협곡 사이로 잿빛 호수가 고여 있다
 status: canon
-sources: [ZEN-217, ZEN-220, ZEN-139, ZEN-157]
+sources: [ZEN-217, ZEN-220, ZEN-139, ZEN-157, ZEN-134]
 tags: [대륙, 숲, 거목, 협곡, 녹색]
 links:
+  - { to: loc-kazuul-cliffs, rel: 안의 구역 }
   - { to: cre-baloth, rel: 사냥하는 발로스 숲파괴자 }
   - { to: chr-murasa-pyromancer, rel: 떠도는 용병 }
   - { to: loc-kazandu-refuge, rel: 안의 구역 }
@@ -33,6 +34,7 @@ map: { x: 172, y: 165, terrain: forest, size: continent }
 - 안에 구역 카잔두 피난처(`loc-kazandu-refuge`)와 안개 낀 우림(`loc-misty-rainforest`, 숲이나 섬을 찾아오는 페치랜드, [결정] 2026-09-30 타짐에서 옮김)이 있다.
 - 돈을 받고 불을 빌려주는 용병 무라사의 화염술사(`chr-murasa-pyromancer`, ZEN-139)가 이 대륙을 떠돈다 ([결정] 2026-09-30).
 - 발로스 숲파괴자(`cre-baloth`, ZEN-157)가 무라사의 밀림을 사냥터로 삼는다 ([결정] 2026-09-30, 발라 게드에서 옮김).
+- 무라사로 드는 길목의 절벽 카주울의 절벽(`loc-kazuul-cliffs`, 기본 산)이 안의 구역이다. 미노타우로스 용병 카주울 전쟁군주(`chr-kazuul-warlord`, ZEN-134)가 산다 ([결정] 2026-09-30).
 
 ## 미정/질문
 

@@ -33,10 +33,33 @@ export function alliesOf(state: State, world: World, a: Actor) {
 export function allyJoined(state: State, world: World, a: Actor, master: Actor, t: number) {
   if (!isAlly(state, world, a.id)) return;
   for (const x of alliesOf(state, world, master)) {
-    if (!npcDef(state, world, x.id)?.rally?.length || powersSealed(state, world, x, t)) continue;
+    const rally = npcDef(state, world, x.id)?.rally ?? [];
+    if (!rally.length || powersSealed(state, world, x, t)) continue;
+    // "You may put a +1/+1 counter on each Ally creature you control": no one to pick, and it
+    // only helps ("may": always, [가공]). Every Ally of the party, wherever they are.
+    for (const eff of rally) if (eff.type === 'counters_allies') alliesCounter(state, world, x, master, t);
+    if (!rally.some(targeted)) continue;
     const candidates = present(state, x.region).filter((y) => y.id !== x.id && targetable(y, t)).map((y) => y.id);
     if (candidates.length) (state.choices ??= []).push({ by: master.id, land: x.region, effect: { type: 'rally', source: x.id }, candidates, optional: true, t });
   }
+}
+
+// A rally that falls on someone picked (not the counters on the party's Allies).
+function targeted(eff: { type: string }) {
+  return eff.type !== 'counters_allies';
+}
+
+// Kazuul Warlord's war cry: a +1/+1 counter (Actor.plusCounters, for good) on each Ally of the party.
+function alliesCounter(state: State, world: World, x: Actor, master: Actor, t: number) {
+  const party = alliesOf(state, world, master);
+  for (const y of party) y.plusCounters = (y.plusCounters ?? 0) + 1;
+  addLog(state, {
+    kind: 'status',
+    text: `${shortName(x.name)}의 함성에 무리의 동료들이 힘을 얻었다 (+1/+1 카운터: ${party.map((y) => shortName(y.name)).join(', ')}).`,
+    regions: [...new Set(party.map((y) => y.region))],
+    actors: party.map((y) => y.id),
+    t,
+  });
 }
 
 // What the rally of `sourceId` would do now, for the one picking.
@@ -46,6 +69,7 @@ export function rallyText(state: State, world: World, sourceId: string) {
   if (!x || !controller) return '';
   const n = alliesOf(state, world, controller).length;
   return (npcDef(state, world, x.id)?.rally ?? [])
+    .filter(targeted)
     .map((eff) =>
       eff.type === 'lose_life_allies'
         ? `${shortName(x.name)}의 저주: 고른 하나가 생명 ${n}을 잃는다 (무리의 동료 수, 죽을 수도 있다)`
@@ -61,7 +85,7 @@ export function applyRally(state: State, world: World, sourceId: string, targetI
   const target = state.actors[targetId];
   if (!x || x.dead || !target || target.dead || target.region !== x.region || target.travel || !targetable(target, t)) return;
   const controller = masterOf(state, x) ?? x;
-  for (const eff of npcDef(state, world, x.id)?.rally ?? []) {
+  for (const eff of (npcDef(state, world, x.id)?.rally ?? []).filter(targeted)) {
     const n = alliesOf(state, world, controller).length;
     if (eff.type === 'lose_life_allies') {
       addLog(state, {
