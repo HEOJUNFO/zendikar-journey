@@ -261,6 +261,7 @@ export function fetchLand(state: State, world: World, a: Actor, fromId: string, 
     t,
   });
   a.fetched = [...(a.fetched ?? []), toId];
+  a.searched = gameDay(t);
   bondLand(state, world, a, t, toId, target);
 }
 

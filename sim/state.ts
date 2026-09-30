@@ -54,6 +54,8 @@ export type Actor = {
   // drying out (until it is back in the water at 00:00).
   strandedSince?: number;
   dried?: number;
+  // Game day they last sought out a land with a fetch land: "searched their library" (Archive Trap).
+  searched?: number;
   // Game day they last gained life (sim/life.ts).
   lifeGained?: number;
   // Game day they were last turned down seeking to make someone follow them (a beast they

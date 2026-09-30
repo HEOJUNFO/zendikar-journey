@@ -24,6 +24,19 @@ export function relationsText(a: Actor) {
     .map((r) => `- ${r.name} (${formatClock(r.t)}): ${r.text}`);
 }
 
+// "Mills N": they lose up to `n` of their memories of others, picked by `pick` (random in
+// [0, 1)). Returns the names forgotten.
+export function forget(a: Actor, n: number, pick: () => number) {
+  const ids = Object.keys(a.relations ?? {});
+  const gone: string[] = [];
+  while (ids.length && gone.length < n) {
+    const [id] = ids.splice(Math.floor(pick() * ids.length), 1);
+    gone.push(a.relations![id].name);
+    delete a.relations![id];
+  }
+  return gone;
+}
+
 export function relationTo(a: Actor, otherId: string) {
   return a.relations?.[otherId]?.text;
 }

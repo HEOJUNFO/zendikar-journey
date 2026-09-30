@@ -343,6 +343,10 @@ const EffectSchema = z.discriminatedUnion('type', [
   // wherever they are; the LLM, as the trap, draws one there (or none) after the hour: that one
   // is moved to the trap's land, and turns on whoever set it off for the rest of the day.
   z.strictObject({ type: z.literal('summon'), look: z.number().int().positive() }),
+  // "Target opponent mills N cards" (Archive Trap): whoever set it off loses N of their
+  // memories, at random: what they think of those they know (sim/relations.ts). Not for
+  // morning (gm) events.
+  z.strictObject({ type: z.literal('forget'), count: z.number().int().positive() }),
 ]);
 export type Effect = z.infer<typeof EffectSchema>;
 
@@ -426,8 +430,17 @@ export const EventSimSchema = z.discriminatedUnion('trigger', [
   // Goes off when someone arrives in `region` (exactly there: an area is entered on its own).
   // With gained_life, only for those who gained life this turn (game day); with refused, only
   // for those turned down this turn as they sought to make someone follow them (Summoning Trap:
-  // "if a creature spell you cast this turn was countered by an opponent").
-  z.strictObject({ ...EventBase, ...EventCost, trigger: z.literal('enter'), gained_life: z.boolean().default(false), refused: z.boolean().default(false) }),
+  // "if a creature spell you cast this turn was countered by an opponent"); with searched, only
+  // for those who sought out a land with a fetch land this turn (Archive Trap: "if an opponent
+  // searched their library this turn").
+  z.strictObject({
+    ...EventBase,
+    ...EventCost,
+    trigger: z.literal('enter'),
+    gained_life: z.boolean().default(false),
+    refused: z.boolean().default(false),
+    searched: z.boolean().default(false),
+  }),
   // Goes off when a noncreature permanent in `region` is destroyed by someone else's doing (a
   // spell, an ability or another event): for now the land itself (law-permanents).
   z.strictObject({ ...EventBase, ...EventCost, trigger: z.literal('destroyed') }),
@@ -550,6 +563,7 @@ export type EventDef = {
   landfalls?: number; // landfall
   gained_life?: boolean; // enter
   refused?: boolean; // enter
+  searched?: boolean; // enter
   cards?: number; // drew
   cooldownHours: number;
   scope: 'region' | 'world';
@@ -681,8 +695,8 @@ export function buildWorld(entities: RawEntity[]): { world: World; errors: strin
       const { cooldown_hours, effects, cost, ...rest } = sim.data;
       if (rest.trigger !== 'landfall' && effects.some((x) => x.type === 'destroy_lands'))
         err(e.id, 'destroy_lands 는 trigger: landfall 사건에만 쓸 수 있음 (누가 상륙한 땅인지 알아야 함)');
-      if (rest.trigger === 'gm' && effects.some((x) => x.type === 'lose_life' || x.type === 'damage_hand'))
-        err(e.id, 'lose_life, damage_hand 는 trigger: gm 사건에 쓸 수 없음 (누가 일으켰는지 알아야 함)');
+      if (rest.trigger === 'gm' && effects.some((x) => x.type === 'lose_life' || x.type === 'damage_hand' || x.type === 'forget' || x.type === 'summon'))
+        err(e.id, 'lose_life, damage_hand, forget, summon 은 trigger: gm 사건에 쓸 수 없음 (누가 일으켰는지 알아야 함)');
       world.events.push({
         id: e.id,
         name: e.name,

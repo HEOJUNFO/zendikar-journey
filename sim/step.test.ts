@@ -974,6 +974,7 @@ test('a fetch land gives no mana; given up with 1 life, it bonds a mountain or p
   assert.deepEqual(p.bonds, ['loc-c']);
   assert.deepEqual(p.landfalls?.regions, ['loc-mesa', 'loc-c']); // the day's second landfall
   assert.deepEqual(p.fetched, ['loc-c']);
+  assert.equal(p.searched, 0); // searched their library today (Archive Trap)
   assert.equal(p.life, 19);
   assert.deepEqual(manaCapacity(state, world, p, state.minutes), { R: 1 });
   assert.match((await act(state, world, { type: 'fetch', from: 'loc-mesa', to: 'loc-a' })).error!, /유대를 맺고 있어야/);
@@ -2189,4 +2190,33 @@ test('the real Vastwood Gorger hunts in Oran-Rief, the Vastwood', () => {
   assert.equal(g?.region, 'loc-oran-rief');
   assert.deepEqual(ptOf(g), [5, 6]);
   assert.ok(world.npcs.find((x) => x.id === 'cre-vastwood-gorger')?.beast);
+});
+
+test('an archive trap: one who searched out a land today and enters forgets those they knew', async () => {
+  const archive: RawEntity = {
+    id: 'evt-arc',
+    kind: 'event',
+    name: '기록보관소 함정',
+    status: 'canon',
+    sim: { region: 'loc-b', trigger: 'enter', searched: true, text: '천장이 무너졌다.', effects: [{ type: 'forget', count: 13 }] },
+  };
+  const world = fixture([archive, npc('chr-x', npcSim('loc-b')), npc('chr-y', npcSim('loc-b')), npc('chr-z', npcSim('loc-c'))]);
+  const state = newState(world, { seed: 1, mode: 'observer' });
+  const [x, y, z] = [state.actors['chr-x'], state.actors['chr-y'], state.actors['chr-z']];
+  x.region = y.region = 'loc-a';
+  x.relations = { 'chr-z': { name: 'z', text: '벗', t: 0 }, 'chr-y': { name: 'y', text: '길동무', t: 0 } };
+  y.relations = { 'chr-z': { name: 'z', text: '벗', t: 0 } };
+  x.searched = 0; // sought a land with a fetch land today
+  await advance(state, world, 3);
+  assert.deepEqual(Object.keys(x.relations ?? {}).filter((id) => id === 'chr-z'), []); // forgotten
+  assert.equal(y.relations?.['chr-z']?.text, '벗'); // didn't search: nothing
+  assert.ok(texts(state).some((t) => t.includes('기억 2개를 잃었다')));
+  assert.equal(z.dead, undefined);
+});
+
+test('the real Archive Trap lies on Jwar Isle, for those who searched', () => {
+  const world = loadWorld();
+  const ev = world.events.find((e) => e.id === 'evt-archive-trap');
+  assert.equal(ev?.region, 'loc-jwar-isle');
+  assert.equal(ev?.searched, true);
 });

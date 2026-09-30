@@ -20,6 +20,7 @@ import {
   TRAVEL_EFFECT,
 } from './rules.ts';
 import { gainedLifeToday, loseLife } from './life.ts';
+import { forget } from './relations.ts';
 import { addLog, alive, landUnusable, needsOf, npcDef, outOfTime, present, ptOf, random } from './state.ts';
 import { addFoe, attackBlocked, dealDamage, foesOf, hostileNpcs } from './combat.ts';
 import { bondBlocked, bondLand, expireGranted, FETCH_HOURS, fetchLand, fetchSource, growBlocked, growEntered, growLand, spawnWild, summonLibrary, upkeepRevive, useAbility } from './abilities.ts';
@@ -178,7 +179,7 @@ function enterEvents(state: State, world: World, at: number) {
     }
     if (ev.trigger !== 'enter' || onCooldown(state, ev, at)) continue;
     if (state.pending.some((p) => p.eventId === ev.id)) continue;
-    const by = present(state, ev.region).filter((a) => a.arrivedAt === at && (!ev.gained_life || gainedLifeToday(a, at)) && (!ev.refused || refusedToday(a, at)));
+    const by = present(state, ev.region).filter((a) => a.arrivedAt === at && (!ev.gained_life || gainedLifeToday(a, at)) && (!ev.refused || refusedToday(a, at)) && (!ev.searched || a.searched === gameDay(at)));
     if (by.length) trigger(state, world, ev, at, { by: by.map((a) => a.id), lands: [] });
   }
 }
@@ -293,6 +294,22 @@ function fire(state: State, world: World, ev: EventDef, t: number, omened: boole
       addLog(state, { kind: 'event', text: `${kind} ${eff.count}마리가 쏟아져 나왔다 (${eff.pt.join('/')}).`, regions: [ev.region], actors: born.map((b) => b.id) });
       // They turn on whoever set it off, for the rest of the day.
       for (const b of born) for (const id of cause.by ?? []) addFoe(b, id, t);
+    } else if (eff.type === 'forget') {
+      for (const id of cause.by ?? []) {
+        const a = state.actors[id];
+        if (!a || a.dead || a.travel) continue;
+        const gone = forget(a, eff.count, () => random(state));
+        const name = shortName(a.name);
+        addLog(state, {
+          kind: 'effect',
+          text: gone.length
+            ? `${josa(name, '이', '가')} 기억 ${gone.length}개를 잃었다 (${josa(gone.join(', '), '을', '를')} 어떻게 여겼는지 잊었다).`
+            : `${josa(name, '은', '는')} 잃을 기억이 없었다.`,
+          regions: [a.region],
+          actors: [a.id],
+          t,
+        });
+      }
     } else if (eff.type === 'summon') {
       // Which of the creatures looked at is drawn here (if any) is the trap's, asked after the hour.
       const creatures = summonLibrary(state, world, ev.region, cause.by ?? []).slice(0, eff.look);
