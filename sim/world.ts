@@ -86,6 +86,10 @@ export const LandSimSchema = z.strictObject({
   no_mana: z.boolean().default(false),
   // Not a land at all, a place (e.g. Goma Fada, a walking city): no one bonds with it.
   not_land: z.boolean().default(false),
+  // One land with another place (a sea and its coast or bay: the Silundi Sea and Coast, Sunder
+  // Bay and its offing; user decision 2026-09-30): bonding here is bonding with that land, and
+  // going between them is an hour. The map still draws them apart.
+  one_land_with: z.string().optional(),
   // A place that moves (Goma Fada, "the city that walks"): `per_day` map units a day toward
   // the stop the LLM picks next among `stops` (sim/wander.ts). Its map point is where it starts.
   wanders: z
@@ -570,6 +574,8 @@ export type Region = {
   landType?: LandType;
   noMana: boolean;
   notLand?: boolean;
+  // The land this place is one with (`sim.one_land_with`): bonds go to that one.
+  oneLandWith?: string;
   wanders?: { perDay: number; stops: { name: string; x: number; y: number }[] };
   fetch?: { types: LandType[]; life: number };
   fallenMana?: { color: Color; cost: number };
@@ -749,6 +755,7 @@ export function buildWorld(entities: RawEntity[]): { world: World; errors: strin
           ...(land.data?.land_type ? { landType: land.data.land_type } : {}),
           noMana: land.data?.no_mana ?? false,
           ...(land.data?.not_land ? { notLand: true, noMana: true } : {}),
+          ...(land.data?.one_land_with ? { oneLandWith: land.data.one_land_with } : {}),
           ...(land.data?.wanders ? { wanders: { perDay: land.data.wanders.per_day, stops: land.data.wanders.stops } } : {}),
           fetch: land.data?.fetch,
           fallenMana: land.data?.fallen_mana,
@@ -767,6 +774,13 @@ export function buildWorld(entities: RawEntity[]): { world: World; errors: strin
     const c = world.regions.find((x) => x.id === r.of);
     if (!c) err(r.id, `map.of ${r.of} 가 맵에 없음`);
     else if (c.parent || c.id === r.id) err(r.id, `map.of ${r.of} 는 다른 지역이어야 함 (구역이나 자기 자신은 안 됨)`);
+  }
+  // A place one land with another: that one must be a land of its own, not one with a third.
+  for (const r of world.regions) {
+    if (!r.oneLandWith) continue;
+    const o = world.regions.find((x) => x.id === r.oneLandWith);
+    if (!o) err(r.id, `sim.one_land_with ${r.oneLandWith} 가 맵에 없음`);
+    else if (o.oneLandWith || o.notLand) err(r.id, `sim.one_land_with ${r.oneLandWith} 는 그 자체로 땅이어야 함`);
   }
   // Areas sit where their region is. One level only, and never in a sea region (a sea may be
   // an area of a land region, as a bay: Thunder Bay in Murasa, user decision 2026-09-30).
@@ -943,8 +957,15 @@ function baseTravelHours(a: Region, b: Region, abilities: readonly Ability[]) {
   };
   const home = (r: Region) => r.parent ?? r.id;
   if (home(a) === home(b)) return 1 + climb(a) + climb(b);
+  // One land in two places (a sea and its coast): an hour between them.
+  if (a.oneLandWith === b.id || b.oneLandWith === a.id) return 1 + climb(a) + climb(b);
   const road = Math.max(1, Math.ceil(distance(a, b) / TRAVEL_UNITS_PER_HOUR));
   return road + (a.parent ? 1 : 0) + (b.parent ? 1 : 0) + climb(a) + climb(b);
+}
+
+// The land a place is: itself, or the one it is one land with (`sim.one_land_with`).
+export function landIdOf(world: World, id: string) {
+  return world.regions.find((r) => r.id === id)?.oneLandWith ?? id;
 }
 
 // A land's basic land types (none for a named land card, or a sea), unless it says its own.

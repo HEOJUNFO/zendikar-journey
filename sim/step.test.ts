@@ -1401,7 +1401,7 @@ test('the real Sunder Bay offing: Lorthos\'s tides reach Murasa and its areas, n
   assert.ok(!coast.includes('loc-tazeem'));
   assert.ok(!coast.includes('loc-ondu'));
   assert.equal(world.npcs.find((n) => n.id === 'chr-lorthos')?.home, 'loc-sunder-offing');
-  assert.equal(region(world, 'loc-sunder-offing').notLand, true);
+  assert.equal(region(world, 'loc-sunder-offing').oneLandWith, 'loc-thunder-bay');
   assert.equal(region(world, 'loc-thunder-bay').parent, 'loc-murasa');
 });
 
@@ -3169,4 +3169,27 @@ test('when the world moves a character\'s home, they go there in a running game 
   k.home = 'loc-somewhere-else';
   syncWorld(state, world);
   assert.equal(k.region, 'loc-ghet-estate');
+});
+
+test('one land in two places: bonding at the coast is bonding with the sea; an hour between them; one for a fetch', () => {
+  const world = loadWorld();
+  const state = newState(world, { seed: 1, mode: 'character', player: { name: '나', background: '떠돌이', region: 'loc-silundi-coast' } });
+  const p = state.actors[PLAYER_ID];
+  assert.equal(bondBlocked(state, world, p, state.minutes), null);
+  bondLand(state, world, p, state.minutes);
+  assert.deepEqual(p.bonds, ['loc-silundi-sea']);
+  assert.deepEqual(manaCapacity(state, world, p, state.minutes), { U: 1 });
+  // The sea is that same land: already bonded with it.
+  p.landfalls = undefined;
+  p.region = 'loc-silundi-sea';
+  assert.match(bondBlocked(state, world, p, state.minutes)!, /이미/);
+  assert.equal(travelHours(region(world, 'loc-silundi-coast'), region(world, 'loc-silundi-sea'), ['aquatic']), 1);
+  assert.equal(travelHours(region(world, 'loc-sunder-offing'), region(world, 'loc-thunder-bay'), ['aquatic']), 1);
+  // A fetch finds the land once.
+  const island = world.regions.filter((r) => landTypes(r).includes('island'));
+  assert.ok(island.some((r) => r.id === 'loc-silundi-coast'));
+  p.bonds = ['loc-scalding-tarn'];
+  const found = fetchTargets(state, world, p, 'loc-scalding-tarn').map((r) => r.id);
+  assert.ok(found.includes('loc-silundi-sea') && !found.includes('loc-silundi-coast'));
+  assert.ok(found.includes('loc-thunder-bay') && !found.includes('loc-sunder-offing'));
 });

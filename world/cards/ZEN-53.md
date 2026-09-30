@@ -45,7 +45,7 @@ entities: [chr-lorthos, evt-lorthos-emerges, law-mana-colors, loc-sunder-offing,
 
 - `chr-lorthos`: 전설의 거대한 문어. 물에 사는 이(`aquatic`), 하루는 LLM이 짠다. 선더만 앞바다에 산다.
 - `evt-lorthos-emerges`: `trigger: gm`, `region: loc-sunder-offing`, `range: 120`, `scope: world`, 로르토스가 마나 8을 치른다. 효과는 `tap`(최대 8, 인물 먼저 그다음 해안의 땅, 다음 언탭 건너뜀 → 모레 00:00에 풀림)이다.
-- `loc-sunder-offing`: 무라사 북서쪽, 선더만 밖의 깊은 바다 (땅이 아님, [결정] 2026-09-30).
+- `loc-sunder-offing`: 무라사 북서쪽, 선더만 밖의 깊은 바다. 선더만과 한 땅 (`one_land_with`, [결정] 2026-09-30).
 - `loc-thunder-bay` (선더만, Sunder Bay): 무라사 북서쪽 테두리의 바다 구역, 기본 섬 ([결정] 2026-09-30).
 - `law-mana-colors`: 청색을 더했다.
 - 탭(인물은 묶임, 대지는 잠시 쓸 수 없음)과 언탭(턴 시작 00:00)은 대응 표에 정했다. 붙잡힘은 카드대로 "모레 00:00까지", 해안의 땅은 "조수에 잠긴 해안"(탐색·일 불가).

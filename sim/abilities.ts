@@ -15,13 +15,14 @@ import { landSealed, powersSealed, sealText } from './seal.ts';
 import { addLog, hasAbility, npcDef, outOfTime, present, ptOf, random, targetable, untargetableText } from './state.ts';
 import type { Actor, ChoiceEffect, State } from './state.ts';
 import { josa, shortName, toward } from './text.ts';
-import { ABILITY_LABELS, LAND_TYPE_LABELS, landTypes, realmOf, region, spellColors } from './world.ts';
+import { ABILITY_LABELS, LAND_TYPE_LABELS, landIdOf, landTypes, realmOf, region, spellColors } from './world.ts';
 import type { Ability, ActivatedAbility, BondEffect, Region, World } from './world.ts';
 
 // Why `a` can't bond with the land they stand on now, or null. One land per turn, as one
 // land drop per turn in MTG.
 export function bondBlocked(state: State, world: World, a: Actor, t: number): string | null {
-  const r = region(world, a.region);
+  // Where they stand may be one land with another place: that land is the one.
+  const r = region(world, landIdOf(world, a.region));
   if (r.notLand) return `${josa(r.name, '은', '는')} 땅이 아니라 유대를 맺을 수 없다.`;
   if (a.bonds?.includes(r.id)) return `이미 ${josa(r.name, '과', '와')} 유대를 맺었다.`;
   if (state.regions[r.id]?.destroyed) return '부서진 땅과는 유대를 맺을 수 없다.';
@@ -141,7 +142,7 @@ function mountainFire(state: State, world: World, a: Actor, land: Region, amount
 // `target`: whom the player picked for a land's targeted effect, or (a mountain, with Valakut
 // ready) for its fire. An NPC's pick is asked of the LLM after the hour (state.choices).
 export function bondLand(state: State, world: World, a: Actor, t: number, regionId = a.region, target?: string) {
-  const r = region(world, regionId);
+  const r = region(world, landIdOf(world, regionId));
   const def = npcDef(state, world, a.id);
   // A beast holds only its latest hunting ground.
   a.bonds = def?.beast ? [r.id] : [...(a.bonds ?? []), r.id];
@@ -234,7 +235,7 @@ export function fetchTargets(state: State, world: World, a: Actor, fromId: strin
   const from = world.regions.find((r) => r.id === fromId);
   if (!from?.fetch) return [];
   return world.regions.filter(
-    (r) => r.id !== from.id && !a.bonds?.includes(r.id) && !state.regions[r.id]?.destroyed && landTypes(r).some((x) => from.fetch!.types.includes(x)),
+    (r) => r.id !== from.id && !r.oneLandWith && !a.bonds?.includes(r.id) && !state.regions[r.id]?.destroyed && landTypes(r).some((x) => from.fetch!.types.includes(x)),
   );
 }
 
