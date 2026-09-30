@@ -338,6 +338,11 @@ const EffectSchema = z.discriminatedUnion('type', [
     // Their colors, from the card ("1/1 green Snake tokens"): [] for colorless ones.
     colors: z.array(z.enum(COLORS)),
   }),
+  // "Look at the top N cards of your library. You may put a creature card from among them onto
+  // the battlefield" (Summoning Trap): N creature kinds of the world at random (those that can
+  // be there); the LLM, as the trap, calls one forth (or none) after the hour: a new one of
+  // that kind, with no master, turning on whoever set it off for the rest of the day.
+  z.strictObject({ type: z.literal('summon'), look: z.number().int().positive() }),
 ]);
 export type Effect = z.infer<typeof EffectSchema>;
 
@@ -419,8 +424,10 @@ export const EventSimSchema = z.discriminatedUnion('trigger', [
   // `landfalls`-th landfall this turn (game day).
   z.strictObject({ ...EventBase, ...EventCost, trigger: z.literal('landfall'), landfalls: z.number().int().min(1).default(1) }),
   // Goes off when someone arrives in `region` (exactly there: an area is entered on its own).
-  // With gained_life, only for those who gained life this turn (game day).
-  z.strictObject({ ...EventBase, ...EventCost, trigger: z.literal('enter'), gained_life: z.boolean().default(false) }),
+  // With gained_life, only for those who gained life this turn (game day); with refused, only
+  // for those turned down this turn as they sought to make someone follow them (Summoning Trap:
+  // "if a creature spell you cast this turn was countered by an opponent").
+  z.strictObject({ ...EventBase, ...EventCost, trigger: z.literal('enter'), gained_life: z.boolean().default(false), refused: z.boolean().default(false) }),
   // Goes off when a noncreature permanent in `region` is destroyed by someone else's doing (a
   // spell, an ability or another event): for now the land itself (law-permanents).
   z.strictObject({ ...EventBase, ...EventCost, trigger: z.literal('destroyed') }),
@@ -542,6 +549,7 @@ export type EventDef = {
   chance?: number; // gm
   landfalls?: number; // landfall
   gained_life?: boolean; // enter
+  refused?: boolean; // enter
   cards?: number; // drew
   cooldownHours: number;
   scope: 'region' | 'world';

@@ -18,7 +18,7 @@ import { gainLife, lifeOf } from './life.ts';
 import { hasAbility, newState, outOfTime, PLAYER_ID, present, ptOf, syncWorld, targetable } from './state.ts';
 import { foresightText } from './foresight.ts';
 import { spendBlocked, storeBlocked } from './eons.ts';
-import { bondBlocked, bondLand, bondTargets, fetchTargets, fireTargets, firesOnBond, growBlocked, spawnWild, useAbility } from './abilities.ts';
+import { bondBlocked, bondLand, bondTargets, fetchTargets, fireTargets, firesOnBond, growBlocked, spawnWild, summonLibrary, useAbility } from './abilities.ts';
 import { DEPLETED_LABEL, DESTROYED_DAYS } from './rules.ts';
 import { swayBlocked } from './retainers.ts';
 import { upkeepWins } from './win.ts';
@@ -2087,4 +2087,56 @@ test('an NPC may go after the player; a flying player picks whether to take to t
   await act(state, world, { type: 'wait', hours: 3 });
   assert.equal(woundsOf(p, state.minutes), 0); // out of reach until midnight
   assert.ok(!state.asks?.length);
+});
+
+const summoning: RawEntity = {
+  id: 'evt-sum',
+  kind: 'event',
+  name: '소환 함정',
+  status: 'canon',
+  sim: { region: 'loc-b', trigger: 'enter', refused: true, text: '룬이 빛났다.', effects: [{ type: 'summon', look: 7 }] },
+};
+const beastKind = (id: string, abilities: string[], home = 'loc-c'): RawEntity =>
+  planned({ id, kind: 'creature', name: id.slice(4), status: 'canon', sim: { name: `${id} 한 마리`, pt: [4, 4], role: 'r', home, persona: 'p', goal: 'g', needs: ['energy'], abilities } });
+
+test('a summoning trap: one refused today who enters calls forth one of the kinds, as its card, turned on them', async () => {
+  const world = fixture([summoning, beastKind('cre-sk', ['fly']), beastKind('cre-sea', ['aquatic'], 'loc-sea'), npc('chr-x', npcSim('loc-b')), npc('chr-y', npcSim('loc-b'))]);
+  const state = newState(world, { seed: 1, mode: 'observer' });
+  const [x, y] = [state.actors['chr-x'], state.actors['chr-y']];
+  x.region = y.region = 'loc-a';
+  x.refused = 0; // turned down today
+  const offered: string[][] = [];
+  const summon: Llm['summon'] = async ({ kinds, intruders }) => (offered.push([...kinds.map((k) => k.id).sort(), ...intruders.map((a) => a.id)]), 'cre-sk');
+  await advance(state, world, 3, { summon });
+  assert.deepEqual(offered, [['cre-sk', 'chr-x']]); // a sea kind can't stand there; y was not refused
+  const born = Object.values(state.actors).find((a) => a.name === 'sk' && a.id.startsWith('tok-'));
+  assert.ok(born);
+  assert.equal(born.region, 'loc-b');
+  assert.deepEqual(born.abilities, ['fly']);
+  assert.equal(born.master, undefined);
+  assert.ok(texts(state).some((t) => t.includes('문간의 어둠에서 걸어 나왔다')));
+});
+
+test('turned down: the player refusing to serve, or refusing the player, marks the one refused that day', async () => {
+  const seeker = { ...npcSim('loc-a', 'work'), plan: [['00:00', '24:00', 'loc-a', 'social', '그를 찾아감', '💬', null, null, PLAYER_ID]] };
+  const world = fixture([npc('chr-x', seeker)]);
+  const state = character(world, 'loc-a');
+  await act(state, world, { type: 'wait', hours: 2 }, { reply: async () => ({ say: '나를 따르게.', attack: false, recruit: true }) });
+  await act(state, world, { type: 'choose', pick: null });
+  assert.equal(state.actors['chr-x'].refused, 0);
+  // The player turned down by one they sought to win.
+  const w2 = fixture([npc('chr-y', npcSim('loc-a'))]);
+  const s2 = character(w2, 'loc-a');
+  await act(s2, w2, { type: 'talk', to: 'chr-y', say: '나와 함께 가자' }, { reply: async () => ({ say: '싫소.', attack: false, refused: true }) });
+  assert.equal(s2.actors[PLAYER_ID].refused, 0);
+});
+
+test('the real Summoning Trap lies in Bala Ged, and could not call forth the Shoal Serpent there', () => {
+  const world = loadWorld();
+  const ev = world.events.find((e) => e.id === 'evt-summoning-trap');
+  assert.equal(ev?.region, 'loc-bala-ged');
+  assert.equal(ev?.refused, true);
+  const state = newState(world, { seed: 1, mode: 'observer' });
+  const kinds = summonLibrary(state, world, 'loc-bala-ged');
+  assert.ok(kinds.includes('cre-baloth') && !kinds.includes('cre-shoal-serpent'));
 });

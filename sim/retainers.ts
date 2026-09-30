@@ -4,7 +4,7 @@
 // player wins retainers by persuading someone in conversation. A beast that may follow
 // (`tamable`, the Felidar Sovereign) chooses whom to trust: the player who talks to it, or an
 // NPC who courts it (a "court" block); the LLM decides, as the beast.
-import { formatClock } from './clock.ts';
+import { formatClock, gameDay } from './clock.ts';
 import { addLog } from './state.ts';
 import type { Actor, State } from './state.ts';
 import { remember } from './relations.ts';
@@ -42,6 +42,16 @@ export function swayBlocked(state: State, world: World, a: Actor): string | null
   const m = masterOf(state, a);
   if (m) return `${josa(shortName(a.name), '은', '는')} 이미 ${shortName(m.name)}의 권속이다.`;
   return null;
+}
+
+// `a` sought to make someone follow them and was turned down (a beast they courted, one they
+// asked to serve them): today they are one refused (Summoning Trap).
+export function refuse(state: State, a: Actor, t: number) {
+  a.refused = gameDay(t);
+}
+
+export function refusedToday(a: Actor, t: number) {
+  return a.refused === gameDay(t);
 }
 
 // Hours an NPC spends at a beast's side to win its trust.

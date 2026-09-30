@@ -4,7 +4,7 @@
 // the air when one who can't fly sets on them.
 import { untapTime } from './clock.ts';
 import { applyRally, rallyText } from './allies.ts';
-import { bindRetainer } from './retainers.ts';
+import { bindRetainer, refuse } from './retainers.ts';
 import { addLog, player } from './state.ts';
 import type { Actor, Choice, State } from './state.ts';
 import { josa, shortName } from './text.ts';
@@ -43,7 +43,10 @@ export function answerAsk(state: State, world: World, pick: string | null, t: nu
   } else if (c.effect.type === 'pledge') {
     const master = state.actors[c.effect.from];
     if (pick === master?.id && canServe(p, master)) bindRetainer(state, world, p, master, t, '설득');
-    else if (master) addLog(state, { kind: 'status', text: `${josa(shortName(master.name), '을', '를')} 따르기를 거절했다.`, regions: [p.region], actors: [p.id, master.id], t });
+    else if (master) {
+      addLog(state, { kind: 'status', text: `${josa(shortName(master.name), '을', '를')} 따르기를 거절했다.`, regions: [p.region], actors: [p.id, master.id], t });
+      refuse(state, master, t);
+    }
   } else if (c.effect.type === 'evade') {
     const from = state.actors[c.effect.from];
     if (!from) return;

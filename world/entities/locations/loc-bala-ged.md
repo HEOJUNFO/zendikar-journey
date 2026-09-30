@@ -5,7 +5,7 @@ name: 발라 게드
 name_en: Bala Ged
 summary: 굴 드라즈 동쪽에 붙은 밀림 대륙. 짙은 나무 그늘이 늪 가장자리까지 내려오고, 두 대륙이 겹친 땅 밑에 푸른 지하묘지가 있다
 status: canon
-sources: [ZEN-229, ZEN-178]
+sources: [ZEN-229, ZEN-178, ZEN-184]
 tags: [대륙, 숲, 밀림, 녹색]
 links:
   - { to: chr-rampaging-baloths, rel: 밀림을 휩쓰는 발로스 무리 }
@@ -13,6 +13,7 @@ links:
   - { to: loc-verdant-catacombs, rel: 굴 드라즈와 겹친 땅 }
   - { to: loc-ondu, rel: 북동쪽의 대륙 }
   - { to: cre-baloth, rel: 사는 짐승 }
+  - { to: evt-summoning-trap, rel: 밀림에 묻힌 유적의 함정 }
 map: { x: 237, y: 355, terrain: forest, size: continent }
 ---
 
@@ -26,6 +27,7 @@ map: { x: 237, y: 355, terrain: forest, size: continent }
 - 좌표는 [가공]이다. 굴 드라즈(198, 382) 동북쪽에 두 대륙의 원이 겹치게 둔다 ([결정] 2026-09-30: 다리로 이은 느낌이 아니라 겹치게). 겹친 곳 한가운데에 푸른 지하묘지가 있다. 굴 드라즈까지 약 4시간, 푸른 지하묘지까지 약 2시간, 온두까지 약 11시간, 즈와르 섬까지 약 10시간. 대륙이라 지도에 크게 그린다 (`size: continent`).
 - 지형을 숲(밀림)으로 둔 것은 [배경](발라 게드는 밀림 대륙)과 지하묘지가 늪·숲을 찾는다는 [카드]에서 정한 [가공]이다.
 
+- 밀림에 옛 석조 유적이 묻혀 있고, 소환 함정(`evt-summoning-trap`, ZEN-184)이 숨어 있다. 그날 무언가를 따르게 하려다 거절당한 이가 들어서면 생물을 불러내 덤비게 한다.
 - 발로스(`cre-baloth`, ZEN-157)가 여기서 산다 ([결정] 2026-09-30 다시 놓기). 먹성이 끝이 없어 사냥감을 바닥내면 다른 땅으로 옮겨 간다.
 
 ## 미정/질문

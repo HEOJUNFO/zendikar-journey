@@ -1,6 +1,6 @@
 // Landfall (bonding with a land) and activated abilities, used as the morning LLM plans.
 import { gameDay, untapTime } from './clock.ts';
-import { dealDamage, die, leavePlane } from './combat.ts';
+import { addFoe, dealDamage, die, leavePlane } from './combat.ts';
 import { creatureColors, manaAvailable, payMana, planPayment } from './mana.ts';
 import { landTapBlocked, tapLand } from './landtap.ts';
 import type { Color } from './mana.ts';
@@ -12,7 +12,7 @@ import { castSpell, spellDef } from './spells.ts';
 import { addLog, npcDef, outOfTime, present, ptOf, random, targetable } from './state.ts';
 import type { Actor, ChoiceEffect, State } from './state.ts';
 import { josa, shortName, toward } from './text.ts';
-import { ABILITY_LABELS, LAND_TYPE_LABELS, landTypes, region, spellColors } from './world.ts';
+import { ABILITY_LABELS, canStay, LAND_TYPE_LABELS, landTypes, region, spellColors } from './world.ts';
 import type { Ability, ActivatedAbility, BondEffect, Region, World } from './world.ts';
 
 // Why `a` can't bond with the land they stand on now, or null. One land per turn, as one
@@ -503,6 +503,46 @@ export function spawnWild(state: State, world: World, creature: string, pt: [num
     out.push(state.actors[id]);
   }
   return out;
+}
+
+// --- Summoning Trap: "look at the top N cards of your library, put a creature onto the battlefield" ---
+
+// The world's creature cards, as a library: the kinds that live in it as their own card (a
+// creature entity's sim), those that could stand in `regionId`, in a random order.
+export function summonLibrary(state: State, world: World, regionId: string) {
+  const r = region(world, regionId);
+  const kinds = world.npcs.filter((n) => n.creature === n.id && canStay(r, n.abilities)).map((n) => n.id);
+  for (let i = kinds.length - 1; i > 0; i--) {
+    const j = Math.floor(random(state) * (i + 1));
+    [kinds[i], kinds[j]] = [kinds[j], kinds[i]];
+  }
+  return kinds;
+}
+
+// A new one of `kindId` comes forth in `regionId`, with no master, as its card (its powers
+// too), under its kind's name; it turns on those in `foes` for the rest of the day.
+export function summonKind(state: State, world: World, kindId: string, regionId: string, foes: string[], t: number) {
+  const base = world.npcs.find((n) => n.id === kindId);
+  if (!base) return undefined;
+  const kindName = world.lore.find((l) => l.id === kindId)?.name ?? base.name;
+  const id = freeTokenId(state, `tok-${state.nextLogId}-0`);
+  (state.tokens ??= {})[id] = { ...base, id, name: kindName, home: regionId, role: `${region(world, regionId).name}에 불려 나온 ${kindName}`, activated: [] };
+  const x: Actor = {
+    id,
+    name: kindName,
+    kind: 'npc',
+    region: regionId,
+    stats: { energy: 80, hunger: 0, coin: 0 },
+    pt: [...base.pt],
+    pace: 'normal',
+    abilities: [...base.abilities],
+    needs: [...base.needs],
+    enteredAt: t,
+  };
+  state.actors[id] = x;
+  addLog(state, { kind: 'event', text: `${josa(kindName, '이', '가')} 문간의 어둠에서 걸어 나왔다 (${base.pt.join('/')}).`, regions: [regionId], actors: [id], t });
+  for (const f of foes) addFoe(x, f, t);
+  return x;
 }
 
 // --- Oran-Rief: "{T}: Put a +1/+1 counter on each green creature that entered this turn" ---

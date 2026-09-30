@@ -18,6 +18,7 @@ const ConverseSchema = z.object({
   impressions: z.object({ a: z.string().min(1), b: z.string().min(1) }),
   attack: z.enum(['a', 'b']).nullable().default(null),
   follow: z.enum(['a', 'b']).nullable().default(null),
+  refused: z.enum(['a', 'b']).nullable().default(null),
 });
 
 export async function converse({ world, state, a, b }: ConverseInput): Promise<Conversation | null> {
@@ -55,7 +56,8 @@ Answer with JSON only:
           pledgers.length
             ? `\nAdd "follow": ${pledgers.map((k) => `"${k}"`).join(' or ')} only if that one, won over by what the other says and who they are, now pledges to follow and serve the other as their retainer; that is rare and a big step. Otherwise "follow": null.`
             : ''
-        }`,
+        }
+"refused": "a" or "b" only if that one sought to make the other follow or serve them and was turned down; otherwise null.`,
       },
       {
         role: 'user',
@@ -83,5 +85,6 @@ ${history.length ? `\nTheir past words together:\n${history.join('\n')}` : ''}`,
     impressions: { [a.id]: parsed.data.impressions.a, [b.id]: parsed.data.impressions.b },
     attacker: parsed.data.attack ? id[parsed.data.attack] : null,
     follower: parsed.data.follow && pledge[parsed.data.follow] ? id[parsed.data.follow] : null,
+    refused: parsed.data.refused ? id[parsed.data.refused] : null,
   };
 }

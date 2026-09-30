@@ -22,12 +22,12 @@ import {
 import { gainedLifeToday, loseLife } from './life.ts';
 import { addLog, alive, landUnusable, needsOf, npcDef, outOfTime, present, ptOf, random } from './state.ts';
 import { addFoe, attackBlocked, dealDamage, foesOf, hostileNpcs } from './combat.ts';
-import { bondBlocked, bondLand, expireGranted, FETCH_HOURS, fetchLand, fetchSource, growBlocked, growEntered, growLand, spawnWild, upkeepRevive, useAbility } from './abilities.ts';
+import { bondBlocked, bondLand, expireGranted, FETCH_HOURS, fetchLand, fetchSource, growBlocked, growEntered, growLand, spawnWild, summonLibrary, upkeepRevive, useAbility } from './abilities.ts';
 import { CLAIM_HOURS, claimBlocked, claimItem, itemsAt } from './items.ts';
 import { EON_HOURS, eonLand, holdStill, spendBlocked, spendDay, storeBlocked, storeDay, timeNews } from './eons.ts';
 import { upkeepWins } from './win.ts';
 import { HIRE_HOURS, hireBlocked, hireMerc } from './allies.ts';
-import { COURT_HOURS, courtBlocked, followsMaster, masterOf, readyCourt, upkeepPossessions } from './retainers.ts';
+import { COURT_HOURS, courtBlocked, followsMaster, masterOf, readyCourt, refusedToday, upkeepPossessions } from './retainers.ts';
 import { learnBlocked, learnSpell, npcCastBlocked, readyCast, spellDef } from './spells.ts';
 import { payMana } from './mana.ts';
 import type { Actor, GmPlan, State, Task } from './state.ts';
@@ -176,7 +176,7 @@ function enterEvents(state: State, world: World, at: number) {
     }
     if (ev.trigger !== 'enter' || onCooldown(state, ev, at)) continue;
     if (state.pending.some((p) => p.eventId === ev.id)) continue;
-    const by = present(state, ev.region).filter((a) => a.arrivedAt === at && (!ev.gained_life || gainedLifeToday(a, at)));
+    const by = present(state, ev.region).filter((a) => a.arrivedAt === at && (!ev.gained_life || gainedLifeToday(a, at)) && (!ev.refused || refusedToday(a, at)));
     if (by.length) trigger(state, world, ev, at, { by: by.map((a) => a.id), lands: [] });
   }
 }
@@ -291,6 +291,10 @@ function fire(state: State, world: World, ev: EventDef, t: number, omened: boole
       addLog(state, { kind: 'event', text: `${kind} ${eff.count}마리가 쏟아져 나왔다 (${eff.pt.join('/')}).`, regions: [ev.region], actors: born.map((b) => b.id) });
       // They turn on whoever set it off, for the rest of the day.
       for (const b of born) for (const id of cause.by ?? []) addFoe(b, id, t);
+    } else if (eff.type === 'summon') {
+      // Which of the kinds looked at comes forth (if any) is the trap's, asked after the hour.
+      const kinds = summonLibrary(state, world, ev.region).slice(0, eff.look);
+      if (kinds.length) (state.summons ??= []).push({ event: ev.id, kinds, by: cause.by ?? [], region: ev.region, t });
     } else {
       for (const id of regions) {
         state.regions[id] ??= { conditions: [] };

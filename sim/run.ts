@@ -19,8 +19,8 @@ import { castableSpells, castBlocked, castSpell, harmful, learnableSpells, spell
 import { opponentsOf, sealsDue, setSeal } from './seal.ts';
 import { COLORS } from './mana.ts';
 import type { Color } from './mana.ts';
-import { abilityBlocked, applyBondEffect, enteredToday, fetchBlocked, fetchTargets, growBlocked, growLand } from './abilities.ts';
-import { bindRetainer, courtTargets, followsMaster, seize, swayBlocked } from './retainers.ts';
+import { abilityBlocked, applyBondEffect, enteredToday, fetchBlocked, fetchTargets, growBlocked, growLand, summonKind } from './abilities.ts';
+import { bindRetainer, courtTargets, followsMaster, refuse, seize, swayBlocked } from './retainers.ts';
 import { josa, shortName } from './text.ts';
 import type { ScheduleBlock } from './types.ts';
 import { ABILITY_LABELS, canStay, LAND_TYPE_LABELS, landTypes, placeName } from './world.ts';
@@ -45,7 +45,8 @@ export type ReplyInput = { world: World; state: State; npc: Speaker; say?: strin
 // What the NPC says, whether they now attack the player or pledge to serve them (become their
 // retainer), and what they now think of them.
 // `recruit`: they ask the player to follow and serve them (the player answers: sim/asks.ts).
-export type Reply = { say: string; attack: boolean; follow?: boolean; recruit?: boolean; impression?: string };
+// `refused`: the player sought to make them follow and they turned it down.
+export type Reply = { say: string; attack: boolean; follow?: boolean; recruit?: boolean; refused?: boolean; impression?: string };
 export type EvadeInput = { world: World; state: State; npc: Speaker; attacker: Actor };
 export type ConverseInput = { world: World; state: State; a: Speaker; b: Speaker };
 // An NPC picks whom an effect falls on (e.g. a land's "target player loses 1 life"): one of
@@ -54,10 +55,13 @@ export type ConverseInput = { world: World; state: State; a: Speaker; b: Speaker
 export type ChooseInput = { world: World; state: State; npc: Speaker; what: string; candidates: Actor[]; optional?: boolean };
 // One who seals a color (Iona) names it as a fight begins: against `opponents`.
 export type ChooseColorInput = { world: World; state: State; npc: Speaker; opponents: Actor[] };
+// A trap (`trap`) sprung by `intruders` picks one of `kinds` (creature kinds) to call forth.
+export type SummonInput = { world: World; state: State; trap: EventDef; kinds: NpcDef[]; intruders: Actor[] };
 // Two NPCs' exchange: the lines, what each now thinks of the other (by id), and who, if
 // anyone, now attacks the other.
 // `follower`: one who, won over, now pledges to serve the other (as an NPC may to the player).
-export type Conversation = { lines: { by: string; say: string }[]; impressions: Record<string, string>; attacker: string | null; follower?: string | null };
+// `refused`: one who sought to make the other follow them and was turned down.
+export type Conversation = { lines: { by: string; say: string }[]; impressions: Record<string, string>; attacker: string | null; follower?: string | null; refused?: string | null };
 
 export type Llm = {
   planDay?: (input: PlanDayInput) => Promise<ScheduleBlock[] | null>;
@@ -70,6 +74,8 @@ export type Llm = {
   converse?: (input: ConverseInput) => Promise<Conversation | null>;
   choose?: (input: ChooseInput) => Promise<string | null>;
   chooseColor?: (input: ChooseColorInput) => Promise<Color | null>;
+  // A summoning trap sprung (Summoning Trap): which of `kinds` it calls forth, or none.
+  summon?: (input: SummonInput) => Promise<string | null>;
 };
 
 // NPC conversations written per game day at most (each is one LLM call).
@@ -203,6 +209,8 @@ async function conversations(state: State, world: World, since: number, llm: Llm
     const follower = talk.follower === x.id ? x : talk.follower === y.id ? y : undefined;
     if (follower && !talk.attacker && canPledge(state, world, follower, follower === x ? y : x))
       bindRetainer(state, world, follower, follower === x ? y : x, state.minutes, '설득');
+    const refused = talk.refused === x.id ? x : talk.refused === y.id ? y : undefined;
+    if (refused && !follower) refuse(state, refused, state.minutes);
     if (talk.attacker === x.id || talk.attacker === y.id) {
       const [from, to] = talk.attacker === x.id ? [x, y] : [y, x];
       addFoe(from, to.id, state.minutes);
@@ -213,6 +221,29 @@ async function conversations(state: State, world: World, since: number, llm: Llm
         actors: [from.id, to.id],
       });
     }
+  }
+}
+
+// Summoning traps sprung this hour (sim/step.ts): the LLM, as the trap, calls forth one of the
+// kinds looked at ("you may": none). With no answer, the first of them (the top card).
+async function summons(state: State, world: World, llm: Llm) {
+  const due = state.summons ?? [];
+  state.summons = [];
+  for (const s of due) {
+    const trap = world.events.find((e) => e.id === s.event);
+    const kinds = s.kinds.map((id) => world.npcs.find((n) => n.id === id)).filter((n) => !!n);
+    const intruders = s.by.map((id) => state.actors[id]).filter((a) => a && !a.dead);
+    if (!trap || !kinds.length) continue;
+    let pick: string | null = kinds[0].id;
+    if (llm.summon) {
+      try {
+        pick = await llm.summon({ world, state, trap, kinds, intruders });
+      } catch (e) {
+        console.warn(`summon for ${trap.id} failed:`, e);
+      }
+    }
+    if (pick && kinds.some((k) => k.id === pick)) summonKind(state, world, pick, s.region, intruders.map((a) => a.id), state.minutes);
+    else addLog(state, { kind: 'event', text: `${trap.name}: 문간의 어둠은 끝내 잠잠했다.`, regions: [s.region] });
   }
 }
 
@@ -249,6 +280,7 @@ async function evasions(state: State, world: World, llm: Llm) {
 // engine picks at random among the candidates, so the effect still lands.
 async function choices(state: State, world: World, llm: Llm) {
   await evasions(state, world, llm);
+  await summons(state, world, llm);
   const due = state.choices ?? [];
   state.choices = [];
   for (const c of due) {
@@ -358,6 +390,7 @@ async function followChoice(state: State, world: World, llm: Llm, by: Actor, npc
   }
   if (pick !== suitor.id || suitor.dead || suitor.master || suitor.region !== by.region || swayBlocked(state, world, by)) {
     addLog(state, { kind: 'status', text: `${josa(shortName(by.name), '은', '는')} ${shortName(suitor.name)}에게 곁을 내주지 않았다.`, regions: [by.region], actors: [by.id, suitor.id] });
+    refuse(state, suitor, state.minutes);
     return;
   }
   bindRetainer(state, world, by, suitor, state.minutes, '인정');
@@ -418,6 +451,7 @@ async function talk(state: State, world: World, p: Actor, npcId: string, say: st
 function applyReply(state: State, world: World, me: Actor, p: Actor, reply: Reply) {
   const name = shortName(me.name);
   if (reply.impression) remember(me, p, reply.impression, state.minutes);
+  if (reply.refused && !reply.follow) refuse(state, p, state.minutes);
   if (reply.follow && !reply.attack && !swayBlocked(state, world, me)) bindRetainer(state, world, me, p, state.minutes, '설득');
   else if (reply.recruit && !reply.attack && canServe(p, me))
     (state.asks ??= []).push({ by: p.id, land: p.region, effect: { type: 'pledge', from: me.id }, candidates: [me.id], t: state.minutes });
