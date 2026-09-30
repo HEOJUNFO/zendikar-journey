@@ -2663,7 +2663,7 @@ test('the real Hagra Diabolist lives in the Hagra swamp of Guul Draz, for 50 coi
   const o = state.actors['chr-hagra-diabolist'];
   assert.equal(o?.region, 'loc-hagra');
   assert.equal(region(world, 'loc-hagra').parent, 'loc-guul-draz');
-  assert.ok(region(world, 'loc-hagra').notLand);
+  assert.deepEqual(landTypes(region(world, 'loc-hagra')), ['swamp']); // a swamp
   const def = world.npcs.find((x) => x.id === 'chr-hagra-diabolist')!;
   assert.equal(hirePrice(def), 50);
   assert.deepEqual(def.rally, [{ type: 'lose_life_allies' }]);
