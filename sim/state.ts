@@ -54,6 +54,9 @@ export type Actor = {
   // drying out (until it is back in the water at 00:00).
   strandedSince?: number;
   dried?: number;
+  // The hour they last struck as the attacker (sim/combat.ts `clash`): "attacking creatures"
+  // (Arrow Volley Trap).
+  attackedAt?: number;
   // Game day they last sought out a land with a fetch land: "searched their library" (Archive Trap).
   searched?: number;
   // Game day they last gained life (sim/life.ts).
@@ -231,6 +234,9 @@ export type State = {
   // after the hour (sim/run.ts), from these candidates.
   // `optional`: they may pick no one ("you may").
   choices?: Choice[];
+  // Arrow volleys loosed (sim/step.ts): how the damage falls among the attackers is the LLM's
+  // division, as the trap, after the hour (sim/run.ts `volleys`).
+  volleys?: { event: string; amount: number; by: string[]; region: string; t: number }[];
   // Summoning traps sprung (sim/step.ts): which of the creatures looked at is drawn there is
   // the LLM's pick, as the trap, after the hour (sim/run.ts `summons`).
   summons?: { event: string; creatures: string[]; by: string[]; region: string; t: number }[];

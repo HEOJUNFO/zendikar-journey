@@ -131,6 +131,7 @@ export function clash(state: State, attacker: Actor, defender: Actor, t: number)
     actors: [attacker.id, defender.id],
   });
   attacker.lastClash = t;
+  attacker.attackedAt = t;
   defender.lastClash = t;
   addFoe(defender, attacker.id, t);
   addFoe(attacker, defender.id, t);

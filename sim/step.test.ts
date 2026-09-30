@@ -12,7 +12,7 @@ import { addFoe, attackBlocked, die, knockedOut, woundsOf } from './combat.ts';
 import { sealedBy, sealToday } from './seal.ts';
 import { castBlocked, castSpell } from './spells.ts';
 import { COLORS, formatMana, manaAvailable, manaCapacity, parseManaCost, planPayment } from './mana.ts';
-import { MAX_TALKS_PER_DAY, usableAbilities } from './run.ts';
+import { MAX_TALKS_PER_DAY, usableAbilities, volleyShares } from './run.ts';
 import { eligibleGmEvents, travelBlocked } from './step.ts';
 import { gainLife, lifeOf } from './life.ts';
 import { hasAbility, newState, outOfTime, PLAYER_ID, present, ptOf, syncWorld, targetable } from './state.ts';
@@ -2238,4 +2238,46 @@ test('an archive trap on the player: those who know them forget them', async () 
   assert.equal(state.actors['chr-x'].relations?.[PLAYER_ID], undefined); // forgot the player
   assert.equal(state.actors['chr-x'].relations?.['chr-y']?.text, '벗'); // not the others
   assert.ok(texts(state).some((t) => t.includes('의 기억에서') && t.includes('지워졌다 (1명)')));
+});
+
+const volleyTrap: RawEntity = {
+  id: 'evt-vol',
+  kind: 'event',
+  name: '화살 세례 함정',
+  status: 'canon',
+  sim: { region: 'loc-a', trigger: 'attacked', attackers: 4, text: '화살이 쏟아졌다.', effects: [{ type: 'volley', amount: 5 }] },
+};
+
+test('an arrow volley trap: four or more striking in the same hour there, the trap divides 5 damage among them', async () => {
+  const band = ['chr-a1', 'chr-a2', 'chr-a3', 'chr-a4'];
+  const world = fixture([volleyTrap, npc('chr-t', npcSim('loc-a', 'work', [0, 30])), ...band.map((id) => npc(id, npcSim('loc-a', 'work', [1, 9])))]);
+  const state = newState(world, { seed: 1, mode: 'observer' });
+  for (const id of band) addFoe(state.actors[id], 'chr-t', state.minutes);
+  const asked: string[][] = [];
+  const volley: Llm['volley'] = async ({ targets, amount }) => (asked.push([...targets.map((a) => a.id).sort(), String(amount)]), { 'chr-a1': 3, 'chr-a2': 2 });
+  await advance(state, world, 1, { volley });
+  assert.deepEqual(asked, [[...band, '5']]);
+  assert.equal(woundsOf(state.actors['chr-a1'], state.minutes), 3);
+  assert.equal(woundsOf(state.actors['chr-a2'], state.minutes), 2);
+  assert.equal(woundsOf(state.actors['chr-a3'], state.minutes), 0);
+  assert.equal(woundsOf(state.actors['chr-t'], state.minutes), 4); // the four blows it took
+});
+
+test('an arrow volley trap sleeps for three; a bad division falls around them, strongest first', async () => {
+  const world = fixture([volleyTrap, npc('chr-t', npcSim('loc-a', 'work', [0, 30])), ...['chr-a1', 'chr-a2', 'chr-a3'].map((id) => npc(id, npcSim('loc-a', 'work', [1, 9])))]);
+  const state = newState(world, { seed: 1, mode: 'observer' });
+  for (const id of ['chr-a1', 'chr-a2', 'chr-a3']) addFoe(state.actors[id], 'chr-t', state.minutes);
+  let asked = 0;
+  await advance(state, world, 1, { volley: async () => (asked++, null) });
+  assert.equal(asked, 0);
+  const [a, b] = [state.actors['chr-a1'], state.actors['chr-a2']];
+  b.pt = [3, 9];
+  assert.deepEqual(volleyShares([a, b], 5, { 'chr-a1': 9 }), { 'chr-a2': 3, 'chr-a1': 2 });
+});
+
+test('the real Arrow Volley Trap lies in Ondu', () => {
+  const world = loadWorld();
+  const ev = world.events.find((e) => e.id === 'evt-arrow-volley-trap');
+  assert.equal(ev?.region, 'loc-ondu');
+  assert.equal(ev?.attackers, 4);
 });

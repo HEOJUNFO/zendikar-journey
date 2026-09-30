@@ -7,7 +7,7 @@ import type { Action } from './actions.ts';
 import { addLog, hasAbility, npcDef, outOfTime, player, ptOf, random, speakerDef } from './state.ts';
 import type { Actor, GmPlan, LogEntry, State } from './state.ts';
 import { eligibleGmEvents, ruinsUntil, step } from './step.ts';
-import { addFoe, clash } from './combat.ts';
+import { addFoe, clash, dealDamage } from './combat.ts';
 import { relationsText, remember } from './relations.ts';
 import { claimableItems } from './items.ts';
 import { lifeOf } from './life.ts';
@@ -58,6 +58,8 @@ export type ChooseInput = { world: World; state: State; npc: Speaker; what: stri
 export type ChooseColorInput = { world: World; state: State; npc: Speaker; opponents: Actor[] };
 // A trap (`trap`) sprung by `intruders` picks one of `creatures` (anywhere in the world) to draw there.
 export type SummonInput = { world: World; state: State; trap: EventDef; creatures: Actor[]; intruders: Actor[] };
+// A trap (`trap`) divides `amount` damage among `targets`, the attackers who set it off.
+export type VolleyInput = { world: World; state: State; trap: EventDef; targets: Actor[]; amount: number };
 // Two NPCs' exchange: the lines, what each now thinks of the other (by id), and who, if
 // anyone, now attacks the other.
 // `follower`: one who, won over, now pledges to serve the other (as an NPC may to the player).
@@ -77,6 +79,8 @@ export type Llm = {
   chooseColor?: (input: ChooseColorInput) => Promise<Color | null>;
   // A summoning trap sprung (Summoning Trap): which of `creatures` it draws there, or none.
   summon?: (input: SummonInput) => Promise<string | null>;
+  // An arrow volley (Arrow Volley Trap): how much of `amount` falls on each of `targets`, by id.
+  volley?: (input: VolleyInput) => Promise<Record<string, number> | null>;
 };
 
 // NPC conversations written per game day at most (each is one LLM call).
@@ -248,6 +252,49 @@ async function summons(state: State, world: World, llm: Llm) {
   }
 }
 
+// Arrow volleys loosed this hour (sim/step.ts): the LLM, as the trap, divides the damage among
+// the attackers who set it off (all of it, as it chooses). With no usable answer, it falls one
+// at a time around them, strongest first.
+async function volleys(state: State, world: World, llm: Llm) {
+  const due = state.volleys ?? [];
+  state.volleys = [];
+  for (const v of due) {
+    const trap = world.events.find((e) => e.id === v.event);
+    const targets = v.by.map((id) => state.actors[id]).filter((a) => a && !a.dead);
+    if (!trap || !targets.length) continue;
+    let split: Record<string, number> | null = null;
+    if (llm.volley) {
+      try {
+        split = await llm.volley({ world, state, trap, targets, amount: v.amount });
+      } catch (e) {
+        console.warn(`volley for ${trap.id} failed:`, e);
+      }
+    }
+    const shares = volleyShares(targets, v.amount, split);
+    for (const a of targets) {
+      const n = shares[a.id] ?? 0;
+      if (n <= 0 || a.dead) continue;
+      addLog(state, { kind: 'combat', text: `${trap.name}: 화살 ${n}대가 ${shortName(a.name)}에게 꽂혔다.`, regions: [a.region], actors: [a.id] });
+      dealDamage(state, a, n, state.minutes, trap.name);
+    }
+  }
+}
+
+// A division of `amount` among `targets`: the one asked for if it adds up (whole, not over,
+// only to them), else one at a time around them, strongest first.
+export function volleyShares(targets: Actor[], amount: number, split: Record<string, number> | null) {
+  const ids = new Set(targets.map((a) => a.id));
+  const ok =
+    split &&
+    Object.entries(split).every(([id, n]) => ids.has(id) && Number.isInteger(n) && n >= 0) &&
+    Object.values(split).reduce((s, n) => s + n, 0) === amount;
+  if (ok) return split!;
+  const order = [...targets].sort((x, y) => ptOf(y)[0] - ptOf(x)[0] || x.id.localeCompare(y.id));
+  const out: Record<string, number> = {};
+  for (let i = 0; i < amount; i++) out[order[i % order.length].id] = (out[order[i % order.length].id] ?? 0) + 1;
+  return out;
+}
+
 // Flyer NPCs set on this hour by one who can't fly (sim/combat.ts): do they take to the air?
 // Their answer holds until midnight: out of that one's reach, or standing to fight.
 async function evasions(state: State, world: World, llm: Llm) {
@@ -282,6 +329,7 @@ async function evasions(state: State, world: World, llm: Llm) {
 async function choices(state: State, world: World, llm: Llm) {
   await evasions(state, world, llm);
   await summons(state, world, llm);
+  await volleys(state, world, llm);
   const due = state.choices ?? [];
   state.choices = [];
   for (const c of due) {

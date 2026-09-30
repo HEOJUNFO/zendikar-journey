@@ -5,7 +5,7 @@ import { ptOf } from '../state.ts';
 import { COLOR_LABELS, COLORS, manaCapacity } from '../mana.ts';
 import type { Color } from '../mana.ts';
 import { region, spellColors } from '../world.ts';
-import type { ChooseColorInput, ChooseInput, SummonInput } from '../run.ts';
+import type { ChooseColorInput, ChooseInput, SummonInput, VolleyInput } from '../run.ts';
 import { loreText } from './context.ts';
 import { relationsText } from '../relations.ts';
 import { shortName } from '../text.ts';
@@ -112,4 +112,36 @@ Which do you draw here?`,
     return creatures[0]?.id ?? null;
   }
   return parsed.data.pick;
+}
+
+// An arrow volley trap (Arrow Volley Trap) divides its damage among the attackers who set it off,
+// as it chooses: the LLM decides, as the trap (all of it must fall).
+export async function divideVolley({ world, trap, targets, amount }: VolleyInput): Promise<Record<string, number> | null> {
+  const content = await chatCompletion(
+    [
+      {
+        role: 'system',
+        content: `You are an ancient trap of the plane of Zendikar: ${trap.name}. ${trap.summary}
+Those below attacked on your ground. Divide exactly ${amount} damage among them as you choose (whole numbers, 0 or more each, adding up to ${amount}). Damage at or over one's toughness kills.
+Answer with JSON only: {"damage": {"<id>": <n>, ...}}.`,
+      },
+      {
+        role: 'user',
+        content: `World lore:
+${loreText(world)}
+
+The attackers:
+${targets.map((a) => `- ${a.id}: ${shortName(a.name)}${a.kind === 'player' ? ' (the player)' : ''} (power/toughness ${ptOf(a).join('/')})`).join('\n')}
+
+How do you divide the ${amount} damage?`,
+      },
+    ],
+    300,
+  );
+  const parsed = z.object({ damage: z.record(z.string(), z.number()) }).safeParse(extractJson(content));
+  if (!parsed.success) {
+    console.warn(`Unusable volley from ${trap.id}:`, content);
+    return null;
+  }
+  return parsed.data.damage;
 }

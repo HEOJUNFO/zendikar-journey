@@ -74,6 +74,7 @@ export function step(state: State, world: World) {
     }
   }
   enterEvents(state, world, t + STEP_MINUTES);
+  attackEvents(state, world, t);
   meetings(state, world);
   state.minutes = t + STEP_MINUTES;
 }
@@ -181,6 +182,16 @@ function enterEvents(state: State, world: World, at: number) {
     if (state.pending.some((p) => p.eventId === ev.id)) continue;
     const by = present(state, ev.region).filter((a) => a.arrivedAt === at && (!ev.gained_life || gainedLifeToday(a, at)) && (!ev.refused || refusedToday(a, at)) && (!ev.searched || a.searched === gameDay(at)));
     if (by.length) trigger(state, world, ev, at, { by: by.map((a) => a.id), lands: [] });
+  }
+}
+
+// Those who struck as attackers this hour, where an `attacked` event lies: enough of them set
+// it off (Arrow Volley Trap).
+function attackEvents(state: State, world: World, t: number) {
+  for (const ev of world.events) {
+    if (ev.trigger !== 'attacked' || onCooldown(state, ev, t)) continue;
+    const by = alive(state).filter((a) => a.region === ev.region && a.attackedAt === t);
+    if (by.length >= ev.attackers!) trigger(state, world, ev, t, { by: by.map((a) => a.id), lands: [] });
   }
 }
 
@@ -294,6 +305,9 @@ function fire(state: State, world: World, ev: EventDef, t: number, omened: boole
       addLog(state, { kind: 'event', text: `${kind} ${eff.count}마리가 쏟아져 나왔다 (${eff.pt.join('/')}).`, regions: [ev.region], actors: born.map((b) => b.id) });
       // They turn on whoever set it off, for the rest of the day.
       for (const b of born) for (const id of cause.by ?? []) addFoe(b, id, t);
+    } else if (eff.type === 'volley') {
+      // How it falls among them is the trap's, asked after the hour.
+      if (cause.by?.length) (state.volleys ??= []).push({ event: ev.id, amount: eff.amount, by: cause.by, region: ev.region, t });
     } else if (eff.type === 'forget') {
       for (const id of cause.by ?? []) {
         const a = state.actors[id];

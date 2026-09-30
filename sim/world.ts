@@ -347,6 +347,10 @@ const EffectSchema = z.discriminatedUnion('type', [
   // memories, at random: what they think of those they know (sim/relations.ts). Not for
   // morning (gm) events.
   z.strictObject({ type: z.literal('forget'), count: z.number().int().positive() }),
+  // "N damage divided as you choose among any number of target attacking creatures" (Arrow
+  // Volley Trap): N damage among those who set it off; the LLM, as the trap, divides it after
+  // the hour. Not for morning (gm) events.
+  z.strictObject({ type: z.literal('volley'), amount: z.number().int().positive() }),
 ]);
 export type Effect = z.infer<typeof EffectSchema>;
 
@@ -447,6 +451,9 @@ export const EventSimSchema = z.discriminatedUnion('trigger', [
   // Goes off for anyone in `region` (or its areas) who has drawn `cards` or more spells this
   // turn ("if an opponent drew three or more cards this turn"): once a day for each.
   z.strictObject({ ...EventBase, ...EventCost, trigger: z.literal('drew'), cards: z.number().int().min(1) }),
+  // Goes off when `attackers` or more strike as attackers in `region` in the same hour ("if four
+  // or more creatures are attacking", Arrow Volley Trap): those attackers set it off.
+  z.strictObject({ ...EventBase, ...EventCost, trigger: z.literal('attacked'), attackers: z.number().int().min(1) }),
 ]);
 
 // --- built world -----------------------------------------------------------------------
@@ -558,13 +565,14 @@ export type EventDef = {
   summary: string;
   region: string;
   range: number;
-  trigger: 'gm' | 'landfall' | 'enter' | 'destroyed' | 'drew';
+  trigger: 'gm' | 'landfall' | 'enter' | 'destroyed' | 'drew' | 'attacked';
   chance?: number; // gm
   landfalls?: number; // landfall
   gained_life?: boolean; // enter
   refused?: boolean; // enter
   searched?: boolean; // enter
   cards?: number; // drew
+  attackers?: number; // attacked
   cooldownHours: number;
   scope: 'region' | 'world';
   omen?: string;
@@ -695,8 +703,8 @@ export function buildWorld(entities: RawEntity[]): { world: World; errors: strin
       const { cooldown_hours, effects, cost, ...rest } = sim.data;
       if (rest.trigger !== 'landfall' && effects.some((x) => x.type === 'destroy_lands'))
         err(e.id, 'destroy_lands 는 trigger: landfall 사건에만 쓸 수 있음 (누가 상륙한 땅인지 알아야 함)');
-      if (rest.trigger === 'gm' && effects.some((x) => x.type === 'lose_life' || x.type === 'damage_hand' || x.type === 'forget' || x.type === 'summon'))
-        err(e.id, 'lose_life, damage_hand, forget, summon 은 trigger: gm 사건에 쓸 수 없음 (누가 일으켰는지 알아야 함)');
+      if (rest.trigger === 'gm' && effects.some((x) => x.type === 'lose_life' || x.type === 'damage_hand' || x.type === 'forget' || x.type === 'summon' || x.type === 'volley'))
+        err(e.id, 'lose_life, damage_hand, forget, summon, volley 는 trigger: gm 사건에 쓸 수 없음 (누가 일으켰는지 알아야 함)');
       world.events.push({
         id: e.id,
         name: e.name,
