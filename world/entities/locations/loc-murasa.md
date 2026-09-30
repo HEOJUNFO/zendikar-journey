@@ -10,6 +10,7 @@ tags: [대륙, 숲, 거목, 협곡, 녹색]
 links:
   - { to: loc-kazandu-refuge, rel: 안의 구역 }
   - { to: loc-misty-rainforest, rel: 안의 구역 }
+  - { to: loc-deepwater-realm, rel: 동쪽 바다 }
   - { to: loc-tazeem, rel: 동쪽의 대륙 }
   - { to: loc-ondu, rel: 남동쪽의 대륙 }
 map: { x: 115, y: 110, terrain: forest, size: continent }

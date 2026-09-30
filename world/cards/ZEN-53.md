@@ -12,7 +12,7 @@ rarity: mythic
 artist: "Kekai Kotaki"
 scryfall: https://scryfall.com/card/zen/53/lorthos-the-tidemaker
 added: 2026-09-29
-entities: [chr-lorthos, evt-lorthos-emerges, law-mana-colors]
+entities: [chr-lorthos, evt-lorthos-emerges, law-mana-colors, loc-deepwater-realm]
 ---
 
 ## 카드 원문
@@ -49,3 +49,7 @@ entities: [chr-lorthos, evt-lorthos-emerges, law-mana-colors]
 - `law-mana-colors`: 청색을 더했다.
 - 2026-09-29 점검: 탭(인물은 묶임, 대지는 잠시 쓸 수 없음)과 언탭(턴 시작 00:00)을 대응 표에 정했다. 속박을 "다음 날 06:00까지"에서 카드대로 "모레 00:00까지"로 바꿨다. [가공]이던 "조수에 잠긴 해안(12시간 이동 불가)"을 카드의 대지 탭("조수에 잠긴 해안", 탐색·일 불가)으로 바꿨다.
 - 참고: 지금 지도에는 해안에 해당하는 땅이 없어서 출현해도 붙잡히는 것이 없다.
+- 2026-09-30 다시 놓기 (지역 초기화 뒤, 대지 20장을 깐 다음):
+  - `loc-deepwater-realm`: 다시 만들었다. 타짐과 무라사 사이 바다 (157, 83) ([결정]). `chr-lorthos`, `evt-lorthos-emerges` 를 canon 으로 되돌렸다.
+  - 해안 거리를 40에서 55로 ([가공], 커진 지도에 맞춤). 해안 = 타짐과 그 구역 넷, 무라사와 그 구역 둘. 이제 출현하면 실제로 붙잡을 것이 있다.
+  - 에메리아(공중섬)도 타짐의 구역이라 해안에 든다.

@@ -1364,3 +1364,12 @@ test('the real Valakut: seeking out a land with a fetch land, then bonding Valak
   assert.ok(state.regions['loc-akoum']?.destroyed);
   assert.ok(p.dead);
 });
+
+test('the real deepwater realm: Lorthos\'s tides reach Tazeem and Murasa and their areas, not Ondu', () => {
+  const world = loadWorld();
+  const ev = world.events.find((e) => e.id === 'evt-lorthos-emerges')!;
+  const coast = affectedRegions(world, ev).map((r) => r.id);
+  for (const id of ['loc-tazeem', 'loc-emeria', 'loc-magosi', 'loc-murasa', 'loc-misty-rainforest', 'loc-kazandu-refuge']) assert.ok(coast.includes(id), id);
+  assert.ok(!coast.includes('loc-ondu'));
+  assert.equal(world.npcs.find((n) => n.id === 'chr-lorthos')?.home, 'loc-deepwater-realm');
+});

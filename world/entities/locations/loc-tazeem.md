@@ -9,6 +9,7 @@ sources: [ZEN-213, ZEN-218, ZEN-220, ZEN-221, ZEN-225]
 tags: [대륙, 해안, 절벽, 청색]
 links:
   - { to: loc-emeria, rel: 하늘의 구역 }
+  - { to: loc-deepwater-realm, rel: 서쪽 바다 }
   - { to: loc-magosi, rel: 우마라 강의 폭포 }
   - { to: loc-oran-rief, rel: 산호 바위 숲 }
   - { to: loc-soaring-seacliff, rel: 해안의 바다절벽 }
