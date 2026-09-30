@@ -1441,3 +1441,10 @@ test('the real Emeria teaches the celestial mantle, and Iona, who lives there, i
   await advance(state, world, 1, { planDay: async (input) => (input.id === 'chr-iona' && (offered = input.learn), planDay!(input)) });
   assert.ok(offered?.some((s) => s.id === 'spl-celestial-mantle' && s.at === 'loc-emeria'));
 });
+
+test('the real Chandra wanders Akoum', () => {
+  const world = loadWorld();
+  const state = newState(world, { seed: 1, mode: 'observer' });
+  assert.equal(state.actors['chr-chandra']?.region, 'loc-akoum');
+  assert.equal(state.actors['chr-chandra']?.loyalty, 5);
+});

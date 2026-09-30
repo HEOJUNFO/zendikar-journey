@@ -5,13 +5,14 @@ name: 아쿰
 name_en: Akoum
 summary: 젠디카르 동쪽의 험한 화산 대륙. 검붉은 바위 협곡이 이어지고, 뒤틀린 땅에서 떨어져 나온 바위 조각들이 하늘에 떠 있다
 status: canon
-sources: [ZEN-210, ZEN-223, ZEN-226, ZEN-228]
+sources: [ZEN-210, ZEN-223, ZEN-226, ZEN-228, ZEN-120]
 tags: [대륙, 화산, 협곡, 적색]
 links:
   - { to: loc-akoum-refuge, rel: 안의 구역 }
   - { to: loc-scalding-tarn, rel: 안의 구역 }
   - { to: loc-teetering-peaks, rel: 안의 구역 }
   - { to: loc-valakut, rel: 한가운데의 화산 }
+  - { to: chr-chandra, rel: 헤매는 플레인즈워커 }
 map: { x: 488, y: 240, terrain: volcanic, size: continent }
 ---
 
@@ -26,6 +27,8 @@ map: { x: 488, y: 240, terrain: volcanic, size: continent }
 - 지도 동쪽의 화산 지대 지역이다 (지형 `volcanic`, 적색 땅) ([결정] 2026-09-30: 아쿰도 유대를 맺는 땅).
 - 안에 구역 아쿰 피난처(`loc-akoum-refuge`)와 뜨거운 호수(`loc-scalding-tarn`, 섬이나 산을 찾아오는 페치랜드), 흔들리는 봉우리(`loc-teetering-peaks`, 유대를 맺을 때 곁의 하나에게 하루 +2/+0), 발라쿠트(`loc-valakut`, 산이 여섯 모이면 아쿰 어디로든 불길)가 있다. 아쿰의 다른 대지 카드가 나오면 구역으로 더한다.
 - 위치 (488, 240)는 [배경]의 동쪽 대륙에서 정한 [가공]이다. 대륙이라 지도에 크게 그린다 (`size: continent`).
+
+- 불의 플레인즈워커 찬드라(`chr-chandra`, ZEN-120)가 무언가를 찾아 이곳을 헤맨다 ([배경] 우긴의 눈, [결정] 2026-09-30 다시 놓기).
 
 ## 미정/질문
 
