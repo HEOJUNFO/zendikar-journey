@@ -36,7 +36,7 @@ entities: [cre-halo-hunter, chr-iona, loc-akoum]
 
 ## 반영 내역
 
-- `cre-halo-hunter` (새 생물종, 한 마리 "후광 사냥꾼"): 아쿰, 6/3, 흑 5, 기력만, `intimidate`, `types: [demon]`, `enter_destroy: angel`.
+- `cre-halo-hunter` (새 생물종, 한 마리 "후광 사냥꾼"): 아쿰, 6/3, 흑 5, 먹지 않음, `intimidate`, `types: [demon]`, `enter_destroy: angel`.
 - `chr-iona`: 생물 유형 천사 (`types: [angel]`).
 - `loc-akoum`: 산속 굴.
 - 엔진: 능력 `intimidate` (`combat.ts` 의 `unblockable`, `intimidated`; `mana.ts` 의 `actorColors`), 생물 유형 `sim.types`, `sim.enter_destroy` (`abilities.ts` 의 `enterDestroy`/`applyEnterDestroy`, 도착한 틱과 `callForth` 에서, 고를 것 `destroy`), 파괴 공통 `destroy`.

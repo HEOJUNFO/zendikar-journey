@@ -42,7 +42,7 @@ entities: [cre-felidar, law-life, law-retainers, loc-sejiri]
 
 ## 반영 내역
 
-- `cre-felidar` (새 생물종, 게임 속 한 마리 "펠리다르 군주"): 세지리에 산다. 4/6, 백 6, 기력만 씀, `beast`, `tamable`, 능력 `vigilance`·`lifelink`, `wins_at_life: 40`.
+- `cre-felidar` (새 생물종, 게임 속 한 마리 "펠리다르 군주"): 세지리에 산다. 4/6, 백 6, 먹지 않고 돈을 쓰지 않음, `beast`, `tamable`, 능력 `vigilance`·`lifelink`, `wins_at_life: 40`.
 - `law-life`: 생명을 기력과 뗌 (`Actor.life`, 시작 20, 회복 없음, 0이면 죽음). 생명연결, 승리를 더함. 다른 생명 효과 문서의 기력 수치를 뺌. 페치의 생명 값은 가진 생명보다 적을 때만.
 - `law-retainers`: 따를 이를 고르는 짐승(인정), NPC의 `court` 블록.
 - `loc-sejiri`: 펠리다르 군주가 사는 곳.

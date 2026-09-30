@@ -38,6 +38,6 @@ entities: [cre-sphinx, loc-jwar-isle]
 
 ## 반영 내역
 
-- `cre-sphinx` (새 생물종, 한 마리 "즈와르 섬의 스핑크스"): 5/5, 청 6, 기력만, `fly`, `shroud`, `foresight`.
+- `cre-sphinx` (새 생물종, 한 마리 "즈와르 섬의 스핑크스"): 5/5, 청 6, 먹지 않음, `fly`, `shroud`, `foresight`.
 - `loc-jwar-isle`: 스핑크스가 사는 곳.
 - 엔진: 능력 `shroud`(`targetable`: 주문 대상, 능력 대상, 땅의 대상 효과, 발라쿠트, 무리 발동, 뒤틀림 정령의 후보에서 빠짐), `sim.foresight`(`sim/foresight.ts`: 하루 계획은 아침 계획 뒤에, 대화에 남은 앞일).
