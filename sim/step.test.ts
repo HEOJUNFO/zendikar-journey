@@ -2731,20 +2731,3 @@ test('the real Halo Hunter lairs in Akoum, intimidating, hunting Iona the Angel'
   assert.equal(npcDef(state, world, h.id)?.enterDestroy, 'angel');
   assert.deepEqual(npcDef(state, world, 'chr-iona')?.types, ['angel']);
 });
-
-test('an Angel who seals the hunter\'s color keeps him from destroying her; another color does not', async () => {
-  const hunter = { ...npcSim('loc-c', 'work', [6, 3]), home: 'loc-a', mana: { B: 5 }, needs: [], types: ['demon'], enter_destroy: 'angel' };
-  const iona = { ...npcSim('loc-c', 'work', [7, 7]), needs: [], types: ['angel'], seal: true, mana: { W: 9 } };
-  for (const [color, survives] of [['B', true], ['R', false]] as const) {
-    const world = fixture([npc('chr-h', hunter), npc('chr-io', iona)]);
-    const state = newState(world, { seed: 1, mode: 'observer' });
-    let picked = 0;
-    await advance(state, world, 2, { chooseColor: async () => color, choose: async () => (picked++, 'chr-io') });
-    const io = state.actors['chr-io'];
-    assert.equal(io.seal?.color, color);
-    assert.equal(!io.dead, survives, color);
-    assert.equal(picked, survives ? 0 : 1);
-    if (survives) assert.ok(texts(state).some((t) => t.includes('그 힘을 쓰지 못한다')));
-    assert.ok(texts(state).some((t) => t.includes('기척을 알아챘다')));
-  }
-});

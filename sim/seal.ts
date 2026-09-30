@@ -4,8 +4,7 @@
 // Entering is entering a fight (user decision 2026-09-29): the first time in a day that they
 // fight someone, they name a color (the LLM picks, sim/run.ts). Until 00:00, anyone they are
 // fighting (their foe, or one who took them for a foe) can't cast spells of that color,
-// wherever they are, player or NPC, paid for or free. Nor, as arriving is being cast, can one
-// of that color use their "when this enters" (Halo Hunter, sim/abilities.ts `enterSealed`).
+// wherever they are, player or NPC, paid for or free.
 import { gameDay } from './clock.ts';
 import { foesOf } from './combat.ts';
 import { COLOR_LABELS } from './mana.ts';
@@ -46,13 +45,7 @@ export function setSeal(state: State, a: Actor, color: Color, t: number) {
 
 // Who keeps `caster` from casting `spell` now, if anyone.
 export function sealedBy(state: State, caster: Actor, spell: SpellDef, t: number) {
-  return sealedAgainst(state, caster, spellColors(spell), t);
-}
-
-// Who has sealed one of `colors` against `caster` now, if anyone. Also what keeps one whose
-// arrival is their casting from its "when this enters" (Halo Hunter, a black creature: user
-// decision 2026-09-30).
-export function sealedAgainst(state: State, caster: Actor, colors: readonly Color[], t: number) {
+  const colors = spellColors(spell);
   return Object.values(state.actors).find((x) => {
     const c = !x.dead ? sealToday(x, t) : undefined;
     return c && colors.includes(c) && opponentsOf(state, x, t).some((o) => o.id === caster.id);
