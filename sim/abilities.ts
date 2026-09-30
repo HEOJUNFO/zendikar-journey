@@ -1,7 +1,7 @@
 // Landfall (bonding with a land) and activated abilities, used as the morning LLM plans.
 import { gameDay, untapTime } from './clock.ts';
 import { addFoe, dealDamage, destroy, leavePlane } from './combat.ts';
-import { creatureColors, manaAvailable, payMana, planPayment } from './mana.ts';
+import { actorColors, creatureColors, manaAvailable, payMana, planPayment } from './mana.ts';
 import { landTapBlocked, tapLand } from './landtap.ts';
 import type { Color } from './mana.ts';
 import { itemsOnLandfall } from './items.ts';
@@ -9,6 +9,7 @@ import { gainLife, lifeOf, loseLife, setLife } from './life.ts';
 import { allyJoined } from './allies.ts';
 import { DEPLETED_LABEL } from './rules.ts';
 import { castSpell, spellDef } from './spells.ts';
+import { sealedAgainst, sealText } from './seal.ts';
 import { addLog, hasAbility, npcDef, outOfTime, present, ptOf, random, targetable } from './state.ts';
 import type { Actor, ChoiceEffect, State } from './state.ts';
 import { josa, shortName, toward } from './text.ts';
@@ -560,12 +561,31 @@ export function enterDestroy(state: State, world: World, a: Actor, t: number) {
   const candidates = present(state, a.region)
     .filter((x) => x.id !== a.id && (npcDef(state, world, x.id)?.types ?? []).includes(kind) && targetable(x, t))
     .map((x) => x.id);
-  if (candidates.length) (state.choices ??= []).push({ by: a.id, land: a.region, effect: { type: 'destroy', kind }, candidates, optional: true, t });
+  if (!candidates.length) return;
+  // One who can seal a color (Iona) senses the hunter come for them: they take him for a foe,
+  // so they name their color before he picks (sim/run.ts `choices`), and a color of his sealed
+  // keeps him from it, as it keeps his card from being cast.
+  for (const x of candidates.map((id) => state.actors[id])) {
+    if (!npcDef(state, world, x.id)?.seal) continue;
+    addFoe(x, a.id, t);
+    addLog(state, { kind: 'event', text: `${josa(shortName(x.name), '이', '가')} 자신을 노리고 들어선 ${shortName(a.name)}의 기척을 알아챘다.`, regions: [a.region], actors: [x.id, a.id], t });
+  }
+  (state.choices ??= []).push({ by: a.id, land: a.region, effect: { type: 'destroy', kind }, candidates, optional: true, t });
+}
+
+// Who has sealed his color against the hunter (Iona), if anyone: his "when this enters" is off.
+export function enterSealed(state: State, world: World, a: Actor, t: number) {
+  return sealedAgainst(state, a, actorColors(state, world, a), t);
 }
 
 // Their pick lands: the one picked, still there, is destroyed.
 export function applyEnterDestroy(state: State, world: World, a: Actor, target: Actor, t: number) {
   if (a.dead || target.dead || target.region !== a.region || target.travel || !targetable(target, t)) return;
+  const sealer = enterSealed(state, world, a, t);
+  if (sealer) {
+    addLog(state, { kind: 'effect', text: `${sealText(sealer, t)} ${josa(shortName(a.name), '은', '는')} 그 힘을 쓰지 못한다.`, regions: [a.region], actors: [a.id, sealer.id], t });
+    return;
+  }
   addLog(state, {
     kind: 'event',
     text: `${josa(shortName(a.name), '이', '가')} 들어서자마자 ${josa(shortName(target.name), '을', '를')} 덮쳐 파괴하려 한다.`,

@@ -23,7 +23,7 @@ import { castableSpells, castBlocked, castSpell, harmful, learnableSpells, spell
 import { opponentsOf, sealsDue, setSeal } from './seal.ts';
 import { COLORS } from './mana.ts';
 import type { Color } from './mana.ts';
-import { abilityBlocked, applyBondEffect, applyEnterDestroy, enteredToday, fetchBlocked, fetchTargets, growBlocked, growLand, callForth } from './abilities.ts';
+import { abilityBlocked, applyBondEffect, applyEnterDestroy, enterSealed, enteredToday, fetchBlocked, fetchTargets, growBlocked, growLand, callForth } from './abilities.ts';
 import { bindRetainer, courtTargets, followsMaster, refuse, seize, swayBlocked } from './retainers.ts';
 import { josa, shortName } from './text.ts';
 import type { ScheduleBlock } from './types.ts';
@@ -379,6 +379,8 @@ async function choices(state: State, world: World, llm: Llm) {
   await evasions(state, world, llm);
   await summons(state, world, llm);
   await volleys(state, world, llm);
+  // Those drawn into a fight this hour name their color before the picks (a hunter's arrival).
+  await seals(state, world, llm);
   const due = state.choices ?? [];
   state.choices = [];
   for (const c of due) {
@@ -425,6 +427,11 @@ async function choices(state: State, world: World, llm: Llm) {
     // Halo Hunter, arriving: which one of the kind he hunts (if any) he destroys.
     if (c.effect.type === 'destroy') {
       if (!llm.choose) continue;
+      // His color sealed against him: no pick to make (applyEnterDestroy says why).
+      if (enterSealed(state, world, by, state.minutes)) {
+        applyEnterDestroy(state, world, by, candidates[0], state.minutes);
+        continue;
+      }
       let pick: string | null = null;
       try {
         pick = await llm.choose({ world, state, npc, candidates, optional: true, what: `${land.name}: 당신이 이곳에 들어섰다. 여기 있는 ${CREATURE_TYPE_LABELS[c.effect.kind]} 가운데 하나를 골라 파괴할 수 있다 (파괴된 이는 죽는다). 아무도 고르지 않을 수도 있다` });
