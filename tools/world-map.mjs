@@ -4,9 +4,16 @@ import { writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { loadWorld, WORLD_DIR } from '../sim/load.ts';
 import { TERRAINS } from '../sim/world.ts';
-import { areaLabelAt, containerRadius, fitView, nodeAt, regionLabelAt, shelves } from '../web/view.ts';
+import { areaLabelAt, containerRadius, fitView, halfCircle, landColors, nodeAt, regionLabelAt, shelves } from '../web/view.ts';
 
 const S = 6; // px per map unit
+// A land's circle in its mana colors (web/view.ts landColors), split for a two-color land.
+const land = (x, y, r, colors, style) =>
+  colors.length < 2
+    ? `<circle cx="${x}" cy="${y}" r="${r}" fill="${colors[0]}" ${style}/>`
+    : `<path d="${halfCircle(x, y, r, 0)}" fill="${colors[0]}" ${style.replace(/stroke[^ ]*="[^"]*"/g, '')}/>` +
+      `<path d="${halfCircle(x, y, r, 1)}" fill="${colors[1]}" ${style.replace(/stroke[^ ]*="[^"]*"/g, '')}/>` +
+      `<circle cx="${x}" cy="${y}" r="${r}" fill="none" ${style.replace(/fill-opacity="[^"]*"/, '')}/>`;
 const esc = (s) => s.replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]);
 
 const world = loadWorld();
@@ -18,17 +25,15 @@ const shelfShapes = shelves(world).flatMap((sh) => [
 // As the game draws them (web/view.ts): a region holding areas is itself a large circle, with
 // its areas as small circles across the lower part.
 const containers = world.regions.filter((r) => !r.parent && containerRadius(world, r)).map((r) => {
-  const t = TERRAINS[r.terrain];
   const R = containerRadius(world, r) * S;
-  return `  <circle cx="${r.x * S}" cy="${r.y * S}" r="${R}" fill="${t.color}" fill-opacity="0.35" stroke="#f4ecd8" stroke-opacity="0.7" stroke-width="3"/>`;
+  return `  ${land(r.x * S, r.y * S, R, landColors(r), 'fill-opacity="0.72" stroke="#f4ecd8" stroke-opacity="0.7" stroke-width="3"')}`;
 });
 const areaNodes = world.regions
   .filter((r) => r.parent)
   .map((r) => {
-    const t = TERRAINS[r.terrain];
     const { x, y } = nodeAt(world, r);
     const label = areaLabelAt(world, r);
-    return `  <g><circle cx="${x * S}" cy="${y * S}" r="16" fill="${t.color}" stroke="#f4ecd8" stroke-width="2"/>
+    return `  <g>${land(x * S, y * S, 16, landColors(r), 'stroke="#f4ecd8" stroke-width="2"')}
     <text x="${label.x * S}" y="${label.y * S}" text-anchor="${label.anchor}" class="area">${esc(r.name)}</text></g>`;
   });
 const nodes = world.regions.filter((r) => !r.parent).map((r) => {
@@ -40,7 +45,7 @@ const nodes = world.regions.filter((r) => !r.parent).map((r) => {
       `<circle cx="${x}" cy="${y}" r="30" fill="none" stroke="#9fc4ff" stroke-width="2" stroke-dasharray="6 6"/>`
     : R
       ? ''
-      : `<circle cx="${x}" cy="${y}" r="26" fill="${t.color}" stroke="#f4ecd8" stroke-width="3"/>`;
+      : land(x, y, 26, landColors(r), 'stroke="#f4ecd8" stroke-width="3"');
   // A region circle is named where the game names it (above, or beside/below for an island of
   // a continent), its terrain on the next line; other nodes are named below.
   const label = R ? regionLabelAt(world, r) : null;

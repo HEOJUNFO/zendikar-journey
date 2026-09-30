@@ -6,7 +6,7 @@ import { areasOf, TERRAINS } from '../sim/world.ts';
 import type { World } from '../sim/world.ts';
 import { MapView } from './MapView.tsx';
 import { LegendsList, LogView, ObserverControls, PeopleList, PlayerCard, RegionCard } from './panels.tsx';
-import { visibleActors } from './view.ts';
+import { landSwatch, visibleActors } from './view.ts';
 
 type Props = {
   world: World;
@@ -66,7 +66,7 @@ function RegionList(props: { world: World; state: State | null; selected?: strin
             <li key={r.id}>
               <button className={`ghost${selected === r.id ? ' on' : ''}`} onClick={() => onSelect(r.id)}>
                 {r.parent && <span className="muted">└</span>}
-                <span className="swatch" style={{ background: TERRAINS[r.terrain].color }} />
+                <span className="swatch" style={{ background: landSwatch(r) }} />
                 {r.name}
                 {rs?.destroyed && ' ✕'}
                 {!!rs?.conditions.length && ' ⚠'}

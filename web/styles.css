@@ -194,6 +194,10 @@ header h1 {
 .map-sea {
   fill: var(--sea);
 }
+/* a two-color land: its halves carry no outline of their own (the circle over them does) */
+.map-half {
+  stroke: none !important;
+}
 /* shallow water joining a continent and its islands */
 .map-shelf circle {
   fill: var(--sea-line);
@@ -646,7 +650,7 @@ header h1 {
 /* --- areas inside a region: a large circle holding small ones --- */
 
 .map-container {
-  fill-opacity: 0.35;
+  fill-opacity: 0.72;
   stroke: #f4ecd8;
   stroke-width: 0.45;
   stroke-opacity: 0.7;

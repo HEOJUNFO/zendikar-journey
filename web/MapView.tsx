@@ -5,7 +5,7 @@ import type { Actor, State } from '../sim/state.ts';
 import { shortName } from '../sim/text.ts';
 import { hasPowers, MAP_HEIGHT, MAP_WIDTH, region, spellColors, TERRAINS, travelHours } from '../sim/world.ts';
 import type { World } from '../sim/world.ts';
-import { areaLabelAt, containerRadius, fitView, isTrap, nodeAt, regionLabelAt, shelves, trapStatus, visibleActors } from './view.ts';
+import { areaLabelAt, containerRadius, fitView, halfCircle, isTrap, landColors, nodeAt, regionLabelAt, shelves, trapStatus, visibleActors } from './view.ts';
 import type { MapBox } from './view.ts';
 
 type Props = {
@@ -24,6 +24,18 @@ type Props = {
 };
 
 const TRAP_GAP = 3.6;
+
+// A land's circle in its mana colors: split down the middle for a two-color land.
+function LandCircle({ x, y, r, colors, className }: { x: number; y: number; r: number; colors: string[]; className: string }) {
+  if (colors.length < 2) return <circle cx={x} cy={y} r={r} fill={colors[0]} className={className} />;
+  return (
+    <g>
+      <path d={halfCircle(x, y, r, 0)} fill={colors[0]} className={`${className} map-half`} />
+      <path d={halfCircle(x, y, r, 1)} fill={colors[1]} className={`${className} map-half`} />
+      <circle cx={x} cy={y} r={r} fill="none" className={className} />
+    </g>
+  );
+}
 
 // Zoom: the narrowest view (most zoomed in), each button step, and how far a drag must go
 // before it pans instead of clicking.
@@ -169,7 +181,7 @@ export function MapView({ world, state, selected, onSelect, all, picked, onPickA
               <g key={r.id} className="map-region map-area" onClick={() => onSelect(r.id)} tabIndex={0}
                 onKeyDown={(e) => (e.key === 'Enter' || e.key === ' ') && onSelect(r.id)}>
                 <title>{`${parent.name} › ${r.name} (${t.label})`}</title>
-                <circle cx={x} cy={y} r={2.4} fill={t.color} className="map-node" />
+                <LandCircle x={x} y={y} r={2.4} colors={landColors(r)} className="map-node" />
                 {isSel && <circle cx={x} cy={y} r={3.7} className="map-selected" />}
                 {destroyed && <text x={x} y={y + 1} className="map-destroyed map-area-mark">✕</text>}
                 {conds.length > 0 && <text x={x + 2.7} y={y - 2.1} className="map-alert map-area-mark">⚠</text>}
@@ -185,7 +197,7 @@ export function MapView({ world, state, selected, onSelect, all, picked, onPickA
               <g key={r.id} className="map-region" onClick={() => onSelect(r.id)} tabIndex={0}
                 onKeyDown={(e) => (e.key === 'Enter' || e.key === ' ') && onSelect(r.id)}>
                 <title>{`${r.name} (${t.label})`}</title>
-                <circle cx={r.x} cy={r.y} r={R} fill={t.color} className="map-container" />
+                <LandCircle x={r.x} y={r.y} r={R} colors={landColors(r)} className="map-container" />
                 {isSel && <circle cx={r.x} cy={r.y} r={R + 1.2} className="map-selected" />}
                 {destroyed && <text x={own.x} y={own.y + 1.4} className="map-destroyed">✕</text>}
                 {conds.length > 0 && <text x={own.x + 3.6} y={own.y - 2.7} className="map-alert">⚠</text>}
@@ -203,7 +215,7 @@ export function MapView({ world, state, selected, onSelect, all, picked, onPickA
                   <circle cx={r.x} cy={r.y} r={4.5} className="map-whirl" />
                 </>
               ) : (
-                <circle cx={r.x} cy={r.y} r={4.8} fill={t.color} className="map-node" />
+                <LandCircle x={r.x} y={r.y} r={4.8} colors={landColors(r)} className="map-node" />
               )}
               {isSel && <circle cx={r.x} cy={r.y} r={t.sea ? 12.3 : 6.9} className="map-selected" />}
               {destroyed && <text x={r.x} y={r.y + 1.6} className="map-destroyed">✕</text>}

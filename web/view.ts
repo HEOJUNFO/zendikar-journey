@@ -5,6 +5,7 @@ import { player } from '../sim/state.ts';
 import type { Actor, State } from '../sim/state.ts';
 import { MAP_HEIGHT, MAP_WIDTH, TERRAINS } from '../sim/world.ts';
 import type { EventDef, Region, World } from '../sim/world.ts';
+import type { Color } from '../sim/mana.ts';
 
 export function visibleActors(state: State, all = false): Actor[] {
   const alive = Object.values(state.actors).filter((a) => !a.dead || a.kind === 'player');
@@ -19,6 +20,32 @@ export function visibleLog(state: State, all = false) {
 
 export function clock(state: State) {
   return formatClock(state.minutes);
+}
+
+// Lands are drawn in the color of their mana (MTG's five), not their terrain: white cream,
+// blue, black, red, green, and grey for a land that gives none or only colorless. A land that
+// gives one of two colors is drawn split between them. The sea keeps its own color.
+export const MANA_COLORS: Record<Color | 'C', string> = {
+  W: '#efe4c2',
+  U: '#3f7fcf',
+  B: '#2b2233',
+  R: '#cc4f34',
+  G: '#3f9447',
+  C: '#9a958b',
+};
+export function landColors(r: Region): string[] {
+  if (TERRAINS[r.terrain].sea) return [TERRAINS[r.terrain].color];
+  if (r.noMana || !r.color) return [MANA_COLORS.C];
+  return r.color.split('/').map((c) => MANA_COLORS[c as Color]);
+}
+// A CSS background for a small swatch of the land's colors.
+export function landSwatch(r: Region) {
+  const [a, b] = landColors(r);
+  return b ? `linear-gradient(90deg, ${a} 50%, ${b} 50%)` : a;
+}
+// The left and right halves of a circle, for a two-color land.
+export function halfCircle(x: number, y: number, r: number, side: 0 | 1) {
+  return `M${x} ${y - r}A${r} ${r} 0 0 ${side} ${x} ${y + r}Z`;
 }
 
 // Where a land's node is drawn. A region holding areas, or one with a size (a continent, a
