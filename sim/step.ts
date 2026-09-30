@@ -161,6 +161,18 @@ function gmLayer(state: State, world: World, t: number) {
 // the characters move, so a traveller is met at the gate, not an hour later.
 function enterEvents(state: State, world: World, at: number) {
   for (const ev of world.events) {
+    // Those here who drew enough spells today, each once a day (this spring included).
+    if (ev.trigger === 'drew') {
+      if (onCooldown(state, ev, at)) continue;
+      const here = new Set([ev.region, ...world.regions.filter((r) => r.parent === ev.region).map((r) => r.id)]);
+      const day = gameDay(at);
+      const by = alive(state).filter(
+        (a) => here.has(a.region) && !a.travel && !outOfTime(state, a, at) && a.drawn?.day === day && a.drawn.count >= ev.cards! && !a.drawn.sprung?.includes(ev.id),
+      );
+      for (const a of by) a.drawn!.sprung = [...(a.drawn!.sprung ?? []), ev.id];
+      if (by.length) trigger(state, world, ev, at, { by: by.map((a) => a.id), lands: [] });
+      continue;
+    }
     if (ev.trigger !== 'enter' || onCooldown(state, ev, at)) continue;
     if (state.pending.some((p) => p.eventId === ev.id)) continue;
     const by = present(state, ev.region).filter((a) => a.arrivedAt === at && (!ev.gained_life || gainedLifeToday(a, at)));
@@ -245,6 +257,14 @@ function fire(state: State, world: World, ev: EventDef, t: number, omened: boole
         state.regions[id] ??= { conditions: [] };
         state.regions[id].conditions.push({ label: eff.land_label, until, blocksTravel: false, tapped: true, source: ev.id });
         addLog(state, { kind: 'condition', text: `${region(world, id).name}: ${eff.land_label} (${formatClock(until)}까지 쓸 수 없다)`, regions: [id], scope: ev.scope });
+      }
+    } else if (eff.type === 'damage_hand') {
+      for (const id of cause.by ?? []) {
+        const a = state.actors[id];
+        if (!a || a.dead || a.travel) continue;
+        const n = a.spells?.length ?? 0;
+        if (n) dealDamage(state, a, n, t, `${ev.name} (쥔 주문 ${n})`);
+        else addLog(state, { kind: 'effect', text: `${josa(shortName(a.name), '은', '는')} 쥔 주문이 없어 불길이 비껴갔다.`, regions: [a.region], actors: [a.id], t });
       }
     } else if (eff.type === 'lose_life') {
       for (const id of cause.by ?? []) {

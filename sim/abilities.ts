@@ -348,7 +348,7 @@ export function useAbility(state: State, world: World, beingId: string, abilityI
       const gone = discardSpell(state, world, bs, t);
       if (gone && spellColors(gone).includes(eff.if_color) && target) dealDamage(state, target, eff.damage, t, cause);
     } else if (eff.type === 'wheel') {
-      for (const x of present(state, bs.region)) wheel(state, world, x, eff.draw);
+      for (const x of present(state, bs.region)) wheel(state, world, x, eff.draw, t);
     } else if (eff.type === 'flashback' && target) {
       for (const id of bs.graveyard ?? []) {
         const s = spellDef(world, id);
@@ -377,12 +377,14 @@ function discardSpell(state: State, world: World, a: Actor, t: number) {
 }
 
 // Let go of every spell held, then come to hold `draw` spells of the world at random.
-function wheel(state: State, world: World, a: Actor, draw: number) {
+function wheel(state: State, world: World, a: Actor, draw: number, t: number) {
   a.graveyard = [...(a.graveyard ?? []), ...(a.spells ?? [])];
   const pool = [...world.spells];
   const got: string[] = [];
   while (got.length < draw && pool.length) got.push(pool.splice(Math.floor(random(state) * pool.length), 1)[0].id);
   a.spells = got;
+  const day = gameDay(t);
+  a.drawn = { day, count: (a.drawn?.day === day ? a.drawn.count : 0) + got.length, sprung: a.drawn?.day === day ? a.drawn.sprung : undefined };
   addLog(state, {
     kind: 'effect',
     text: `${josa(shortName(a.name), '은', '는')} 알던 주문을 잊고${got.length ? ` ${got.map((id) => spellDef(world, id)!.name).join(', ')}${josa(spellDef(world, got.at(-1)!)!.name, '을', '를').slice(-1)} 떠올렸다` : ' 아무것도 떠올리지 못했다'}.`,

@@ -5,9 +5,10 @@ name: 찬드라, 불꽃의 방랑자
 name_en: Chandra Ablaze
 summary: 차원을 넘나드는 불의 마법사. 붉은 머리칼과 고글, 온몸의 불길. 화산 대륙 아쿰을 헤매며 무언가를 찾는다
 status: canon
-sources: [ZEN-120]
+sources: [ZEN-120, ZEN-146]
 tags: [플레인즈워커, 전설, 적색, 불]
 links:
+  - { to: evt-runeflare-trap, rel: 그녀의 −2가 깨우는 함정 }
   - { to: law-planeswalkers, rel: 플레인즈워커 }
   - { to: law-mana-colors, rel: 적색의 존재 }
   - { to: loc-akoum, rel: 헤매는 곳 }

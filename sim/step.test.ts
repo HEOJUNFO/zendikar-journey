@@ -1807,3 +1807,37 @@ test('the real Roil Elemental drifts over Tazeem', () => {
   assert.equal(r?.region, 'loc-tazeem');
   assert.equal(world.npcs.find((x) => x.id === 'cre-roil-elemental')?.landfallSeize, true);
 });
+
+const runeflare: RawEntity = {
+  id: 'evt-rune',
+  kind: 'event',
+  name: '룬불꽃',
+  status: 'canon',
+  sim: { region: 'loc-a', trigger: 'drew', cards: 3, text: '룬이 불길을 뿜었다.', effects: [{ type: 'damage_hand' }] },
+};
+const spell = (id: string): RawEntity => ({ ...bolt, id, name: id });
+
+test('a drew trap burns, once a day, each one here who drew three spells, for the spells they hold', async () => {
+  const world = fixture([walker, bolt, spell('spl-2'), spell('spl-3'), runeflare, npc('chr-x', npcSim('loc-a', 'social', [1, 5])), npc('chr-y', npcSim('loc-b', 'social', [1, 5]))]);
+  const state = newState(world, { seed: 1, mode: 'observer' });
+  const x = state.actors['chr-x'];
+  const w = state.actors['chr-w'];
+  assert.equal(useAbility(state, world, 'chr-w', 'wheel', '', state.minutes), null);
+  assert.deepEqual(x.drawn, { day: 0, count: 3, sprung: undefined });
+  await advance(state, world, 1);
+  assert.ok(texts(state).some((t) => t.includes('룬이 불길을 뿜었다')));
+  assert.equal(woundsOf(x, state.minutes), 3);
+  assert.equal(w.left, true); // loyalty 5 − 2, then 3 of fire
+  assert.equal(state.actors['chr-y'].drawn, undefined); // elsewhere: untouched
+  const fired = state.log.filter((e) => e.text.includes('룬이 불길을')).length;
+  await advance(state, world, 1);
+  assert.equal(state.log.filter((e) => e.text.includes('룬이 불길을')).length, fired); // once a day
+});
+
+test('the real Runeflare Trap lies over Akoum', () => {
+  const world = loadWorld();
+  const ev = world.events.find((e) => e.id === 'evt-runeflare-trap');
+  assert.equal(ev?.region, 'loc-akoum');
+  assert.equal(ev?.trigger, 'drew');
+  assert.equal(ev?.cards, 3);
+});

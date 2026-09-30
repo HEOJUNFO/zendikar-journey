@@ -45,6 +45,9 @@ export type Actor = {
   manaSpent?: { day: number; spent: Mana };
   // When they last arrived somewhere (an enter event may answer it at that hour).
   arrivedAt?: number;
+  // Spells they drew (came to hold at random) this turn, and the events that already answered
+  // it ("if an opponent drew three or more cards this turn").
+  drawn?: { day: number; count: number; sprung?: string[] };
   // Life total (sim/life.ts), apart from energy; START_LIFE until something changes it.
   life?: number;
   // Game day they last gained life (sim/life.ts).
