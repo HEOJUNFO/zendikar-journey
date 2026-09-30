@@ -7,6 +7,7 @@
   <rect width="100%" height="100%" fill="#16324f"/>
   <circle cx="540" cy="426" r="42" fill="#d9c38a" fill-opacity="0.35" stroke="#f4ecd8" stroke-opacity="0.7" stroke-width="3"/>
   <circle cx="960" cy="384" r="96" fill="#b5462c" fill-opacity="0.35" stroke="#f4ecd8" stroke-opacity="0.7" stroke-width="3"/>
+  <circle cx="696" cy="672" r="42" fill="#d9c38a" fill-opacity="0.35" stroke="#f4ecd8" stroke-opacity="0.7" stroke-width="3"/>
   <circle cx="696" cy="480" r="96" fill="#8fb35a" fill-opacity="0.35" stroke="#f4ecd8" stroke-opacity="0.7" stroke-width="3"/>
   <circle cx="576" cy="192" r="96" fill="#d9c38a" fill-opacity="0.35" stroke="#f4ecd8" stroke-opacity="0.7" stroke-width="3"/>
   <g><circle cx="540" cy="447" r="16" fill="#6a5a82" stroke="#f4ecd8" stroke-width="2"/>
@@ -19,12 +20,17 @@
     <text x="576" y="307.79999999999995" text-anchor="middle" class="area">에메리아</text></g>
   <g><circle cx="665.0775510125908" cy="516.7124249896555" r="16" fill="#3f7a3a" stroke="#f4ecd8" stroke-width="2"/>
     <text x="627.1975510030146" y="570.6851456019833" text-anchor="end" class="area">그레이펠트 피난처</text></g>
+  <g><circle cx="696" cy="693" r="16" fill="#b08850" stroke="#f4ecd8" stroke-width="2"/>
+    <text x="696" y="733.8" text-anchor="middle" class="area">즈와르 섬 피난처</text></g>
   <g>
     <text x="540" y="356" text-anchor="middle" class="name">아게딤</text>
     <text x="540" y="374" text-anchor="middle" class="terrain">해변</text></g>
   <g>
     <text x="960" y="260" text-anchor="middle" class="name">아쿰</text>
     <text x="960" y="278" text-anchor="middle" class="terrain">화산 지대</text></g>
+  <g>
+    <text x="696" y="602" text-anchor="middle" class="name">즈와르 섬</text>
+    <text x="696" y="620" text-anchor="middle" class="terrain">해변</text></g>
   <g>
     <text x="696" y="356" text-anchor="middle" class="name">온두</text>
     <text x="696" y="374" text-anchor="middle" class="terrain">초원</text></g>
