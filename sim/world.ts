@@ -444,6 +444,9 @@ export const EventSimSchema = z.discriminatedUnion('trigger', [
     gained_life: z.boolean().default(false),
     refused: z.boolean().default(false),
     searched: z.boolean().default(false),
+    // Only for those who tamed an item this turn (Baloth Cage Trap: "if an opponent had an
+    // artifact enter the battlefield under their control this turn").
+    claimed: z.boolean().default(false),
   }),
   // Goes off when a noncreature permanent in `region` is destroyed by someone else's doing (a
   // spell, an ability or another event): for now the land itself (law-permanents).
@@ -571,6 +574,7 @@ export type EventDef = {
   gained_life?: boolean; // enter
   refused?: boolean; // enter
   searched?: boolean; // enter
+  claimed?: boolean; // enter
   cards?: number; // drew
   attackers?: number; // attacked
   cooldownHours: number;

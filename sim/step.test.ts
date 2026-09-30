@@ -889,6 +889,7 @@ test('an item is tamed with mana where it stands; it holds its owner\'s life and
   await act(state, world, { type: 'bond' });
   p.life = 28;
   await act(state, world, { type: 'claim', item: 'itm-v' });
+  assert.equal(state.actors[PLAYER_ID].claimed, Math.floor(state.minutes / 1440)); // an artifact entered under their control today
   assert.deepEqual(state.items?.['itm-v'], { name: '그릇', owner: PLAYER_ID, counters: 28 });
   assert.match((await act(state, world, { type: 'claim', item: 'itm-v' })).error!, /이미 그릇을 길들였다/);
   // Worn down, then a new land the next day: life becomes what the vessel holds.
@@ -2280,4 +2281,31 @@ test('the real Arrow Volley Trap lies in Ondu', () => {
   const ev = world.events.find((e) => e.id === 'evt-arrow-volley-trap');
   assert.equal(ev?.region, 'loc-ondu');
   assert.equal(ev?.attackers, 4);
+});
+
+test('a baloth cage trap: one who tamed an item today enters, and a hungry 4/4 baloth breaks out at them', async () => {
+  const cage: RawEntity = {
+    id: 'evt-cage',
+    kind: 'event',
+    name: '발로스 우리 함정',
+    status: 'canon',
+    sim: { region: 'loc-b', trigger: 'enter', claimed: true, text: '우리가 열렸다.', effects: [{ type: 'create', creature: 'cre-bal', count: 1, pt: [4, 4], colors: ['G'] }] },
+  };
+  const world = fixture([cage, planned({ id: 'cre-bal', kind: 'creature', name: '발로스', status: 'canon', sim: { pt: [4, 4], role: 'r', home: 'loc-c', persona: 'p', goal: 'g', needs: ['energy', 'hunger'], beast: true } }), npc('chr-x', npcSim('loc-b')), npc('chr-y', npcSim('loc-b'))]);
+  const state = newState(world, { seed: 1, mode: 'observer' });
+  const [x, y] = [state.actors['chr-x'], state.actors['chr-y']];
+  x.region = y.region = 'loc-a';
+  x.claimed = 0; // tamed an item today
+  await advance(state, world, 3);
+  const born = Object.values(state.actors).filter((a) => a.id.startsWith('tok-') && a.name === '발로스');
+  assert.equal(born.length, 1);
+  assert.deepEqual(born[0].needs, ['energy', 'hunger']); // it lives as a baloth: it will hunt
+  assert.ok(texts(state).some((t) => t.includes('우리가 열렸다')));
+});
+
+test('the real Baloth Cage Trap lies in Bala Ged, for those who tamed an item', () => {
+  const world = loadWorld();
+  const ev = world.events.find((e) => e.id === 'evt-baloth-cage-trap');
+  assert.equal(ev?.region, 'loc-bala-ged');
+  assert.equal(ev?.claimed, true);
 });

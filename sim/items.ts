@@ -1,5 +1,6 @@
 // Items (MTG artifacts, world/entities/items): permanents that stand in one place. Whoever
 // pays an item's cost there tames it and holds it until they die or leave the plane.
+import { gameDay } from './clock.ts';
 import { gainLife, lifeOf } from './life.ts';
 import { formatMana, manaAvailable, payMana, planPayment } from './mana.ts';
 import { addLog, npcDef } from './state.ts';
@@ -61,6 +62,8 @@ export function claimItem(state: State, world: World, a: Actor, itemId: string, 
   payMana(state, world, a, x.cost, t);
   const counters = x.effects.some((e) => e.type === 'charge_life') ? lifeOf(a) : 0;
   (state.items ??= {})[x.id] = { name: x.name, owner: a.id, counters };
+  // "An artifact entered the battlefield under their control this turn" (Baloth Cage Trap).
+  a.claimed = gameDay(t);
   addLog(state, {
     kind: 'event',
     text: `${josa(shortName(a.name), '이', '가')} ${josa(x.name, '을', '를')} 길들였다.${counters ? ` 그릇에 생명 ${counters}이 담겼다.` : ''}`,

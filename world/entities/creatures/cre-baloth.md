@@ -5,12 +5,13 @@ name: 발로스
 name_en: Baloth
 summary: 끝없는 먹성으로 한 땅의 사냥감을 금세 바닥내고, 먹이를 찾아 땅을 옮겨 다니는 거대한 녹색 짐승
 status: canon
-sources: [ZEN-157, ZEN-178]
+sources: [ZEN-157, ZEN-178, ZEN-156]
 tags: [짐승, 녹색]
 links:
   - { to: law-mana-colors, rel: 녹색의 존재 }
   - { to: loc-murasa, rel: 처음 사는 곳 }
   - { to: chr-rampaging-baloths, rel: 발라 게드의 다른 무리 }
+  - { to: evt-baloth-cage-trap, rel: 발라 게드의 우리에 갇힌 발로스 }
 sim:
   pt: [4, 4]
   mana: { G: 6 }         # 카드 {4}{G}{G}

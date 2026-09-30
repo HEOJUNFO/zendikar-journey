@@ -57,6 +57,8 @@ export type Actor = {
   // The hour they last struck as the attacker (sim/combat.ts `clash`): "attacking creatures"
   // (Arrow Volley Trap).
   attackedAt?: number;
+  // Game day they last tamed an item: "an artifact entered under their control" (Baloth Cage Trap).
+  claimed?: number;
   // Game day they last sought out a land with a fetch land: "searched their library" (Archive Trap).
   searched?: number;
   // Game day they last gained life (sim/life.ts).

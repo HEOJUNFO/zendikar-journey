@@ -469,6 +469,9 @@ function raiseToken(state: State, world: World, from: Actor, creature: string, f
 export function spawnWild(state: State, world: World, creature: string, pt: [number, number], count: number, regionId: string, colors: Color[]) {
   const kind = world.lore.find((l) => l.id === creature);
   const kindName = kind?.name ?? creature;
+  // A kind that lives in the world as its own card lives by its needs (a baloth hunts when
+  // hungry); others only tire.
+  const needs = world.npcs.find((n) => n.id === creature)?.needs ?? ['energy'];
   const out: Actor[] = [];
   for (let i = 0; i < count; i++) {
     const id = freeTokenId(state, `tok-${state.nextLogId}-${i}`);
@@ -483,7 +486,7 @@ export function spawnWild(state: State, world: World, creature: string, pt: [num
       goal: '제 땅을 지킨다.',
       pt: [...pt],
       abilities: [],
-      needs: ['energy'],
+      needs: [...needs],
       beast: true,
       creature,
       colors: [...colors],
@@ -497,7 +500,7 @@ export function spawnWild(state: State, world: World, creature: string, pt: [num
       pt: [...pt],
       pace: 'normal',
       abilities: [],
-      needs: ['energy'],
+      needs: [...needs],
       enteredAt: state.minutes,
     };
     out.push(state.actors[id]);
