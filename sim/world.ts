@@ -267,6 +267,8 @@ export const CharacterSimSchema = z.strictObject({
   landfall_seize: z.boolean().default(false),
   // "Landfall — this loses <ability> until end of turn" (Shoal Serpent: defender).
   landfall_lose: z.array(z.enum(ABILITIES)).default([]),
+  // "Landfall — this gains <ability> until end of turn" (Geyser Glider: flying).
+  landfall_grant: z.array(z.enum(ABILITIES)).default([]),
   // The creature kind a character is (e.g. cre-vampire). A creature entity's sim is its own kind.
   creature: z.string().optional(),
   // A planeswalker's loyalty (law-planeswalkers): their momentum. Loyalty abilities raise
@@ -555,6 +557,7 @@ export type NpcDef = {
   landfallToken?: { creature: string; pt: Pt; colors: Color[] };
   landfallSeize?: boolean;
   landfallLose?: Ability[];
+  landfallGrant?: Ability[];
   // The creature kind they are (e.g. cre-vampire), for "a Vampire you control".
   creature?: string;
   // Their colors when their mana doesn't say (e.g. a black Vampire risen in play).
@@ -717,7 +720,7 @@ export function buildWorld(entities: RawEntity[]): { world: World; errors: strin
         err(e.id, `sim 오류: ${issues(sim.error)}`);
         continue;
       }
-      const { knows_colors, activated, wins_at_life, extra_combat, landfall_token, landfall_seize, landfall_lose, name, ...rest } = sim.data;
+      const { knows_colors, activated, wins_at_life, extra_combat, landfall_token, landfall_seize, landfall_lose, landfall_grant, name, ...rest } = sim.data;
 
       world.npcs.push({
         id: e.id,
@@ -730,6 +733,7 @@ export function buildWorld(entities: RawEntity[]): { world: World; errors: strin
         ...(landfall_token ? { landfallToken: landfall_token } : {}),
         ...(landfall_seize ? { landfallSeize: true } : {}),
         ...(landfall_lose.length ? { landfallLose: landfall_lose } : {}),
+        ...(landfall_grant.length ? { landfallGrant: landfall_grant } : {}),
         ...(extra_combat ? { extraCombat: { cost: parseManaCost(extra_combat.cost)!, costText: extra_combat.cost } } : {}),
         activated: activated.map((x) => ({ ...x, cost: parseManaCost(x.cost)!, costText: x.cost })),
       });
@@ -871,7 +875,7 @@ function baseTravelHours(a: Region, b: Region, abilities: readonly Ability[]) {
 // A land's basic land types (none for a named land card, or a sea).
 export function landTypes(r: Region): LandType[] {
   const type = TERRAINS[r.terrain].type;
-  return r.nonbasic || !type ? [] : [type];
+  return r.nonbasic || r.notLand || !type ? [] : [type];
 }
 
 // Whether someone with these abilities can be in a region at all. The sea is for those who

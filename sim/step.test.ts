@@ -27,7 +27,7 @@ import { upkeepWins } from './win.ts';
 import { hirePrice } from './allies.ts';
 import { askText } from './asks.ts';
 import type { State } from './state.ts';
-import { affectedRegions, buildWorld, region, travelHours } from './world.ts';
+import { affectedRegions, buildWorld, landTypes, region, travelHours } from './world.ts';
 import type { RawEntity } from './world.ts';
 
 const loc = (id: string, x: number, y: number, terrain: string): RawEntity => ({
@@ -2573,4 +2573,28 @@ test('the real Eldrazi Monument sits in Emeria', () => {
   const m = world.items.find((x) => x.id === 'itm-eldrazi-monument')!;
   assert.equal(m.at, 'loc-emeria');
   assert.deepEqual(m.effects.map((e) => e.type), ['anthem', 'upkeep_sacrifice']);
+});
+
+test('landfall grant: bonding with a land, it flies until midnight', async () => {
+  const glider = planned({ id: 'cre-gg', kind: 'creature', name: '활공자', status: 'canon', sim: { pt: [4, 4], role: 'r', home: 'loc-a', persona: 'p', goal: 'g', needs: ['energy'], beast: true, landfall_grant: ['fly'], plan: [['00:00', '06:00', 'loc-a', 'leisure', '쉼', '🔥'], ['06:00', '10:00', 'loc-a', 'bond', '땅을 차지', '🔥'], ['10:00', '24:00', 'loc-a', 'leisure', '쉼', '🔥']] } });
+  const world = fixture([glider]);
+  const state = newState(world, { seed: 1, mode: 'observer' });
+  const g = state.actors['cre-gg'];
+  assert.equal(hasAbility(g, 'fly', state.minutes), false);
+  await advance(state, world, 4);
+  assert.ok(hasAbility(g, 'fly', state.minutes));
+  await advance(state, world, 15); // through 00:00
+  assert.equal(hasAbility(g, 'fly', state.minutes), false);
+});
+
+test('the real Geyser Glider hunts in the Makindi Trenches, Ondu\'s canyons: no land, no mountain', () => {
+  const world = loadWorld();
+  const state = newState(world, { seed: 1, mode: 'observer' });
+  const g = state.actors['cre-geyser-glider'];
+  assert.equal(g?.region, 'loc-makindi');
+  assert.deepEqual(world.npcs.find((x) => x.id === 'cre-geyser-glider')?.landfallGrant, ['fly']);
+  const mk = region(world, 'loc-makindi');
+  assert.equal(mk.parent, 'loc-ondu');
+  assert.ok(mk.notLand);
+  assert.deepEqual(landTypes(mk), []);
 });
