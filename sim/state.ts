@@ -5,7 +5,7 @@ import { NEEDS } from './types.ts';
 import type { LifeKind, Need, Pace, Schedule, Stats } from './types.ts';
 import { canStay, spellColors } from './world.ts';
 import type { Ability, BondEffect, NpcDef, Pt, Speaker, World } from './world.ts';
-import type { Mana } from './mana.ts';
+import type { Color, Mana } from './mana.ts';
 
 export type TaskKind = LifeKind | 'explore' | 'travel' | 'fight' | 'bond' | 'learn' | 'cast' | 'fetch';
 
@@ -56,6 +56,8 @@ export type Actor = {
   wounds?: { day: number; amount: number };
   // Who they'll attack on sight this turn (they were attacked, or turned hostile).
   foes?: { day: number; ids: string[] };
+  // The color they sealed today (Iona, sim/seal.ts): their opponents can't cast spells of it.
+  seal?: { day: number; color: Color };
   // Whom they serve: they are that one's retainer (sim/retainers.ts).
   master?: string;
   // Lands they sought out with a fetch land: gone from their "library". Kept for when

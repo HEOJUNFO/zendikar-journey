@@ -12,6 +12,9 @@ import { relationsText, remember } from './relations.ts';
 import { claimableItems } from './items.ts';
 import { eonLand, eonsIn, spendBlocked, storeBlocked } from './eons.ts';
 import { castSpell } from './spells.ts';
+import { opponentsOf, sealsDue, setSeal } from './seal.ts';
+import { COLORS } from './mana.ts';
+import type { Color } from './mana.ts';
 import { abilityBlocked, applyBondEffect, enteredToday, fetchBlocked, fetchTargets, growBlocked, growLand } from './abilities.ts';
 import { bindRetainer, swayBlocked } from './retainers.ts';
 import { josa, shortName } from './text.ts';
@@ -41,6 +44,8 @@ export type ConverseInput = { world: World; state: State; a: Speaker; b: Speaker
 // `candidates`, by id.
 // `optional`: they may pick no one (null).
 export type ChooseInput = { world: World; state: State; npc: Speaker; what: string; candidates: Actor[]; optional?: boolean };
+// One who seals a color (Iona) names it as a fight begins: against `opponents`.
+export type ChooseColorInput = { world: World; state: State; npc: Speaker; opponents: Actor[] };
 // Two NPCs' exchange: the lines, what each now thinks of the other (by id), and who, if
 // anyone, now attacks the other.
 export type Conversation = { lines: { by: string; say: string }[]; impressions: Record<string, string>; attacker: string | null };
@@ -55,6 +60,7 @@ export type Llm = {
   evade?: (input: EvadeInput) => Promise<boolean>;
   converse?: (input: ConverseInput) => Promise<Conversation | null>;
   choose?: (input: ChooseInput) => Promise<string | null>;
+  chooseColor?: (input: ChooseColorInput) => Promise<Color | null>;
 };
 
 // NPC conversations written per game day at most (each is one LLM call).
@@ -211,6 +217,25 @@ async function choices(state: State, world: World, llm: Llm) {
       pick = candidates[Math.floor(random(state) * candidates.length)].id;
     }
     applyBondEffect(state, world, by, land.id, c.effect, pick!, state.minutes);
+  }
+  await seals(state, world, llm);
+}
+
+// Those who seal a color (Iona) and just entered a fight name one (sim/seal.ts). The LLM
+// picks; with no answer, a color at random (the card must name one).
+async function seals(state: State, world: World, llm: Llm) {
+  for (const a of sealsDue(state, world, state.minutes)) {
+    const npc = speakerDef(state, world, a.id);
+    if (!npc) continue;
+    let color: Color | null = null;
+    if (llm.chooseColor) {
+      try {
+        color = await llm.chooseColor({ world, state, npc, opponents: opponentsOf(state, a, state.minutes) });
+      } catch (e) {
+        console.warn(`chooseColor for ${a.id} failed:`, e);
+      }
+    }
+    setSeal(state, a, color ?? COLORS[Math.floor(random(state) * COLORS.length)], state.minutes);
   }
 }
 

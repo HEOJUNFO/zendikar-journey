@@ -6,8 +6,10 @@ import { act as runAct, advance as runAdvance } from './run.ts';
 import type { Llm } from './run.ts';
 import type { Action } from './actions.ts';
 import type { World } from './world.ts';
-import { die, knockedOut, woundsOf } from './combat.ts';
-import { formatMana, manaAvailable, manaCapacity, parseManaCost, planPayment } from './mana.ts';
+import { addFoe, die, knockedOut, woundsOf } from './combat.ts';
+import { sealedBy, sealToday } from './seal.ts';
+import { castBlocked, castSpell } from './spells.ts';
+import { COLORS, formatMana, manaAvailable, manaCapacity, parseManaCost, planPayment } from './mana.ts';
 import { MAX_TALKS_PER_DAY, usableAbilities } from './run.ts';
 import { eligibleGmEvents, travelBlocked } from './step.ts';
 import { gainLife } from './life.ts';
@@ -1297,4 +1299,42 @@ test('Valakut: an NPC waking it may send the fire at no one', async () => {
   await advance(state, world, 5, { choose: async ({ optional }) => (asked++, assert.ok(optional), null) });
   assert.equal(asked, 1);
   assert.equal(woundsOf(state.actors[PLAYER_ID], state.minutes), 0);
+});
+
+test('Iona: entering a fight she names a color, and those she fights cannot cast it until midnight', async () => {
+  const world = fixture([mantle, tribute('loc-a'), lore('cre-v', 'creature'), npc('chr-iona', { ...npcSim('loc-a', 'leisure', [0, 7]), seal: true }), npc('chr-y', npcSim('loc-a'))]);
+  const state = character(world, 'loc-a');
+  const p = state.actors[PLAYER_ID];
+  const iona = state.actors['chr-iona'];
+  p.spells = ['spl-m', 'spl-t'];
+  p.bonds = ['loc-a'];
+  const asked: string[][] = [];
+  const llm: Llm = { chooseColor: async ({ opponents }) => (asked.push(opponents.map((x) => x.id)), 'W') };
+  await act(state, world, { type: 'wait', hours: 1 }, llm);
+  assert.equal(iona.seal, undefined); // no fight, no color
+  addFoe(iona, PLAYER_ID, state.minutes); // she turns on the player
+  await act(state, world, { type: 'wait', hours: 1 }, llm);
+  assert.deepEqual(asked, [[PLAYER_ID]]);
+  assert.equal(sealToday(iona, state.minutes), 'W');
+  assert.match(castBlocked(state, world, p, 'spl-m', PLAYER_ID, false, state.minutes)!, /백색을 봉인/);
+  // Another color, or someone not in the fight, is free to cast.
+  assert.doesNotMatch(castBlocked(state, world, p, 'spl-t', 'chr-y', false, state.minutes) ?? '', /봉인/);
+  const y = state.actors['chr-y'];
+  y.spells = ['spl-m'];
+  assert.equal(sealedBy(state, y, world.spells.find((s) => s.id === 'spl-m')!, state.minutes), undefined);
+  // Cast for free (a power), it is still stopped.
+  castSpell(state, world, p, 'spl-m', PLAYER_ID, false, state.minutes, true);
+  assert.equal(p.auras, undefined);
+  // At midnight the fight and the seal are over.
+  const day = Math.floor(state.minutes / 1440);
+  while (Math.floor(state.minutes / 1440) === day) await act(state, world, { type: 'wait', hours: 1 }, llm);
+  assert.equal(castBlocked(state, world, p, 'spl-m', PLAYER_ID, false, state.minutes), null);
+});
+
+test('Iona with no answer from the LLM still names a color', async () => {
+  const world = fixture([npc('chr-iona', { ...npcSim('loc-a', 'leisure', [0, 7]), seal: true })]);
+  const state = character(world, 'loc-a');
+  addFoe(state.actors['chr-iona'], PLAYER_ID, state.minutes);
+  await act(state, world, { type: 'wait', hours: 1 });
+  assert.ok(COLORS.includes(sealToday(state.actors['chr-iona'], state.minutes)!));
 });

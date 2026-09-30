@@ -5,12 +5,13 @@ import { PACE_LABELS } from '../sim/actions.ts';
 import { formatClock, formatTimeOfDay, gameDay, minuteOfDay } from '../sim/clock.ts';
 import { isPerson, needsOf, outOfTime, player, present, ptOf } from '../sim/state.ts';
 import { woundsOf } from '../sim/combat.ts';
-import { formatMana, manaAvailable, manaCapacity, manaLabel } from '../sim/mana.ts';
+import { COLOR_LABELS, formatMana, manaAvailable, manaCapacity, manaLabel } from '../sim/mana.ts';
 import { bondBlocked, bondTargets, enteredToday, fetchTargets, fireTargets, firesOnBond, growBlocked, growLand, targetedBondEffect } from '../sim/abilities.ts';
 import { BOND_HOURS } from '../sim/actions.ts';
 import { CLAIM_HOURS, claimBlocked, itemsAt, itemsOf } from '../sim/items.ts';
 import { eonLand, eonsIn, spendBlocked, storeBlocked } from '../sim/eons.ts';
 import { castBlocked, harmful, learnBlocked, spellsTaughtAt } from '../sim/spells.ts';
+import { sealToday } from '../sim/seal.ts';
 import type { Actor, LogEntry, State } from '../sim/state.ts';
 import { travelBlocked } from '../sim/step.ts';
 import { josa, shortName } from '../sim/text.ts';
@@ -259,6 +260,7 @@ export function PeopleList({ world, state, all }: { world: World; state: State; 
         <div key={a.id} className="person">
           <b>{shortName(a.name)}</b> <small className="muted">{fighting(a, state.minutes)}</small>
           {a.master && state.actors[a.master] && <small className="muted"> · {shortName(state.actors[a.master].name)}의 권속</small>}
+          {sealToday(a, state.minutes) && <small className="muted"> · {COLOR_LABELS[sealToday(a, state.minutes)!]}색 봉인</small>}
           <p className="muted">{status(world, a)}</p>
           {!p && (
             <>

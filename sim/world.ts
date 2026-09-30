@@ -224,6 +224,9 @@ export const CharacterSimSchema = z.strictObject({
   // A planeswalker's loyalty (law-planeswalkers): their momentum. Loyalty abilities raise
   // or spend it; damage wears it down; at 0 they leave this plane.
   loyalty: z.number().int().min(1).optional(),
+  // "As this enters, choose a color. Your opponents can't cast spells of the chosen color"
+  // (Iona): entering a fight, they name a color (sim/seal.ts).
+  seal: z.boolean().default(false),
   // They hold (know) every spell of these colors in the world: their hand.
   knows_colors: z.array(z.enum(COLORS)).default([]),
   // Powers the morning LLM may use for them ("{cost}, {T}: effect" or "+1: effect").
@@ -446,6 +449,8 @@ export type NpcDef = {
   loyalty?: number;
   knowsColors?: Color[];
   activated?: ActivatedAbility[];
+  // Names a color entering a fight; their opponents can't cast spells of it (sim/seal.ts).
+  seal?: boolean;
 };
 
 export type SpellDef = {

@@ -1,5 +1,6 @@
 // Spells (world/entities/spells): learned at a place, cast with mana on someone standing in
-// the same place. Only the player learns and casts them for now.
+// the same place. The player learns and casts them; NPCs hold theirs by color (knows_colors)
+// and cast them by their powers (Chandra). A sealed color can't be cast (sim/seal.ts).
 import { untapTime } from './clock.ts';
 import { addFoe } from './combat.ts';
 import { gainLife, lifeOf, loseLife } from './life.ts';
@@ -8,6 +9,7 @@ import { remember } from './relations.ts';
 import { creatureOf, retainersOf } from './retainers.ts';
 import { addLog, present, ptOf } from './state.ts';
 import type { Actor, State } from './state.ts';
+import { sealedBy, sealText } from './seal.ts';
 import { josa, shortName } from './text.ts';
 import { placeName, region } from './world.ts';
 import type { SpellDef, World } from './world.ts';
@@ -45,6 +47,8 @@ export function tappable(state: State, world: World, a: Actor, kind: string) {
 export function castBlocked(state: State, world: World, a: Actor, spellId: string, targetId: string, kick: boolean, t: number): string | null {
   const s = spellDef(world, spellId);
   if (!s || !a.spells?.includes(s.id)) return '모르는 주문이다.';
+  const by = sealedBy(state, a, s, t);
+  if (by) return sealText(by, t);
   const target = state.actors[targetId];
   if (!target || target.dead || (target.id === a.id && s.target !== 'any_here')) return '그런 대상은 없다.';
   if (target.id !== a.id && !present(state, a.region).some((x) => x.id === target.id))
@@ -65,6 +69,11 @@ export function harmful(s: SpellDef) {
 export function castSpell(state: State, world: World, a: Actor, spellId: string, targetId: string, kick: boolean, t: number, free = false) {
   const s = spellDef(world, spellId)!;
   const target = state.actors[targetId];
+  const by = sealedBy(state, a, s, t);
+  if (by) {
+    addLog(state, { kind: 'status', text: `${josa(shortName(a.name), '은', '는')} ${josa(s.name, '을', '를')} 쓰지 못했다: ${sealText(by, t)}`, regions: [a.region], actors: [a.id, by.id], t });
+    return;
+  }
   if (!free) payMana(state, world, a, s.cost, t);
   let kicked = false;
   if (kick && s.kicker) {
