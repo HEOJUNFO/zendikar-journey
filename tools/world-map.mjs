@@ -6,7 +6,7 @@ import { loadWorld, WORLD_DIR } from '../sim/load.ts';
 import { MAP_HEIGHT, MAP_WIDTH, TERRAINS } from '../sim/world.ts';
 import { areaLabelAt, containerRadius, nodeAt } from '../web/view.ts';
 
-const S = 10; // px per map unit
+const S = 6; // px per map unit
 const esc = (s) => s.replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]);
 
 const world = loadWorld();

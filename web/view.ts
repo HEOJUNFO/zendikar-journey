@@ -24,7 +24,7 @@ export function clock(state: State) {
 // small island), is itself a circle of that size, with its areas as small circles across the
 // lower part; the upper part is where its own people and marks go. (The engine puts areas at
 // their region's place; this is only how they are drawn.)
-const SIZE_RADIUS = { continent: 11, island: 5 } as const;
+const SIZE_RADIUS = { continent: 16, island: 7 } as const;
 function areaAngle(world: World, r: Region) {
   const sibs = world.regions.filter((x) => x.parent === r.parent);
   const n = sibs.length;
@@ -36,8 +36,8 @@ function areaAngle(world: World, r: Region) {
 export function containerRadius(world: World, r: Region) {
   if (r.parent) return 0;
   const n = world.regions.filter((x) => x.parent === r.id).length;
-  const base = r.size ? SIZE_RADIUS[r.size] : n ? 7 : 0;
-  return base && base + Math.max(0, n - 3) * 0.9;
+  const base = r.size ? SIZE_RADIUS[r.size] : n ? 10 : 0;
+  return base && base + Math.max(0, n - 3) * 1.3;
 }
 
 export function nodeAt(world: World, r: Region) {
@@ -52,9 +52,9 @@ export function nodeAt(world: World, r: Region) {
 // An area's name: just outside its region's circle, in the area's direction.
 export function areaLabelAt(world: World, r: Region) {
   const angle = areaAngle(world, r);
-  const d = containerRadius(world, world.regions.find((x) => x.id === r.parent)!) + 1.2;
+  const d = containerRadius(world, world.regions.find((x) => x.id === r.parent)!) + 1.8;
   const [dx, dy] = [Math.cos(angle), Math.sin(angle)];
-  return { x: r.x + dx * d, y: r.y + dy * d + 1, anchor: dx > 0.3 ? 'start' : dx < -0.3 ? 'end' : 'middle' } as const;
+  return { x: r.x + dx * d, y: r.y + dy * d + 1.5, anchor: dx > 0.3 ? 'start' : dx < -0.3 ? 'end' : 'middle' } as const;
 }
 
 // Traps: events the land sets off by itself when someone comes (law-ruin-traps), unlike

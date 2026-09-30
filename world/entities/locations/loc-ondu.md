@@ -11,7 +11,7 @@ links:
   - { to: loc-arid-mesa, rel: 안의 구역 }
   - { to: loc-agadeem, rel: 붙어 있는 섬 }
   - { to: loc-akoum, rel: 동쪽의 대륙 }
-map: { x: 58, y: 40, terrain: grassland, size: continent }
+map: { x: 116, y: 80, terrain: grassland, size: continent }
 ---
 
 ## 설정

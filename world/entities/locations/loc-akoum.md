@@ -9,7 +9,7 @@ sources: [ZEN-210]
 tags: [대륙, 화산, 협곡, 적색]
 links:
   - { to: loc-akoum-refuge, rel: 안의 구역 }
-map: { x: 80, y: 32, terrain: volcanic, size: continent }
+map: { x: 160, y: 64, terrain: volcanic, size: continent }
 ---
 
 ## 설정
@@ -22,7 +22,7 @@ map: { x: 80, y: 32, terrain: volcanic, size: continent }
 
 - 지도 동쪽의 화산 지대 지역이다 (지형 `volcanic`, 적색 땅) ([결정] 2026-09-30: 아쿰도 유대를 맺는 땅).
 - 안에 구역 아쿰 피난처(`loc-akoum-refuge`)가 있다. 아쿰의 다른 대지 카드가 나오면 구역으로 더한다.
-- 위치 (80, 32)는 [배경]의 동쪽 대륙에서 정한 [가공]이다. 대륙이라 지도에 크게 그린다 (`size: continent`).
+- 위치 (160, 64)는 [배경]의 동쪽 대륙에서 정한 [가공]이다. 대륙이라 지도에 크게 그린다 (`size: continent`).
 
 ## 미정/질문
 
