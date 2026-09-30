@@ -67,6 +67,8 @@ export type Actor = {
   seal?: { day: number; color: Color };
   // Whom they serve: they are that one's retainer (sim/retainers.ts).
   master?: string;
+  // Abilities they have lost for a while ("loses defender until end of turn").
+  lost?: { ability: Ability; until: number }[];
   // Seized (Roil Elemental): held by their master's power, not their will. Striking the master
   // doesn't free them; only the master's end does. The player seized can only wait or strike it.
   seized?: boolean;
@@ -390,6 +392,11 @@ export function present(state: State, regionId: string) {
 }
 
 // Power / toughness now, with their +1/+1 counters, this turn's boosts and their auras.
+// Whether they have `ability` now (not lost for the while).
+export function hasAbility(a: Actor, ability: Ability, t: number) {
+  return a.abilities.includes(ability) && !a.lost?.some((x) => x.ability === ability && x.until > t);
+}
+
 export function ptOf(a: Actor): Pt {
   let [p, t] = a.pt ?? PLAYER_PT;
   if (a.plusCounters) [p, t] = [p + a.plusCounters, t + a.plusCounters];

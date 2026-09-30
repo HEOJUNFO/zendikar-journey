@@ -12,9 +12,9 @@ export const MAP_WIDTH = 600;
 export const MAP_HEIGHT = 450;
 
 // fly: can reach sky islands. aquatic: lives in the sea, and only there.
-export const ABILITIES = ['fly', 'aquatic', 'lifelink', 'vigilance', 'haste', 'trample'] as const;
+export const ABILITIES = ['fly', 'aquatic', 'lifelink', 'vigilance', 'haste', 'trample', 'defender'] as const;
 export type Ability = (typeof ABILITIES)[number];
-export const ABILITY_LABELS: Record<Ability, string> = { fly: '비행', aquatic: '물에 삶', lifelink: '생명연결', vigilance: '경계', haste: '속공', trample: '돌진' };
+export const ABILITY_LABELS: Record<Ability, string> = { fly: '비행', aquatic: '물에 삶', lifelink: '생명연결', vigilance: '경계', haste: '속공', trample: '돌진', defender: '수비대' };
 
 export const TERRAIN_IDS = [
   'grassland',
@@ -242,6 +242,8 @@ export const CharacterSimSchema = z.strictObject({
   // Elemental): as they bond, they may seize one there (anyone, the player too) as their
   // retainer until they die (sim/retainers.ts `seize`).
   landfall_seize: z.boolean().default(false),
+  // "Landfall — this loses <ability> until end of turn" (Shoal Serpent: defender).
+  landfall_lose: z.array(z.enum(ABILITIES)).default([]),
   // The creature kind a character is (e.g. cre-vampire). A creature entity's sim is its own kind.
   creature: z.string().optional(),
   // A planeswalker's loyalty (law-planeswalkers): their momentum. Loyalty abilities raise
@@ -475,6 +477,7 @@ export type NpcDef = {
   landfall?: { pt: [number, number]; trample: boolean };
   landfallToken?: { creature: string; pt: Pt; colors: Color[] };
   landfallSeize?: boolean;
+  landfallLose?: Ability[];
   // The creature kind they are (e.g. cre-vampire), for "a Vampire you control".
   creature?: string;
   // Their colors when their mana doesn't say (e.g. a black Vampire risen in play).
@@ -631,7 +634,7 @@ export function buildWorld(entities: RawEntity[]): { world: World; errors: strin
         err(e.id, `sim 오류: ${issues(sim.error)}`);
         continue;
       }
-      const { knows_colors, activated, wins_at_life, extra_combat, landfall_token, landfall_seize, name, ...rest } = sim.data;
+      const { knows_colors, activated, wins_at_life, extra_combat, landfall_token, landfall_seize, landfall_lose, name, ...rest } = sim.data;
 
       world.npcs.push({
         id: e.id,
@@ -643,6 +646,7 @@ export function buildWorld(entities: RawEntity[]): { world: World; errors: strin
         ...(wins_at_life !== undefined ? { winsAtLife: wins_at_life } : {}),
         ...(landfall_token ? { landfallToken: landfall_token } : {}),
         ...(landfall_seize ? { landfallSeize: true } : {}),
+        ...(landfall_lose.length ? { landfallLose: landfall_lose } : {}),
         ...(extra_combat ? { extraCombat: { cost: parseManaCost(extra_combat.cost)!, costText: extra_combat.cost } } : {}),
         activated: activated.map((x) => ({ ...x, cost: parseManaCost(x.cost)!, costText: x.cost })),
       });

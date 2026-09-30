@@ -10,7 +10,7 @@ import { releaseItems } from './items.ts';
 import { doubleLife, gainLife, lifeOf } from './life.ts';
 import { manaAvailable, payMana, planPayment } from './mana.ts';
 import { HUNT_HUNGER, KILL_FEED, KO_ACTIVITY, KO_HOURS } from './rules.ts';
-import { addLog, needsOf, npcDef, outOfTime, present, ptOf, random } from './state.ts';
+import { addLog, hasAbility, needsOf, npcDef, outOfTime, present, ptOf, random } from './state.ts';
 import type { Actor, State } from './state.ts';
 import { hasPowers } from './world.ts';
 import type { World } from './world.ts';
@@ -228,6 +228,8 @@ export function hostileNpcs(state: State, world: World, t: number) {
     if (a.kind === 'player' || a.dead || a.travel || a.boundUntil !== undefined || outOfTime(state, a, t)) continue;
     if (a.forced && a.forced.kind !== 'fight') continue; // collapsed
     if (a.lastClash === t) continue; // already fought this hour
+    // Defender: they never strike first (they still strike back when struck).
+    if (hasAbility(a, 'defender', t)) continue;
     // Their own foes, and (a retainer) whoever their master is fighting right here.
     const m = masterOf(state, a);
     const theirs = [...foesOf(a, t), ...(m && m.region === a.region && !m.travel ? foesOf(m, t) : [])];

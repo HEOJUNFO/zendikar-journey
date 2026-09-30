@@ -15,7 +15,7 @@ import { COLORS, formatMana, manaAvailable, manaCapacity, parseManaCost, planPay
 import { MAX_TALKS_PER_DAY, usableAbilities } from './run.ts';
 import { eligibleGmEvents, travelBlocked } from './step.ts';
 import { gainLife } from './life.ts';
-import { newState, outOfTime, PLAYER_ID, present, ptOf, syncWorld } from './state.ts';
+import { hasAbility, newState, outOfTime, PLAYER_ID, present, ptOf, syncWorld } from './state.ts';
 import { spendBlocked, storeBlocked } from './eons.ts';
 import { bondBlocked, bondLand, bondTargets, fetchTargets, fireTargets, firesOnBond, growBlocked, spawnWild, useAbility } from './abilities.ts';
 import { DEPLETED_LABEL, DESTROYED_DAYS } from './rules.ts';
@@ -1840,4 +1840,35 @@ test('the real Runeflare Trap lies over Akoum', () => {
   assert.equal(ev?.region, 'loc-akoum');
   assert.equal(ev?.trigger, 'drew');
   assert.equal(ev?.cards, 3);
+});
+
+test('defender never strikes first; landfall takes it away until midnight', async () => {
+  const plan = [
+    ['00:00', '06:00', 'loc-a', 'leisure', '잠김', '🌊'],
+    ['06:00', '10:00', 'loc-a', 'bond', '여울 차지', '🌊'],
+    ['10:00', '24:00', 'loc-a', 'leisure', '잠김', '🌊'],
+  ];
+  const world = fixture([npc('chr-s', { ...npcSim('loc-a', 'social', [5, 5]), needs: ['energy'], abilities: ['defender'], landfall_lose: ['defender'], plan }), npc('chr-y', npcSim('loc-a', 'social', [1, 9]))]);
+  const state = newState(world, { seed: 1, mode: 'observer' });
+  const s = state.actors['chr-s'];
+  const strikes = () => state.log.filter((e) => e.kind === 'combat' && e.text.includes('공격했다') && e.actors[0] === 'chr-s').length;
+  addFoe(s, 'chr-y', state.minutes);
+  await advance(state, world, 1);
+  assert.equal(strikes(), 0);
+  await advance(state, world, 3); // bonded at 10:00
+  assert.ok(texts(state).some((t) => t.includes('수비대를 잃었다')));
+  assert.equal(hasAbility(s, 'defender', state.minutes), false);
+  addFoe(s, 'chr-y', state.minutes);
+  await advance(state, world, 1);
+  assert.equal(strikes(), 1);
+  assert.equal(hasAbility(s, 'defender', state.minutes + 1440), true); // back tomorrow
+});
+
+test('the real Shoal Serpent lurks in the new Silundi Sea', () => {
+  const world = loadWorld();
+  const state = newState(world, { seed: 1, mode: 'observer' });
+  const s = state.actors['cre-shoal-serpent'];
+  assert.equal(s?.region, 'loc-silundi-sea');
+  assert.deepEqual(s.abilities, ['aquatic', 'defender']);
+  assert.equal(region(world, 'loc-silundi-sea').terrain, 'deepsea');
 });

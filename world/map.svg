@@ -88,6 +88,9 @@
   <g>
     <text x="2880" y="201" text-anchor="middle" class="name">세지리</text>
     <text x="2880" y="219" text-anchor="middle" class="terrain">설원</text></g>
+  <g><circle cx="2430" cy="1032" r="70" fill="#1d3b66" opacity="0.75"/><circle cx="2430" cy="1032" r="30" fill="none" stroke="#9fc4ff" stroke-width="2" stroke-dasharray="6 6"/>
+    <text x="2430" y="1124" text-anchor="middle" class="name">실룬디 바다</text>
+    <text x="2430" y="1142" text-anchor="middle" class="terrain">심해</text></g>
   <g>
     <text x="1848" y="634.2" text-anchor="middle" class="name">타짐</text>
     <text x="1848" y="652.2" text-anchor="middle" class="terrain">해변</text></g>

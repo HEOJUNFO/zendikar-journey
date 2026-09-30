@@ -157,6 +157,12 @@ export function bondLand(state: State, world: World, a: Actor, t: number, region
       t,
     });
   }
+  // "Landfall — this loses defender until end of turn".
+  for (const ability of def?.landfallLose ?? []) {
+    if (!a.abilities.includes(ability)) continue;
+    a.lost = [...(a.lost ?? []).filter((x) => x.until > t && x.ability !== ability), { ability, until: untapTime(t) }];
+    addLog(state, { kind: 'status', text: `${josa(shortName(a.name), '이', '가')} ${josa(ABILITY_LABELS[ability], '을', '를')} 잃었다 (자정까지).`, regions: [a.region], actors: [a.id], t });
+  }
   // "Landfall — gain control of target creature": whom (if anyone) is theirs to pick, after the hour.
   if (def?.landfallSeize) {
     const candidates = present(state, a.region).filter((x) => x.id !== a.id && x.master !== a.id).map((x) => x.id);
