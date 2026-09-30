@@ -3142,3 +3142,31 @@ test('areas are drawn where the lore puts them (map.pos), inside their region', 
   const sea = nodeAt(world, region(world, 'loc-sea-gate'));
   assert.ok(sea.y > region(world, 'loc-tazeem').y); // south, on Halimar
 });
+
+test('when the world moves a character\'s home, they go there in a running game (not one who serves someone)', () => {
+  const world = loadWorld();
+  const state = newState(world, { seed: 1, mode: 'observer' });
+  const l = state.actors['chr-lorthos'];
+  assert.equal(l.region, 'loc-sunder-offing');
+  assert.equal(l.home, 'loc-sunder-offing');
+  // As a save from when his home was the bay.
+  l.region = 'loc-thunder-bay';
+  l.home = 'loc-thunder-bay';
+  syncWorld(state, world);
+  assert.equal(l.region, 'loc-sunder-offing');
+  // Moved about since: left where he is.
+  l.region = 'loc-thunder-bay';
+  syncWorld(state, world);
+  assert.equal(l.region, 'loc-thunder-bay');
+  // A region gone from the world leaves no state behind.
+  state.regions['loc-gone'] = { conditions: [] };
+  syncWorld(state, world);
+  assert.equal(state.regions['loc-gone'], undefined);
+  // One who serves someone stays at their side.
+  const k = state.actors['chr-kazuul-warlord'];
+  k.master = 'chr-kalitas';
+  k.region = 'loc-ghet-estate';
+  k.home = 'loc-somewhere-else';
+  syncWorld(state, world);
+  assert.equal(k.region, 'loc-ghet-estate');
+});

@@ -90,6 +90,9 @@ export type Actor = {
   sealedOut?: number;
   // Protection from these colors (a card's, e.g. Malakir Bloodwitch: white).
   protection?: Color[];
+  // The home the world gave them when last seen (sim/state.ts `syncWorld`): if the world moves
+  // it, they go there.
+  home?: string;
   // The day their "when this enters" last answered: once a day, on the first arrival (user
   // decision 2026-09-30).
   enteredDay?: number;
@@ -351,11 +354,26 @@ export function syncWorld(state: State, world: World) {
   // longer in the world leave the save; those standing where nothing is any more go home, or
   // to the first land they can stay on.
   const exists = (id: string) => world.regions.some((r) => r.id === id);
+  // Regions and events gone from the world leave no state behind.
+  for (const id of Object.keys(state.regions)) if (!exists(id)) delete state.regions[id];
+  for (const id of Object.keys(state.events)) if (!world.events.some((e) => e.id === id)) delete state.events[id];
   for (const a of Object.values(state.actors)) {
     const def = world.npcs.find((n) => n.id === a.id) ?? state.tokens?.[a.id];
     if (a.kind === 'npc' && !def) {
       delete state.actors[a.id];
       continue;
+    }
+    // The world moved their home (a user decision): they go there, unless they serve someone
+    // (they stay at their master's side). A save from before this was kept counts as moved when
+    // they stand elsewhere.
+    if (a.kind === 'npc' && def && !a.dead && world.npcs.includes(def as NpcDef) && a.home !== def.home) {
+      if (!a.master && a.region !== def.home && exists(def.home)) {
+        a.region = def.home;
+        a.travel = undefined;
+        a.task = undefined;
+        a.schedule = undefined;
+      }
+      a.home = def.home;
     }
     if (exists(a.region) && (!a.travel || exists(a.travel.to))) continue;
     const home = def && exists(def.home) ? def.home : world.regions.find((r) => canStay(r, a.abilities))?.id;
@@ -385,6 +403,7 @@ function npcActor(npc: NpcDef): Actor {
     name: npc.name,
     kind: 'npc',
     region: npc.home,
+    home: npc.home,
     stats: { ...INITIAL_STATS },
     pt: [...npc.pt],
     pace: 'normal',
