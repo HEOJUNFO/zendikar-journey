@@ -12,11 +12,11 @@ import { relationsText, remember } from './relations.ts';
 import { claimableItems } from './items.ts';
 import { eonLand, eonsIn, spendBlocked, storeBlocked } from './eons.ts';
 import { castSpell } from './spells.ts';
-import { abilityBlocked, bondDrain, enteredToday, growBlocked, growLand } from './abilities.ts';
+import { abilityBlocked, applyBondEffect, enteredToday, growBlocked, growLand } from './abilities.ts';
 import { bindRetainer, swayBlocked } from './retainers.ts';
 import { josa, shortName } from './text.ts';
 import type { ScheduleBlock } from './types.ts';
-import { canStay, placeName } from './world.ts';
+import { ABILITY_LABELS, canStay, placeName } from './world.ts';
 import type { ActivatedAbility, EventDef, NpcDef, Speaker, World } from './world.ts';
 import type { PlanDayInput } from './llm/planner.ts';
 
@@ -190,13 +190,19 @@ async function choices(state: State, world: World, llm: Llm) {
     let pick: string | null = null;
     if (llm.choose) {
       try {
-        pick = await llm.choose({ world, state, npc, candidates, what: `${land.name}: 당신이 이 땅과 유대를 맺자, 고른 한 사람이 생명 ${c.amount}을 잃는다 (${land.summary})` });
+        const what =
+          c.effect.type === 'lose_life'
+            ? `고른 하나가 생명 ${c.effect.amount}을 잃는다`
+            : c.effect.type === 'grant'
+              ? `고른 하나(당신 자신도 된다)가 오늘 자정까지 ${ABILITY_LABELS[c.effect.ability]} 능력을 얻는다`
+              : '';
+        pick = await llm.choose({ world, state, npc, candidates, what: `${land.name}: 당신이 이 땅과 유대를 맺자, ${what} (${land.summary})` });
       } catch (e) {
         console.warn(`choose for ${c.by} failed:`, e);
       }
     }
     if (!candidates.some((x) => x.id === pick)) pick = candidates[Math.floor(random(state) * candidates.length)].id;
-    bondDrain(state, world, by, land.id, c.amount, pick!, state.minutes);
+    applyBondEffect(state, world, by, land.id, c.effect, pick!, state.minutes);
   }
 }
 

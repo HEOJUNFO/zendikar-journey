@@ -13,7 +13,7 @@ import { eligibleGmEvents, travelBlocked } from './step.ts';
 import { gainLife } from './life.ts';
 import { newState, outOfTime, PLAYER_ID, present, ptOf, syncWorld } from './state.ts';
 import { spendBlocked, storeBlocked } from './eons.ts';
-import { bondBlocked, bondLand, bondVictims, fetchTargets, growBlocked, spawnWild, useAbility } from './abilities.ts';
+import { bondBlocked, bondLand, bondTargets, fetchTargets, growBlocked, spawnWild, useAbility } from './abilities.ts';
 import { DEPLETED_LABEL } from './rules.ts';
 import { swayBlocked } from './retainers.ts';
 import type { State } from './state.ts';
@@ -1153,7 +1153,7 @@ test('a land that takes a life: the player picks someone there as they bond, and
   x.stats.energy = 50;
   assert.match((await act(state, world, { type: 'bond' })).error!, /골라야 한다/);
   const [snake] = spawnWild(state, world, 'cre-snake', [1, 1], 1, 'loc-piranha', ['G']);
-  assert.ok(bondVictims(state, world, state.actors[PLAYER_ID], 'loc-piranha').includes(snake)); // a beast may be picked too
+  assert.ok(bondTargets(state, world, state.actors[PLAYER_ID], 'loc-piranha', { type: 'lose_life', amount: 1 }).includes(snake)); // a beast may be picked too
   await act(state, world, { type: 'bond', target: 'chr-x' });
   assert.deepEqual(state.actors[PLAYER_ID].bonds, ['loc-piranha']);
   assert.equal(x.stats.energy, 36); // -10 for the life, -1 an hour of leisure for 4 hours
@@ -1175,4 +1175,38 @@ test('an NPC bonding with it picks by the LLM whom it falls on; alone, it falls 
   await advance(alone, world, 4, { choose });
   assert.deepEqual(alone.actors['chr-x'].bonds, ['loc-piranha']);
   assert.equal(asked.length, 1); // no one to pick
+});
+
+const seacliff: RawEntity = {
+  id: 'loc-cliff',
+  kind: 'location',
+  name: '바다절벽',
+  status: 'canon',
+  map: { in: 'loc-a', terrain: 'beach', color: 'U' },
+  sim: { nonbasic: true, enters_tapped: true, on_bond: [{ type: 'grant', ability: 'fly' }] },
+};
+
+test('a seacliff: the one bonding picks someone there (themselves too) to fly until midnight', async () => {
+  const world = fixture([seacliff]);
+  const state = character(world, 'loc-cliff');
+  const p = state.actors[PLAYER_ID];
+  assert.match((await act(state, world, { type: 'bond' })).error!, /골라야 한다/);
+  await act(state, world, { type: 'bond', target: PLAYER_ID });
+  assert.ok(p.abilities.includes('fly'));
+  assert.equal(travelBlocked(state, world, p, 'loc-sky'), null);
+  await act(state, world, { type: 'move', to: 'loc-sky' });
+  assert.equal(p.region, 'loc-sky');
+  await act(state, world, { type: 'wait', hours: 12 }); // past midnight
+  assert.ok(!p.abilities.includes('fly'));
+  assert.match(travelBlocked(state, world, p, 'loc-a')!, /비행/); // stranded on a sky island with no ropes
+  assert.ok(texts(state).some((t) => t.includes('비행이(가) 사라졌다')));
+});
+
+test('an NPC bonding with the seacliff may pick itself for the wings', async () => {
+  const world = fixture([seacliff, npc('chr-x', { ...npcSim('loc-cliff'), plan: [['00:00', '24:00', 'loc-cliff', 'bond', '절벽과 유대', '🌱']] })]);
+  const state = character(world, 'loc-a');
+  const asked: string[][] = [];
+  await advance(state, world, 4, { choose: async ({ candidates, npc }) => (asked.push(candidates.map((a) => a.id)), npc.id) });
+  assert.deepEqual(asked, [['chr-x']]);
+  assert.ok(state.actors['chr-x'].abilities.includes('fly'));
 });

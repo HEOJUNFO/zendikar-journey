@@ -4,7 +4,7 @@ import { INITIAL_STATS } from './rules.ts';
 import { NEEDS } from './types.ts';
 import type { LifeKind, Need, Pace, Schedule, Stats } from './types.ts';
 import { canStay, spellColors } from './world.ts';
-import type { Ability, NpcDef, Pt, Speaker, World } from './world.ts';
+import type { Ability, BondEffect, NpcDef, Pt, Speaker, World } from './world.ts';
 import type { Mana } from './mana.ts';
 
 export type TaskKind = LifeKind | 'explore' | 'travel' | 'fight' | 'bond' | 'learn' | 'cast' | 'fetch';
@@ -23,7 +23,7 @@ export type Task = {
   // keeps days (sim/eons.ts).
   from?: string;
   land?: string;
-  // bond: whom the land's "target player loses N life" falls on (the player's pick).
+  // bond: whom the land's targeted effect ("target player loses N life") falls on (the player's pick).
   target?: string;
 };
 
@@ -73,6 +73,9 @@ export type Actor = {
   enteredAt?: number;
   // +1/+1 counters on them: for good, until they die.
   plusCounters?: number;
+  // Abilities they have only for a while ("gains flying until end of turn"), in `abilities`
+  // until `until`.
+  granted?: { ability: Ability; until: number }[];
   // Spells they know (world/entities/spells): their hand.
   spells?: string[];
   // Spells they let go of (discarded): their graveyard.
@@ -185,9 +188,9 @@ export type State = {
   items?: Record<string, { name: string; owner?: string; counters: number }>;
   // Extra turns (sim/eons.ts): on that game day only `actor` moves; everyone else is out of time.
   extraDays?: { actor: string; day: number }[];
-  // Picks an NPC owes (a land's "target player loses N life" as they bonded with it): the LLM
-  // makes them after the hour (sim/run.ts), from these candidates.
-  choices?: { by: string; land: string; amount: number; candidates: string[]; t: number }[];
+  // Picks an NPC owes (a land's targeted effect as they bonded with it): the LLM makes them
+  // after the hour (sim/run.ts), from these candidates.
+  choices?: { by: string; land: string; effect: BondEffect; candidates: string[]; t: number }[];
   nextLogId: number;
   log: LogEntry[];
 };
@@ -254,7 +257,8 @@ export function syncWorld(state: State, world: World) {
     const a = (state.actors[npc.id] ??= { ...npcActor(npc), manaSpent: old?.manaSpent, boundUntil: old?.boundUntil });
     // Saves from when some characters stayed at home without a day of their own.
     if ((a.kind as string) === 'being') a.kind = 'npc';
-    a.abilities = [...npc.abilities];
+    // Their own, and any they have for a while (sim/abilities.ts grantAbility).
+    a.abilities = [...new Set([...npc.abilities, ...(a.granted ?? []).map((g) => g.ability)])];
     a.needs = [...npc.needs];
     a.pt = [...npc.pt];
     refreshHand(state, world, npc);

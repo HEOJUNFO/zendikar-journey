@@ -9,7 +9,9 @@ import { chatCompletion, extractJson } from './chat.ts';
 
 export async function choose({ state, npc, what, candidates }: ChooseInput): Promise<string | null> {
   const me = state.actors[npc.id];
-  const people = candidates.map((a) => `- ${a.id}: ${shortName(a.name)}${a.kind === 'player' ? ' (the player)' : ''} (power/toughness ${ptOf(a).join('/')})`);
+  const people = candidates.map(
+    (a) => `- ${a.id}: ${shortName(a.name)}${a.id === npc.id ? ' (you)' : a.kind === 'player' ? ' (the player)' : ''} (power/toughness ${ptOf(a).join('/')})`,
+  );
   const content = await chatCompletion(
     [
       {

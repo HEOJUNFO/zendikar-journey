@@ -93,13 +93,15 @@ export const LandSimSchema = z.strictObject({
   // creature card from your graveyard to the battlefield": at 00:00, whoever holds it with N
   // plains or more gets back the last retainer who died serving them.
   upkeep_revive: z.strictObject({ plains: z.number().int().positive() }).optional(),
-  // What bonding with it does: the bonder gains life, or ("target player loses N life") someone
-  // standing there, whom the bonder picks, loses it.
+  // What bonding with it does: the bonder gains life, or someone standing there, whom the
+  // bonder picks, loses life ("target player loses N life") or gains an ability for the day.
   on_bond: z
     .array(
       z.discriminatedUnion('type', [
         z.strictObject({ type: z.literal('gain_life'), amount: z.number().int().positive() }),
         z.strictObject({ type: z.literal('lose_life'), amount: z.number().int().positive() }),
+        // "Target creature gains flying until end of turn": one there (them too), until 00:00.
+        z.strictObject({ type: z.literal('grant'), ability: z.enum(ABILITIES) }),
       ]),
     )
     .default([]),
@@ -114,6 +116,13 @@ export const LandSimSchema = z.strictObject({
   grow_entered: z.strictObject({ color: z.enum(COLORS) }).optional(),
 });
 export type BondEffect = z.infer<typeof LandSimSchema>['on_bond'][number];
+
+// What bonding with a land does, in a few words (for the region card and prompts).
+export function bondEffectText(eff: BondEffect) {
+  if (eff.type === 'gain_life') return `유대를 맺으면 생명 ${eff.amount}`;
+  if (eff.type === 'lose_life') return `유대를 맺으면 곁의 하나(맺는 이가 고름)가 생명 ${eff.amount}을 잃음`;
+  return `유대를 맺으면 곁의 하나(자신도, 맺는 이가 고름)가 자정까지 ${ABILITY_LABELS[eff.ability]}`;
+}
 
 export const MapSchema = z.union([
   // A region: a node on the map.

@@ -6,13 +6,13 @@ import { BOND_HOURS, KIND_EFFECTS } from './rules.ts';
 import { addLog, isPerson, landUnusable, outOfTime, player } from './state.ts';
 import type { State, Task } from './state.ts';
 import { startTravel, travelBlocked } from './step.ts';
-import { bondBlocked, bondVictims, fetchBlocked, growBlocked } from './abilities.ts';
+import { bondBlocked, bondTargets, fetchBlocked, growBlocked, targetedBondEffect } from './abilities.ts';
 import { CLAIM_HOURS, claimBlocked, itemDef } from './items.ts';
 import { EON_HOURS, spendBlocked, storeBlocked } from './eons.ts';
 import { castBlocked, learnBlocked, spellDef } from './spells.ts';
 import { josa, shortName, toward } from './text.ts';
 import { PACES } from './types.ts';
-import { region } from './world.ts';
+import { bondEffectText, region } from './world.ts';
 import type { World } from './world.ts';
 
 export const ActionSchema = z.discriminatedUnion('type', [
@@ -89,14 +89,19 @@ export function startAction(state: State, world: World, action: Action): string 
     case 'bond': {
       const why = bondBlocked(state, world, p, t);
       if (why) return why;
-      // "Target player loses N life": pick someone here, when anyone is.
-      const drain = region(world, p.region).onBond.find((x) => x.type === 'lose_life');
-      const victims = drain ? bondVictims(state, world, p, p.region) : [];
-      if (victims.length && !victims.some((x) => x.id === action.target))
-        return `이 땅은 곁의 한 사람의 생명을 앗아 간다. 누구에게 내줄지 골라야 한다: ${victims.map((x) => shortName(x.name)).join(', ')}.`;
-      const target = victims.find((x) => x.id === action.target);
+      // A targeted effect ("target player loses N life", "target creature gains flying"): pick
+      // someone here, when anyone is.
+      const eff = targetedBondEffect(region(world, p.region));
+      const targets = eff ? bondTargets(state, world, p, p.region, eff) : [];
+      if (targets.length && !targets.some((x) => x.id === action.target))
+        return `이 땅은 곁의 하나에게 힘을 미친다 (${bondEffectText(eff!)}). 누구로 할지 골라야 한다: ${targets.map((x) => (x.id === p.id ? '나' : shortName(x.name))).join(', ')}.`;
+      const target = targets.find((x) => x.id === action.target);
       task = { kind: 'bond', activity: '땅과 유대 맺기', emoji: '🌱', until: until(BOND_HOURS), ...(target ? { target: target.id } : {}) };
-      text = `${BOND_HOURS}시간 동안 이 땅과 유대를 맺는다.${target ? ` ${josa(shortName(target.name), '이', '가')} 이 땅에 생명을 앗길 것이다.` : ''}`;
+      text = `${BOND_HOURS}시간 동안 이 땅과 유대를 맺는다.${
+        !target ? ''
+        : eff!.type === 'lose_life' ? ` ${josa(shortName(target.name), '이', '가')} 이 땅에 생명을 앗길 것이다.`
+        : ` 이 땅의 힘은 ${target.id === p.id ? '나' : shortName(target.name)}에게 간다.`
+      }`;
       break;
     }
     case 'attack': {

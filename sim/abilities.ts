@@ -11,8 +11,8 @@ import { castSpell, spellDef } from './spells.ts';
 import { addLog, npcDef, outOfTime, present, ptOf, random } from './state.ts';
 import type { Actor, State } from './state.ts';
 import { josa, shortName, toward } from './text.ts';
-import { LAND_TYPE_LABELS, landTypes, region, spellColors } from './world.ts';
-import type { ActivatedAbility, World } from './world.ts';
+import { ABILITY_LABELS, LAND_TYPE_LABELS, landTypes, region, spellColors } from './world.ts';
+import type { Ability, ActivatedAbility, BondEffect, Region, World } from './world.ts';
 
 // Why `a` can't bond with the land they stand on now, or null. One land per turn, as one
 // land drop per turn in MTG.
@@ -28,26 +28,58 @@ export function bondBlocked(state: State, world: World, a: Actor, t: number): st
 
 // Landfall: the land comes under their control (the one they stand on, or one sought out from
 // afar with a fetch land).
-// Who a land's "target player loses N life" may fall on as `a` bonds with it: anyone standing
-// there with them, beasts too (user decision 2026-09-30).
-export function bondVictims(state: State, world: World, a: Actor, regionId: string) {
-  return present(state, regionId).filter((x) => x.id !== a.id);
+// A land's effect that falls on someone the bonder picks ("target player loses N life",
+// "target creature gains flying"), if it has one.
+export function targetedBondEffect(r: Region) {
+  return r.onBond.find((x) => x.type !== 'gain_life');
 }
 
-// `target` loses the land's life, if they are still there.
-export function bondDrain(state: State, world: World, a: Actor, regionId: string, amount: number, targetId: string | undefined, t: number) {
+// Whom it may fall on as `a` bonds with it: anyone standing there, beasts too (user decision
+// 2026-09-30); `a` too when it is a gift, as "target creature" may be one's own.
+export function bondTargets(state: State, world: World, a: Actor, regionId: string, eff: BondEffect) {
+  return present(state, regionId).filter((x) => x.id !== a.id || eff.type === 'grant');
+}
+
+// The effect falls on `target`, if they are still there.
+export function applyBondEffect(state: State, world: World, a: Actor, regionId: string, eff: BondEffect, targetId: string | undefined, t: number) {
   const r = region(world, regionId);
-  const target = targetId ? bondVictims(state, world, a, regionId).find((x) => x.id === targetId) : undefined;
+  const target = targetId ? bondTargets(state, world, a, regionId, eff).find((x) => x.id === targetId) : undefined;
   if (!target) {
     if (targetId) addLog(state, { kind: 'status', text: `${r.name}: 노린 이가 이미 곁에 없다.`, regions: [r.id], actors: [a.id], t });
     return;
   }
-  addLog(state, { kind: 'event', text: `${josa(shortName(a.name), '이', '가')} ${josa(shortName(target.name), '을', '를')} ${r.name}에 내주었다.`, regions: [r.id], actors: [a.id, target.id], t });
-  loseLife(state, target, amount, r.name);
+  if (eff.type === 'lose_life') {
+    addLog(state, { kind: 'event', text: `${josa(shortName(a.name), '이', '가')} ${josa(shortName(target.name), '을', '를')} ${r.name}에 내주었다.`, regions: [r.id], actors: [a.id, target.id], t });
+    loseLife(state, target, eff.amount, r.name);
+  } else if (eff.type === 'grant') grantAbility(state, target, eff.ability, untapTime(t), r.name, t);
 }
 
-// `target`: whom the player picked for a "target player loses N life" land. An NPC's pick is
-// asked of the LLM after the hour (state.choices).
+// `x` has `ability` until `until` ("until end of turn": 00:00).
+export function grantAbility(state: State, x: Actor, ability: Ability, until: number, cause: string, t: number) {
+  const label = ABILITY_LABELS[ability];
+  if (x.abilities.includes(ability) && !x.granted?.some((g) => g.ability === ability)) {
+    addLog(state, { kind: 'status', text: `${josa(shortName(x.name), '은', '는')} 이미 ${josa(label, '이', '가')} 있다.`, regions: [x.region], actors: [x.id], t });
+    return;
+  }
+  x.granted = [...(x.granted ?? []).filter((g) => g.ability !== ability), { ability, until }];
+  if (!x.abilities.includes(ability)) x.abilities = [...x.abilities, ability];
+  addLog(state, { kind: 'event', text: `${cause}의 바람이 ${shortName(x.name)}에게 ${josa(label, '을', '를')} 주었다 (자정까지).`, regions: [x.region], actors: [x.id], t });
+}
+
+// What was given for a while is gone at `t`.
+export function expireGranted(state: State, t: number) {
+  for (const x of Object.values(state.actors)) {
+    const gone = (x.granted ?? []).filter((g) => g.until <= t);
+    if (!gone.length) continue;
+    x.granted = x.granted!.filter((g) => g.until > t);
+    x.abilities = x.abilities.filter((ab) => !gone.some((g) => g.ability === ab));
+    if (!x.dead)
+      addLog(state, { kind: 'status', text: `${shortName(x.name)}의 ${gone.map((g) => ABILITY_LABELS[g.ability]).join(', ')}이(가) 사라졌다.`, regions: [x.region], actors: [x.id], t });
+  }
+}
+
+// `target`: whom the player picked for a land's targeted effect. An NPC's pick is asked of the
+// LLM after the hour (state.choices).
 export function bondLand(state: State, world: World, a: Actor, t: number, regionId = a.region, target?: string) {
   const r = region(world, regionId);
   const def = npcDef(state, world, a.id);
@@ -79,11 +111,13 @@ export function bondLand(state: State, world: World, a: Actor, t: number, region
   if (r.entersTapped)
     addLog(state, { kind: 'status', text: `${josa(r.name, '은', '는')} 탭된 채 들어왔다. 오늘은 마나를 내지 않는다.`, regions: [r.id], actors: [a.id], t });
   for (const eff of r.onBond) {
-    if (eff.type === 'gain_life') gainLife(state, a, eff.amount, t, r.name);
-    if (eff.type !== 'lose_life') continue;
-    const victims = bondVictims(state, world, a, r.id);
-    if (a.kind === 'player' || !victims.length) bondDrain(state, world, a, r.id, eff.amount, target, t);
-    else (state.choices ??= []).push({ by: a.id, land: r.id, amount: eff.amount, candidates: victims.map((x) => x.id), t });
+    if (eff.type === 'gain_life') {
+      gainLife(state, a, eff.amount, t, r.name);
+      continue;
+    }
+    const targets = bondTargets(state, world, a, r.id, eff);
+    if (a.kind === 'player' || !targets.length) applyBondEffect(state, world, a, r.id, eff, target, t);
+    else (state.choices ??= []).push({ by: a.id, land: r.id, effect: eff, candidates: targets.map((x) => x.id), t });
   }
   itemsOnLandfall(state, world, a, t);
 }
