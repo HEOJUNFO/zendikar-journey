@@ -8,6 +8,7 @@ import { remember } from './relations.ts';
 import { masterOf, releaseRetainer, retainersOf } from './retainers.ts';
 import { releaseItems } from './items.ts';
 import { doubleLife, gainLife, lifeOf } from './life.ts';
+import { manaAvailable, payMana, planPayment } from './mana.ts';
 import { HUNT_HUNGER, KILL_FEED, KO_ACTIVITY, KO_HOURS } from './rules.ts';
 import { addLog, needsOf, npcDef, outOfTime, present, ptOf, random } from './state.ts';
 import type { Actor, State } from './state.ts';
@@ -200,6 +201,25 @@ function prey(state: State, world: World, a: Actor, t: number) {
     .sort((x, y) => ptOf(x)[1] - ptOf(y)[1] || x.id.localeCompare(y.id))[0];
 }
 
+// "Whenever this attacks, you may pay …: untap all attacking creatures, an additional combat
+// phase" (Hellkite Charger): having struck, if both still stand and they can pay, they pay
+// ("may": always, [결정]) and strike once more this hour, with their retainers here who struck
+// this hour too.
+function extraCombat(state: State, world: World, a: Actor, foe: Actor, t: number) {
+  const extra = npcDef(state, world, a.id)?.extraCombat;
+  if (!extra || down(a) || down(foe)) return;
+  if (!planPayment(manaAvailable(state, world, a, t), extra.cost)) return;
+  payMana(state, world, a, extra.cost, t);
+  addLog(state, {
+    kind: 'combat',
+    text: `${josa(shortName(a.name), '이', '가')} 힘(${extra.costText})을 끌어올려 다시 날아들었다. 한 번 더 싸운다.`,
+    regions: [a.region],
+    actors: [a.id, foe.id],
+  });
+  const band = [a, ...retainersOf(state, a.id).filter((r) => r.region === a.region && !r.travel && r.lastClash === t)];
+  for (const x of band) if (!down(x) && !down(foe)) clash(state, x, foe, t);
+}
+
 // NPCs attack a foe standing with them, one exchange per hour. Their hour goes
 // to fighting. A hungry beast makes a foe of its prey; if it kills, it feeds.
 export function hostileNpcs(state: State, world: World, t: number) {
@@ -225,6 +245,7 @@ export function hostileNpcs(state: State, world: World, t: number) {
     if (!foe) continue;
     a.forced = { kind: 'fight', activity: `${josa(shortName(foe.name), '과', '와')} 싸움`, emoji: '⚔️', until: t + STEP_MINUTES };
     clash(state, a, foe, t);
+    extraCombat(state, world, a, foe, t);
     // A beast feeds on what it brought down (a kill, or an NPC knocked out).
     if (down(foe) && !down(a) && npcDef(state, world, a.id)?.beast) {
       a.stats.hunger = Math.max(0, a.stats.hunger - KILL_FEED);

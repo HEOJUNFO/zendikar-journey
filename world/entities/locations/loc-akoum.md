@@ -5,7 +5,7 @@ name: 아쿰
 name_en: Akoum
 summary: 젠디카르 동쪽의 험한 화산 대륙. 검붉은 바위 협곡이 이어지고, 뒤틀린 땅에서 떨어져 나온 바위 조각들이 하늘에 떠 있다
 status: canon
-sources: [ZEN-210, ZEN-223, ZEN-226, ZEN-228, ZEN-120]
+sources: [ZEN-210, ZEN-223, ZEN-226, ZEN-228, ZEN-120, ZEN-131]
 tags: [대륙, 화산, 협곡, 적색]
 links:
   - { to: loc-akoum-refuge, rel: 안의 구역 }
@@ -13,6 +13,7 @@ links:
   - { to: loc-teetering-peaks, rel: 안의 구역 }
   - { to: loc-valakut, rel: 한가운데의 화산 }
   - { to: chr-chandra, rel: 헤매는 플레인즈워커 }
+  - { to: cre-hellkite, rel: 하늘의 사냥꾼 }
 map: { x: 488, y: 240, terrain: volcanic, size: continent }
 ---
 
@@ -29,6 +30,7 @@ map: { x: 488, y: 240, terrain: volcanic, size: continent }
 - 위치 (488, 240)는 [배경]의 동쪽 대륙에서 정한 [가공]이다. 대륙이라 지도에 크게 그린다 (`size: continent`).
 
 - 불의 플레인즈워커 찬드라(`chr-chandra`, ZEN-120)가 무언가를 찾아 이곳을 헤맨다 ([배경] 우긴의 눈, [결정] 2026-09-30 다시 놓기).
+- 붉은 용 헬카이트 돌격대(`cre-hellkite`, ZEN-131)가 아쿰의 하늘을 날며 사냥한다 ([배경] 아쿰의 용, [결정] 2026-09-30).
 
 ## 미정/질문
 

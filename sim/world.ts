@@ -12,9 +12,9 @@ export const MAP_WIDTH = 600;
 export const MAP_HEIGHT = 450;
 
 // fly: can reach sky islands. aquatic: lives in the sea, and only there.
-export const ABILITIES = ['fly', 'aquatic', 'lifelink', 'vigilance'] as const;
+export const ABILITIES = ['fly', 'aquatic', 'lifelink', 'vigilance', 'haste'] as const;
 export type Ability = (typeof ABILITIES)[number];
-export const ABILITY_LABELS: Record<Ability, string> = { fly: '비행', aquatic: '물에 삶', lifelink: '생명연결', vigilance: '경계' };
+export const ABILITY_LABELS: Record<Ability, string> = { fly: '비행', aquatic: '물에 삶', lifelink: '생명연결', vigilance: '경계', haste: '속공' };
 
 export const TERRAIN_IDS = [
   'grassland',
@@ -222,6 +222,10 @@ export const CharacterSimSchema = z.strictObject({
   // "At the beginning of your upkeep, if you have N or more life, you win the game": its
   // controller (its master; a beast alone is no player) wins at 00:00 (sim/win.ts).
   wins_at_life: z.number().int().min(1).optional(),
+  // "Whenever this attacks, you may pay {cost}. If you do, untap all attacking creatures and
+  // there is an additional combat phase" (Hellkite Charger): when they strike and can pay, they
+  // do, and they (and their retainers who struck with them) strike once more that hour.
+  extra_combat: z.strictObject({ cost: CostSchema }).optional(),
   // Landfall: when they bond with a land, they get +P/+T (and trample) until the turn ends.
   landfall: z.strictObject({ pt: z.tuple([z.number().int(), z.number().int()]), trample: z.boolean().default(false) }).optional(),
   // The creature kind a character is (e.g. cre-vampire). A creature entity's sim is its own kind.
@@ -444,6 +448,7 @@ export type NpcDef = {
   beast?: boolean;
   tamable?: boolean;
   winsAtLife?: number;
+  extraCombat?: { cost: ManaCost; costText: string };
   landfall?: { pt: [number, number]; trample: boolean };
   // The creature kind they are (e.g. cre-vampire), for "a Vampire you control".
   creature?: string;
@@ -600,7 +605,8 @@ export function buildWorld(entities: RawEntity[]): { world: World; errors: strin
         err(e.id, `sim 오류: ${issues(sim.error)}`);
         continue;
       }
-      const { knows_colors, activated, wins_at_life, name, ...rest } = sim.data;
+      const { knows_colors, activated, wins_at_life, extra_combat, name, ...rest } = sim.data;
+
       world.npcs.push({
         id: e.id,
         name: name ?? e.name,
@@ -609,6 +615,7 @@ export function buildWorld(entities: RawEntity[]): { world: World; errors: strin
         creature: e.kind === 'creature' ? e.id : rest.creature,
         knowsColors: knows_colors,
         ...(wins_at_life !== undefined ? { winsAtLife: wins_at_life } : {}),
+        ...(extra_combat ? { extraCombat: { cost: parseManaCost(extra_combat.cost)!, costText: extra_combat.cost } } : {}),
         activated: activated.map((x) => ({ ...x, cost: parseManaCost(x.cost)!, costText: x.cost })),
       });
     } else if (e.kind === 'event') {
@@ -728,7 +735,13 @@ export function distance(a: { x: number; y: number }, b: { x: number; y: number 
 // Within a region (its open ground and its areas) any move is an hour. Between regions it is
 // the distance, plus an hour to get out of or into an area through its region. One without the
 // ability a land asks for (e.g. flying to a sky ruin) climbs instead, if it can be climbed.
+// Haste halves the way ([결정] 2026-09-30, ZEN-131), never under an hour.
 export function travelHours(a: Region, b: Region, abilities: readonly Ability[] = []) {
+  const hours = baseTravelHours(a, b, abilities);
+  return abilities.includes('haste') ? Math.max(1, Math.ceil(hours / 2)) : hours;
+}
+
+function baseTravelHours(a: Region, b: Region, abilities: readonly Ability[]) {
   const climb = (r: Region) => {
     const need = TERRAINS[r.terrain].requires;
     return need && !abilities.includes(need) ? (r.climbHours ?? 0) : 0;

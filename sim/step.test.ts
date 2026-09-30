@@ -1589,3 +1589,50 @@ test('life never comes back by itself; at 0 one dies, but an NPC who takes it fr
   await act(other, world2, { type: 'bond', target: 'chr-x' });
   assert.ok(other.actors['chr-x'].dead);
 });
+
+const hellkite = (mana: object): RawEntity => planned({
+  id: 'cre-h',
+  kind: 'creature',
+  name: '용',
+  status: 'canon',
+  sim: { pt: [5, 5], mana, role: 'r', home: 'loc-a', persona: 'p', goal: 'g', needs: ['energy'], beast: true, abilities: ['fly', 'haste'], extra_combat: { cost: '{5}{R}{R}' } },
+});
+
+test('haste halves the way, never under an hour', () => {
+  const world = fixture();
+  const [a, b] = [region(world, 'loc-a'), region(world, 'loc-b')];
+  assert.equal(travelHours(a, b), 2);
+  assert.equal(travelHours(a, b, ['haste']), 1);
+  assert.equal(travelHours(a, region(world, 'loc-sea'), ['haste']), Math.ceil(travelHours(a, region(world, 'loc-sea')) / 2));
+});
+
+test('a hellkite that strikes and can pay strikes once more that hour; without the mana, once', async () => {
+  const world = fixture([hellkite({ R: 7 }), npc('chr-y', npcSim('loc-a', 'social', [0, 30]))]);
+  const state = newState(world, { seed: 1, mode: 'observer' });
+  const h = state.actors['cre-h'];
+  const strikes = () => state.log.filter((e) => e.kind === 'combat' && e.text.includes('공격했다') && e.actors[0] === 'cre-h').length;
+  addFoe(h, 'chr-y', state.minutes);
+  await advance(state, world, 1);
+  assert.equal(strikes(), 2);
+  assert.ok(texts(state).some((t) => t.includes('한 번 더 싸운다')));
+  assert.equal(woundsOf(state.actors['chr-y'], state.minutes - 60), 10);
+  assert.equal(formatMana(manaAvailable(state, world, h, state.minutes)), '없음');
+  await advance(state, world, 1);
+  assert.equal(strikes(), 3);
+
+  const poorWorld = fixture([hellkite({ R: 6 }), npc('chr-y', npcSim('loc-a', 'social', [0, 30]))]);
+  const poor = newState(poorWorld, { seed: 1, mode: 'observer' });
+  addFoe(poor.actors['cre-h'], 'chr-y', poor.minutes);
+  await advance(poor, poorWorld, 1);
+  assert.ok(!texts(poor).some((t) => t.includes('한 번 더 싸운다')));
+});
+
+test('the real Hellkite Charger flies over Akoum, with haste', () => {
+  const world = loadWorld();
+  const state = newState(world, { seed: 1, mode: 'observer' });
+  const h = state.actors['cre-hellkite'];
+  assert.equal(h?.name, '헬카이트 돌격대');
+  assert.equal(h.region, 'loc-akoum');
+  assert.deepEqual(h.abilities, ['fly', 'haste']);
+  assert.equal(world.npcs.find((x) => x.id === 'cre-hellkite')?.extraCombat?.costText, '{5}{R}{R}');
+});
