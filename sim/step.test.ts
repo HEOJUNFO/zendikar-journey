@@ -28,7 +28,7 @@ import { applyEnterDestroy, bondBlocked, enterDestroy, onEnter, bondLand, bondTa
 import { DEPLETED_LABEL, DESTROYED_DAYS, TRAVEL_UNITS_PER_HOUR } from './rules.ts';
 import { bindRetainer, retainersOf, swayBlocked } from './retainers.ts';
 import { joinedToday } from './bounce.ts';
-import { fixedTile, nearestTile, ownsTile, sameTile, tilesOf, tileSteps, tooSmall } from './tiles.ts';
+import { centroid, fixedTile, nearestTile, ownsTile, sameTile, TILE, tileCenter, tilesOf, tileSteps, tooSmall } from './tiles.ts';
 import { applyQuell, upkeepQuell } from './quell.ts';
 import { upkeepWins } from './win.ts';
 import { hirePrice } from './allies.ts';
@@ -2206,6 +2206,29 @@ test('tiles: the player walks to a tile of their land, and seeks someone out; ex
   const before = p.tile!;
   await act(state, world, { type: 'explore', hours: 1, pace: 'normal' });
   assert.equal(tileSteps(before, p.tile!), 1);
+});
+
+test('tiles: each lives on their own tile of their home (as the lore puts it, `home_pos`, or one by name); an old save spreads them', () => {
+  const wide: RawEntity = { id: 'loc-w', kind: 'location', name: '넓은 땅', status: 'canon', map: { x: 200, y: 200, terrain: 'grassland', size: 'continent' } };
+  const world = fixture([wide, npc('chr-e', { ...npcSim('loc-w'), home_pos: [0.9, 0] }), npc('chr-n', { ...npcSim('loc-w'), home_pos: [0, -0.9] }), npc('chr-x', npcSim('loc-w'))]);
+  const state = newState(world, { seed: 1, mode: 'observer' });
+  const [e, n] = [state.actors['chr-e'], state.actors['chr-n']];
+  const mid = centroid(world, 'loc-w')!;
+  assert.ok(tileCenter(e.tile!).x > mid.x + TILE); // east
+  assert.ok(tileCenter(n.tile!).y < mid.y - TILE); // north
+  assert.ok(!together(e, n));
+  // A save from when all stood on the middle tile: at home, they go to their own.
+  const old = newState(world, { seed: 1, mode: 'observer' });
+  delete old.spread;
+  for (const a of Object.values(old.actors)) a.tile = nearestTile(world, 'loc-w');
+  syncWorld(old, world);
+  assert.ok(sameTile(old.actors['chr-e'].tile, e.tile));
+  // The real world: no crowd on one tile at the start.
+  const real = loadWorld();
+  const rs = newState(real, { seed: 1, mode: 'observer' });
+  const counts = new Map<string, number>();
+  for (const a of Object.values(rs.actors)) counts.set(`${a.region}|${a.tile}`, (counts.get(`${a.region}|${a.tile}`) ?? 0) + 1);
+  assert.ok(Math.max(...counts.values()) <= 2, JSON.stringify([...counts].filter(([, c]) => c > 2)));
 });
 
 test('tiles: an old save gets everyone a tile of their land', () => {

@@ -250,6 +250,10 @@ export const CharacterSimSchema = z.strictObject({
   mana: ManaSchema.optional(),
   role: z.string().min(1),
   home: z.string(),
+  // Where in their home they live, as the lore has it: [east(+)/west(-), south(+)/north(-)] in
+  // parts of the land's radius, like an area's `map.pos` (sim/tiles.ts `placeTile`). Without
+  // it, a tile of their home picked by their name.
+  home_pos: z.tuple([z.number().min(-1).max(1), z.number().min(-1).max(1)]).optional(),
   persona: z.string().min(1),
   goal: z.string().min(1),
   abilities: z.array(z.enum(ABILITIES)).default([]),
@@ -441,6 +445,8 @@ const EventBase = {
   scope: z.enum(['region', 'world']).default('region'),
   // Warning an hour before it fires. The careful dodge its stat effects.
   omen: z.string().optional(),
+  // A trap that springs underfoot: where in its land it lies, like `home_pos`.
+  pos: z.tuple([z.number().min(-1).max(1), z.number().min(-1).max(1)]).optional(),
   text: z.string().min(1),
   effects: z.array(EffectSchema).min(1),
 };
@@ -529,6 +535,8 @@ export const ItemSimSchema = z.strictObject({
   card_type: z.enum(['artifact', 'enchantment']).default('artifact'),
   cost: CostSchema,
   at: z.string(),
+  // Where in its land it stands, like `home_pos`.
+  pos: z.tuple([z.number().min(-1).max(1), z.number().min(-1).max(1)]).optional(),
   effects: z
     .array(
       z.discriminatedUnion('type', [
@@ -642,6 +650,7 @@ export type NpcDef = {
   summary: string;
   role: string;
   home: string;
+  homePos?: [number, number];
   persona: string;
   goal: string;
   pt: Pt;
@@ -706,6 +715,7 @@ export type ItemDef = {
   costText: string;
   at: string;
   effects: ItemEffect[];
+  pos?: [number, number];
 };
 
 // Who answers when spoken to.
@@ -733,6 +743,7 @@ export type EventDef = {
   text: string;
   effects: Effect[];
   cost?: { by: string; mana: ManaCost; text: string };
+  pos?: [number, number];
 };
 
 // Every entity in brief, for prompts (laws, creatures, factions...).
@@ -848,7 +859,7 @@ export function buildWorld(entities: RawEntity[]): { world: World; errors: strin
         err(e.id, `sim 오류: ${issues(sim.error)}`);
         continue;
       }
-      const { knows_colors, activated, wins_at_life, extra_combat, landfall_token, landfall_seize, landfall_lose, landfall_grant, landfall_drain, enter_destroy, enter_drain, enter_draw, tap_draw_allies, name, ...rest } = sim.data;
+      const { knows_colors, activated, wins_at_life, extra_combat, landfall_token, landfall_seize, landfall_lose, landfall_grant, landfall_drain, enter_destroy, enter_drain, enter_draw, tap_draw_allies, name, home_pos, ...rest } = sim.data;
 
       world.npcs.push({
         id: e.id,
@@ -864,6 +875,7 @@ export function buildWorld(entities: RawEntity[]): { world: World; errors: strin
         ...(landfall_grant.length ? { landfallGrant: landfall_grant } : {}),
         ...(enter_destroy ? { enterDestroy: enter_destroy } : {}),
         ...(enter_drain ? { enterDrain: enter_drain } : {}),
+        ...(home_pos ? { homePos: home_pos } : {}),
         ...(enter_draw ? { enterDraw: { count: enter_draw.count, discard: enter_draw.discard, ...(enter_draw.kicker ? { kicker: parseManaCost(enter_draw.kicker)!, kickerText: enter_draw.kicker } : {}) } } : {}),
         ...(landfall_drain ? { landfallDrain: landfall_drain } : {}),
         ...(tap_draw_allies ? { tapDrawAllies: true } : {}),
@@ -917,7 +929,7 @@ export function buildWorld(entities: RawEntity[]): { world: World; errors: strin
         continue;
       }
       const d = sim.data;
-      world.items.push({ id: e.id, name: e.name, summary: e.summary ?? '', cardType: d.card_type, cost: parseManaCost(d.cost)!, costText: d.cost, at: d.at, effects: d.effects });
+      world.items.push({ id: e.id, name: e.name, summary: e.summary ?? '', cardType: d.card_type, cost: parseManaCost(d.cost)!, costText: d.cost, at: d.at, ...(d.pos ? { pos: d.pos } : {}), effects: d.effects });
     } else {
       err(e.id, `sim 은 location, character, creature, event, spell, item 에만 쓸 수 있음 (${e.kind})`);
     }

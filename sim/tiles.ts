@@ -169,8 +169,26 @@ export function ownsTile(world: World, regionId: string, t: Tile | undefined) {
   return !!t && tilesOf(world, regionId).some((x) => sameTile(x, t));
 }
 
-// A tile picked for something that stays put in a land (a trap, a relic), from its id: always
-// the same one.
+// The tile of a land where something lives or lies: where the lore puts it in the land (`pos`,
+// in parts of the land's radius from its middle), or one picked by its id (always the same).
+export function placeTile(world: World, regionId: string, id: string, pos?: [number, number]): Tile | undefined {
+  if (!pos) return fixedTile(world, regionId, id);
+  const r = world.regions.find((x) => x.id === regionId);
+  const mid = r?.parent ? centroid(world, regionId) : r && { x: r.x, y: r.y };
+  if (!r || !mid) return fixedTile(world, regionId, id);
+  const R = r.radius ?? TILE;
+  return nearestTile(world, regionId, { x: mid.x + pos[0] * R * 0.8, y: mid.y + pos[1] * R * 0.8 });
+}
+
+// A character's own tile in their home, a trap's in its land.
+export function homeTile(world: World, npc: { id: string; home: string; homePos?: [number, number] }) {
+  return placeTile(world, npc.home, npc.id, npc.homePos);
+}
+export function eventTile(world: World, ev: { id: string; region: string; pos?: [number, number] }) {
+  return placeTile(world, ev.region, ev.id, ev.pos);
+}
+
+// A tile picked for something that stays put in a land, from its id: always the same one.
 export function fixedTile(world: World, regionId: string, id: string): Tile | undefined {
   const ts = tilesOf(world, regionId);
   if (!ts.length) return undefined;

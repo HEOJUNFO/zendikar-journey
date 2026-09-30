@@ -1,7 +1,7 @@
 // Items (MTG artifacts, world/entities/items): permanents that stand in one place. Whoever
 // pays an item's cost there tames it and holds it until they die or leave the plane.
 import { gameDay } from './clock.ts';
-import { fixedTile, sameTile, tileLabel } from './tiles.ts';
+import { placeTile, sameTile, tileLabel } from './tiles.ts';
 import { gainLife, lifeOf } from './life.ts';
 import { formatMana, manaAvailable, payMana, planPayment } from './mana.ts';
 import { addLog, npcDef } from './state.ts';
@@ -23,7 +23,7 @@ export function itemsAt(world: World, regionId: string) {
 
 // The tile of its land an item stands on: always the same one (sim/tiles.ts).
 export function itemTile(world: World, x: ItemDef) {
-  return fixedTile(world, x.at, x.id);
+  return placeTile(world, x.at, x.id, x.pos);
 }
 
 export function itemOwner(state: State, itemId: string) {

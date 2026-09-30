@@ -37,7 +37,7 @@ import { anthemHour, upkeepSacrifice } from './monument.ts';
 import { upkeepQuell } from './quell.ts';
 import { HIRE_HOURS, hireBlocked, hireMerc } from './allies.ts';
 import { bounceCandidates, joinedToday } from './bounce.ts';
-import { fixedTile, nearestTile, sameTile, tileCenter, tileLabel, tilesOf, tileSteps } from './tiles.ts';
+import { eventTile, fixedTile, homeTile, nearestTile, sameTile, tileCenter, tileLabel, tilesOf, tileSteps } from './tiles.ts';
 import type { Tile } from './tiles.ts';
 import { COURT_HOURS, courtBlocked, followsMaster, masterOf, readyCourt, refusedToday, upkeepPossessions } from './retainers.ts';
 import { learnBlocked, learnSpell, npcCastBlocked, readyCast, spellDef } from './spells.ts';
@@ -200,7 +200,7 @@ function enterEvents(state: State, world: World, at: number) {
     if (ev.trigger !== 'enter' || onCooldown(state, ev, at)) continue;
     if (state.pending.some((p) => p.eventId === ev.id)) continue;
     // A trap lies on one tile of its land: those who stepped onto it this hour.
-    const by = present(state, ev.region, fixedTile(world, ev.region, ev.id)).filter((a) => a.steppedAt === at && (!ev.gained_life || gainedLifeToday(a, at)) && (!ev.refused || refusedToday(a, at)) && (!ev.searched || a.searched === gameDay(at)) && (!ev.claimed || a.claimed === gameDay(at)) && (!ev.joined || joinedToday(state, a, at) >= ev.joined));
+    const by = present(state, ev.region, eventTile(world, ev)).filter((a) => a.steppedAt === at && (!ev.gained_life || gainedLifeToday(a, at)) && (!ev.refused || refusedToday(a, at)) && (!ev.searched || a.searched === gameDay(at)) && (!ev.claimed || a.claimed === gameDay(at)) && (!ev.joined || joinedToday(state, a, at) >= ev.joined));
     if (by.length) trigger(state, world, ev, at, { by: by.map((a) => a.id), lands: [] });
   }
 }
@@ -367,7 +367,7 @@ function fire(state: State, world: World, ev: EventDef, t: number, omened: boole
       }
     } else if (eff.type === 'bounce') {
       // Whom it flings is the trap's, asked after the hour.
-      const tile = fixedTile(world, ev.region, ev.id);
+      const tile = eventTile(world, ev);
       if (bounceCandidates(state, world, ev.region, tile, t).length) (state.bounces ??= []).push({ event: ev.id, count: eff.count, by: cause.by ?? [], region: ev.region, tile, t });
     } else if (eff.type === 'summon') {
       // Which of the creatures looked at is drawn here (if any) is the trap's, asked after the hour.
@@ -577,8 +577,18 @@ function npcTask(state: State, world: World, a: Actor, t: number): Task | undefi
   if (target) {
     if (goTo(state, world, a, target, t)) return a.task;
   } else if (block.regionId !== a.region && !travelBlocked(state, world, a, block.regionId)) {
-    startTravel(state, world, a, block.regionId, t);
+    // Home: to their own tile of it.
+    const def = npcDef(state, world, a.id);
+    startTravel(state, world, a, block.regionId, t, def && 'home' in def && def.home === block.regionId ? homeTile(world, def) : undefined);
     return a.task;
+  } else if (block.kind === 'sleep' && block.regionId === a.region && a.region === npcDef(state, world, a.id)?.home) {
+    // They sleep at home, on their own tile.
+    const def = npcDef(state, world, a.id)!;
+    const own = 'home' in def ? homeTile(world, def) : undefined;
+    if (own && !sameTile(own, a.tile)) {
+      startTravel(state, world, a, a.region, t, own);
+      return a.task;
+    }
   } else if (block.kind === 'claim') {
     // An item to tame stands on one tile of its land: they walk to it.
     const x = itemsAt(world, a.region).find((y) => !state.items?.[y.id]?.owner && !state.items?.[y.id]?.gone);

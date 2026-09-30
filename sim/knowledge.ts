@@ -6,7 +6,7 @@
 // player sees it. The day's count of secrets learned is what "drew N cards this turn" asks
 // (the Runeflare Trap).
 import { gameDay } from './clock.ts';
-import { fixedTile, tileLabel } from './tiles.ts';
+import { eventTile, tileLabel } from './tiles.ts';
 import { itemTile } from './items.ts';
 import { foresightText } from './foresight.ts';
 import { addLog, random } from './state.ts';
@@ -47,7 +47,7 @@ function triggerText(ev: EventDef) {
 export function secretsOf(state: State, world: World, t: number): Secret[] {
   // A trap that springs underfoot lies on one tile of its land: where, too.
   const spot = (ev: EventDef) => {
-    const tile = ev.trigger === 'enter' ? fixedTile(world, ev.region, ev.id) : undefined;
+    const tile = ev.trigger === 'enter' ? eventTile(world, ev) : undefined;
     return tile ? `${placeName(world, region(world, ev.region))}(${tileLabel(world, ev.region, tile)})` : placeName(world, region(world, ev.region));
   };
   const traps = world.events.map((ev) => ({ id: `trap:${ev.id}`, text: `${spot(ev)}의 ${ev.name}: ${ev.summary}. ${triggerText(ev)}.` }));

@@ -6,7 +6,7 @@ import { shortName } from '../sim/text.ts';
 import { hasPowers, MAP_HEIGHT, MAP_WIDTH, region, spellColors, TERRAINS } from '../sim/world.ts';
 import type { World } from '../sim/world.ts';
 import { moveHours } from '../sim/step.ts';
-import { fixedTile, nearestTile, sameTile, TILE, tileCenter, tileKey } from '../sim/tiles.ts';
+import { eventTile, nearestTile, sameTile, TILE, tileCenter, tileKey } from '../sim/tiles.ts';
 import type { Tile } from '../sim/tiles.ts';
 import { areaLabelAt, fitView, halfCircle, isTrap, landColors, nodeAt, PLAIN_NODE, regionLabelAt, shelves, tileRects, trapStatus, visibleActors } from './view.ts';
 import type { MapBox } from './view.ts';
@@ -256,7 +256,7 @@ export function MapView({ world, state, selected, selectedTile, onSelect, all, p
         })}
         {traps.map((ev, i) => {
           // One that springs underfoot: on its tile; others in their land's middle.
-          const tile = ev.trigger === 'enter' ? fixedTile(world, ev.region, ev.id) : undefined;
+          const tile = ev.trigger === 'enter' ? eventTile(world, ev) : undefined;
           const node = tile ? tileCenter(tile) : nodeAt(world, region(world, ev.region));
           const n = traps.slice(0, i).filter((x) => x.region === ev.region).length;
           const [x, y] = [node.x - TILE * 0.3 + TRAP_GAP * n, node.y + TILE * 0.3];

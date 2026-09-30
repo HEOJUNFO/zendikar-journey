@@ -3,7 +3,7 @@ import { gameDay, START_MINUTES } from './clock.ts';
 import { INITIAL_STATS } from './rules.ts';
 import { NEEDS } from './types.ts';
 import type { LifeKind, Need, Pace, Schedule, Stats } from './types.ts';
-import { nearestTile, ownsTile, sameTile, tileCenter, tileLabel } from './tiles.ts';
+import { homeTile, nearestTile, ownsTile, sameTile, tileCenter, tileLabel } from './tiles.ts';
 import type { Tile } from './tiles.ts';
 import type { QuellKind } from './quell.ts';
 import { josa, shortName } from './text.ts';
@@ -286,6 +286,8 @@ export type State = {
   asks?: Choice[];
   nextLogId: number;
   log: LogEntry[];
+  // Everyone stands on their own tile of their home (saves from before stood on its middle).
+  spread?: number;
 };
 
 export const PLAYER_ID = 'player';
@@ -318,9 +320,10 @@ export function newState(world: World, opts: NewGame): State {
     log: [],
   };
   for (const npc of world.npcs) {
-    state.actors[npc.id] = npcActor(npc);
+    state.actors[npc.id] = { ...npcActor(npc), tile: homeTile(world, npc) };
     refreshHand(state, world, npc);
   }
+  state.spread = 1;
   if (opts.mode === 'character') {
     if (!opts.player) throw new Error('character mode needs a player');
     state.playerId = PLAYER_ID;
@@ -348,7 +351,7 @@ export function syncWorld(state: State, world: World) {
   for (const e of world.events) state.events[e.id] ??= {};
   for (const npc of world.npcs) {
     const old = state.beings?.[npc.id];
-    const a = (state.actors[npc.id] ??= { ...npcActor(npc), manaSpent: old?.manaSpent, boundUntil: old?.boundUntil });
+    const a = (state.actors[npc.id] ??= { ...npcActor(npc), tile: homeTile(world, npc), manaSpent: old?.manaSpent, boundUntil: old?.boundUntil });
     // Saves from when some characters stayed at home without a day of their own.
     if ((a.kind as string) === 'being') a.kind = 'npc';
     // Their own, and any they have for a while (sim/abilities.ts grantAbility).
@@ -393,6 +396,7 @@ export function syncWorld(state: State, world: World) {
     if (a.kind === 'npc' && def && !a.dead && world.npcs.includes(def as NpcDef) && a.home !== def.home) {
       if (!a.master && a.region !== def.home && exists(def.home)) {
         a.region = def.home;
+        a.tile = homeTile(world, def as NpcDef);
         a.travel = undefined;
         a.task = undefined;
         a.schedule = undefined;
@@ -408,6 +412,14 @@ export function syncWorld(state: State, world: World) {
     a.region = home;
     a.travel = undefined;
     a.schedule = undefined;
+  }
+  // Saves from when everyone in a land stood on its middle tile: those at home, on their own.
+  if (!state.spread) {
+    for (const a of Object.values(state.actors)) {
+      const def = world.npcs.find((n) => n.id === a.id);
+      if (def && !a.dead && !a.master && !a.travel && a.region === def.home) a.tile = homeTile(world, def);
+    }
+    state.spread = 1;
   }
   // Saves from before tiles, and tiles the map took away: the nearest tile of their land.
   for (const a of Object.values(state.actors)) {

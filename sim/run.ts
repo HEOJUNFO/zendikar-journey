@@ -20,7 +20,7 @@ import { loremastersOf, recallBlocked, recallCount } from './loremaster.ts';
 import { sacrifice } from './monument.ts';
 import { strandedText } from './stranded.ts';
 import { bounce, bounceCandidates } from './bounce.ts';
-import { fixedTile } from './tiles.ts';
+import { eventTile } from './tiles.ts';
 import { applyQuell, permanentsOf, QUELL_KINDS, QUELL_LABELS, quellGive } from './quell.ts';
 import { applyRally, hireableFor, hireMerc, hirePrice, rallyText } from './allies.ts';
 import { answerAsk, askText, canServe } from './asks.ts';
@@ -370,7 +370,7 @@ async function summons(state: State, world: World, llm: Llm) {
         console.warn(`summon for ${trap.id} failed:`, e);
       }
     }
-    if (pick && creatures.some((c) => c.id === pick)) callForth(state, world, pick, s.region, intruders.map((a) => a.id), state.minutes, fixedTile(world, s.region, s.event));
+    if (pick && creatures.some((c) => c.id === pick)) callForth(state, world, pick, s.region, intruders.map((a) => a.id), state.minutes, eventTile(world, trap));
     else addLog(state, { kind: 'event', text: `${trap.name}: 문간의 어둠은 끝내 잠잠했다.`, regions: [s.region] });
   }
 }
