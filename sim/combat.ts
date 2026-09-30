@@ -137,6 +137,8 @@ export function landwalked(world: World, attacker: Actor, defender: Actor, t: nu
 // Their colors: a card's, or the colors of the lands they have bonded with (sim/mana.ts).
 export function intimidated(state: State, world: World, attacker: Actor, defender: Actor, t: number) {
   if (!hasAbility(attacker, 'intimidate', t)) return false;
+  // An artifact creature (마법물체 생물) may block it, whatever its colors.
+  if (npcDef(state, world, defender.id)?.types?.includes('artifact')) return false;
   const theirs = actorColors(state, world, defender);
   return !actorColors(state, world, attacker).some((c) => theirs.includes(c));
 }

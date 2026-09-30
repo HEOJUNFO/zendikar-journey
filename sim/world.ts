@@ -15,10 +15,11 @@ export const MAP_HEIGHT = 450;
 export const ABILITIES = ['fly', 'aquatic', 'lifelink', 'vigilance', 'haste', 'trample', 'defender', 'shroud', 'swampwalk', 'indestructible', 'intimidate'] as const;
 export type Ability = (typeof ABILITIES)[number];
 export const ABILITY_LABELS: Record<Ability, string> = { fly: '비행', aquatic: '물에 삶', lifelink: '생명연결', vigilance: '경계', haste: '속공', trample: '돌진', defender: '수비대', shroud: '방어막', swampwalk: '늪걷기', indestructible: '파괴불가', intimidate: '위협' };
-// Creature types a card may name ("destroy target Angel").
-export const CREATURE_TYPES = ['angel', 'demon'] as const;
+// Creature types a card may name ("destroy target Angel"), and `artifact` for an artifact
+// creature (마법물체 생물: it may block an intimidating one).
+export const CREATURE_TYPES = ['angel', 'demon', 'artifact'] as const;
 export type CreatureType = (typeof CREATURE_TYPES)[number];
-export const CREATURE_TYPE_LABELS: Record<CreatureType, string> = { angel: '천사', demon: '악마' };
+export const CREATURE_TYPE_LABELS: Record<CreatureType, string> = { angel: '천사', demon: '악마', artifact: '마법물체' };
 
 export const TERRAIN_IDS = [
   'grassland',

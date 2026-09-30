@@ -2692,6 +2692,10 @@ test('intimidate: one who shares none of its colors can\'t strike back at it, no
   assert.deepEqual(actorColors(state, world, x), ['B']);
   assert.equal(intimidated(state, world, d, x, state.minutes), false);
   assert.equal(unblockable(state, world, d, x, state.minutes), null);
+  // An artifact creature blocks it, colors or not.
+  x.bonds = [];
+  (world.npcs.find((n) => n.id === 'chr-x')!).types = ['artifact'];
+  assert.equal(intimidated(state, world, d, x, state.minutes), false);
 });
 
 test('enter_destroy: arriving where an Angel is, the hunter may destroy it; shroud and indestructible are spared', async () => {
