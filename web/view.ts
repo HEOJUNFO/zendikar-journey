@@ -3,6 +3,7 @@
 import { formatClock } from '../sim/clock.ts';
 import { player } from '../sim/state.ts';
 import type { Actor, State } from '../sim/state.ts';
+import { MAP_HEIGHT, MAP_WIDTH, TERRAINS } from '../sim/world.ts';
 import type { EventDef, Region, World } from '../sim/world.ts';
 
 export function visibleActors(state: State, all = false): Actor[] {
@@ -55,6 +56,30 @@ export function areaLabelAt(world: World, r: Region) {
   const d = containerRadius(world, world.regions.find((x) => x.id === r.parent)!) + 1.8;
   const [dx, dy] = [Math.cos(angle), Math.sin(angle)];
   return { x: r.x + dx * d, y: r.y + dy * d + 1.5, anchor: dx > 0.3 ? 'start' : dx < -0.3 ? 'end' : 'middle' } as const;
+}
+
+// The part of the map a view shows, in map units.
+export type MapBox = { x: number; y: number; w: number; h: number };
+
+// Room for the names around the outermost lands (more on top, where the full-screen map's bar sits).
+const FIT_PAD = { x: 24, top: 24, bottom: 14 };
+const FIT_MIN_W = 120;
+
+// The box that holds every land (with their names), widened to the map's shape so the map
+// opens on the lands rather than on the empty sea around them.
+export function fitView(world: World): MapBox {
+  const tops = world.regions.filter((r) => !r.parent);
+  if (!tops.length) return { x: 0, y: 0, w: MAP_WIDTH, h: MAP_HEIGHT };
+  const extent = (r: Region) => containerRadius(world, r) || (TERRAINS[r.terrain].sea ? 10.5 : 4.8);
+  const x0 = Math.min(...tops.map((r) => r.x - extent(r))) - FIT_PAD.x;
+  const x1 = Math.max(...tops.map((r) => r.x + extent(r))) + FIT_PAD.x;
+  const y0 = Math.min(...tops.map((r) => r.y - extent(r))) - FIT_PAD.top;
+  const y1 = Math.max(...tops.map((r) => r.y + extent(r))) + FIT_PAD.bottom;
+  const aspect = MAP_WIDTH / MAP_HEIGHT;
+  const w = Math.min(MAP_WIDTH, Math.max(FIT_MIN_W, x1 - x0, (y1 - y0) * aspect));
+  const h = w / aspect;
+  const clamp = (v: number, size: number, max: number) => Math.min(Math.max(v, 0), Math.max(0, max - size));
+  return { x: clamp((x0 + x1 - w) / 2, w, MAP_WIDTH), y: clamp((y0 + y1 - h) / 2, h, MAP_HEIGHT), w, h };
 }
 
 // Traps: events the land sets off by itself when someone comes (law-ruin-traps), unlike

@@ -3,8 +3,8 @@
 import { writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { loadWorld, WORLD_DIR } from '../sim/load.ts';
-import { MAP_HEIGHT, MAP_WIDTH, TERRAINS } from '../sim/world.ts';
-import { areaLabelAt, containerRadius, nodeAt } from '../web/view.ts';
+import { TERRAINS } from '../sim/world.ts';
+import { areaLabelAt, containerRadius, fitView, nodeAt } from '../web/view.ts';
 
 const S = 6; // px per map unit
 const esc = (s) => s.replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]);
@@ -43,13 +43,15 @@ const nodes = world.regions.filter((r) => !r.parent).map((r) => {
     <text x="${x}" y="${ty}" text-anchor="middle" class="terrain">${esc(t.label)}</text></g>`;
 });
 
-const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${MAP_WIDTH * S} ${MAP_HEIGHT * S}" width="${MAP_WIDTH * S}" height="${MAP_HEIGHT * S}">
+// The lands as the game map first shows them (web/view.ts fitView), not the whole sea.
+const box = Object.fromEntries(Object.entries(fitView(world)).map(([k, v]) => [k, Math.round(v * S)]));
+const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="${box.x} ${box.y} ${box.w} ${box.h}" width="${box.w}" height="${box.h}">
   <style>
     .name { font: 600 18px sans-serif; fill: #f4ecd8; }
     .terrain { font: 13px sans-serif; fill: #b9c3cf; }
     .area { font: 600 14px sans-serif; fill: #f4ecd8; }
   </style>
-  <rect width="100%" height="100%" fill="#16324f"/>
+  <rect x="${box.x}" y="${box.y}" width="${box.w}" height="${box.h}" fill="#16324f"/>
 ${containers.join('\n')}
 ${areaNodes.join('\n')}
 ${nodes.join('\n')}
