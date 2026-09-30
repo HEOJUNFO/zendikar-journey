@@ -143,8 +143,21 @@ export function intimidated(state: State, world: World, attacker: Actor, defende
   return !actorColors(state, world, attacker).some((c) => theirs.includes(c));
 }
 
+// Asleep (resting, sleeping, collapsed from exhaustion), not knocked out.
+export function asleep(a: Actor) {
+  return (a.forced ?? a.task)?.kind === 'sleep' && !knockedOut(a);
+}
+
+// Fallen on in their sleep: one asleep can't strike back (nor fly) the first exchange against
+// one they don't yet hold a foe. Vigilance ("attacking doesn't cause it to tap"): never caught
+// asleep (user decision 2026-09-30, as haste became half travel time).
+export function caughtAsleep(attacker: Actor, defender: Actor, t: number) {
+  return asleep(defender) && !hasAbility(defender, 'vigilance', t) && !foesOf(defender, t).includes(attacker.id);
+}
+
 // Why the defender can't block the attacker (strike back, or fly from them), or null.
 export function unblockable(state: State, world: World, attacker: Actor, defender: Actor, t: number): string | null {
+  if (caughtAsleep(attacker, defender, t)) return '잠든 채 덮쳐져';
   if (landwalked(world, attacker, defender, t)) return '늪과 이어진 몸이라 늪을 걷는 적에게';
   // Protection from a color: one of that color can't block them.
   const shield = protectedFrom(attacker, actorColors(state, world, defender), t);

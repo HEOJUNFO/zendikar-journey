@@ -43,4 +43,4 @@ entities: [cre-shepherd-of-the-lost, loc-emeria, chr-iona, cre-halo-hunter]
 
 - `cre-shepherd-of-the-lost`: 에메리아의 천사, 3/3 백 5, 비행·선제공격·경계, `types: [angel]`, 기력만 쓴다.
 - 새 능력 `first_strike`(선제공격, `sim/combat.ts` 의 `clash`).
-- 경계는 이미 성립(공격해도 묶이지 않음)하므로 기록만.
+- 경계: 잠든 채 덮쳐지지 않는다 (`caughtAsleep`, [결정] 2026-09-30). 자는 이는 덮쳐진 첫 합에 반격하지 못한다는 규칙도 이때 생겼다.

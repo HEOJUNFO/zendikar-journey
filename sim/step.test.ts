@@ -2737,6 +2737,26 @@ test('first strike: one who has it strikes first, and one it fells never strikes
   assert.ok(knockedOut(a1) && knockedOut(b1));
 });
 
+test('caught asleep: one sleeping can\'t strike back (nor fly) the first exchange; vigilance is never caught asleep', () => {
+  const world = fixture([npc('chr-a', npcSim('loc-a', 'work', [2, 9])), npc('chr-x', npcSim('loc-a', 'work', [2, 9])), npc('chr-v', { ...npcSim('loc-a', 'work', [2, 9]), abilities: ['vigilance', 'fly'] })]);
+  const state = newState(world, { seed: 1, mode: 'observer' });
+  const [a, x, v] = ['chr-a', 'chr-x', 'chr-v'].map((id) => state.actors[id]);
+  const t = state.minutes;
+  const sleep = { kind: 'sleep' as const, activity: '잠', emoji: '💤' };
+  x.task = { ...sleep };
+  v.task = { ...sleep };
+  assert.equal(unblockable(state, world, a, x, t), '잠든 채 덮쳐져');
+  clash(state, world, a, x, t, unblockable(state, world, a, x, t));
+  assert.equal(woundsOf(a, t), 0);
+  assert.ok(texts(state).some((l) => l.includes('잠든 채 덮쳐져 맞서지 못한다')));
+  // Awake to them now: the next exchange, they strike back.
+  assert.equal(unblockable(state, world, a, x, t + 60), null);
+  clash(state, world, a, x, t + 60, unblockable(state, world, a, x, t + 60));
+  assert.equal(woundsOf(a, t + 60), 2);
+  // Vigilance: never caught asleep.
+  assert.equal(unblockable(state, world, a, v, t), null);
+});
+
 test('the real Shepherd of the Lost keeps Emeria: a 3/3 Angel with flying, first strike, vigilance', () => {
   const world = loadWorld();
   const state = newState(world, { seed: 1, mode: 'observer' });
