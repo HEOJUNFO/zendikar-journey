@@ -23,7 +23,7 @@ import { castableSpells, castBlocked, castSpell, harmful, learnableSpells, spell
 import { opponentsOf, sealsDue, setSeal } from './seal.ts';
 import { COLORS } from './mana.ts';
 import type { Color } from './mana.ts';
-import { abilityBlocked, applyBondEffect, applyEnterDestroy, enteredToday, fetchBlocked, fetchTargets, growBlocked, growLand, callForth } from './abilities.ts';
+import { abilityBlocked, applyBondEffect, applyDrainGrow, applyEnterDestroy, enteredToday, fetchBlocked, fetchTargets, growBlocked, growLand, callForth } from './abilities.ts';
 import { bindRetainer, courtTargets, followsMaster, refuse, seize, swayBlocked } from './retainers.ts';
 import { josa, shortName } from './text.ts';
 import type { ScheduleBlock } from './types.ts';
@@ -425,6 +425,19 @@ async function choices(state: State, world: World, llm: Llm) {
       }
       const x = candidates.find((y) => y.id === pick) ?? [...candidates].sort((p, q) => ptOf(p)[1] - ptOf(q)[1] || p.id.localeCompare(q.id))[0];
       sacrifice(state, world, x, item, state.minutes);
+      continue;
+    }
+    // Ob Nixilis, bonding: whom (if anyone) he drains, growing for it.
+    if (c.effect.type === 'drain_grow') {
+      if (!llm.choose) continue;
+      let pick: string | null = null;
+      try {
+        pick = await llm.choose({ world, state, npc, candidates, optional: true, what: `${land.name}: 당신이 이 땅과 유대를 맺자 땅의 타락한 마나가 당신에게 흐른다. 고른 하나가 생명 ${c.effect.life}을 잃고(당신을 적으로 삼는다), 그러면 당신은 +1/+1 카운터 ${c.effect.counters}을 얻어 영영 커진다. 아무도 고르지 않을 수도 있다` });
+      } catch (e) {
+        console.warn(`choose (drain) for ${c.by} failed:`, e);
+      }
+      const target = candidates.find((x) => x.id === pick);
+      if (target) applyDrainGrow(state, world, by, target, c.effect, state.minutes);
       continue;
     }
     // Halo Hunter, arriving: which one of the kind he hunts (if any) he destroys.

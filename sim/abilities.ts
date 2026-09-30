@@ -53,7 +53,7 @@ export function bondTargets(state: State, world: World, a: Actor, regionId: stri
 }
 
 // The effect falls on `target`, if they are still there.
-export function applyBondEffect(state: State, world: World, a: Actor, regionId: string, eff: Exclude<ChoiceEffect, { type: 'cast' | 'follow' | 'rally' | 'seize' | 'pledge' | 'evade' | 'discard' | 'sacrifice' | 'destroy' }>, targetId: string | undefined, t: number) {
+export function applyBondEffect(state: State, world: World, a: Actor, regionId: string, eff: Exclude<ChoiceEffect, { type: 'cast' | 'follow' | 'rally' | 'seize' | 'pledge' | 'evade' | 'discard' | 'sacrifice' | 'destroy' | 'drain_grow' }>, targetId: string | undefined, t: number) {
   const r = region(world, regionId);
   if (eff.type === 'damage') return mountainFire(state, world, a, r, eff.amount, targetId, t);
   const target = targetId ? bondTargets(state, world, a, regionId, eff).find((x) => x.id === targetId) : undefined;
@@ -180,6 +180,12 @@ export function bondLand(state: State, world: World, a: Actor, t: number, region
   if (lf?.landfallSeize) {
     const candidates = present(state, a.region).filter((x) => x.id !== a.id && x.master !== a.id && targetable(x, t, creatureColors(def))).map((x) => x.id);
     if (candidates.length) (state.choices ??= []).push({ by: a.id, land: a.region, effect: { type: 'seize' }, candidates, optional: true, t });
+  }
+  // "Landfall — you may have target player lose N life; if you do, N +1/+1 counters on this."
+  if (lf?.landfallDrain) {
+    const colors = creatureColors(def);
+    const candidates = present(state, a.region).filter((x) => x.id !== a.id && targetable(x, t, colors)).map((x) => x.id);
+    if (candidates.length) (state.choices ??= []).push({ by: a.id, land: a.region, effect: { type: 'drain_grow', ...lf.landfallDrain }, candidates, optional: true, t });
   }
   // "Landfall — create a token": one more of their kind, born at their side and theirs.
   if (lf?.landfallToken) {
@@ -563,6 +569,22 @@ export function callForth(state: State, world: World, id: string, regionId: stri
   for (const f of foes) addFoe(x, f, t);
   onEnter(state, world, x, t);
   return x;
+}
+
+// Ob Nixilis's pick lands: the one picked, still there, loses the life; he grows for good.
+export function applyDrainGrow(state: State, world: World, a: Actor, target: Actor, eff: { life: number; counters: number }, t: number) {
+  if (a.dead || target.dead || target.region !== a.region || target.travel || !targetable(target, t, creatureColors(npcDef(state, world, a.id)))) return;
+  addLog(state, {
+    kind: 'event',
+    text: `땅의 타락한 마나가 ${shortName(a.name)}에게 흘러든다. ${josa(shortName(target.name), '이', '가')} 생명 ${eff.life}을 빼앗겼다.`,
+    regions: [a.region],
+    actors: [a.id, target.id],
+    t,
+  });
+  loseLife(state, target, eff.life, t, `${shortName(a.name)}의 상륙`, a);
+  if (!target.dead) addFoe(target, a.id, t);
+  a.plusCounters = (a.plusCounters ?? 0) + eff.counters;
+  addLog(state, { kind: 'status', text: `${josa(shortName(a.name), '이', '가')} 커졌다 (+1/+1 카운터 ${eff.counters}, ${ptOf(a).join('/')}).`, regions: [a.region], actors: [a.id], t });
 }
 
 // "When this enters, …": on their first arrival in a land each day (or being brought there),

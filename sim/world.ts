@@ -285,6 +285,10 @@ export const CharacterSimSchema = z.strictObject({
   // Elemental): as they bond, they may seize one there (anyone, the player too) as their
   // retainer until they die (sim/retainers.ts `seize`).
   landfall_seize: z.boolean().default(false),
+  // "Landfall — you may have target player lose N life. If you do, put M +1/+1 counters on this"
+  // (Ob Nixilis, the Fallen): as they bond, one there (their pick after the hour, or none) loses
+  // it and they grow for good.
+  landfall_drain: z.strictObject({ life: z.number().int().positive(), counters: z.number().int().positive() }).optional(),
   // "Landfall — this loses <ability> until end of turn" (Shoal Serpent: defender).
   landfall_lose: z.array(z.enum(ABILITIES)).default([]),
   // "Landfall — this gains <ability> until end of turn" (Geyser Glider: flying).
@@ -592,6 +596,7 @@ export type NpcDef = {
   landfallSeize?: boolean;
   landfallLose?: Ability[];
   landfallGrant?: Ability[];
+  landfallDrain?: { life: number; counters: number };
   types?: CreatureType[];
   enterDestroy?: CreatureType;
   enterDrain?: { per: string };
@@ -758,7 +763,7 @@ export function buildWorld(entities: RawEntity[]): { world: World; errors: strin
         err(e.id, `sim 오류: ${issues(sim.error)}`);
         continue;
       }
-      const { knows_colors, activated, wins_at_life, extra_combat, landfall_token, landfall_seize, landfall_lose, landfall_grant, enter_destroy, enter_drain, name, ...rest } = sim.data;
+      const { knows_colors, activated, wins_at_life, extra_combat, landfall_token, landfall_seize, landfall_lose, landfall_grant, landfall_drain, enter_destroy, enter_drain, name, ...rest } = sim.data;
 
       world.npcs.push({
         id: e.id,
@@ -774,6 +779,7 @@ export function buildWorld(entities: RawEntity[]): { world: World; errors: strin
         ...(landfall_grant.length ? { landfallGrant: landfall_grant } : {}),
         ...(enter_destroy ? { enterDestroy: enter_destroy } : {}),
         ...(enter_drain ? { enterDrain: enter_drain } : {}),
+        ...(landfall_drain ? { landfallDrain: landfall_drain } : {}),
         ...(extra_combat ? { extraCombat: { cost: parseManaCost(extra_combat.cost)!, costText: extra_combat.cost } } : {}),
         activated: activated.map((x) => ({ ...x, cost: parseManaCost(x.cost)!, costText: x.cost })),
       });

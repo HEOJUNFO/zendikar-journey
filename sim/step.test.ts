@@ -2929,3 +2929,35 @@ test('the real Mind Sludge is taught at the Ghet estate: a discard per swamp', (
   assert.equal(s.learnAt, 'loc-ghet-estate');
   assert.deepEqual(s.effects, [{ type: 'discard_per_land', land: 'swamp' }]);
 });
+
+test('landfall drain: as he bonds, one there he picks loses 3 life and he grows three +1/+1 counters; or none', async () => {
+  const demon = { ...npcSim('loc-a', 'work', [3, 3]), mana: { B: 5 }, needs: [], landfall_drain: { life: 3, counters: 3 } };
+  const world = fixture([npc('chr-o', demon), npc('chr-x', npcSim('loc-a')), npc('chr-s', { ...npcSim('loc-a'), abilities: ['shroud'] })]);
+  const state = newState(world, { seed: 1, mode: 'observer' });
+  const [o, x] = [state.actors['chr-o'], state.actors['chr-x']];
+  bondLand(state, world, o, state.minutes);
+  assert.deepEqual(state.choices?.at(-1)?.effect, { type: 'drain_grow', life: 3, counters: 3 });
+  assert.deepEqual(state.choices?.at(-1)?.candidates, ['chr-x']); // not the shrouded one
+  const asked: boolean[] = [];
+  await advance(state, world, 1, { choose: async ({ optional }) => (asked.push(!!optional), 'chr-x') });
+  assert.deepEqual(asked, [true]);
+  assert.equal(lifeOf(x), 17);
+  assert.equal(o.plusCounters, 3);
+  assert.deepEqual(ptOf(o), [6, 6]);
+  // None picked: no one loses, he does not grow.
+  o.bonds = [];
+  o.landfalls = undefined;
+  bondLand(state, world, o, state.minutes);
+  await advance(state, world, 1, { choose: async () => null });
+  assert.equal(o.plusCounters, 3);
+});
+
+test('the real Ob Nixilis, the Fallen walks Bala Ged, a flightless Demon', () => {
+  const world = loadWorld();
+  const state = newState(world, { seed: 1, mode: 'observer' });
+  const o = state.actors['chr-ob-nixilis'];
+  assert.equal(o.region, 'loc-bala-ged');
+  assert.equal(hasAbility(o, 'fly', state.minutes), false);
+  assert.deepEqual(npcDef(state, world, o.id)?.landfallDrain, { life: 3, counters: 3 });
+  assert.deepEqual(npcDef(state, world, o.id)?.types, ['demon']);
+});
