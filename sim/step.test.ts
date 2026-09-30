@@ -1855,7 +1855,16 @@ test('defender never strikes first; landfall takes it away until midnight', asyn
   addFoe(s, 'chr-y', state.minutes);
   await advance(state, world, 1);
   assert.equal(strikes(), 0);
-  await advance(state, world, 3); // bonded at 10:00
+  // Struck, it strikes back in that exchange, but doesn't go after them on its own.
+  const y = state.actors['chr-y'];
+  y.pt = [1, 20];
+  addFoe(y, 'chr-s', state.minutes);
+  await advance(state, world, 1);
+  assert.equal(woundsOf(y, state.minutes - 60), 5);
+  assert.equal(strikes(), 0);
+  y.foes = undefined;
+  s.foes = undefined;
+  await advance(state, world, 2); // bonded at 10:00
   assert.ok(texts(state).some((t) => t.includes('수비대를 잃었다')));
   assert.equal(hasAbility(s, 'defender', state.minutes), false);
   addFoe(s, 'chr-y', state.minutes);
