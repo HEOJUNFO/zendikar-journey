@@ -5,9 +5,10 @@ name: 턴팀버 숲
 name_en: Turntimber Grove
 summary: 온두 남쪽, 나무들이 나선처럼 비틀려 자라는 숲. 금빛 햇살이 비틀린 줄기 사이로 스며들고, 그 기운이 곁의 이를 북돋운다
 status: canon
-sources: [ZEN-227, ZEN-187]
+sources: [ZEN-227, ZEN-187, ZEN-191]
 tags: [숲, 나선 나무, 녹색]
 links:
+  - { to: chr-turntimber-ranger, rel: 늑대를 타고 누비는 엘프 정찰병 }
   - { to: loc-ondu, rel: 바깥 지역 }
   - { to: cre-terra-stomper, rel: 숲을 짓밟는 짐승 }
 map: { in: loc-ondu, terrain: forest, color: G, pos: [0.25, -0.1] }

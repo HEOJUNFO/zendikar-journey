@@ -9,8 +9,9 @@ import { addFoe, dealDamage } from './combat.ts';
 import { loseLife } from './life.ts';
 import { bindRetainer, masterOf, retainersOf, swayBlocked } from './retainers.ts';
 import { untapTime } from './clock.ts';
-import { grantAbility } from './abilities.ts';
+import { grantAbility, spawnWild } from './abilities.ts';
 import { creatureColors } from './mana.ts';
+import type { Color } from './mana.ts';
 import { powersSealed } from './seal.ts';
 import { addLog, npcDef, present, targetable } from './state.ts';
 import type { Actor, State } from './state.ts';
@@ -43,6 +44,9 @@ export function allyJoined(state: State, world: World, a: Actor, master: Actor, 
     for (const eff of rally) if (eff.type === 'counters_allies') alliesCounter(state, world, x, master, t);
     // "You may put a +1/+1 counter on this": the same, on themselves only.
     for (const eff of rally) if (eff.type === 'counter_self') selfCounter(state, x, t);
+    // "You may create a <token>. If you do, put a +1/+1 counter on this": born at their side, the
+    // controller's; always.
+    for (const eff of rally) if (eff.type === 'token_counter') tokenCounter(state, world, x, master, eff, t);
     // "You may have Ally creatures you control gain <ability> until end of turn": the same, no one
     // to pick, always.
     for (const eff of rally) if (eff.type === 'grant_allies') for (const y of alliesOf(state, world, master)) grantAbility(state, y, eff.ability, untapTime(t), `${shortName(x.name)}의 부름`, t);
@@ -54,7 +58,7 @@ export function allyJoined(state: State, world: World, a: Actor, master: Actor, 
 
 // A rally that falls on someone picked (not the counters on the party's Allies).
 function targeted(eff: { type: string }) {
-  return eff.type !== 'counters_allies' && eff.type !== 'counter_self' && eff.type !== 'grant_allies';
+  return eff.type !== 'counters_allies' && eff.type !== 'counter_self' && eff.type !== 'token_counter' && eff.type !== 'grant_allies';
 }
 
 // Kazuul Warlord's war cry: a +1/+1 counter (Actor.plusCounters, for good) on each Ally of the party.
@@ -74,6 +78,20 @@ function alliesCounter(state: State, world: World, x: Actor, master: Actor, t: n
 function selfCounter(state: State, x: Actor, t: number) {
   x.plusCounters = (x.plusCounters ?? 0) + 1;
   addLog(state, { kind: 'status', text: `무리가 늘자 ${josa(shortName(x.name), '이', '가')} 더 사나워졌다 (+1/+1 카운터).`, regions: [x.region], actors: [x.id], t });
+}
+
+// Turntimber Ranger: a Wolf comes to their side and serves their controller; they grow.
+function tokenCounter(state: State, world: World, x: Actor, master: Actor, eff: { creature: string; pt: [number, number]; colors: Color[] }, t: number) {
+  const [b] = spawnWild(state, world, eff.creature, eff.pt, 1, x.region, eff.colors);
+  b.master = master.id;
+  x.plusCounters = (x.plusCounters ?? 0) + 1;
+  addLog(state, {
+    kind: 'event',
+    text: `${shortName(x.name)}의 부름에 ${josa(shortName(b.name), '이', '가')} 나타나 ${shortName(master.name)}의 무리에 들었다 (${eff.pt.join('/')}, 권속). ${josa(shortName(x.name), '은', '는')} +1/+1 카운터를 얻었다.`,
+    regions: [x.region],
+    actors: [x.id, b.id, master.id],
+    t,
+  });
 }
 
 // What the rally of `sourceId` would do now, for the one picking.

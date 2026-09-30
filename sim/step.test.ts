@@ -26,7 +26,7 @@ import { claimBlocked } from './items.ts';
 import { spendBlocked, storeBlocked } from './eons.ts';
 import { applyEnterDestroy, bondBlocked, enterDestroy, onEnter, bondLand, bondTargets, callForth, fetchTargets, fireTargets, firesOnBond, growBlocked, spawnWild, summonLibrary, useAbility } from './abilities.ts';
 import { DEPLETED_LABEL, DESTROYED_DAYS, TRAVEL_UNITS_PER_HOUR } from './rules.ts';
-import { swayBlocked } from './retainers.ts';
+import { retainersOf, swayBlocked } from './retainers.ts';
 import { upkeepWins } from './win.ts';
 import { hirePrice } from './allies.ts';
 import { askOptions, askText } from './asks.ts';
@@ -2906,6 +2906,36 @@ test('the real Tuktuk Grunts roam Akoum, hasty goblin Allies for 50 coin', () =>
   assert.equal(hirePrice(def), 50);
   assert.ok(def.ally && def.abilities.includes('haste'));
   assert.deepEqual(def.rally, [{ type: 'counter_self' }]);
+});
+
+test('a ranger calls a wolf: each Ally joining brings a 2/2 green Wolf to the controller, and the ranger grows', async () => {
+  const ranger = { ...npcSim('loc-a', 'work', [2, 2]), mana: { G: 5 }, ally: true, hireable: true, rally: [{ type: 'token_counter', creature: 'cre-w', pt: [2, 2], colors: ['G'] }] };
+  const other = { ...npcSim('loc-a', 'work', [3, 3]), mana: { R: 5 }, ally: true, hireable: true };
+  const world = fixture([lore('cre-w', 'creature'), npc('chr-r', ranger), npc('chr-o', other)]);
+  const state = character(world, 'loc-a');
+  const p = state.actors[PLAYER_ID];
+  const r = state.actors['chr-r'];
+  p.stats.coin = 100;
+  await act(state, world, { type: 'hire', to: 'chr-r' });
+  await act(state, world, { type: 'hire', to: 'chr-o' });
+  assert.equal(r.plusCounters, 2);
+  const wolves = retainersOf(state, PLAYER_ID).filter((x) => state.tokens?.[x.id]?.creature === 'cre-w');
+  assert.equal(wolves.length, 2);
+  assert.deepEqual(ptOf(wolves[0]), [2, 2]);
+  assert.equal(state.asks?.length ?? 0, 0);
+  assert.ok(texts(state).some((t) => t.includes('의 부름에') && t.includes('권속')));
+  // A rally with no such creature is bad data.
+  const bad = buildWorld([loc('loc-a', 10, 10, 'grassland'), npc('chr-r', ranger)]);
+  assert.ok(bad.errors.some((e) => e.includes('rally: creature cre-w 가 없음')));
+});
+
+test('the real Turntimber Ranger rides the Turntimber Grove, calling wolves, for 50 coin', () => {
+  const world = loadWorld();
+  const state = newState(world, { seed: 1, mode: 'observer' });
+  assert.equal(state.actors['chr-turntimber-ranger']?.region, 'loc-turntimber-grove');
+  const def = world.npcs.find((x) => x.id === 'chr-turntimber-ranger')!;
+  assert.equal(hirePrice(def), 50);
+  assert.deepEqual(def.rally, [{ type: 'token_counter', creature: 'cre-wolf', pt: [2, 2], colors: ['G'] }]);
 });
 
 test('a ritual of the land: the caster gains 2 life for each plains they hold (not a destroyed one); an NPC too', async () => {
