@@ -2181,3 +2181,12 @@ test('the real Terra Stomper hunts in Oran-Rief, 8/8 with trample', () => {
   assert.ok(hasAbility(s, 'trample', state.minutes));
   assert.ok(world.npcs.find((x) => x.id === 'cre-terra-stomper')?.beast);
 });
+
+test('the real Vastwood Gorger hunts in Oran-Rief, the Vastwood', () => {
+  const world = loadWorld();
+  const state = newState(world, { seed: 1, mode: 'observer' });
+  const g = state.actors['cre-vastwood-gorger'];
+  assert.equal(g?.region, 'loc-oran-rief');
+  assert.deepEqual(ptOf(g), [5, 6]);
+  assert.ok(world.npcs.find((x) => x.id === 'cre-vastwood-gorger')?.beast);
+});
