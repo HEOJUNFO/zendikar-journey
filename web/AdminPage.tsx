@@ -433,6 +433,8 @@ function spellEffectText(e: SpellEffect) {
       return '대상이 지닌 주문 하나를 잊음 (본인이 고름)';
     case 'discard_per_land':
       return `시전자가 쥔 ${e.land}마다 대상이 주문 하나를 잊음`;
+    case 'damage_per_land':
+      return `시전자가 쥔 ${e.land}마다 대상에게 피해 1`;
     case 'gain_life_per_land':
       return `시전자가 쥔 ${e.land}마다 생명 ${e.amount}`;
     case 'destroy_relics':

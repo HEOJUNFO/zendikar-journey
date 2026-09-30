@@ -478,6 +478,9 @@ export const SpellSimSchema = z.strictObject({
         // "Target player discards a card for each <land type> you control" (Mind Sludge: Swamp):
         // as many as the caster holds of that type, not destroyed.
         z.strictObject({ type: z.literal('discard_per_land'), land: z.enum(LAND_TYPES) }),
+        // "Deals damage to any target equal to the number of <land type>s you control" (Spire
+        // Barrage: Mountains): as many as the caster holds of that type, not destroyed.
+        z.strictObject({ type: z.literal('damage_per_land'), land: z.enum(LAND_TYPES) }),
         // "Destroy target artifact or enchantment and up to one other target artifact or
         // enchantment" (Relic Crush): items standing where the caster is, auras on those there.
         // The caster picks after casting, the first surely, the rest if they will (sim/relics.ts).

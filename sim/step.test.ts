@@ -8,7 +8,7 @@ import type { PlanDayInput } from './llm/planner.ts';
 import type { Action } from './actions.ts';
 import { startAction } from './actions.ts';
 import type { World } from './world.ts';
-import { addFoe, attackBlocked, clash, die, intimidated, knockedOut, landwalked, unblockable, woundsOf } from './combat.ts';
+import { addFoe, attackBlocked, clash, die, foesOf, intimidated, knockedOut, landwalked, unblockable, woundsOf } from './combat.ts';
 import { landSealed, powersSealed, sealedBy, sealToday, setSeal } from './seal.ts';
 import { castBlocked, castSpell, castTargets, readyCast } from './spells.ts';
 import { actorColors, COLORS, formatMana, manaAvailable, manaCapacity, parseManaCost, planPayment } from './mana.ts';
@@ -3007,6 +3007,30 @@ test('the real Mind Sludge is taught at the Ghet estate: a discard per swamp', (
   const s = world.spells.find((x) => x.id === 'spl-mind-sludge')!;
   assert.equal(s.learnAt, 'loc-ghet-estate');
   assert.deepEqual(s.effects, [{ type: 'discard_per_land', land: 'swamp' }]);
+});
+
+test('spire barrage: damage to one there for each mountain the caster holds; none, nothing', () => {
+  const barrage: RawEntity = { id: 'spl-b', kind: 'spell', name: '폭격', status: 'canon', sim: { cost: '{1}', learn_at: 'loc-a', effects: [{ type: 'damage_per_land', land: 'mountain' }] } };
+  const world = fixture([barrage, loc('loc-m1', 12, 10, 'rocky'), loc('loc-m2', 14, 10, 'rocky'), loc('loc-m3', 16, 10, 'volcanic'), npc('chr-x', npcSim('loc-a', 'work', [2, 9])), npc('chr-c', { ...npcSim('loc-a'), mana: { R: 5 } })]);
+  const state = newState(world, { seed: 1, mode: 'observer' });
+  const [x, c] = [state.actors['chr-x'], state.actors['chr-c']];
+  const t = state.minutes;
+  c.spells = ['spl-b'];
+  c.bonds = ['loc-m1', 'loc-m2', 'loc-m3', 'loc-a'];
+  castSpell(state, world, c, 'spl-b', 'chr-x', false, t);
+  assert.equal(woundsOf(x, t), 3);
+  assert.ok(foesOf(x, t).includes('chr-c'));
+  c.bonds = ['loc-a'];
+  castSpell(state, world, c, 'spl-b', 'chr-x', false, t);
+  assert.equal(woundsOf(x, t), 3);
+  assert.ok(texts(state).some((l) => l.includes('산과 이어져 있지 않아')));
+});
+
+test('the real Spire Barrage is taught in Akoum: damage per mountain', () => {
+  const world = loadWorld();
+  const s = world.spells.find((x) => x.id === 'spl-spire-barrage')!;
+  assert.equal(s.learnAt, 'loc-akoum');
+  assert.deepEqual(s.effects, [{ type: 'damage_per_land', land: 'mountain' }]);
 });
 
 test('landfall drain: as he bonds, one there he picks loses 3 life and he grows three +1/+1 counters; or none', async () => {
