@@ -5,7 +5,7 @@ name: 온두
 name_en: Ondu
 summary: 아쿰 서쪽의 섬 대륙. 바람 부는 고원이 펼쳐지고, 아쿰 쪽 끝에는 메마른 메사, 서쪽 숲에는 그레이펠트 피난처가 있다. 서쪽 바다에 아게딤 섬, 남쪽 앞바다에 즈와르 섬이 붙어 있다
 status: canon
-sources: [ZEN-212, ZEN-211, ZEN-214, ZEN-215, ZEN-227]
+sources: [ZEN-212, ZEN-211, ZEN-214, ZEN-215, ZEN-227, ZEN-200]
 tags: [대륙, 섬, 고원, 백색]
 links:
   - { to: loc-arid-mesa, rel: 안의 구역 }
@@ -14,6 +14,7 @@ links:
   - { to: loc-agadeem, rel: 붙어 있는 섬 }
   - { to: loc-jwar-isle, rel: 남쪽 앞바다의 섬 }
   - { to: loc-akoum, rel: 동쪽의 대륙 }
+  - { to: itm-eternity-vessel, rel: 언덕 위의 유물 }
 map: { x: 345, y: 285, terrain: grassland, size: continent }
 ---
 
@@ -28,6 +29,7 @@ map: { x: 345, y: 285, terrain: grassland, size: continent }
 - 아쿰 서쪽의 지역이다 (지형 `grassland`, 백색 땅, 평원) ([결정] 2026-09-30). 대륙이라 지도에 크게 그린다. 아쿰까지 약 13시간, 타짐까지 약 13시간 (바다 건너). 아게딤과 즈와르 섬은 온두에 딸린 섬이라 지도에서 얕은 바다로 이어 그린다.
 - 평원이라 메마른 메사의 길 찾기로 찾아올 수 있다.
 - 안에 구역 메마른 메사(`loc-arid-mesa`, 동쪽), 턴팀버 숲(`loc-turntimber-grove`, 남쪽), 그레이펠트 피난처(`loc-graypelt-refuge`, 서쪽)가 있다 (지도의 자리는 `map.order`). 서쪽의 아게딤 섬(`loc-agadeem`)과 남쪽의 즈와르 섬(`loc-jwar-isle`)은 따로 된 지역이다.
+- 풀 언덕 위에 영원의 그릇(`itm-eternity-vessel`, ZEN-200)이 서 있다. 누구든 마나 6을 치르고 길들일 수 있다 ([결정] 2026-09-30 다시 놓기).
 
 ## 미정/질문
 

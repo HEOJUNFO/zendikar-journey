@@ -1455,3 +1455,8 @@ test('the real cobra trap lies in Verdant Catacombs: laid waste, it looses four 
   assert.equal(ev.region, 'loc-verdant-catacombs');
   assert.equal(ev.trigger, 'destroyed');
 });
+
+test('the real eternity vessel stands on Ondu', () => {
+  const world = loadWorld();
+  assert.equal(world.items.find((x) => x.id === 'itm-eternity-vessel')?.at, 'loc-ondu');
+});
