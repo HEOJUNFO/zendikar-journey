@@ -12,7 +12,7 @@ links:
   - { to: loc-ondu, rel: 붙어 있는 대륙 }
   - { to: cre-sphinx, rel: 사는 스핑크스 }
   - { to: evt-archive-trap, rel: 묻힌 기록보관소의 함정 }
-map: { x: 345, y: 339, terrain: beach, size: island, of: loc-ondu }
+map: { x: 421, y: 424, terrain: beach, size: island, of: loc-ondu }
 ---
 
 ## 설정
@@ -23,7 +23,7 @@ map: { x: 345, y: 339, terrain: beach, size: island, of: loc-ondu }
 
 ## 게임에서의 역할
 
-- 온두 남쪽의 지역이다 (지형 `beach`, 청색 땅, 섬) ([결정] 2026-09-30). 온두까지 약 5시간. 위치 (345, 339)는 [배경]의 "온두 남쪽 해안 앞"에서 정한 [가공]이다. 온두에 딸린 섬이라 `map.of: loc-ondu` 로 적고, 지도에서 온두와 얕은 바다로 이어 그린다 ([결정] 2026-09-30).
+- 온두 남쪽의 지역이다 (지형 `beach`, 청색 땅, 섬) ([결정] 2026-09-30). 온두까지 약 5시간. 위치 (421, 424)는 [배경]의 "온두 남쪽 해안 앞"에서 정한 [가공]이다. 온두에 딸린 섬이라 `map.of: loc-ondu` 로 적고, 지도에서 온두와 얕은 바다로 이어 그린다 ([결정] 2026-09-30).
 - 온두 대륙에 딸린 작은 섬이라 지도에 작게 그린다 (`size: island`) ([결정]).
 - 안에 구역 즈와르 섬 피난처(`loc-jwar-isle-refuge`)가 있다.
 - 즈와르 섬의 스핑크스(`cre-sphinx`)가 산다 (ZEN-68). 섬 안쪽의 초록빛과 빛나는 수정이 그의 둥지다 ([가공]).

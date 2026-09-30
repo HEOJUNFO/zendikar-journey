@@ -8,8 +8,8 @@ import type { Color, Hybrid, Mana, ManaCost } from './mana.ts';
 import { LIFE_KINDS, NEEDS } from './types.ts';
 import type { Need } from './types.ts';
 
-export const MAP_WIDTH = 600;
-export const MAP_HEIGHT = 450;
+export const MAP_WIDTH = 800;
+export const MAP_HEIGHT = 600;
 
 // fly: can reach sky islands. aquatic: lives in the sea, and only there.
 export const ABILITIES = ['fly', 'aquatic', 'lifelink', 'vigilance', 'haste', 'trample', 'defender', 'shroud', 'swampwalk', 'indestructible', 'intimidate'] as const;
@@ -171,10 +171,11 @@ export const MapSchema = z.union([
     // Where it sits among its region's areas on the map, east (low) to west (high); default 0.
     order: z.number().optional(),
     // Where it lies inside its region, as the lore has it: [east(+)/west(-), south(+)/north(-)],
-    // in parts of the region circle's radius (0,0 the middle). Without it, areas sit in a row
+    // in parts of the region circle's radius (0,0 the middle; 1 on the rim: a coast or a bay,
+    // half over the sea). Without it, areas sit in a row
     // across the lower part by `order`. Only how the map is drawn: the engine keeps areas at
     // their region's place.
-    pos: z.tuple([z.number().min(-0.85).max(0.85), z.number().min(-0.85).max(0.85)]).optional(),
+    pos: z.tuple([z.number().min(-1).max(1), z.number().min(-1).max(1)]).optional(),
   }),
 ]);
 
