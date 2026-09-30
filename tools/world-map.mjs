@@ -4,12 +4,17 @@ import { writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { loadWorld, WORLD_DIR } from '../sim/load.ts';
 import { TERRAINS } from '../sim/world.ts';
-import { areaLabelAt, containerRadius, fitView, nodeAt } from '../web/view.ts';
+import { areaLabelAt, containerRadius, fitView, nodeAt, regionLabelAt, shelves } from '../web/view.ts';
 
 const S = 6; // px per map unit
 const esc = (s) => s.replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]);
 
 const world = loadWorld();
+// Shallow water joining a continent and its islands, under everything.
+const shelfShapes = shelves(world).flatMap((sh) => [
+  ...sh.bands.map((b) => `  <line x1="${b.x1 * S}" y1="${b.y1 * S}" x2="${b.x2 * S}" y2="${b.y2 * S}" stroke="#1f4468" stroke-width="${b.width * S}" stroke-linecap="round"/>`),
+  ...sh.circles.map((c) => `  <circle cx="${c.x * S}" cy="${c.y * S}" r="${c.r * S}" fill="#1f4468"/>`),
+]);
 // As the game draws them (web/view.ts): a region holding areas is itself a large circle, with
 // its areas as small circles across the lower part.
 const containers = world.regions.filter((r) => !r.parent && containerRadius(world, r)).map((r) => {
@@ -36,11 +41,18 @@ const nodes = world.regions.filter((r) => !r.parent).map((r) => {
     : R
       ? ''
       : `<circle cx="${x}" cy="${y}" r="26" fill="${t.color}" stroke="#f4ecd8" stroke-width="3"/>`;
-  // A region holding areas is named above its circle; others below their node.
-  const [ny, ty] = R ? [r.y * S - R - 28, r.y * S - R - 10] : [y + (t.sea ? 92 : 48), y + (t.sea ? 110 : 66)];
+  // A region circle is named where the game names it (above, or beside/below for an island of
+  // a continent), its terrain on the next line; other nodes are named below.
+  const label = R ? regionLabelAt(world, r) : null;
+  const [lx, anchor] = label ? [label.x * S, label.anchor] : [x, 'middle'];
+  const [ny, ty] = !label
+    ? [y + (t.sea ? 92 : 48), y + (t.sea ? 110 : 66)]
+    : label.side === 'above'
+      ? [label.y * S - 18, label.y * S]
+      : [label.y * S, label.y * S + 17];
   return `  <g>${shape}
-    <text x="${x}" y="${ny}" text-anchor="middle" class="name">${esc(r.name)}</text>
-    <text x="${x}" y="${ty}" text-anchor="middle" class="terrain">${esc(t.label)}</text></g>`;
+    <text x="${lx}" y="${ny}" text-anchor="${anchor}" class="name">${esc(r.name)}</text>
+    <text x="${lx}" y="${ty}" text-anchor="${anchor}" class="terrain">${esc(t.label)}</text></g>`;
 });
 
 // The lands as the game map first shows them (web/view.ts fitView), not the whole sea.
@@ -52,6 +64,7 @@ const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="${box.x} ${box.y} 
     .area { font: 600 14px sans-serif; fill: #f4ecd8; }
   </style>
   <rect x="${box.x}" y="${box.y}" width="${box.w}" height="${box.h}" fill="#16324f"/>
+${shelfShapes.join('\n')}
 ${containers.join('\n')}
 ${areaNodes.join('\n')}
 ${nodes.join('\n')}

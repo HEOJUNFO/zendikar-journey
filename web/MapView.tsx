@@ -5,7 +5,7 @@ import type { Actor, State } from '../sim/state.ts';
 import { shortName } from '../sim/text.ts';
 import { hasPowers, MAP_HEIGHT, MAP_WIDTH, region, spellColors, TERRAINS, travelHours } from '../sim/world.ts';
 import type { World } from '../sim/world.ts';
-import { areaLabelAt, containerRadius, fitView, isTrap, nodeAt, trapStatus, visibleActors } from './view.ts';
+import { areaLabelAt, containerRadius, fitView, isTrap, nodeAt, regionLabelAt, shelves, trapStatus, visibleActors } from './view.ts';
 import type { MapBox } from './view.ts';
 
 type Props = {
@@ -143,6 +143,12 @@ export function MapView({ world, state, selected, onSelect, all, picked, onPickA
     <div className="map-wrap">
       <svg className="map" viewBox={`${box.x} ${box.y} ${box.w} ${box.h}`} role="img" aria-label="젠디카르 지도" {...svgProps}>
         <rect width={MAP_WIDTH} height={MAP_HEIGHT} className="map-sea" />
+        {shelves(world).map((sh) => (
+          <g key={`shelf-${sh.id}`} className="map-shelf">
+            {sh.bands.map((b, i) => <line key={i} x1={b.x1} y1={b.y1} x2={b.x2} y2={b.y2} strokeWidth={b.width} />)}
+            {sh.circles.map((c, i) => <circle key={i} cx={c.x} cy={c.y} r={c.r} />)}
+          </g>
+        ))}
         {actors
           .filter((a) => a.travel)
           .map((a) => {
@@ -174,6 +180,7 @@ export function MapView({ world, state, selected, onSelect, all, picked, onPickA
           const R = containerRadius(world, r);
           if (R) {
             const own = nodeAt(world, r);
+            const label = regionLabelAt(world, r);
             return (
               <g key={r.id} className="map-region" onClick={() => onSelect(r.id)} tabIndex={0}
                 onKeyDown={(e) => (e.key === 'Enter' || e.key === ' ') && onSelect(r.id)}>
@@ -182,7 +189,7 @@ export function MapView({ world, state, selected, onSelect, all, picked, onPickA
                 {isSel && <circle cx={r.x} cy={r.y} r={R + 1.2} className="map-selected" />}
                 {destroyed && <text x={own.x} y={own.y + 1.4} className="map-destroyed">✕</text>}
                 {conds.length > 0 && <text x={own.x + 3.6} y={own.y - 2.7} className="map-alert">⚠</text>}
-                <text x={r.x} y={r.y - R - 1.5} className="map-label">{r.name}</text>
+                <text x={label.x} y={label.y} style={{ textAnchor: label.anchor }} className="map-label">{r.name}</text>
               </g>
             );
           }

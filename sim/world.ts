@@ -8,8 +8,8 @@ import type { Color, Hybrid, Mana, ManaCost } from './mana.ts';
 import { LIFE_KINDS, NEEDS } from './types.ts';
 import type { Need } from './types.ts';
 
-export const MAP_WIDTH = 320;
-export const MAP_HEIGHT = 240;
+export const MAP_WIDTH = 480;
+export const MAP_HEIGHT = 360;
 
 // fly: can reach sky islands. aquatic: lives in the sea, and only there.
 export const ABILITIES = ['fly', 'aquatic'] as const;
@@ -100,6 +100,8 @@ export const MapSchema = z.union([
     color: LandColor,
     // How large it is drawn: a continent (e.g. Ondu), or a small island off one (Agadeem).
     size: z.enum(['continent', 'island']).optional(),
+    // The continent an island belongs to: drawn joined to it by shallow water.
+    of: z.string().optional(),
   }),
   // An area inside a region: a land of its own at the region's place.
   z.strictObject({
@@ -360,6 +362,8 @@ export type Region = {
   parent?: string;
   // How large a region is drawn (web/view.ts).
   size?: 'continent' | 'island';
+  // The continent this island belongs to (`map.of`), for the map only.
+  of?: string;
 };
 
 export type NpcDef = {
@@ -482,7 +486,7 @@ export function buildWorld(entities: RawEntity[]): { world: World; errors: strin
           name: e.name,
           nameEn: e.name_en ?? '',
           summary: e.summary ?? '',
-          ...('in' in map.data ? { x: 0, y: 0, parent: map.data.in } : { x: map.data.x, y: map.data.y, size: map.data.size }),
+          ...('in' in map.data ? { x: 0, y: 0, parent: map.data.in } : { x: map.data.x, y: map.data.y, size: map.data.size, of: map.data.of }),
           terrain: map.data.terrain,
           color: c === 'C' ? null : Array.isArray(c) ? (`${c[0]}/${c[1]}` as Hybrid) : (c ?? TERRAINS[map.data.terrain].mana),
           entersTapped: land.data?.enters_tapped ?? false,
@@ -496,6 +500,13 @@ export function buildWorld(entities: RawEntity[]): { world: World; errors: strin
         });
       }
     }
+  }
+  // An island belongs to a region, not to an area or itself.
+  for (const r of world.regions) {
+    if (!r.of) continue;
+    const c = world.regions.find((x) => x.id === r.of);
+    if (!c) err(r.id, `map.of ${r.of} 가 맵에 없음`);
+    else if (c.parent || c.id === r.id) err(r.id, `map.of ${r.of} 는 다른 지역이어야 함 (구역이나 자기 자신은 안 됨)`);
   }
   // Areas sit where their region is. One level only, and never at sea.
   for (const r of world.regions) {

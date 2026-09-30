@@ -9,7 +9,7 @@ sources: [ZEN-213]
 tags: [대륙, 해안, 절벽, 청색]
 links:
   - { to: loc-emeria, rel: 하늘의 구역 }
-map: { x: 130, y: 62, terrain: beach, size: continent }
+map: { x: 205, y: 95, terrain: beach, size: continent }
 ---
 
 ## 설정
@@ -20,7 +20,7 @@ map: { x: 130, y: 62, terrain: beach, size: continent }
 
 ## 게임에서의 역할
 
-- 지도 북쪽 (130, 62)의 지역이다 (지형 `beach`, 청색 땅, 섬) ([결정] 2026-09-30). 온두까지 약 9시간. 대륙이라 지도에 크게 그린다 (`size: continent`).
+- 지도 북쪽 (205, 95)의 지역이다 (지형 `beach`, 청색 땅, 섬) ([결정] 2026-09-30). 온두까지 약 13시간, 아쿰까지 약 18시간. 대륙이라 지도에 크게 그린다 (`size: continent`).
 - 안에 구역 에메리아(`loc-emeria`)가 있다. 비행하지 못하는 이도 밧줄로 오를 수 있다.
 
 ## 미정/질문

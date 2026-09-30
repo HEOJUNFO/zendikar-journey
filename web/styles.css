@@ -194,6 +194,14 @@ header h1 {
 .map-sea {
   fill: var(--sea);
 }
+/* shallow water joining a continent and its islands */
+.map-shelf circle {
+  fill: var(--sea-line);
+}
+.map-shelf line {
+  stroke: var(--sea-line);
+  stroke-linecap: round;
+}
 /* zoom (wheel, buttons) and pan (drag) */
 .map-wrap {
   position: relative;

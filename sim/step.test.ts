@@ -817,6 +817,8 @@ test('buildWorld reports bad game data', () => {
     loc('loc-a', 10, 10, 'grassland'),
     loc('loc-sky', 50, 10, 'sky'),
     { id: 'loc-bad', kind: 'location', name: 'x', map: { x: 500, y: 1, terrain: 'lava' } },
+    // An island can only belong to a region that is on the map.
+    { id: 'loc-stray', kind: 'location', name: 'x', map: { x: 20, y: 20, terrain: 'beach', size: 'island', of: 'loc-moon' } },
     // A written routine or a GM flag: no longer (the LLM plans every day).
     { id: 'chr-routine', kind: 'character', name: 'x', sim: { ...npcSim('loc-a'), plan: undefined, routine: allDay('loc-a') } },
     { id: 'chr-gm', kind: 'character', name: 'x', sim: { ...npcSim('loc-a'), plan: undefined, gm: true } },
@@ -828,6 +830,7 @@ test('buildWorld reports bad game data', () => {
   ]);
   const has = (id: string) => errors.some((e) => e.startsWith(`${id}:`));
   assert.ok(has('loc-bad'));
+  assert.ok(has('loc-stray'));
   assert.ok(has('chr-routine'));
   assert.ok(has('chr-gm'));
   assert.ok(has('chr-nowhere'));

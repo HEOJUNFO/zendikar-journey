@@ -25,7 +25,7 @@ export function clock(state: State) {
 // small island), is itself a circle of that size, with its areas as small circles across the
 // lower part; the upper part is where its own people and marks go. (The engine puts areas at
 // their region's place; this is only how they are drawn.)
-const SIZE_RADIUS = { continent: 16, island: 7 } as const;
+const SIZE_RADIUS = { continent: 22, island: 7 } as const;
 function areaAngle(world: World, r: Region) {
   const sibs = world.regions.filter((x) => x.parent === r.parent);
   const n = sibs.length;
@@ -51,19 +51,58 @@ export function nodeAt(world: World, r: Region) {
   return { x: r.x, y: r.y - containerRadius(world, r) * 0.45 };
 }
 
-// An area's name: just outside its region's circle, in the area's direction.
+// A region circle's name: above it, except for an island of a continent, whose name goes on
+// the side away from the continent (it would lie over the continent's edge otherwise).
+// `side` says where it went.
+export function regionLabelAt(world: World, r: Region) {
+  const R = containerRadius(world, r);
+  const c = r.of ? world.regions.find((x) => x.id === r.of) : undefined;
+  const d = c ? Math.hypot(r.x - c.x, r.y - c.y) : 0;
+  const [ux, uy] = c && d ? [(r.x - c.x) / d, (r.y - c.y) / d] : [0, -1];
+  if (uy > 0.7) return { x: r.x, y: r.y + R + 4.3, anchor: 'middle', side: 'below' } as const;
+  if (uy > -0.7) return { x: r.x + Math.sign(ux) * (R + 1.5), y: r.y + 1, anchor: ux < 0 ? 'end' : 'start', side: 'beside' } as const;
+  return { x: r.x, y: r.y - R - 1.5, anchor: 'middle', side: 'above' } as const;
+}
+
+// An area's name: just outside its region's circle, in the area's direction. On a small island
+// the names would reach across to the continent beside it, so there they stack below the
+// island instead (under its own name, if that went below), left to right as the areas sit.
+const AREA_LINE = 3;
+const BELOW_NAME = 7.5;
 export function areaLabelAt(world: World, r: Region) {
+  const parent = world.regions.find((x) => x.id === r.parent)!;
+  const d = containerRadius(world, parent) + 1.8;
+  if (parent.size === 'island') {
+    const sibs = world.regions.filter((x) => x.parent === r.parent).sort((a, b) => nodeAt(world, a).x - nodeAt(world, b).x);
+    const under = regionLabelAt(world, parent).side === 'below' ? BELOW_NAME : 0;
+    return { x: r.x, y: r.y + d + 1.5 + under + sibs.indexOf(r) * AREA_LINE, anchor: 'middle' } as const;
+  }
   const angle = areaAngle(world, r);
-  const d = containerRadius(world, world.regions.find((x) => x.id === r.parent)!) + 1.8;
   const [dx, dy] = [Math.cos(angle), Math.sin(angle)];
   return { x: r.x + dx * d, y: r.y + dy * d + 1.5, anchor: dx > 0.3 ? 'start' : dx < -0.3 ? 'end' : 'middle' } as const;
+}
+
+// Shallow water around a continent and the islands that belong to it (`map.of`), joining them
+// so the islands read as the continent's: a wider circle under each, and a band to each island.
+const SHELF = 4;
+export function shelves(world: World) {
+  return world.regions
+    .filter((c) => world.regions.some((i) => i.of === c.id))
+    .map((c) => {
+      const islands = world.regions.filter((i) => i.of === c.id);
+      return {
+        id: c.id,
+        circles: [c, ...islands].map((r) => ({ x: r.x, y: r.y, r: containerRadius(world, r) + SHELF })),
+        bands: islands.map((i) => ({ x1: c.x, y1: c.y, x2: i.x, y2: i.y, width: 2 * (containerRadius(world, i) + SHELF) })),
+      };
+    });
 }
 
 // The part of the map a view shows, in map units.
 export type MapBox = { x: number; y: number; w: number; h: number };
 
 // Room for the names around the outermost lands (more on top, where the full-screen map's bar sits).
-const FIT_PAD = { x: 24, top: 24, bottom: 14 };
+const FIT_PAD = { x: 24, top: 24, bottom: 20 };
 const FIT_MIN_W = 120;
 
 // The box that holds every land (with their names), widened to the map's shape so the map
