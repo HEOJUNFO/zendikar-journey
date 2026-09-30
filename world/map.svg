@@ -1,18 +1,21 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="132 0 2384 1788" width="2384" height="1788">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="120 0 2408 1806" width="2408" height="1806">
   <style>
     .name { font: 600 18px sans-serif; fill: #f4ecd8; }
     .terrain { font: 13px sans-serif; fill: #b9c3cf; }
     .area { font: 600 14px sans-serif; fill: #f4ecd8; }
   </style>
-  <rect x="132" y="0" width="2384" height="1788" fill="#16324f"/>
+  <rect x="120" y="0" width="2408" height="1806" fill="#16324f"/>
   <line x1="1380" y1="1140" x2="1170" y2="1068" stroke="#1f4468" stroke-width="168" stroke-linecap="round"/>
   <line x1="1380" y1="1140" x2="1380" y2="1356" stroke="#1f4468" stroke-width="132" stroke-linecap="round"/>
   <circle cx="1380" cy="1140" r="156" fill="#1f4468"/>
   <circle cx="1170" cy="1068" r="84" fill="#1f4468"/>
   <circle cx="1380" cy="1356" r="66" fill="#1f4468"/>
+  <line x1="917.8775576021328" y1="1535.5534216589176" x2="996" y2="1539" stroke="#9a958b" stroke-opacity="0.72" stroke-width="42"/>
+  <line x1="1074.1224423978672" y1="1542.4465783410824" x2="996" y2="1539" stroke="#9a958b" stroke-opacity="0.72" stroke-width="42"/>
   <circle cx="1170" cy="1068" r="60" fill="#3f7fcf" fill-opacity="0.72" stroke="#f4ecd8" stroke-opacity="0.7" stroke-width="3"/>
   <circle cx="1950" cy="960" r="139.8" fill="#cc4f34" fill-opacity="0.72" stroke="#f4ecd8" stroke-opacity="0.7" stroke-width="3"/>
-  <circle cx="840" cy="1530" r="132" fill="#2b2233" fill-opacity="0.72" stroke="#f4ecd8" stroke-opacity="0.7" stroke-width="3"/>
+  <circle cx="1200" cy="1548" r="132" fill="#3f9447" fill-opacity="0.72" stroke="#f4ecd8" stroke-opacity="0.7" stroke-width="3"/>
+  <circle cx="792" cy="1530" r="132" fill="#2b2233" fill-opacity="0.72" stroke="#f4ecd8" stroke-opacity="0.7" stroke-width="3"/>
   <circle cx="1380" cy="1356" r="42" fill="#3f7fcf" fill-opacity="0.72" stroke="#f4ecd8" stroke-opacity="0.7" stroke-width="3"/>
   <circle cx="690" cy="660" r="132" fill="#3f9447" fill-opacity="0.72" stroke="#f4ecd8" stroke-opacity="0.7" stroke-width="3"/>
   <circle cx="1380" cy="1140" r="132" fill="#efe4c2" fill-opacity="0.72" stroke="#f4ecd8" stroke-opacity="0.7" stroke-width="3"/>
@@ -36,14 +39,14 @@
     <text x="690" y="811.8000000000001" text-anchor="middle" class="area">카잔두 피난처</text></g>
   <g><circle cx="1271.6706145365536" cy="630.9097683803343" r="16" fill="#3f7fcf" stroke="#f4ecd8" stroke-width="2"/>
     <text x="1319.4393677857736" y="709.733161401693" text-anchor="start" class="area">마고시, 물의 장막</text></g>
-  <g><circle cx="882.5183673576876" cy="1580.4795843607762" r="16" fill="#9a958b" stroke="#f4ecd8" stroke-width="2"/>
-    <text x="931.9942857375423" y="1648.2194643442251" text-anchor="start" class="area">습지 평원</text></g>
+  <g><circle cx="834.5183673576876" cy="1580.4795843607762" r="16" fill="#9a958b" stroke="#f4ecd8" stroke-width="2"/>
+    <text x="883.9942857375423" y="1648.2194643442251" text-anchor="start" class="area">습지 평원</text></g>
   <g><circle cx="1230" cy="643.8" r="16" fill="#9a958b" stroke="#f4ecd8" stroke-width="2"/>
     <text x="1230" y="737.4000000000001" text-anchor="middle" class="area">안개 낀 우림</text></g>
   <g><circle cx="1188.3293854634464" cy="630.9097683803343" r="16" fill="#3f9447" stroke="#f4ecd8" stroke-width="2"/>
     <text x="1140.5606322142266" y="709.733161401693" text-anchor="end" class="area">오란리프, 우거진 땅</text></g>
-  <g><circle cx="797.4816326423124" cy="1580.4795843607762" r="16" fill="#2b2233" stroke="#f4ecd8" stroke-width="2"/>
-    <text x="748.0057142624577" y="1648.2194643442251" text-anchor="end" class="area">피라냐 습지</text></g>
+  <g><circle cx="749.4816326423124" cy="1580.4795843607762" r="16" fill="#2b2233" stroke="#f4ecd8" stroke-width="2"/>
+    <text x="700.0057142624577" y="1648.2194643442251" text-anchor="end" class="area">피라냐 습지</text></g>
   <g><circle cx="1977.2203421273748" cy="1024.3821634808016" r="16" fill="#9a958b" stroke="#f4ecd8" stroke-width="2"/>
     <text x="2008.6464023516828" y="1107.7117856968346" text-anchor="start" class="area">뜨거운 호수</text></g>
   <g><path d="M1920 320A16 16 0 0 0 1920 352Z" fill="#efe4c2"  /><path d="M1920 320A16 16 0 0 1 1920 352Z" fill="#3f7fcf"  /><circle cx="1920" cy="336" r="16" fill="none" stroke="#f4ecd8" stroke-width="2"/>
@@ -63,8 +66,11 @@
     <text x="1950" y="793.1999999999999" text-anchor="middle" class="name">아쿰</text>
     <text x="1950" y="811.1999999999999" text-anchor="middle" class="terrain">화산 지대</text></g>
   <g>
-    <text x="840" y="1371" text-anchor="middle" class="name">굴 드라즈</text>
-    <text x="840" y="1389" text-anchor="middle" class="terrain">늪</text></g>
+    <text x="1200" y="1389" text-anchor="middle" class="name">발라 게드</text>
+    <text x="1200" y="1407" text-anchor="middle" class="terrain">숲</text></g>
+  <g>
+    <text x="792" y="1371" text-anchor="middle" class="name">굴 드라즈</text>
+    <text x="792" y="1389" text-anchor="middle" class="terrain">늪</text></g>
   <g>
     <text x="1380" y="1423.8000000000002" text-anchor="middle" class="name">즈와르 섬</text>
     <text x="1380" y="1440.8000000000002" text-anchor="middle" class="terrain">해변</text></g>
@@ -80,4 +86,7 @@
   <g>
     <text x="1230" y="395.40000000000003" text-anchor="middle" class="name">타짐</text>
     <text x="1230" y="413.40000000000003" text-anchor="middle" class="terrain">해변</text></g>
+  <g><circle cx="996" cy="1539" r="26" fill="#9a958b" stroke="#f4ecd8" stroke-width="3"/>
+    <text x="996" y="1587" text-anchor="middle" class="name">푸른 지하묘지</text>
+    <text x="996" y="1605" text-anchor="middle" class="terrain">폐허</text></g>
 </svg>

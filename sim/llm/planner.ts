@@ -11,6 +11,7 @@ const BlockSchema = z.object({
   activity: z.string().min(1).max(60),
   emoji: z.string().min(1).max(8),
   kind: z.enum(LIFE_KINDS),
+  land: z.string().optional(),
 });
 const PlanSchema = z.object({ blocks: z.array(BlockSchema).min(1).max(24) });
 
@@ -42,18 +43,21 @@ export type PlanDayInput = {
   days?: { land: string; cost: string; held: number; store: boolean; spend: boolean };
   // A land they hold like Oran-Rief, and the creatures it would strengthen today (when any).
   grow?: { land: string; creatures: string[] };
+  // Lands they could seek out today by giving up a fetch land they hold (Arid Mesa...).
+  fetch?: { id: string; text: string }[];
 };
 
 // Kinds of blocks they may plan: no meals without hunger, taming only if there is an item for
 // them to tame, keeping days only with a land that keeps them.
-function kindsFor(input: Pick<PlanDayInput, 'needs' | 'items' | 'days' | 'grow'>) {
+function kindsFor(input: Pick<PlanDayInput, 'needs' | 'items' | 'days' | 'grow' | 'fetch'>) {
   return LIFE_KINDS.filter(
     (k) =>
       (k !== 'eat' || input.needs.includes('hunger')) &&
       (k !== 'claim' || !!input.items?.length) &&
       (k !== 'store_day' || !!input.days?.store) &&
       (k !== 'spend_day' || !!input.days?.spend) &&
-      (k !== 'grow' || !!input.grow),
+      (k !== 'grow' || !!input.grow) &&
+      (k !== 'fetch' || !!input.fetch?.length),
   );
 }
 
@@ -69,7 +73,9 @@ export async function planDay(input: PlanDayInput): Promise<ScheduleBlock[] | nu
     2000,
   );
   let blocks = parsePlan(content, new Set(input.regions.map((r) => r.id)));
-  if (blocks?.some((b) => !kinds.has(b.kind))) blocks = null;
+  // A fetch must name one of the lands it can reach.
+  const sought = new Set(input.fetch?.map((x) => x.id));
+  if (blocks?.some((b) => !kinds.has(b.kind) || (b.kind === 'fetch' && !sought.has(b.land ?? '')))) blocks = null;
   if (!blocks) console.warn(`Unusable plan for ${input.name}:`, content);
   return blocks;
 }
@@ -80,7 +86,7 @@ role and goals, their needs, what they know happened, and the people they know.
 Answer with JSON only, no prose.`;
 
 function userPrompt(input: PlanDayInput) {
-  const { day, now, name, persona, goal, role, home, here, stats, needs, regions, news, relations = [], items = [], days, grow } = input;
+  const { day, now, name, persona, goal, role, home, here, stats, needs, regions, news, relations = [], items = [], days, grow, fetch = [] } = input;
   const kinds = kindsFor(input);
   const state = [
     needs.includes('energy') && `energy ${Math.round(stats.energy)}/100 (low = tired)`,
@@ -123,12 +129,18 @@ Rules:
     kinds.includes('grow')
       ? `\n- "grow" takes 1 hour, anywhere: they call on ${grow!.land} (no mana from it today) to make stronger, for good, every creature of its color that came into the world today, whoever they belong to: ${grow!.creatures.join(', ')}.`
       : ''
+  }${
+    kinds.includes('fetch')
+      ? `\n- "fetch" takes 1 hour, anywhere, and needs "land": the id of the land sought. They give up a fetch land they hold (the bond with it ends) and some life, and bond from afar with the land sought, drawing its mana from then on. It is not their one land of the day. Lands they could seek:\n${fetch.map((x) => `  - "${x.id}": ${x.text}`).join('\n')}`
+      : ''
   }
 - Travel between regions takes hours; only change region when there is a reason.
 - Let today follow from their state, news, goal and the people they know; days need not repeat.
 - activity is a short Korean phrase shown on screen (e.g. "폐허 순찰"); emoji is a single emoji.
 
-Answer: {"blocks":[{"start":0,"end":360,"regionId":"...","activity":"...","emoji":"...","kind":"sleep"}, ...]}`;
+Answer: {"blocks":[{"start":0,"end":360,"regionId":"...","activity":"...","emoji":"...","kind":"sleep"}, ...]}${
+    kinds.includes('fetch') ? ' (a "fetch" block also has "land")' : ''
+  }`;
 }
 
 export function parsePlan(content: string, regionIds: Set<string>): ScheduleBlock[] | null {

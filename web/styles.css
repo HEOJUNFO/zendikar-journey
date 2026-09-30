@@ -206,6 +206,10 @@ header h1 {
   stroke: var(--sea-line);
   stroke-linecap: round;
 }
+/* a strip of land joining two regions through the land between them */
+.map-bridge line {
+  stroke-opacity: 0.72;
+}
 /* zoom (wheel, buttons) and pan (drag) */
 .map-wrap {
   position: relative;

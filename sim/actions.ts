@@ -6,7 +6,7 @@ import { BOND_HOURS, KIND_EFFECTS } from './rules.ts';
 import { addLog, isPerson, landUnusable, outOfTime, player } from './state.ts';
 import type { State, Task } from './state.ts';
 import { startTravel, travelBlocked } from './step.ts';
-import { bondBlocked, bondTargets, fetchBlocked, firesOnBond, growBlocked, targetedBondEffect } from './abilities.ts';
+import { bondBlocked, bondTargets, FETCH_HOURS, fetchBlocked, firesOnBond, growBlocked, targetedBondEffect } from './abilities.ts';
 import { CLAIM_HOURS, claimBlocked, itemDef } from './items.ts';
 import { EON_HOURS, spendBlocked, storeBlocked } from './eons.ts';
 import { castBlocked, learnBlocked, spellDef } from './spells.ts';
@@ -145,7 +145,7 @@ export function startAction(state: State, world: World, action: Action): string 
       const why = fetchBlocked(state, world, p, action.from, action.to);
       if (why) return why;
       const [from, to] = [region(world, action.from), region(world, action.to)];
-      task = { kind: 'fetch', activity: `${from.name}에서 길 찾기`, emoji: '🧭', until: until(1), from: from.id, land: to.id, ...(action.target ? { target: action.target } : {}) };
+      task = { kind: 'fetch', activity: `${from.name}에서 길 찾기`, emoji: '🧭', until: until(FETCH_HOURS), from: from.id, land: to.id, ...(action.target ? { target: action.target } : {}) };
       text = `${josa(from.name, '을', '를')} 내어 주고 ${toward(to.name)} 이어지는 길을 찾는다 (생명 ${from.fetch!.life}).`;
       break;
     }

@@ -22,7 +22,8 @@ export function bondBlocked(state: State, world: World, a: Actor, t: number): st
   if (state.regions[r.id]?.destroyed) return '부서진 땅과는 유대를 맺을 수 없다.';
   if (npcDef(state, world, a.id)?.beast && state.regions[r.id]?.conditions.some((c) => c.label === DEPLETED_LABEL))
     return '사냥감이 바닥난 땅이다.';
-  if (a.landfalls?.day === gameDay(t) && a.landfalls.regions.length >= 1) return '오늘은 이미 한 땅과 유대를 맺었다. 땅은 하루에 하나.';
+  // A land sought out with a fetch land isn't the day's one land.
+  if (a.landfalls?.day === gameDay(t) && a.landfalls.regions.filter((id) => !a.fetched?.includes(id)).length >= 1) return '오늘은 이미 한 땅과 유대를 맺었다. 땅은 하루에 하나.';
   return null;
 }
 
@@ -179,6 +180,9 @@ export function bondLand(state: State, world: World, a: Actor, t: number, region
   itemsOnLandfall(state, world, a, t);
 }
 
+// Giving up a fetch land takes an hour, from wherever they are.
+export const FETCH_HOURS = 1;
+
 // Lands `a` could seek out with the fetch land `fromId`: of its types, not held, not destroyed.
 export function fetchTargets(state: State, world: World, a: Actor, fromId: string) {
   const from = world.regions.find((r) => r.id === fromId);
@@ -198,6 +202,15 @@ export function fetchBlocked(state: State, world: World, a: Actor, fromId: strin
   if (!fetchTargets(state, world, a, from.id).some((r) => r.id === toId))
     return `${from.fetch.types.map((x) => LAND_TYPE_LABELS[x]).join('이나 ')} 가운데 아직 유대가 없는 땅이어야 한다.`;
   return null;
+}
+
+// For an NPC's `fetch` block: a fetch land they hold that can seek out `toId` now, or why none can.
+export function fetchSource(state: State, world: World, a: Actor, toId: string | undefined): { from: Region } | { why: string } {
+  const held = (a.bonds ?? []).map((id) => world.regions.find((r) => r.id === id)).filter((r) => r?.fetch) as Region[];
+  if (!held.length) return { why: '내어 줄 길 찾기 땅이 없다.' };
+  if (!toId) return { why: '찾을 땅을 정하지 않았다.' };
+  const from = held.find((r) => !fetchBlocked(state, world, a, r.id, toId));
+  return from ? { from } : { why: fetchBlocked(state, world, a, held[0].id, toId)! };
 }
 
 // "{T}, Pay N life, Sacrifice this land: Search your library for a <type> card, put it onto

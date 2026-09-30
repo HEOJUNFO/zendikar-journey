@@ -4,8 +4,8 @@ import { npcDef } from '../sim/state.ts';
 import type { Actor, State } from '../sim/state.ts';
 import { shortName } from '../sim/text.ts';
 import { hasPowers, MAP_HEIGHT, MAP_WIDTH, region, spellColors, TERRAINS, travelHours } from '../sim/world.ts';
-import type { World } from '../sim/world.ts';
-import { areaLabelAt, containerRadius, fitView, halfCircle, isTrap, landColors, nodeAt, regionLabelAt, shelves, trapStatus, visibleActors } from './view.ts';
+import type { Region, World } from '../sim/world.ts';
+import { areaLabelAt, bridges, containerRadius, fitView, halfCircle, isTrap, landColors, nodeAt, regionLabelAt, shelves, trapStatus, visibleActors } from './view.ts';
 import type { MapBox } from './view.ts';
 
 type Props = {
@@ -26,6 +26,12 @@ type Props = {
 const TRAP_GAP = 3.6;
 
 // A land's circle in its mana colors: split down the middle for a two-color land.
+// Drawing order: region circles first, then plain nodes (a land between two continents sits
+// on both), then areas.
+function layer(world: World, r: Region) {
+  return r.parent ? 2 : containerRadius(world, r) ? 0 : 1;
+}
+
 function LandCircle({ x, y, r, colors, className }: { x: number; y: number; r: number; colors: string[]; className: string }) {
   if (colors.length < 2) return <circle cx={x} cy={y} r={r} fill={colors[0]} className={className} />;
   return (
@@ -161,6 +167,11 @@ export function MapView({ world, state, selected, onSelect, all, picked, onPickA
             {sh.circles.map((c, i) => <circle key={i} cx={c.x} cy={c.y} r={c.r} />)}
           </g>
         ))}
+        {bridges(world).map((b) => (
+          <g key={`bridge-${b.id}`} className="map-bridge" stroke={b.color}>
+            {b.bands.map((x, i) => <line key={i} x1={x.x1} y1={x.y1} x2={x.x2} y2={x.y2} strokeWidth={x.width} />)}
+          </g>
+        ))}
         {actors
           .filter((a) => a.travel)
           .map((a) => {
@@ -168,7 +179,7 @@ export function MapView({ world, state, selected, onSelect, all, picked, onPickA
             const to = nodeAt(world, region(world, a.travel!.to));
             return <line key={`road-${a.id}`} x1={from.x} y1={from.y} x2={to.x} y2={to.y} className="map-road" />;
           })}
-        {[...world.regions].sort((a, b) => Number(!!a.parent) - Number(!!b.parent)).map((r) => {
+        {[...world.regions].sort((a, b) => layer(world, a) - layer(world, b)).map((r) => {
           const t = TERRAINS[r.terrain];
           const conds = state?.regions[r.id]?.conditions ?? [];
           const destroyed = !!state?.regions[r.id]?.destroyed;

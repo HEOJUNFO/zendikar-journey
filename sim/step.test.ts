@@ -29,7 +29,7 @@ const loc = (id: string, x: number, y: number, terrain: string): RawEntity => ({
 });
 // No one's day is written anywhere: the LLM plans it. Here a fake planner stands in, giving
 // each character the day a test writes for them (`plan` in these helpers, as
-// [start, end, region, kind, activity, emoji] rows), or a day at leisure where they stand.
+// [start, end, region, kind, activity, emoji, land?] rows), or a day at leisure where they stand.
 const PLANS = new Map<string, unknown[][]>();
 const planned = (e: RawEntity): RawEntity => {
   const { plan, ...sim } = e.sim as { plan?: unknown[][] };
@@ -38,13 +38,14 @@ const planned = (e: RawEntity): RawEntity => {
   return { ...e, sim };
 };
 const planDay: Llm['planDay'] = async (input) =>
-  (PLANS.get(input.id) ?? [['00:00', '24:00', input.here, 'leisure', '머무름', '🙂']]).map(([start, end, regionId, kind, activity, emoji]) => ({
+  (PLANS.get(input.id) ?? [['00:00', '24:00', input.here, 'leisure', '머무름', '🙂']]).map(([start, end, regionId, kind, activity, emoji, land]) => ({
     start: parseTimeOfDay(start as string),
     end: parseTimeOfDay(end as string),
     regionId: regionId as string,
     kind: kind as never,
     activity: activity as string,
     emoji: emoji as string,
+    ...(land ? { land: land as string } : {}),
   }));
 const act = (state: State, world: World, action: Action | string, llm: Llm = {}) => runAct(state, world, action, { planDay, ...llm });
 const advance = (state: State, world: World, hours: number, llm: Llm = {}) => runAdvance(state, world, hours, { planDay, ...llm });
@@ -820,6 +821,8 @@ test('buildWorld reports bad game data', () => {
     { id: 'loc-bad', kind: 'location', name: 'x', map: { x: 500, y: 1, terrain: 'lava' } },
     // An island can only belong to a region that is on the map.
     { id: 'loc-stray', kind: 'location', name: 'x', map: { x: 20, y: 20, terrain: 'beach', size: 'island', of: 'loc-moon' } },
+    // A land between two regions joins regions on the map.
+    { id: 'loc-bridge', kind: 'location', name: 'x', map: { x: 30, y: 20, terrain: 'ruins', joins: ['loc-a', 'loc-moon'] } },
     // A written routine or a GM flag: no longer (the LLM plans every day).
     { id: 'chr-routine', kind: 'character', name: 'x', sim: { ...npcSim('loc-a'), plan: undefined, routine: allDay('loc-a') } },
     { id: 'chr-gm', kind: 'character', name: 'x', sim: { ...npcSim('loc-a'), plan: undefined, gm: true } },
@@ -832,6 +835,7 @@ test('buildWorld reports bad game data', () => {
   const has = (id: string) => errors.some((e) => e.startsWith(`${id}:`));
   assert.ok(has('loc-bad'));
   assert.ok(has('loc-stray'));
+  assert.ok(has('loc-bridge'));
   assert.ok(has('chr-routine'));
   assert.ok(has('chr-gm'));
   assert.ok(has('chr-nowhere'));
@@ -953,6 +957,40 @@ test('a landfall trap answers a land bonded from afar', async () => {
   await act(state, world, { type: 'fetch', from: 'loc-mesa', to: 'loc-c' });
   await act(state, world, { type: 'wait', hours: 2 });
   assert.ok(texts(state).includes('땅이 울린다.')); // the second landfall of the day, on loc-c
+});
+
+test('bonding with a land after seeking one out: the land sought is not the day\'s one land', async () => {
+  const world = fixture([mesa]);
+  const state = character(world, 'loc-mesa');
+  const p = state.actors[PLAYER_ID];
+  p.bonds = ['loc-mesa'];
+  await act(state, world, { type: 'fetch', from: 'loc-mesa', to: 'loc-c' });
+  assert.equal(bondBlocked(state, world, p, state.minutes), null);
+  await act(state, world, { type: 'bond' });
+  assert.deepEqual(p.bonds, ['loc-c', 'loc-mesa']);
+  assert.match(bondBlocked(state, world, { ...p, region: 'loc-a' }, state.minutes)!, /하루에 하나/);
+});
+
+test('an NPC seeks out the land its plan names with a fetch land it holds, and may still bond that day', async () => {
+  const plan = [
+    ['00:00', '07:00', 'loc-a', 'sleep', '잠', '😴'],
+    ['07:00', '08:00', 'loc-a', 'fetch', '길 찾기', '🧭', 'loc-c'],
+    ['08:00', '12:00', 'loc-a', 'bond', '유대', '🌿'],
+    ['12:00', '24:00', 'loc-a', 'leisure', '쉼', '🙂'],
+  ];
+  const world = fixture([mesa, npc('npc-f', { ...npcSim('loc-a'), plan })]);
+  const state = newState(world, { seed: 1, mode: 'observer' });
+  const f = state.actors['npc-f'];
+  f.bonds = ['loc-mesa'];
+  let offered: unknown;
+  const llm: Llm = { planDay: async (input) => ((offered = input.fetch), planDay!(input)) };
+  await advance(state, world, 7, llm);
+  // Plains and mountains they don't hold yet, each once.
+  assert.deepEqual((offered as { id: string }[]).map((x) => x.id), ['loc-a', 'loc-c']);
+  assert.equal(f.region, 'loc-a'); // never went there
+  assert.deepEqual(f.bonds, ['loc-c', 'loc-a']);
+  assert.deepEqual(f.fetched, ['loc-c']);
+  assert.ok(texts(state).some((x) => x.includes('메사를 내어 주고')));
 });
 
 const crypt: RawEntity = {
