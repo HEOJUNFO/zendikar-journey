@@ -41,6 +41,8 @@ export function allyJoined(state: State, world: World, a: Actor, master: Actor, 
     // "You may put a +1/+1 counter on each Ally creature you control": no one to pick, and it
     // only helps ("may": always, [가공]). Every Ally of the party, wherever they are.
     for (const eff of rally) if (eff.type === 'counters_allies') alliesCounter(state, world, x, master, t);
+    // "You may put a +1/+1 counter on this": the same, on themselves only.
+    for (const eff of rally) if (eff.type === 'counter_self') selfCounter(state, x, t);
     // "You may have Ally creatures you control gain <ability> until end of turn": the same, no one
     // to pick, always.
     for (const eff of rally) if (eff.type === 'grant_allies') for (const y of alliesOf(state, world, master)) grantAbility(state, y, eff.ability, untapTime(t), `${shortName(x.name)}의 부름`, t);
@@ -52,7 +54,7 @@ export function allyJoined(state: State, world: World, a: Actor, master: Actor, 
 
 // A rally that falls on someone picked (not the counters on the party's Allies).
 function targeted(eff: { type: string }) {
-  return eff.type !== 'counters_allies' && eff.type !== 'grant_allies';
+  return eff.type !== 'counters_allies' && eff.type !== 'counter_self' && eff.type !== 'grant_allies';
 }
 
 // Kazuul Warlord's war cry: a +1/+1 counter (Actor.plusCounters, for good) on each Ally of the party.
@@ -66,6 +68,12 @@ function alliesCounter(state: State, world: World, x: Actor, master: Actor, t: n
     actors: party.map((y) => y.id),
     t,
   });
+}
+
+// Tuktuk Grunts: a +1/+1 counter on themselves, for good.
+function selfCounter(state: State, x: Actor, t: number) {
+  x.plusCounters = (x.plusCounters ?? 0) + 1;
+  addLog(state, { kind: 'status', text: `무리가 늘자 ${josa(shortName(x.name), '이', '가')} 더 사나워졌다 (+1/+1 카운터).`, regions: [x.region], actors: [x.id], t });
 }
 
 // What the rally of `sourceId` would do now, for the one picking.

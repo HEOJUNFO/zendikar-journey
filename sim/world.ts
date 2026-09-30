@@ -290,8 +290,9 @@ export const CharacterSimSchema = z.strictObject({
   // party. damage_allies: damage to one there equal to the party's Allies (Murasa Pyromancer).
   // lose_life_allies: one there loses life equal to the party's Allies (Hagra Diabolist).
   // counters_allies: a +1/+1 counter on each Ally in the party, no one to pick (Kazuul Warlord).
+  // counter_self: a +1/+1 counter on the one with the rally only (Tuktuk Grunts).
   // grant_allies: each Ally in the party gains <ability> until the turn ends (Seascape Aerialist: flying).
-  rally: z.array(z.discriminatedUnion('type', [z.strictObject({ type: z.literal('damage_allies') }), z.strictObject({ type: z.literal('lose_life_allies') }), z.strictObject({ type: z.literal('counters_allies') }), z.strictObject({ type: z.literal('grant_allies'), ability: z.enum(ABILITIES) })])).default([]),
+  rally: z.array(z.discriminatedUnion('type', [z.strictObject({ type: z.literal('damage_allies') }), z.strictObject({ type: z.literal('lose_life_allies') }), z.strictObject({ type: z.literal('counters_allies') }), z.strictObject({ type: z.literal('counter_self') }), z.strictObject({ type: z.literal('grant_allies'), ability: z.enum(ABILITIES) })])).default([]),
   // "You may look at the top card of your library any time" (Sphinx of Jwar Isle): they see
   // what is coming. The rest of today's events and powers the morning LLM picked are in their
   // plan (made after it) and their talk (sim/foresight.ts).
@@ -629,7 +630,7 @@ export type NpcDef = {
   winsAtLife?: number;
   extraCombat?: { cost: ManaCost; costText: string };
   ally?: boolean;
-  rally?: ({ type: 'damage_allies' | 'lose_life_allies' | 'counters_allies' } | { type: 'grant_allies'; ability: Ability })[];
+  rally?: ({ type: 'damage_allies' | 'lose_life_allies' | 'counters_allies' | 'counter_self' } | { type: 'grant_allies'; ability: Ability })[];
   hireable?: boolean;
   foresight?: boolean;
   landfall?: { pt: [number, number]; trample: boolean };

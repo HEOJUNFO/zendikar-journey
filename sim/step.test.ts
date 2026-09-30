@@ -2880,6 +2880,34 @@ test('the real Kazuul Warlord lives on Kazuul\'s Cliffs, a mountain in Murasa, f
   assert.deepEqual(def.rally, [{ type: 'counters_allies' }]);
 });
 
+test('goblins grow with the crowd: each Ally joining puts a +1/+1 counter on the grunts only', async () => {
+  const grunts = { ...npcSim('loc-a', 'work', [2, 2]), mana: { R: 5 }, ally: true, hireable: true, abilities: ['haste'], rally: [{ type: 'counter_self' }] };
+  const other = { ...npcSim('loc-a', 'work', [3, 3]), mana: { R: 5 }, ally: true, hireable: true };
+  const world = fixture([npc('chr-g', grunts), npc('chr-o', other)]);
+  const state = character(world, 'loc-a');
+  const p = state.actors[PLAYER_ID];
+  const [g, o] = [state.actors['chr-g'], state.actors['chr-o']];
+  p.stats.coin = 100;
+  await act(state, world, { type: 'hire', to: 'chr-g' });
+  assert.equal(g.plusCounters, 1);
+  assert.equal(state.asks?.length ?? 0, 0); // nothing to pick
+  await act(state, world, { type: 'hire', to: 'chr-o' });
+  assert.equal(g.plusCounters, 2);
+  assert.equal(o.plusCounters, undefined);
+  assert.deepEqual(ptOf(g), [4, 4]);
+  assert.ok(texts(state).some((t) => t.includes('더 사나워졌다')));
+});
+
+test('the real Tuktuk Grunts roam Akoum, hasty goblin Allies for 50 coin', () => {
+  const world = loadWorld();
+  const state = newState(world, { seed: 1, mode: 'observer' });
+  assert.equal(state.actors['chr-tuktuk-grunts']?.region, 'loc-akoum');
+  const def = world.npcs.find((x) => x.id === 'chr-tuktuk-grunts')!;
+  assert.equal(hirePrice(def), 50);
+  assert.ok(def.ally && def.abilities.includes('haste'));
+  assert.deepEqual(def.rally, [{ type: 'counter_self' }]);
+});
+
 test('a ritual of the land: the caster gains 2 life for each plains they hold (not a destroyed one); an NPC too', async () => {
   const ritual: RawEntity = { id: 'spl-r', kind: 'spell', name: '의식', status: 'canon', sim: { cost: '{1}', learn_at: 'loc-a', target: 'self', effects: [{ type: 'gain_life_per_land', land: 'plains', amount: 2 }] } };
   const world = fixture([ritual, loc('loc-p2', 14, 10, 'grassland'), npc('chr-c', { ...npcSim('loc-a'), mana: { W: 1 } })]);

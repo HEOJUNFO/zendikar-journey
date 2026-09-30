@@ -5,9 +5,10 @@ name: 아쿰
 name_en: Akoum
 summary: 젠디카르 동쪽의 험한 화산 대륙. 검붉은 바위 협곡이 이어지고, 뒤틀린 땅에서 떨어져 나온 바위 조각들이 하늘에 떠 있다
 status: canon
-sources: [ZEN-210, ZEN-223, ZEN-120, ZEN-131, ZEN-146, ZEN-5, ZEN-96, ZEN-150]
+sources: [ZEN-210, ZEN-223, ZEN-120, ZEN-131, ZEN-146, ZEN-5, ZEN-96, ZEN-150, ZEN-152]
 tags: [대륙, 화산, 협곡, 적색]
 links:
+  - { to: chr-tuktuk-grunts, rel: 사는 고블린 용병 }
   - { to: spl-spire-barrage, rel: 가르치는 주문 }
   - { to: loc-goma-fada, rel: 대륙 위를 걸어 다니는 대상단 }
   - { to: loc-akoum-refuge, rel: 안의 구역 }
