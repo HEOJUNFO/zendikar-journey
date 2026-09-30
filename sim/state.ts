@@ -23,7 +23,7 @@ export type Task = {
   // keeps days (sim/eons.ts).
   from?: string;
   land?: string;
-  // court: the beast whose trust they seek.
+  // court: the beast whose trust they seek; hire: the mercenary.
   who?: string;
   // bond: whom the land's targeted effect ("target player loses N life") falls on (the player's pick).
   target?: string;
@@ -113,7 +113,8 @@ export type Actor = {
 
 // What falls on the one picked: a land's bonding effect, a burst of damage (Valakut), or a
 // spell an NPC casts (sim/spells.ts).
-export type ChoiceEffect = BondEffect | { type: 'damage'; amount: number } | { type: 'cast'; spell: string } | { type: 'follow' };
+export type Choice = { by: string; land: string; effect: ChoiceEffect; candidates: string[]; optional?: boolean; t: number };
+export type ChoiceEffect = BondEffect | { type: 'damage'; amount: number } | { type: 'cast'; spell: string } | { type: 'follow' } | { type: 'rally'; source: string };
 
 export type Condition = {
   label: string;
@@ -207,7 +208,10 @@ export type State = {
   // Picks an NPC owes (a land's targeted effect as they bonded with it): the LLM makes them
   // after the hour (sim/run.ts), from these candidates.
   // `optional`: they may pick no one ("you may").
-  choices?: { by: string; land: string; effect: ChoiceEffect; candidates: string[]; optional?: boolean; t: number }[];
+  choices?: Choice[];
+  // Picks the player owes (an Ally's rally in their party): they answer with a "choose" action
+  // before anything else (sim/run.ts).
+  asks?: Choice[];
   nextLogId: number;
   log: LogEntry[];
 };

@@ -3,7 +3,8 @@ import type { ReactNode } from 'react';
 import type { Action } from '../sim/actions.ts';
 import { PACE_LABELS } from '../sim/actions.ts';
 import { formatClock, formatTimeOfDay, gameDay, minuteOfDay } from '../sim/clock.ts';
-import { isPerson, needsOf, outOfTime, player, present, ptOf } from '../sim/state.ts';
+import { isPerson, needsOf, npcDef, outOfTime, player, present, ptOf } from '../sim/state.ts';
+import { askText, hireBlocked, hirePrice } from '../sim/allies.ts';
 import { woundsOf } from '../sim/combat.ts';
 import { COLOR_LABELS, formatMana, manaAvailable, manaCapacity, manaLabel } from '../sim/mana.ts';
 import { bondBlocked, bondTargets, enteredToday, fetchTargets, fireTargets, firesOnBond, growBlocked, growLand, targetedBondEffect } from '../sim/abilities.ts';
@@ -410,6 +411,26 @@ export function CharacterControls(props: {
     );
   }
 
+  // A pick they owe (an Ally's rally in their party): nothing else until they answer.
+  const ask = state.asks?.[0];
+  if (ask) {
+    return (
+      <div className="controls controls-player">
+        <p>🔥 {askText(state, world, ask)}. 누구에게?</p>
+        <div className="row">
+          {ask.candidates.map((id) => (
+            <button key={id} disabled={busy} onClick={() => onAct({ type: 'choose', pick: id })}>
+              {shortName(state.actors[id]?.name ?? id)}
+            </button>
+          ))}
+          <button disabled={busy} onClick={() => onAct({ type: 'choose', pick: null })}>
+            하지 않는다
+          </button>
+        </div>
+      </div>
+    );
+  }
+
   // Out of time (a day left in Magosi, or someone else's extra day): nothing to do but let it pass.
   if (outOfTime(state, p)) {
     return (
@@ -504,6 +525,23 @@ export function CharacterControls(props: {
           >
             하루 되찾기
           </button>
+        </div>
+      )}
+      {people.some((a) => npcDef(state, world, a.id)?.hireable) && (
+        <div className="row">
+          <span className="muted">🪙 고용:</span>
+          {people
+            .filter((a) => npcDef(state, world, a.id)?.hireable)
+            .map((a) => (
+              <button
+                key={a.id}
+                disabled={busy || !!stuck || !!hireBlocked(state, world, p, a.id)}
+                title={hireBlocked(state, world, p, a.id) ?? '값을 치르면 끝없이 당신을 따른다'}
+                onClick={() => onAct({ type: 'hire', to: a.id })}
+              >
+                {shortName(a.name)} ({hirePrice(npcDef(state, world, a.id)!)}코인)
+              </button>
+            ))}
         </div>
       )}
       {grower && (

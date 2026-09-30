@@ -6,6 +6,7 @@ import { landTapBlocked, tapLand } from './landtap.ts';
 import type { Color } from './mana.ts';
 import { itemsOnLandfall } from './items.ts';
 import { gainLife, lifeOf, loseLife } from './life.ts';
+import { allyJoined } from './allies.ts';
 import { DEPLETED_LABEL } from './rules.ts';
 import { castSpell, spellDef } from './spells.ts';
 import { addLog, npcDef, outOfTime, present, ptOf, random } from './state.ts';
@@ -43,7 +44,7 @@ export function bondTargets(state: State, world: World, a: Actor, regionId: stri
 }
 
 // The effect falls on `target`, if they are still there.
-export function applyBondEffect(state: State, world: World, a: Actor, regionId: string, eff: Exclude<ChoiceEffect, { type: 'cast' | 'follow' }>, targetId: string | undefined, t: number) {
+export function applyBondEffect(state: State, world: World, a: Actor, regionId: string, eff: Exclude<ChoiceEffect, { type: 'cast' | 'follow' | 'rally' }>, targetId: string | undefined, t: number) {
   const r = region(world, regionId);
   if (eff.type === 'damage') return mountainFire(state, world, a, r, eff.amount, targetId, t);
   const target = targetId ? bondTargets(state, world, a, regionId, eff).find((x) => x.id === targetId) : undefined;
@@ -265,6 +266,8 @@ export function upkeepRevive(state: State, world: World, t: number) {
       enteredAt: t,
     });
     holder.fallen = holder.fallen!.filter((id) => id !== back.id);
+    // Back under their control: an Ally rejoining wakes the party's rallies.
+    allyJoined(state, world, back, holder, t);
     addLog(state, {
       kind: 'event',
       text: `${land!.name}의 힘으로 ${josa(shortName(back.name), '이', '가')} 되살아나 다시 ${shortName(holder.name)} 곁에 섰다.`,

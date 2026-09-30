@@ -2,7 +2,8 @@
 import { z } from 'zod';
 import { ActionSchema } from '../actions.ts';
 import type { Action } from '../actions.ts';
-import { isPerson, player, present, ptOf } from '../state.ts';
+import { isPerson, npcDef, player, present, ptOf } from '../state.ts';
+import { askText, hireBlocked, hirePrice } from '../allies.ts';
 import type { InterpretInput } from '../run.ts';
 import { travelBlocked } from '../step.ts';
 import { shortName } from '../text.ts';
@@ -62,6 +63,25 @@ export async function interpret({ world, state, text }: InterpretInput): Promise
   const people = present(state, p.region)
     .filter(isPerson)
     .map((a) => `- ${a.id}: ${shortName(a.name)} (power/toughness ${ptOf(a).join('/')})`);
+  // Mercenaries here they could hire.
+  for (const x of present(state, p.region)) {
+    const def = npcDef(state, world, x.id);
+    if (def?.hireable && !hireBlocked(state, world, p, x.id)) days.push(`- {"type":"hire","to":"${x.id}"}  (hire ${shortName(x.name)} for ${hirePrice(def)} coin: they serve the player for good; 1 hour)`);
+  }
+  // A pick they owe comes before anything else: the only action now.
+  const ask = state.asks?.[0];
+  if (ask) {
+    const options = ask.candidates.map((id) => `- {"type":"choose","pick":"${id}"}  (${shortName(state.actors[id]?.name ?? id)})`);
+    const content = await chatCompletion(
+      [
+        { role: 'system', content: SYSTEM_PROMPT },
+        { role: 'user', content: `The player must first pick: ${askText(state, world, ask)}\n\nActions:\n${options.join('\n')}\n- {"type":"choose","pick":null}  (no one)\n\nPlayer typed: ${text}\n\nAnswer: {"action": {...}}` },
+      ],
+      300,
+    );
+    const parsed = AnswerSchema.safeParse(extractJson(content));
+    return parsed.success ? parsed.data.action : null;
+  }
   const content = await chatCompletion(
     [
       { role: 'system', content: SYSTEM_PROMPT },

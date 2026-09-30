@@ -54,11 +54,13 @@ export type PlanDayInput = {
   cast?: { id: string; text: string }[];
   // Beasts that may follow someone who wins their trust, and where each is now.
   court?: { id: string; at: string; text: string }[];
+  // Mercenaries they could afford to hire, and where each is now.
+  hire?: { id: string; at: string; text: string }[];
 };
 
 // Kinds of blocks they may plan: no meals without hunger, taming only if there is an item for
 // them to tame, keeping days only with a land that keeps them.
-function kindsFor(input: Pick<PlanDayInput, 'needs' | 'items' | 'days' | 'grow' | 'fetch' | 'learn' | 'cast' | 'court'>) {
+function kindsFor(input: Pick<PlanDayInput, 'needs' | 'items' | 'days' | 'grow' | 'fetch' | 'learn' | 'cast' | 'court' | 'hire'>) {
   return LIFE_KINDS.filter(
     (k) =>
       (k !== 'eat' || input.needs.includes('hunger')) &&
@@ -69,7 +71,8 @@ function kindsFor(input: Pick<PlanDayInput, 'needs' | 'items' | 'days' | 'grow' 
       (k !== 'fetch' || !!input.fetch?.length) &&
       (k !== 'learn' || !!input.learn?.length) &&
       (k !== 'cast' || !!input.cast?.length) &&
-      (k !== 'court' || !!input.court?.length),
+      (k !== 'court' || !!input.court?.length) &&
+      (k !== 'hire' || !!input.hire?.length),
   );
 }
 
@@ -91,12 +94,14 @@ export async function planDay(input: PlanDayInput): Promise<ScheduleBlock[] | nu
   const taught = new Map(input.learn?.map((x) => [x.id, x.at]));
   const castable = new Set(input.cast?.map((x) => x.id));
   const beasts = new Map(input.court?.map((x) => [x.id, x.at]));
+  const mercs = new Map(input.hire?.map((x) => [x.id, x.at]));
   const bad = (b: ScheduleBlock) =>
     !kinds.has(b.kind) ||
     (b.kind === 'fetch' && !sought.has(b.land ?? '')) ||
     (b.kind === 'learn' && taught.get(b.spell ?? '') !== b.regionId) ||
     (b.kind === 'cast' && !castable.has(b.spell ?? '')) ||
-    (b.kind === 'court' && beasts.get(b.who ?? '') !== b.regionId);
+    (b.kind === 'court' && beasts.get(b.who ?? '') !== b.regionId) ||
+    (b.kind === 'hire' && mercs.get(b.who ?? '') !== b.regionId);
   if (blocks?.some(bad)) blocks = null;
   if (!blocks) console.warn(`Unusable plan for ${input.name}:`, content);
   return blocks;
@@ -108,7 +113,7 @@ role and goals, their needs, what they know happened, and the people they know.
 Answer with JSON only, no prose.`;
 
 function userPrompt(input: PlanDayInput) {
-  const { day, now, name, persona, goal, role, home, here, stats, life, needs, regions, news, relations = [], items = [], days, grow, fetch = [], learn = [], cast = [], court = [] } = input;
+  const { day, now, name, persona, goal, role, home, here, stats, life, needs, regions, news, relations = [], items = [], days, grow, fetch = [], learn = [], cast = [], court = [], hire = [] } = input;
   const kinds = kindsFor(input);
   const state = [
     needs.includes('energy') && `energy ${Math.round(stats.energy)}/100 (low = tired; sleep restores it)`,
@@ -168,14 +173,18 @@ Rules:
     kinds.includes('court')
       ? `\n- "court" takes 2 hours, in the region where the beast is now (regionId must be that region), and needs "who": its id. They stay at its side and try to win its trust; at the end the beast decides whether to follow and serve them (it may not). Only when it fits who they are. Beasts that might follow someone:\n${court.map((x) => `  - "${x.id}" in ${x.at}: ${x.text}`).join('\n')}`
       : ''
+  }${
+    kinds.includes('hire')
+      ? `\n- "hire" takes 1 hour, in the region where the mercenary is now (regionId must be that region), and needs "who": their id. They pay the price and the mercenary serves them for good, following them and fighting at their side. Only when it fits who they are and what they need. Mercenaries they could hire:\n${hire.map((x) => `  - "${x.id}" in ${x.at}: ${x.text}`).join('\n')}`
+      : ''
   }
 - Travel between regions takes hours; only change region when there is a reason.
 - Let today follow from their state, news, goal and the people they know; days need not repeat.
 - activity is a short Korean phrase shown on screen (e.g. "폐허 순찰"); emoji is a single emoji.
 
 Answer: {"blocks":[{"start":0,"end":360,"regionId":"...","activity":"...","emoji":"...","kind":"sleep"}, ...]}${
-    kinds.includes('fetch') || kinds.includes('learn') || kinds.includes('cast') || kinds.includes('court')
-      ? ` (${[kinds.includes('fetch') && 'a "fetch" block also has "land"', (kinds.includes('learn') || kinds.includes('cast')) && '"learn" and "cast" blocks also have "spell"', kinds.includes('court') && 'a "court" block also has "who"'].filter(Boolean).join('; ')})`
+    kinds.includes('fetch') || kinds.includes('learn') || kinds.includes('cast') || kinds.includes('court') || kinds.includes('hire')
+      ? ` (${[kinds.includes('fetch') && 'a "fetch" block also has "land"', (kinds.includes('learn') || kinds.includes('cast')) && '"learn" and "cast" blocks also have "spell"', (kinds.includes('court') || kinds.includes('hire')) && '"court" and "hire" blocks also have "who"'].filter(Boolean).join('; ')})`
       : ''
   }`;
 }

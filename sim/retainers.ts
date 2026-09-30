@@ -11,6 +11,7 @@ import { josa, shortName } from './text.ts';
 import { hasPowers } from './world.ts';
 import type { World } from './world.ts';
 import { npcDef } from './state.ts';
+import { allyJoined } from './allies.ts';
 
 export function masterOf(state: State, a: Actor) {
   const m = a.master ? state.actors[a.master] : undefined;
@@ -65,7 +66,8 @@ export function readyCourt(state: State, world: World, a: Actor, whoId: string, 
   (state.choices ??= []).push({ by: whoId, land: a.region, effect: { type: 'follow' }, candidates: [a.id], optional: true, t });
 }
 
-export function bindRetainer(state: State, a: Actor, master: Actor, t: number, how: string) {
+// `a` now serves `master`. An Ally joining a party wakes its rallies (sim/allies.ts).
+export function bindRetainer(state: State, world: World, a: Actor, master: Actor, t: number, how: string) {
   a.master = master.id;
   remember(a, master, `나의 주인 (${how})`, t);
   addLog(state, {
@@ -74,6 +76,7 @@ export function bindRetainer(state: State, a: Actor, master: Actor, t: number, h
     regions: [a.region],
     actors: [a.id, master.id],
   });
+  allyJoined(state, world, a, master, t);
 }
 
 export function releaseRetainer(state: State, a: Actor, why: string) {

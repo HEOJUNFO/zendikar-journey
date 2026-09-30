@@ -226,6 +226,13 @@ export const CharacterSimSchema = z.strictObject({
   // there is an additional combat phase" (Hellkite Charger): when they strike and can pay, they
   // do, and they (and their retainers who struck with them) strike once more that hour.
   extra_combat: z.strictObject({ cost: CostSchema }).optional(),
+  // An Ally (card type; sim/allies.ts): of Zendikar's expedition parties.
+  ally: z.boolean().default(false),
+  // "Whenever this or another Ally enters under your control, …": when an Ally joins their
+  // party. damage_allies: damage to one there equal to the party's Allies (Murasa Pyromancer).
+  rally: z.array(z.discriminatedUnion('type', [z.strictObject({ type: z.literal('damage_allies') })])).default([]),
+  // A mercenary: anyone who pays (their card's mana value × 10 coin) hires them for good.
+  hireable: z.boolean().default(false),
   // Landfall: when they bond with a land, they get +P/+T (and trample) until the turn ends.
   landfall: z.strictObject({ pt: z.tuple([z.number().int(), z.number().int()]), trample: z.boolean().default(false) }).optional(),
   // The creature kind a character is (e.g. cre-vampire). A creature entity's sim is its own kind.
@@ -449,6 +456,9 @@ export type NpcDef = {
   tamable?: boolean;
   winsAtLife?: number;
   extraCombat?: { cost: ManaCost; costText: string };
+  ally?: boolean;
+  rally?: { type: 'damage_allies' }[];
+  hireable?: boolean;
   landfall?: { pt: [number, number]; trample: boolean };
   // The creature kind they are (e.g. cre-vampire), for "a Vampire you control".
   creature?: string;

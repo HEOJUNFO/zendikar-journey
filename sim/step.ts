@@ -26,6 +26,7 @@ import { bondBlocked, bondLand, expireGranted, FETCH_HOURS, fetchLand, fetchSour
 import { CLAIM_HOURS, claimBlocked, claimItem, itemsAt } from './items.ts';
 import { EON_HOURS, eonLand, holdStill, spendBlocked, spendDay, storeBlocked, storeDay, timeNews } from './eons.ts';
 import { upkeepWins } from './win.ts';
+import { HIRE_HOURS, hireBlocked, hireMerc } from './allies.ts';
 import { COURT_HOURS, courtBlocked, masterOf, readyCourt } from './retainers.ts';
 import { learnBlocked, learnSpell, npcCastBlocked, readyCast, spellDef } from './spells.ts';
 import { payMana } from './mana.ts';
@@ -51,7 +52,7 @@ export function step(state: State, world: World) {
     actorHour(state, world, a, t);
     // A timed task done: the player's action, or an NPC's bonding, taming or keeping days.
     const done = a.task?.until !== undefined && a.task.until <= t + STEP_MINUTES && !a.travel;
-    const timed = ['bond', 'claim', 'store_day', 'spend_day', 'grow', 'fetch', 'learn', 'cast', 'court'];
+    const timed = ['bond', 'claim', 'store_day', 'spend_day', 'grow', 'fetch', 'learn', 'cast', 'court', 'hire'];
     if (done && (a.kind === 'player' || timed.includes(a.task!.kind))) {
       const at = t + STEP_MINUTES;
       if (a.task!.kind === 'bond') bondLand(state, world, a, at, a.region, a.task!.target);
@@ -65,6 +66,7 @@ export function step(state: State, world: World) {
       if (a.task!.kind === 'cast' && a.kind === 'npc' && a.task!.spell) readyCast(state, world, a, a.task!.spell, at);
       // A court: the beast decides after the hour whether to follow them.
       if (a.task!.kind === 'court' && a.task!.who) readyCourt(state, world, a, a.task!.who, at);
+      if (a.task!.kind === 'hire' && a.task!.who) hireMerc(state, world, a, a.task!.who, at);
       a.task = undefined;
     }
   }
@@ -417,13 +419,14 @@ function npcTask(state: State, world: World, a: Actor, t: number): Task | undefi
     : block.kind === 'learn' ? learnBlocked(world, a, spell!.id)
     : block.kind === 'cast' ? npcCastBlocked(state, world, a, spell!.id, t)
     : block.kind === 'court' ? courtBlocked(state, world, a, block.who)
+    : block.kind === 'hire' ? hireBlocked(state, world, a, block.who)
     : block.kind === 'claim' && !item ? (itemsAt(world, a.region).map((x) => claimBlocked(state, world, a, x.id, t))[0] ?? '길들일 것이 없다.')
     : power && !land ? '그런 힘을 가진 땅이 없다.'
     : block.kind === 'store_day' ? storeBlocked(state, world, a, land!.id, t)
     : block.kind === 'spend_day' ? spendBlocked(state, world, a, land!.id, t)
     : block.kind === 'grow' ? growBlocked(state, world, a, land!.id, t)
     : null;
-  const timed = ['bond', 'claim', 'store_day', 'spend_day', 'grow', 'fetch', 'learn', 'cast', 'court'];
+  const timed = ['bond', 'claim', 'store_day', 'spend_day', 'grow', 'fetch', 'learn', 'cast', 'court', 'hire'];
   if (!cannot && timed.includes(block.kind) && a.task?.kind === block.kind) return a.task;
   const task: Task =
     block.kind === 'work' && landUnusable(state, a.region)
@@ -434,8 +437,8 @@ function npcTask(state: State, world: World, a: Actor, t: number): Task | undefi
           ? { kind: 'bond', activity: block.activity, emoji: block.emoji, until: t + BOND_HOURS * 60 }
           : spell
             ? { kind: block.kind, activity: block.activity, emoji: block.emoji, until: t + (block.kind === 'learn' ? spell.learnHours : 1) * 60, spell: spell.id }
-          : block.kind === 'court'
-            ? { kind: 'court', activity: block.activity, emoji: block.emoji, until: t + COURT_HOURS * 60, who: block.who }
+          : block.kind === 'court' || block.kind === 'hire'
+            ? { kind: block.kind, activity: block.activity, emoji: block.emoji, until: t + (block.kind === 'court' ? COURT_HOURS : HIRE_HOURS) * 60, who: block.who }
           : fetchFrom && 'from' in fetchFrom
             ? { kind: 'fetch', activity: block.activity, emoji: block.emoji, until: t + FETCH_HOURS * 60, from: fetchFrom.from.id, land: block.land }
           : item

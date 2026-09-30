@@ -3,7 +3,8 @@
 import { z } from 'zod';
 import { STEP_MINUTES } from './clock.ts';
 import { BOND_HOURS, KIND_EFFECTS } from './rules.ts';
-import { addLog, isPerson, landUnusable, outOfTime, player } from './state.ts';
+import { addLog, isPerson, landUnusable, npcDef, outOfTime, player } from './state.ts';
+import { HIRE_HOURS, hireBlocked, hirePrice } from './allies.ts';
 import type { State, Task } from './state.ts';
 import { startTravel, travelBlocked } from './step.ts';
 import { bondBlocked, bondTargets, FETCH_HOURS, fetchBlocked, firesOnBond, growBlocked, targetedBondEffect } from './abilities.ts';
@@ -39,6 +40,10 @@ export const ActionSchema = z.discriminatedUnion('type', [
   z.object({ type: z.literal('spend_day'), land: z.string() }),
   // Tap a land like Oran-Rief: every creature of its color that came into play today grows.
   z.object({ type: z.literal('grow'), land: z.string() }),
+  // Hire a mercenary here: pay their price and they serve you for good (sim/allies.ts).
+  z.object({ type: z.literal('hire'), to: z.string() }),
+  // Answer the pick you owe (an Ally's rally in your party): someone's id, or null for no one.
+  z.object({ type: z.literal('choose'), pick: z.string().nullable() }),
 ]);
 export type Action = z.infer<typeof ActionSchema>;
 
@@ -173,6 +178,16 @@ export function startAction(state: State, world: World, action: Action): string 
       text = `${r.name}의 힘을 불러내 오늘 새로 난 생물들을 북돋운다.`;
       break;
     }
+    case 'hire': {
+      const why = hireBlocked(state, world, p, action.to);
+      if (why) return why;
+      const name = shortName(state.actors[action.to].name);
+      task = { kind: 'social', activity: `${name} 고용`, emoji: '🪙', until: until(HIRE_HOURS) };
+      text = `${josa(name, '을', '를')} 고용한다 (${hirePrice(npcDef(state, world, action.to)!)}코인).`;
+      break;
+    }
+    case 'choose':
+      return '고를 것이 없다.';
     case 'talk': {
       const npc = state.actors[action.to];
       if (!npc || !isPerson(npc) || npc.dead) return '그런 인물은 없다.';

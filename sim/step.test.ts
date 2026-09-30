@@ -20,6 +20,7 @@ import { bondBlocked, bondLand, bondTargets, fetchTargets, fireTargets, firesOnB
 import { DEPLETED_LABEL, DESTROYED_DAYS } from './rules.ts';
 import { swayBlocked } from './retainers.ts';
 import { upkeepWins } from './win.ts';
+import { askText, hirePrice } from './allies.ts';
 import type { State } from './state.ts';
 import { affectedRegions, buildWorld, region, travelHours } from './world.ts';
 import type { RawEntity } from './world.ts';
@@ -1635,4 +1636,73 @@ test('the real Hellkite Charger flies over Akoum, with haste', () => {
   assert.equal(h.region, 'loc-akoum');
   assert.deepEqual(h.abilities, ['fly', 'haste']);
   assert.equal(world.npcs.find((x) => x.id === 'cre-hellkite')?.extraCombat?.costText, '{5}{R}{R}');
+});
+
+const pyro = (region = 'loc-a', plan?: unknown[][]) =>
+  npc('chr-p', { ...npcSim(region), pt: [3, 2], mana: { R: 6 }, ally: true, hireable: true, rally: [{ type: 'damage_allies' }], ...(plan ? { plan } : {}) });
+
+test('the player hires a mercenary for his mana value × 10 coin; as an Ally joins, the player picks whom his fire falls on', async () => {
+  const world = fixture([pyro(), npc('chr-y', npcSim('loc-a', 'social', [1, 5])), npc('chr-a', { ...npcSim('loc-a'), ally: true })]);
+  const state = character(world, 'loc-a');
+  const p = state.actors[PLAYER_ID];
+  assert.match((await act(state, world, { type: 'hire', to: 'chr-p' })).error!, /돈이 모자라다 \(60코인\)/);
+  assert.match((await act(state, world, { type: 'hire', to: 'chr-y' })).error!, /고용할 수 있는 이가 아니다/);
+  p.stats.coin = 70;
+  await act(state, world, { type: 'hire', to: 'chr-p' });
+  assert.equal(state.actors['chr-p'].master, PLAYER_ID);
+  assert.equal(p.stats.coin, 10);
+  // The pick comes first; nothing else until it is made.
+  assert.equal(state.asks?.length, 1);
+  assert.deepEqual(state.asks![0].candidates.sort(), ['chr-a', 'chr-y', PLAYER_ID].sort());
+  assert.match((await act(state, world, { type: 'wait', hours: 1 })).error!, /먼저 골라야 한다: .*피해 1/);
+  const at = state.minutes;
+  await act(state, world, { type: 'choose', pick: 'chr-y' });
+  assert.equal(state.minutes, at); // no time passes
+  assert.equal(woundsOf(state.actors['chr-y'], state.minutes), 1);
+  assert.deepEqual(state.actors['chr-y'].foes?.ids, ['chr-p']);
+  // Another Ally joins the party: the fire grows with it.
+  await act(state, world, { type: 'talk', to: 'chr-a', say: '함께 가자' }, { reply: async () => ({ say: '좋소.', attack: false, follow: true }) });
+  assert.equal(state.asks?.length, 1);
+  assert.match(askText(state, world, state.asks![0]), /피해 2/);
+  await act(state, world, { type: 'choose', pick: null });
+  assert.equal(state.asks?.length, 0);
+  assert.ok(texts(state).some((t) => t.includes('불길을 거두었다')));
+});
+
+test('a non-Ally joining wakes no rally', async () => {
+  const world = fixture([pyro(), npc('chr-y', npcSim('loc-a'))]);
+  const state = character(world, 'loc-a');
+  state.actors['chr-p'].master = PLAYER_ID;
+  await act(state, world, { type: 'talk', to: 'chr-y', say: '함께 가자' }, { reply: async () => ({ say: '좋소.', attack: false, follow: true }) });
+  assert.equal(state.actors['chr-y'].master, PLAYER_ID);
+  assert.equal(state.asks?.length ?? 0, 0);
+});
+
+test('an NPC hires the mercenary by a hire block; the LLM picks, for them, whom the fire falls on', async () => {
+  const plan = [['00:00', '24:00', 'loc-a', 'hire', '용병 고용', '🪙', undefined, undefined, 'chr-p']];
+  const world = fixture([pyro(), npc('chr-m', { ...npcSim('loc-a'), plan }), npc('chr-y', npcSim('loc-a', 'social', [1, 5]))]);
+  const state = newState(world, { seed: 1, mode: 'observer' });
+  const m = state.actors['chr-m'];
+  m.stats.coin = 100;
+  let offered: PlanDayInput | undefined;
+  const asked: [string, string[]][] = [];
+  const llm: Llm = {
+    planDay: async (input) => (input.id === 'chr-m' && (offered = input), planDay!(input)),
+    choose: async ({ npc, candidates }) => (asked.push([npc.id, candidates.map((c) => c.id).sort()]), 'chr-y'),
+  };
+  await advance(state, world, 1, llm);
+  assert.deepEqual(offered?.hire?.map((x) => [x.id, x.at]), [['chr-p', 'loc-a']]);
+  assert.equal(state.actors['chr-p'].master, 'chr-m');
+  assert.equal(m.stats.coin, 40);
+  assert.deepEqual(asked, [['chr-m', ['chr-m', 'chr-y']]]);
+  assert.equal(woundsOf(state.actors['chr-y'], state.minutes), 1);
+});
+
+test('the real Murasa Pyromancer roams Murasa, for 60 coin', () => {
+  const world = loadWorld();
+  const state = newState(world, { seed: 1, mode: 'observer' });
+  assert.equal(state.actors['chr-murasa-pyromancer']?.region, 'loc-murasa');
+  const def = world.npcs.find((x) => x.id === 'chr-murasa-pyromancer')!;
+  assert.equal(def.ally, true);
+  assert.equal(hirePrice(def), 60);
 });

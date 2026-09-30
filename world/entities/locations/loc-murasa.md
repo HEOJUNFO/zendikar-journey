@@ -5,9 +5,10 @@ name: 무라사
 name_en: Murasa
 summary: 온두 북서쪽, 타짐 서쪽의 거목 대륙. 뒤틀린 거목이 벼랑 끝까지 뻗고, 깊은 협곡 사이로 잿빛 호수가 고여 있다
 status: canon
-sources: [ZEN-217, ZEN-220]
+sources: [ZEN-217, ZEN-220, ZEN-139]
 tags: [대륙, 숲, 거목, 협곡, 녹색]
 links:
+  - { to: chr-murasa-pyromancer, rel: 떠도는 용병 }
   - { to: loc-kazandu-refuge, rel: 안의 구역 }
   - { to: loc-misty-rainforest, rel: 안의 구역 }
   - { to: loc-deepwater-realm, rel: 동쪽 바다 }
@@ -29,6 +30,7 @@ map: { x: 172, y: 165, terrain: forest, size: continent }
 - 지도 북서쪽 (172, 165)의 지역이다 (지형 `forest`, 녹색 땅, 숲) ([결정] 2026-09-30: 무라사도 유대를 맺는 땅). 세계의 첫 기본 숲이다.
 - 위치는 [배경]의 "온두 북쪽, 타짐 서쪽"에서 정한 [가공]이다. 타짐까지 약 12시간, 온두까지 약 18시간. 대륙이라 지도에 크게 그린다 (`size: continent`).
 - 안에 구역 카잔두 피난처(`loc-kazandu-refuge`)와 안개 낀 우림(`loc-misty-rainforest`, 숲이나 섬을 찾아오는 페치랜드, [결정] 2026-09-30 타짐에서 옮김)이 있다.
+- 돈을 받고 불을 빌려주는 용병 무라사의 화염술사(`chr-murasa-pyromancer`, ZEN-139)가 이 대륙을 떠돈다 ([결정] 2026-09-30).
 
 ## 미정/질문
 

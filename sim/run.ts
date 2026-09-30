@@ -11,6 +11,7 @@ import { addFoe, clash } from './combat.ts';
 import { relationsText, remember } from './relations.ts';
 import { claimableItems } from './items.ts';
 import { lifeOf } from './life.ts';
+import { answerAsk, applyRally, askText, hireableFor, hireMerc, hirePrice, rallyText } from './allies.ts';
 import { eonLand, eonsIn, spendBlocked, storeBlocked } from './eons.ts';
 import { castableSpells, castBlocked, castSpell, harmful, learnableSpells, spellDef } from './spells.ts';
 import { opponentsOf, sealsDue, setSeal } from './seal.ts';
@@ -99,6 +100,14 @@ export async function act(state: State, world: World, input: Action | string, ll
     if (!action) return { error: '무슨 행동인지 알아듣지 못했다. 다르게 말해 보자.', entries: [] };
   } else action = input;
 
+  // A pick they owe comes first, and takes no time.
+  if (state.asks?.length) {
+    if (action.type !== 'choose') return { error: `먼저 골라야 한다: ${askText(state, world, state.asks[0])}`, entries: [] };
+    const from = state.nextLogId;
+    answerAsk(state, world, action.pick, state.minutes);
+    return { entries: state.log.filter((e) => e.id >= from) };
+  }
+
   const halted = await prepare(state, world, llm);
   if (halted) return { error: halted, entries: [] };
   const firstId = state.nextLogId;
@@ -122,9 +131,11 @@ export async function act(state: State, world: World, input: Action | string, ll
   if (action.type === 'talk') await talk(state, world, p, action.to, action.say, llm);
   if (action.type === 'attack') await attack(state, world, p, action.to, llm);
   if (action.type === 'cast') castSpell(state, world, p, action.spell, action.to, action.kick, state.minutes);
+  if (action.type === 'hire') hireMerc(state, world, p, action.to, state.minutes);
 
   let halt: string | undefined;
-  for (let n = 0; busy(state, p) && !state.over && n < MAX_ACT_HOURS; n++) {
+  // A pick they owe stops the world until they answer.
+  for (let n = 0; busy(state, p) && !state.over && !state.asks?.length && n < MAX_ACT_HOURS; n++) {
     halt = (await prepare(state, world, llm)) ?? undefined;
     if (halt) break;
     const before = state.nextLogId;
@@ -193,6 +204,11 @@ async function choices(state: State, world: World, llm: Llm) {
   state.choices = [];
   for (const c of due) {
     const by = state.actors[c.by];
+    // The player's own picks wait for them (a "choose" action).
+    if (by?.kind === 'player') {
+      if (!by.dead) (state.asks ??= []).push(c);
+      continue;
+    }
     const npc = speakerDef(state, world, c.by);
     const land = world.regions.find((r) => r.id === c.land);
     const candidates = c.candidates.map((id) => state.actors[id]).filter((x) => x && !x.dead);
@@ -203,6 +219,18 @@ async function choices(state: State, world: World, llm: Llm) {
     }
     if (c.effect.type === 'follow') {
       await followChoice(state, world, llm, by, npc, candidates[0]);
+      continue;
+    }
+    if (c.effect.type === 'rally') {
+      const source = c.effect.source;
+      if (!llm.choose) continue;
+      let pick: string | null = null;
+      try {
+        pick = await llm.choose({ world, state, npc, candidates, optional: true, what: `당신 무리에 동료가 들었다. ${rallyText(state, world, source)}. 누구에게 할지, 아니면 하지 않을지 고른다` });
+      } catch (e) {
+        console.warn(`choose (rally) for ${c.by} failed:`, e);
+      }
+      if (pick && candidates.some((x) => x.id === pick)) applyRally(state, world, source, pick, state.minutes);
       continue;
     }
     let pick: string | null = null;
@@ -270,7 +298,7 @@ async function followChoice(state: State, world: World, llm: Llm, by: Actor, npc
     addLog(state, { kind: 'status', text: `${josa(shortName(by.name), '은', '는')} ${shortName(suitor.name)}에게 곁을 내주지 않았다.`, regions: [by.region], actors: [by.id, suitor.id] });
     return;
   }
-  bindRetainer(state, by, suitor, state.minutes, '인정');
+  bindRetainer(state, world, by, suitor, state.minutes, '인정');
 }
 
 // Those who seal a color (Iona) and just entered a fight name one (sim/seal.ts). The LLM
@@ -321,7 +349,7 @@ async function talk(state: State, world: World, p: Actor, npcId: string, say: st
   });
   if (reply?.impression) remember(state.actors[npc.id], p, reply.impression, state.minutes);
   if (reply?.follow && !reply.attack && !swayBlocked(state, world, state.actors[npc.id]))
-    bindRetainer(state, state.actors[npc.id], p, state.minutes, '설득');
+    bindRetainer(state, world, state.actors[npc.id], p, state.minutes, '설득');
   if (reply?.attack) {
     addFoe(state.actors[npc.id], p.id, state.minutes);
     addLog(state, { kind: 'combat', text: `${josa(name, '이', '가')} 적의를 드러냈다.`, regions: [p.region], actors: [npc.id, p.id] });
@@ -391,6 +419,7 @@ async function prepare(state: State, world: World, llm: Llm): Promise<string | n
           grow: growInput(state, world, a),
           fetch: fetchInput(state, world, a),
           court: courtInput(state, world, a),
+          hire: hireInput(state, world, a),
           ...spellsInput(state, world, a, npc),
           news,
         });
@@ -453,6 +482,15 @@ function courtInput(state: State, world: World, a: Actor): PlanDayInput['court']
   const out = courtTargets(state, world, a)
     .filter((x) => !x.travel && world.regions.some((r) => r.id === x.region))
     .map((x) => ({ id: x.id, at: x.region, text: `${x.name}: ${npcDef(state, world, x.id)?.summary ?? ''}` }));
+  return out.length ? out : undefined;
+}
+
+// Mercenaries they could hire today (not beasts, not those who serve someone), for their plan.
+function hireInput(state: State, world: World, a: Actor): PlanDayInput['hire'] {
+  if (a.master || npcDef(state, world, a.id)?.beast || !npcDef(state, world, a.id)?.needs.includes('coin')) return undefined;
+  const out = hireableFor(state, world, a)
+    .filter((x) => !x.travel)
+    .map((x) => ({ id: x.id, at: x.region, text: `${x.name} (${npcDef(state, world, x.id)?.summary ?? ''}), costs ${hirePrice(npcDef(state, world, x.id)!)} coin (they have ${Math.floor(a.stats.coin)})` }));
   return out.length ? out : undefined;
 }
 

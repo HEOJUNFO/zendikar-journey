@@ -19,6 +19,7 @@ export const KIND_EFFECTS: Record<LifeKind, Effect> = {
   learn: { energy: -1, hunger: 3, coin: 0 },
   cast: { energy: -1, hunger: 3, coin: 0 },
   court: { energy: -2, hunger: 3, coin: 0 },
+  hire: { energy: -1, hunger: 3, coin: 0 },
 };
 // Change per game hour while travelling between regions.
 export const TRAVEL_EFFECT: Effect = { energy: -3, hunger: 4, coin: 0 };

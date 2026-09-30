@@ -7,7 +7,7 @@
 // fetch: giving up a fetch land they hold to bond with the block's `land` from afar (abilities.ts).
 // learn / cast: learning the block's `spell` where it is taught, or casting one they hold on
 // someone there (spells.ts).
-export const LIFE_KINDS = ['sleep', 'eat', 'work', 'social', 'leisure', 'bond', 'claim', 'store_day', 'spend_day', 'grow', 'fetch', 'learn', 'cast', 'court'] as const;
+export const LIFE_KINDS = ['sleep', 'eat', 'work', 'social', 'leisure', 'bond', 'claim', 'store_day', 'spend_day', 'grow', 'fetch', 'learn', 'cast', 'court', 'hire'] as const;
 export type LifeKind = (typeof LIFE_KINDS)[number];
 
 // start/end are minutes of the game day, 0..1440, end exclusive.
@@ -22,7 +22,7 @@ export type ScheduleBlock = {
   land?: string;
   // learn / cast: the spell.
   spell?: string;
-  // court: the beast whose trust they seek (sim/retainers.ts).
+  // court: the beast whose trust they seek (sim/retainers.ts); hire: the mercenary (sim/allies.ts).
   who?: string;
 };
 
