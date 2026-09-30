@@ -12,9 +12,9 @@ export const MAP_WIDTH = 600;
 export const MAP_HEIGHT = 450;
 
 // fly: can reach sky islands. aquatic: lives in the sea, and only there.
-export const ABILITIES = ['fly', 'aquatic'] as const;
+export const ABILITIES = ['fly', 'aquatic', 'lifelink', 'vigilance'] as const;
 export type Ability = (typeof ABILITIES)[number];
-export const ABILITY_LABELS: Record<Ability, string> = { fly: '비행', aquatic: '물에 삶' };
+export const ABILITY_LABELS: Record<Ability, string> = { fly: '비행', aquatic: '물에 삶', lifelink: '생명연결', vigilance: '경계' };
 
 export const TERRAIN_IDS = [
   'grassland',
@@ -201,6 +201,8 @@ const ActivatedSchema = z
   .default([]);
 
 export const CharacterSimSchema = z.strictObject({
+  // The one living in the world, when a creature entity names its kind (e.g. 펠리다르 군주 of 펠리다르).
+  name: z.string().min(1).optional(),
   pt: PtSchema,
   mana: ManaSchema.optional(),
   role: z.string().min(1),
@@ -214,6 +216,12 @@ export const CharacterSimSchema = z.strictObject({
   // A beast: doesn't talk, hunts whoever stands with it when hungry, hunts a land out, and
   // holds only the hunting ground it last bonded with.
   beast: z.boolean().default(false),
+  // A beast that may choose to follow one who wins its trust (the Felidar Sovereign): the
+  // player by talking to it, an NPC by a "court" block. The LLM decides, as the beast.
+  tamable: z.boolean().default(false),
+  // "At the beginning of your upkeep, if you have N or more life, you win the game": its
+  // controller (its master; a beast alone is no player) wins at 00:00 (sim/win.ts).
+  wins_at_life: z.number().int().min(1).optional(),
   // Landfall: when they bond with a land, they get +P/+T (and trample) until the turn ends.
   landfall: z.strictObject({ pt: z.tuple([z.number().int(), z.number().int()]), trample: z.boolean().default(false) }).optional(),
   // The creature kind a character is (e.g. cre-vampire). A creature entity's sim is its own kind.
@@ -434,6 +442,8 @@ export type NpcDef = {
   abilities: Ability[];
   needs: Need[];
   beast?: boolean;
+  tamable?: boolean;
+  winsAtLife?: number;
   landfall?: { pt: [number, number]; trample: boolean };
   // The creature kind they are (e.g. cre-vampire), for "a Vampire you control".
   creature?: string;
@@ -590,14 +600,15 @@ export function buildWorld(entities: RawEntity[]): { world: World; errors: strin
         err(e.id, `sim 오류: ${issues(sim.error)}`);
         continue;
       }
-      const { knows_colors, activated, ...rest } = sim.data;
+      const { knows_colors, activated, wins_at_life, name, ...rest } = sim.data;
       world.npcs.push({
         id: e.id,
-        name: e.name,
+        name: name ?? e.name,
         summary: e.summary ?? '',
         ...rest,
         creature: e.kind === 'creature' ? e.id : rest.creature,
         knowsColors: knows_colors,
+        ...(wins_at_life !== undefined ? { winsAtLife: wins_at_life } : {}),
         activated: activated.map((x) => ({ ...x, cost: parseManaCost(x.cost)!, costText: x.cost })),
       });
     } else if (e.kind === 'event') {

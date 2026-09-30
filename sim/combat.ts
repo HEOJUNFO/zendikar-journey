@@ -7,7 +7,7 @@ import { formatClock, gameDay, STEP_MINUTES } from './clock.ts';
 import { remember } from './relations.ts';
 import { masterOf, releaseRetainer, retainersOf } from './retainers.ts';
 import { releaseItems } from './items.ts';
-import { doubleLife } from './life.ts';
+import { doubleLife, gainLife, lifeOf } from './life.ts';
 import { HUNT_HUNGER, KILL_FEED, KO_ACTIVITY, KO_HOURS } from './rules.ts';
 import { addLog, needsOf, npcDef, outOfTime, present, ptOf, random } from './state.ts';
 import type { Actor, State } from './state.ts';
@@ -153,6 +153,7 @@ export function clash(state: State, attacker: Actor, defender: Actor, t: number)
   // An aura that doubles its controller's life when its bearer deals combat damage.
   for (const [x, dealt] of [[attacker, ap], [defender, dp]] as const) {
     if (dealt <= 0) continue;
+    lifelink(state, x, dealt, t);
     for (const aura of x.auras ?? []) {
       if (!aura.doubleLifeOnHit) continue;
       const controller = masterOf(state, x) ?? x;
@@ -175,7 +176,17 @@ export function clash(state: State, attacker: Actor, defender: Actor, t: number)
       actors: [s.who.id],
     });
     dealDamage(state, s.who, s.excess, t, `${by}의 돌진`, !lethal(from, s.who));
+    lifelink(state, from, s.excess, t);
   }
+}
+
+// Lifelink: damage they deal also gains their controller (their master, or themselves) that
+// much life.
+function lifelink(state: State, x: Actor, dealt: number, t: number) {
+  if (!x.abilities.includes('lifelink') || dealt <= 0) return;
+  const controller = masterOf(state, x) ?? x;
+  if (controller.dead || lifeOf(controller) === null) return;
+  gainLife(state, controller, dealt, t, `${shortName(x.name)}의 생명연결`);
 }
 
 // A hungry beast picks the weakest one standing with it (not those of legend, with powers).

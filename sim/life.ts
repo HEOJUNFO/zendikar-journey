@@ -1,5 +1,5 @@
 // Life (world/README.md: MTG 규칙 → 게임 대응). There is no life total: life rides on energy,
-// ten energy to a point of life. Losing life can't kill, but a body drained to nothing
+// 2.5 energy to a point of life (full energy, 100, is 40 life: [결정] 2026-09-30). Losing life can't kill, but a body drained to nothing
 // collapses. Only effects that say "gain life" count as gaining it (sleep and food restore
 // energy, not life).
 import { gameDay } from './clock.ts';
@@ -8,7 +8,7 @@ import { addLog, needsOf } from './state.ts';
 import type { Actor, State } from './state.ts';
 import { josa, shortName, toward } from './text.ts';
 
-export const LIFE_ENERGY = 10;
+export const LIFE_ENERGY = 2.5;
 
 export function loseLife(state: State, a: Actor, amount: number, cause: string) {
   if (a.dead || !needsOf(a).includes('energy') || amount <= 0) return;

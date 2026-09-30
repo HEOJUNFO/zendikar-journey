@@ -5,11 +5,12 @@ name: 세지리
 name_en: Sejiri
 summary: 젠디카르 북쪽 끝의 얼음 대륙. 눈보라가 그치지 않는 설원과 깎아지른 얼음 절벽이 이어진다
 status: canon
-sources: [ZEN-224]
+sources: [ZEN-224, ZEN-12]
 tags: [대륙, 설원, 얼음, 백색]
 links:
   - { to: loc-sejiri-refuge, rel: 안의 구역 }
   - { to: loc-akoum, rel: 남쪽의 대륙 }
+  - { to: cre-felidar, rel: 펠리다르 군주가 사는 곳 }
 map: { x: 480, y: 68, terrain: tundra, size: continent }
 ---
 
@@ -25,4 +26,5 @@ map: { x: 480, y: 68, terrain: tundra, size: continent }
 
 ## 미정/질문
 
-- 세지리에 누가 사는지, 세지리의 다른 곳: 그 카드가 나오면.
+- 펠리다르 군주(`cre-felidar`, ZEN-12)가 얼음 봉우리에 산다 ([결정] 2026-09-30).
+- 세지리에 사는 다른 이, 세지리의 다른 곳: 그 카드가 나오면.

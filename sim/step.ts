@@ -25,8 +25,9 @@ import { addFoe, dealDamage, hostileNpcs } from './combat.ts';
 import { bondBlocked, bondLand, expireGranted, FETCH_HOURS, fetchLand, fetchSource, growBlocked, growEntered, growLand, spawnWild, upkeepRevive, useAbility } from './abilities.ts';
 import { CLAIM_HOURS, claimBlocked, claimItem, itemsAt } from './items.ts';
 import { EON_HOURS, eonLand, holdStill, spendBlocked, spendDay, storeBlocked, storeDay, timeNews } from './eons.ts';
+import { upkeepWins } from './win.ts';
+import { COURT_HOURS, courtBlocked, masterOf, readyCourt } from './retainers.ts';
 import { learnBlocked, learnSpell, npcCastBlocked, readyCast, spellDef } from './spells.ts';
-import { masterOf } from './retainers.ts';
 import { payMana } from './mana.ts';
 import type { Actor, GmPlan, State, Task } from './state.ts';
 import { josa, shortName, toward } from './text.ts';
@@ -50,7 +51,7 @@ export function step(state: State, world: World) {
     actorHour(state, world, a, t);
     // A timed task done: the player's action, or an NPC's bonding, taming or keeping days.
     const done = a.task?.until !== undefined && a.task.until <= t + STEP_MINUTES && !a.travel;
-    const timed = ['bond', 'claim', 'store_day', 'spend_day', 'grow', 'fetch', 'learn', 'cast'];
+    const timed = ['bond', 'claim', 'store_day', 'spend_day', 'grow', 'fetch', 'learn', 'cast', 'court'];
     if (done && (a.kind === 'player' || timed.includes(a.task!.kind))) {
       const at = t + STEP_MINUTES;
       if (a.task!.kind === 'bond') bondLand(state, world, a, at, a.region, a.task!.target);
@@ -62,6 +63,8 @@ export function step(state: State, world: World) {
       if (a.task!.kind === 'grow' && a.task!.land) growEntered(state, world, a, a.task!.land, at);
       // An NPC's spell: whom it falls on is asked of the LLM after the hour (the player's was cast as they began).
       if (a.task!.kind === 'cast' && a.kind === 'npc' && a.task!.spell) readyCast(state, world, a, a.task!.spell, at);
+      // A court: the beast decides after the hour whether to follow them.
+      if (a.task!.kind === 'court' && a.task!.who) readyCourt(state, world, a, a.task!.who, at);
       a.task = undefined;
     }
   }
@@ -79,6 +82,7 @@ function startDay(state: State, world: World, t: number) {
     timeNews(state, world, t);
     expireGranted(state, t);
     upkeepRevive(state, world, t);
+    upkeepWins(state, world, t);
   }
   if (state.gm.day !== day) state.gm = { day, source: 'none', fires: [] };
   if (state.met.day !== day) state.met = { day, pairs: [] };
@@ -412,13 +416,14 @@ function npcTask(state: State, world: World, a: Actor, t: number): Task | undefi
     : (block.kind === 'learn' || block.kind === 'cast') && !spell ? '그런 주문은 없다.'
     : block.kind === 'learn' ? learnBlocked(world, a, spell!.id)
     : block.kind === 'cast' ? npcCastBlocked(state, world, a, spell!.id, t)
+    : block.kind === 'court' ? courtBlocked(state, world, a, block.who)
     : block.kind === 'claim' && !item ? (itemsAt(world, a.region).map((x) => claimBlocked(state, world, a, x.id, t))[0] ?? '길들일 것이 없다.')
     : power && !land ? '그런 힘을 가진 땅이 없다.'
     : block.kind === 'store_day' ? storeBlocked(state, world, a, land!.id, t)
     : block.kind === 'spend_day' ? spendBlocked(state, world, a, land!.id, t)
     : block.kind === 'grow' ? growBlocked(state, world, a, land!.id, t)
     : null;
-  const timed = ['bond', 'claim', 'store_day', 'spend_day', 'grow', 'fetch', 'learn', 'cast'];
+  const timed = ['bond', 'claim', 'store_day', 'spend_day', 'grow', 'fetch', 'learn', 'cast', 'court'];
   if (!cannot && timed.includes(block.kind) && a.task?.kind === block.kind) return a.task;
   const task: Task =
     block.kind === 'work' && landUnusable(state, a.region)
@@ -429,6 +434,8 @@ function npcTask(state: State, world: World, a: Actor, t: number): Task | undefi
           ? { kind: 'bond', activity: block.activity, emoji: block.emoji, until: t + BOND_HOURS * 60 }
           : spell
             ? { kind: block.kind, activity: block.activity, emoji: block.emoji, until: t + (block.kind === 'learn' ? spell.learnHours : 1) * 60, spell: spell.id }
+          : block.kind === 'court'
+            ? { kind: 'court', activity: block.activity, emoji: block.emoji, until: t + COURT_HOURS * 60, who: block.who }
           : fetchFrom && 'from' in fetchFrom
             ? { kind: 'fetch', activity: block.activity, emoji: block.emoji, until: t + FETCH_HOURS * 60, from: fetchFrom.from.id, land: block.land }
           : item

@@ -12,6 +12,8 @@ import { CLAIM_HOURS, claimBlocked, itemsAt, itemsOf } from '../sim/items.ts';
 import { eonLand, eonsIn, spendBlocked, storeBlocked } from '../sim/eons.ts';
 import { castBlocked, harmful, learnBlocked, spellsTaughtAt } from '../sim/spells.ts';
 import { sealToday } from '../sim/seal.ts';
+import { isWinner } from '../sim/win.ts';
+import { lifeOf } from '../sim/life.ts';
 import type { Actor, LogEntry, State } from '../sim/state.ts';
 import { ruinsUntil, travelBlocked } from '../sim/step.ts';
 import { josa, shortName } from '../sim/text.ts';
@@ -261,6 +263,7 @@ export function PeopleList({ world, state, all }: { world: World; state: State; 
           <b>{shortName(a.name)}</b> <small className="muted">{fighting(a, state.minutes)}</small>
           {a.master && state.actors[a.master] && <small className="muted"> · {shortName(state.actors[a.master].name)}의 권속</small>}
           {sealToday(a, state.minutes) && <small className="muted"> · {COLOR_LABELS[sealToday(a, state.minutes)!]}색 봉인</small>}
+          {isWinner(state, a.id) && <small className="muted"> · 🏆 세계의 승자</small>}
           <p className="muted">{status(world, a)}</p>
           {!p && (
             <>
@@ -291,7 +294,9 @@ export function PlayerCard({ world, state }: { world: World; state: State }) {
       </h2>
       {p.background && <p className="muted">{p.background}</p>}
       <p>{status(world, p)}</p>
+      {isWinner(state, p.id) && <p>🏆 세계의 승자 ({formatClock(state.winners!.find((w) => w.id === p.id)!.at)})</p>}
       <Bar label="기력" value={p.stats.energy} />
+      <p className="muted">생명 {Math.floor(lifeOf(p)! * 10) / 10}</p>
       <Bar label="배고픔" value={p.stats.hunger} bad />
       <div className="bar">
         <span>돈</span>

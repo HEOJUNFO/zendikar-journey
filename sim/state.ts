@@ -23,6 +23,8 @@ export type Task = {
   // keeps days (sim/eons.ts).
   from?: string;
   land?: string;
+  // court: the beast whose trust they seek.
+  who?: string;
   // bond: whom the land's targeted effect ("target player loses N life") falls on (the player's pick).
   target?: string;
 };
@@ -109,7 +111,7 @@ export type Actor = {
 
 // What falls on the one picked: a land's bonding effect, a burst of damage (Valakut), or a
 // spell an NPC casts (sim/spells.ts).
-export type ChoiceEffect = BondEffect | { type: 'damage'; amount: number } | { type: 'cast'; spell: string };
+export type ChoiceEffect = BondEffect | { type: 'damage'; amount: number } | { type: 'cast'; spell: string } | { type: 'follow' };
 
 export type Condition = {
   label: string;
@@ -176,6 +178,9 @@ export type State = {
   playerId?: string;
   // The player character died: their life is over.
   over?: { at: number; cause: string };
+  // Those who won the game ("you win the game", sim/win.ts): the world's winners. The game
+  // goes on; each is named once. `by`: what won it for them (e.g. the Felidar Sovereign).
+  winners?: { id: string; name: string; at: number; by: string }[];
   actors: Record<string, Actor>;
   // Characters born in play (MTG tokens, e.g. Kalitas's risen vampires), who have no entity
   // file: what they live by.

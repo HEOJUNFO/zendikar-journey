@@ -19,6 +19,7 @@ import { spendBlocked, storeBlocked } from './eons.ts';
 import { bondBlocked, bondLand, bondTargets, fetchTargets, fireTargets, firesOnBond, growBlocked, spawnWild, useAbility } from './abilities.ts';
 import { DEPLETED_LABEL, DESTROYED_DAYS } from './rules.ts';
 import { swayBlocked } from './retainers.ts';
+import { upkeepWins } from './win.ts';
 import type { State } from './state.ts';
 import { affectedRegions, buildWorld, region, travelHours } from './world.ts';
 import type { RawEntity } from './world.ts';
@@ -32,7 +33,7 @@ const loc = (id: string, x: number, y: number, terrain: string): RawEntity => ({
 });
 // No one's day is written anywhere: the LLM plans it. Here a fake planner stands in, giving
 // each character the day a test writes for them (`plan` in these helpers, as
-// [start, end, region, kind, activity, emoji, land?, spell?] rows), or a day at leisure where they stand.
+// [start, end, region, kind, activity, emoji, land?, spell?, who?] rows), or a day at leisure where they stand.
 const PLANS = new Map<string, unknown[][]>();
 const planned = (e: RawEntity): RawEntity => {
   const { plan, ...sim } = e.sim as { plan?: unknown[][] };
@@ -41,7 +42,7 @@ const planned = (e: RawEntity): RawEntity => {
   return { ...e, sim };
 };
 const planDay: Llm['planDay'] = async (input) =>
-  (PLANS.get(input.id) ?? [['00:00', '24:00', input.here, 'leisure', '머무름', '🙂']]).map(([start, end, regionId, kind, activity, emoji, land, spell]) => ({
+  (PLANS.get(input.id) ?? [['00:00', '24:00', input.here, 'leisure', '머무름', '🙂']]).map(([start, end, regionId, kind, activity, emoji, land, spell, who]) => ({
     start: parseTimeOfDay(start as string),
     end: parseTimeOfDay(end as string),
     regionId: regionId as string,
@@ -50,6 +51,7 @@ const planDay: Llm['planDay'] = async (input) =>
     emoji: emoji as string,
     ...(land ? { land: land as string } : {}),
     ...(spell ? { spell: spell as string } : {}),
+    ...(who ? { who: who as string } : {}),
   }));
 const act = (state: State, world: World, action: Action | string, llm: Llm = {}) => runAct(state, world, action, { planDay, ...llm });
 const advance = (state: State, world: World, hours: number, llm: Llm = {}) => runAdvance(state, world, hours, { planDay, ...llm });
@@ -507,10 +509,10 @@ test('an enter trap bites only those who gained life today, and drains energy', 
   const drained = character(world, 'loc-a');
   const q = drained.actors[PLAYER_ID];
   gainLife(drained, q, 1, drained.minutes, '시험');
-  assert.equal(q.stats.energy, 90);
+  assert.equal(q.stats.energy, 82.5); // a life is 2.5 energy
   await act(drained, world, { type: 'move', to: 'loc-b' }, {});
   assert.ok(texts(drained).some((t) => t.includes('생명 5을 잃었다')));
-  assert.ok(q.stats.energy < 50);
+  assert.ok(q.stats.energy <= 70); // 5 life: 12.5 energy
   assert.equal(q.dead, undefined); // life loss isn't damage
   assert.ok(p.stats.energy > q.stats.energy);
 });
@@ -870,7 +872,7 @@ test('an item is tamed with mana where it stands; it holds its owner\'s life and
   await act(state, world, { type: 'bond' });
   p.stats.energy = 70;
   await act(state, world, { type: 'claim', item: 'itm-v' });
-  assert.deepEqual(state.items?.['itm-v'], { name: '그릇', owner: PLAYER_ID, counters: 7 }); // 69 energy: life 6.9
+  assert.deepEqual(state.items?.['itm-v'], { name: '그릇', owner: PLAYER_ID, counters: 28 }); // 69 energy: life 27.6
   assert.match((await act(state, world, { type: 'claim', item: 'itm-v' })).error!, /이미 그릇을 길들였다/);
   // Worn down, then a new land the next day: life becomes what the vessel holds.
   await act(state, world, { type: 'wait', hours: 24 });
@@ -918,7 +920,7 @@ test('a refuge: enters tapped (no mana the day it is bonded), gives life on bond
   const p = state.actors[PLAYER_ID];
   p.stats.energy = 50;
   await act(state, world, { type: 'bond' });
-  assert.equal(p.stats.energy, 56); // +10 life, less 4 hours of bonding
+  assert.equal(p.stats.energy, 48.5); // +2.5 life, less 4 hours of bonding
   assert.equal(p.lifeGained, 0);
   assert.deepEqual(manaCapacity(state, world, p, state.minutes), {});
   await act(state, world, { type: 'wait', hours: 24 });
@@ -954,7 +956,7 @@ test('a fetch land gives no mana; given up with 1 life, it bonds a mountain or p
   assert.deepEqual(p.bonds, ['loc-c']);
   assert.deepEqual(p.landfalls?.regions, ['loc-mesa', 'loc-c']); // the day's second landfall
   assert.deepEqual(p.fetched, ['loc-c']);
-  assert.equal(p.stats.energy, 39); // -10 for the life, -1 for the hour
+  assert.equal(p.stats.energy, 46.5); // -2.5 for the life, -1 for the hour
   assert.deepEqual(manaCapacity(state, world, p, state.minutes), { R: 1 });
   assert.match((await act(state, world, { type: 'fetch', from: 'loc-mesa', to: 'loc-a' })).error!, /유대를 맺고 있어야/);
 });
@@ -1203,7 +1205,7 @@ test('a land that takes a life: the player picks someone there as they bond, and
   assert.ok(bondTargets(state, world, state.actors[PLAYER_ID], 'loc-piranha', { type: 'lose_life', amount: 1 }).includes(snake)); // a beast may be picked too
   await act(state, world, { type: 'bond', target: 'chr-x' });
   assert.deepEqual(state.actors[PLAYER_ID].bonds, ['loc-piranha']);
-  assert.equal(x.stats.energy, 36); // -10 for the life, -1 an hour of leisure for 4 hours
+  assert.equal(x.stats.energy, 43.5); // -2.5 for the life, -1 an hour of leisure for 4 hours
 });
 
 test('an NPC bonding with it picks by the LLM whom it falls on; alone, it falls on no one', async () => {
@@ -1215,7 +1217,7 @@ test('an NPC bonding with it picks by the LLM whom it falls on; alone, it falls 
   const choose: Llm['choose'] = async ({ candidates }) => (asked.push(candidates.map((a) => a.id)), PLAYER_ID);
   await act(state, world, { type: 'wait', hours: 4 }, { choose });
   assert.deepEqual(asked, [[PLAYER_ID]]);
-  assert.equal(p.stats.energy, 36);
+  assert.equal(p.stats.energy, 43.5);
   assert.ok(texts(state).some((t) => t.includes('피라냐 습지에 내주었다')));
 
   const alone = character(fixture([piranhas, npc('chr-x', { ...npcSim('loc-piranha'), plan: [['00:00', '24:00', 'loc-piranha', 'bond', '늪과 유대', '🌱']] })]), 'loc-a');
@@ -1385,7 +1387,7 @@ test('the real Malakir: one who gained life today walks in and the needlebite tr
   const before = p.stats.energy;
   await act(state, world, { type: 'move', to: 'loc-malakir' });
   assert.ok(texts(state).some((x) => x.includes('가시가 튀어나와')));
-  assert.ok(p.stats.energy <= before - 50);
+  assert.ok(p.stats.energy <= before - 12.5);
 });
 
 test('the real baloth starts out in the jungle of Bala Ged', () => {
@@ -1418,7 +1420,7 @@ test('an NPC learns a spell by a learn block where it is taught, then casts it b
   await advance(state, world, 1, llm); // the cast
   assert.deepEqual(asked, [['chr-x']]); // not themselves: "target opponent"
   assert.ok(texts(state).some((t) => t.includes('공물을 걸었다')));
-  assert.ok(x.stats.energy <= energy - Math.ceil(energy / 10 / 2) * 10); // half their life, and the hour's own toll
+  assert.ok(x.stats.energy <= energy / 2); // half their life (rounded up), and the hour's own toll
   assert.deepEqual(x.foes?.ids, ['chr-v']);
   assert.equal(formatMana(manaAvailable(state, world, v, state.minutes)), '없음'); // paid
 });
@@ -1459,4 +1461,107 @@ test('the real cobra trap lies in Verdant Catacombs: laid waste, it looses four 
 test('the real eternity vessel stands on Ondu', () => {
   const world = loadWorld();
   assert.equal(world.items.find((x) => x.id === 'itm-eternity-vessel')?.at, 'loc-ondu');
+});
+
+const felidar = (plan?: unknown[][]): RawEntity => planned({
+  id: 'cre-f',
+  kind: 'creature',
+  name: '펠리다르',
+  status: 'canon',
+  sim: {
+    name: '펠리다르 군주',
+    pt: [4, 6],
+    role: 'r',
+    home: 'loc-a',
+    persona: 'p',
+    goal: 'g',
+    needs: ['energy'],
+    beast: true,
+    tamable: true,
+    abilities: ['vigilance', 'lifelink'],
+    wins_at_life: 40,
+    ...(plan ? { plan } : {}),
+  },
+});
+
+test('lifelink: the damage a lifelinked one deals gains its controller that much life', async () => {
+  const world = fixture([felidar(), npc('chr-y', npcSim('loc-a', 'social', [1, 9]))]);
+  const state = newState(world, { seed: 1, mode: 'observer' });
+  const f = state.actors['cre-f'];
+  assert.equal(f.name, '펠리다르 군주');
+  f.stats.energy = 50;
+  addFoe(f, 'chr-y', state.minutes);
+  await advance(state, world, 1);
+  assert.ok(texts(state).some((t) => t.includes('생명연결') && t.includes('생명 4을 얻었다')));
+  assert.equal(f.lifeGained, 0); // day 1
+  assert.ok(f.stats.energy >= 50 + 10 - 8); // 4 life, less the fight hour
+});
+
+test('a beast that may follow answers the player in deeds, and may follow them; with it, full life at midnight wins', async () => {
+  const world = fixture([felidar()]);
+  const state = character(world, 'loc-a');
+  const p = state.actors[PLAYER_ID];
+  let beast: boolean | undefined;
+  await act(state, world, { type: 'talk', to: 'cre-f', say: '함께 가자' }, { reply: async (x) => ((beast = x.beast), { say: '펠리다르 군주가 고개를 숙인다.', attack: false, follow: true }) });
+  assert.equal(beast, true);
+  assert.ok(texts(state).includes('펠리다르 군주가 고개를 숙인다.'));
+  assert.equal(state.actors['cre-f'].master, PLAYER_ID);
+  // Life 40 is full energy: short of it, no win.
+  p.stats.energy = 99;
+  upkeepWins(state, world, state.minutes);
+  assert.equal(state.winners?.length ?? 0, 0);
+  p.stats.energy = 100;
+  upkeepWins(state, world, state.minutes);
+  upkeepWins(state, world, state.minutes);
+  assert.deepEqual(state.winners?.map((w) => [w.id, w.by]), [[PLAYER_ID, '펠리다르 군주']]);
+  assert.ok(state.log.some((e) => e.scope === 'world' && e.text.includes('세계의 승자')));
+});
+
+test('an NPC courts the beast by a court block; the beast (the LLM) follows them, and full at midnight they win', async () => {
+  const plan = [
+    ['00:00', '06:00', 'loc-a', 'sleep', '잠', '😴'],
+    ['06:00', '08:00', 'loc-a', 'court', '펠리다르 곁에 머묾', '🐾', undefined, undefined, 'cre-f'],
+    ['08:00', '24:00', 'loc-a', 'sleep', '잠', '😴'],
+  ];
+  const world = fixture([felidar(), npc('chr-m', { ...npcSim('loc-a'), needs: ['energy'], plan })]);
+  const state = newState(world, { seed: 1, mode: 'observer' });
+  const f = state.actors['cre-f'];
+  let offered: PlanDayInput | undefined;
+  const asked: [string, string[]][] = [];
+  const llm: Llm = {
+    planDay: async (input) => (input.id === 'chr-m' && (offered = input), planDay!(input)),
+    choose: async ({ npc, candidates }) => (asked.push([npc.id, candidates.map((c) => c.id)]), candidates[0].id),
+  };
+  // Alone, the beast wins nothing.
+  f.stats.energy = 100;
+  upkeepWins(state, world, state.minutes);
+  assert.equal(state.winners?.length ?? 0, 0);
+  await advance(state, world, 2, llm); // 06:00 → 08:00
+  assert.deepEqual(offered?.court?.map((x) => [x.id, x.at]), [['cre-f', 'loc-a']]);
+  assert.deepEqual(asked, [['cre-f', ['chr-m']]]);
+  assert.equal(f.master, 'chr-m');
+  assert.ok(texts(state).some((t) => t.includes('권속이 되었다 (인정)')));
+  // A beast that follows someone is no longer courted.
+  assert.equal(swayBlocked(state, world, f)?.includes('이미'), true);
+  await advance(state, world, 17, llm); // through the upkeep at 00:00 of day 2, asleep and full
+  assert.deepEqual(state.winners?.map((w) => w.id), ['chr-m']);
+});
+
+test('a beast that follows no one may turn a suitor away', async () => {
+  const plan = [['00:00', '24:00', 'loc-a', 'court', '곁에 머묾', '🐾', undefined, undefined, 'cre-f']];
+  const world = fixture([felidar(), npc('chr-m', { ...npcSim('loc-a'), plan })]);
+  const state = newState(world, { seed: 1, mode: 'observer' });
+  await advance(state, world, 2, { choose: async () => null });
+  assert.equal(state.actors['cre-f'].master, undefined);
+  assert.ok(texts(state).some((t) => t.includes('곁을 내주지 않았다')));
+});
+
+test('the real Felidar Sovereign lives in Sejiri, with lifelink, and may follow someone', () => {
+  const world = loadWorld();
+  const state = newState(world, { seed: 1, mode: 'observer' });
+  const f = state.actors['cre-felidar'];
+  assert.equal(f?.name, '펠리다르 군주');
+  assert.equal(f.region, 'loc-sejiri');
+  assert.ok(f.abilities.includes('lifelink'));
+  assert.equal(swayBlocked(state, world, f), null);
 });

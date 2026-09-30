@@ -16,7 +16,7 @@ import { opponentsOf, sealsDue, setSeal } from './seal.ts';
 import { COLORS } from './mana.ts';
 import type { Color } from './mana.ts';
 import { abilityBlocked, applyBondEffect, enteredToday, fetchBlocked, fetchTargets, growBlocked, growLand } from './abilities.ts';
-import { bindRetainer, swayBlocked } from './retainers.ts';
+import { bindRetainer, courtTargets, swayBlocked } from './retainers.ts';
 import { josa, shortName } from './text.ts';
 import type { ScheduleBlock } from './types.ts';
 import { ABILITY_LABELS, canStay, LAND_TYPE_LABELS, landTypes, placeName } from './world.ts';
@@ -34,7 +34,9 @@ export type GmDayInput = {
 };
 export type NarrateInput = { world: World; state: State; entries: LogEntry[] };
 export type InterpretInput = { world: World; state: State; text: string };
-export type ReplyInput = { world: World; state: State; npc: Speaker; say: string };
+// `beast`: they have no words (a beast that may still follow someone, sim/retainers.ts): the
+// reply is what they do, narrated.
+export type ReplyInput = { world: World; state: State; npc: Speaker; say: string; beast?: boolean };
 // What the NPC says, whether they now attack the player or pledge to serve them (become their
 // retainer), and what they now think of them.
 export type Reply = { say: string; attack: boolean; follow?: boolean; impression?: string };
@@ -198,6 +200,10 @@ async function choices(state: State, world: World, llm: Llm) {
       await castChoice(state, world, llm, by, npc, c.effect.spell, candidates);
       continue;
     }
+    if (c.effect.type === 'follow') {
+      await followChoice(state, world, llm, by, npc, candidates[0]);
+      continue;
+    }
     let pick: string | null = null;
     if (llm.choose) {
       try {
@@ -248,6 +254,24 @@ async function castChoice(state: State, world: World, llm: Llm, by: Actor, npc: 
   castSpell(state, world, by, s.id, pick, kick, state.minutes);
 }
 
+// A beast that may follow someone was courted (sim/retainers.ts `readyCourt`): the LLM decides,
+// as the beast, whether to follow them. With no answer it stays its own.
+async function followChoice(state: State, world: World, llm: Llm, by: Actor, npc: Speaker, suitor: Actor) {
+  if (!llm.choose) return;
+  let pick: string | null = null;
+  try {
+    const what = `${shortName(suitor.name)}이(가) 두 시간 동안 당신 곁에 머물며 당신의 마음을 얻으려 했다. 그를 주인으로 인정해 따르고 섬길지(고른다), 아니면 아무도 고르지 않고 홀로 남을지 정한다. 따르는 것은 드물고 큰 일이다`;
+    pick = await llm.choose({ world, state, npc, candidates: [suitor], optional: true, what });
+  } catch (e) {
+    console.warn(`choose (follow) for ${by.id} failed:`, e);
+  }
+  if (pick !== suitor.id || suitor.dead || suitor.master || suitor.region !== by.region || swayBlocked(state, world, by)) {
+    addLog(state, { kind: 'status', text: `${josa(shortName(by.name), '은', '는')} ${shortName(suitor.name)}에게 곁을 내주지 않았다.`, regions: [by.region], actors: [by.id, suitor.id] });
+    return;
+  }
+  bindRetainer(state, by, suitor, state.minutes, '인정');
+}
+
 // Those who seal a color (Iona) and just entered a fight name one (sim/seal.ts). The LLM
 // picks; with no answer, a color at random (the card must name one).
 async function seals(state: State, world: World, llm: Llm) {
@@ -275,21 +299,22 @@ async function talk(state: State, world: World, p: Actor, npcId: string, say: st
   const name = shortName(npc.name);
   addLog(state, { kind: 'speech', text: `${shortName(p.name)}: “${say}”`, regions: [p.region], actors: [p.id, npc.id] });
   let reply: Reply | null = null;
-  // A beast has no words.
-  if (npcDef(state, world, npcId)?.beast) {
+  // A beast has no words. One that may follow someone still answers, in what it does.
+  const def = npcDef(state, world, npcId);
+  if (def?.beast && !def.tamable) {
     addLog(state, { kind: 'speech', text: `${josa(name, '은', '는')} 대꾸 없이 낮게 으르렁거린다.`, regions: [p.region], actors: [npcId, p.id] });
     return;
   }
   if (llm.reply) {
     try {
-      reply = await llm.reply({ world, state, npc, say });
+      reply = await llm.reply({ world, state, npc, say, beast: !!def?.beast });
     } catch (e) {
       console.warn(`reply from ${npc.id} failed:`, e);
     }
   }
   addLog(state, {
     kind: 'speech',
-    text: reply ? `${name}: “${reply.say}”` : `${josa(name, '은', '는')} 말없이 당신을 바라본다.`,
+    text: reply ? (def?.beast ? reply.say : `${name}: “${reply.say}”`) : `${josa(name, '은', '는')} 말없이 당신을 바라본다.`,
     regions: [p.region],
     actors: [npc.id, p.id],
   });
@@ -363,6 +388,7 @@ async function prepare(state: State, world: World, llm: Llm): Promise<string | n
           days: daysInput(state, world, a),
           grow: growInput(state, world, a),
           fetch: fetchInput(state, world, a),
+          court: courtInput(state, world, a),
           ...spellsInput(state, world, a, npc),
           news,
         });
@@ -418,6 +444,14 @@ function spellsInput(state: State, world: World, a: Actor, npc: NpcDef): Pick<Pl
   const learn = npc.beast ? [] : learnableSpells(world, a).map((s) => ({ id: s.id, at: s.learnAt, text: `${text(s)}; learning takes ${s.learnHours} hours` }));
   const cast = castableSpells(state, world, a, state.minutes).map((s) => ({ id: s.id, text: text(s) }));
   return { ...(learn.length ? { learn } : {}), ...(cast.length ? { cast } : {}) };
+}
+
+// Beasts whose trust they could seek today, and where each is, for their plan.
+function courtInput(state: State, world: World, a: Actor): PlanDayInput['court'] {
+  const out = courtTargets(state, world, a)
+    .filter((x) => !x.travel && world.regions.some((r) => r.id === x.region))
+    .map((x) => ({ id: x.id, at: x.region, text: `${x.name}: ${npcDef(state, world, x.id)?.summary ?? ''}` }));
+  return out.length ? out : undefined;
 }
 
 // Lands they could seek out with the fetch lands they hold, for their plan.
