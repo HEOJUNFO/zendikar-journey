@@ -1,10 +1,10 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="227 73 4334 3251" width="4334" height="3251">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="175 73 4334 3251" width="4334" height="3251">
   <style>
     .name { font: 600 18px sans-serif; fill: #f4ecd8; }
     .terrain { font: 13px sans-serif; fill: #b9c3cf; }
     .area { font: 600 14px sans-serif; fill: #f4ecd8; }
   </style>
-  <rect x="227" y="73" width="4334" height="3251" fill="#16324f"/>
+  <rect x="175" y="73" width="4334" height="3251" fill="#16324f"/>
   <line x1="2526" y1="2220" x2="2334" y2="2652" stroke="#1f4468" stroke-width="228" stroke-linecap="round"/>
   <line x1="2526" y1="2220" x2="2856" y2="2142" stroke="#1f4468" stroke-width="180" stroke-linecap="round"/>
   <line x1="2526" y1="2220" x2="2526" y2="2544" stroke="#1f4468" stroke-width="180" stroke-linecap="round"/>
@@ -109,6 +109,9 @@
   <g><circle cx="1996.8000000000002" cy="2530.8" r="70" fill="#1d3b66" opacity="0.75"/><circle cx="1996.8000000000002" cy="2530.8" r="30" fill="none" stroke="#9fc4ff" stroke-width="2" stroke-dasharray="6 6"/>
     <text x="1996.8000000000002" y="2622.8" text-anchor="middle" class="name">실룬디 바다</text>
     <text x="1996.8000000000002" y="2640.8" text-anchor="middle" class="terrain">심해</text></g>
+  <g><circle cx="840" cy="894" r="70" fill="#1d3b66" opacity="0.75"/><circle cx="840" cy="894" r="30" fill="none" stroke="#9fc4ff" stroke-width="2" stroke-dasharray="6 6"/>
+    <text x="840" y="986" text-anchor="middle" class="name">선더만 앞바다</text>
+    <text x="840" y="1004" text-anchor="middle" class="terrain">심해</text></g>
   <g>
     <text x="2215.2" y="790.2" text-anchor="middle" class="name">타짐</text>
     <text x="2215.2" y="808.2" text-anchor="middle" class="terrain">해변</text></g>

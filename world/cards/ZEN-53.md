@@ -12,7 +12,7 @@ rarity: mythic
 artist: "Kekai Kotaki"
 scryfall: https://scryfall.com/card/zen/53/lorthos-the-tidemaker
 added: 2026-09-29
-entities: [chr-lorthos, evt-lorthos-emerges, law-mana-colors, loc-thunder-bay, loc-murasa]
+entities: [chr-lorthos, evt-lorthos-emerges, law-mana-colors, loc-sunder-offing, loc-thunder-bay, loc-murasa]
 ---
 
 ## 카드 원문
@@ -54,3 +54,4 @@ entities: [chr-lorthos, evt-lorthos-emerges, law-mana-colors, loc-thunder-bay, l
 - 2026-09-30 (사용자 결정): 심해의 영역을 없애고, 로르토스를 무라사 안의 바다 구역 선더만(`loc-thunder-bay`, 기본 섬)으로 옮겼다. 출현의 해안은 선더만에서 가까운 땅 모두 (무라사 자리에서 거리 140: 무라사, 타짐과 그 구역).
   - 해안 거리를 40에서 55로 ([가공], 커진 지도에 맞춤). 해안 = 타짐과 그 구역 넷, 무라사와 그 구역 둘. 이제 출현하면 실제로 붙잡을 것이 있다.
   - 에메리아(공중섬)도 타짐의 구역이라 해안에 든다.
+- 2026-09-30 (사용자 결정): 로르토스를 선더만 밖, 그 방향의 깊은 바다 선더만 앞바다(`loc-sunder-offing`, 땅이 아님)로 옮겼다. 출현은 앞바다에서 가까운 땅(무라사와 그 구역)을 덮친다.
