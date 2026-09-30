@@ -225,9 +225,9 @@ export type State = {
   // after the hour (sim/run.ts), from these candidates.
   // `optional`: they may pick no one ("you may").
   choices?: Choice[];
-  // Summoning traps sprung (sim/step.ts): which of the kinds looked at comes forth is the
-  // LLM's pick, as the trap, after the hour (sim/run.ts `summons`).
-  summons?: { event: string; kinds: string[]; by: string[]; region: string; t: number }[];
+  // Summoning traps sprung (sim/step.ts): which of the creatures looked at is drawn there is
+  // the LLM's pick, as the trap, after the hour (sim/run.ts `summons`).
+  summons?: { event: string; creatures: string[]; by: string[]; region: string; t: number }[];
   // A flyer NPC attacked by one who can't fly: whether they take to the air is asked of the LLM
   // after the hour (sim/run.ts); the blow waits until then.
   evades?: { by: string; from: string; t: number }[];

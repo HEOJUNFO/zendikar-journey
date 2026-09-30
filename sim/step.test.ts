@@ -2099,22 +2099,21 @@ const summoning: RawEntity = {
 const beastKind = (id: string, abilities: string[], home = 'loc-c'): RawEntity =>
   planned({ id, kind: 'creature', name: id.slice(4), status: 'canon', sim: { name: `${id} 한 마리`, pt: [4, 4], role: 'r', home, persona: 'p', goal: 'g', needs: ['energy'], abilities } });
 
-test('a summoning trap: one refused today who enters calls forth one of the kinds, as its card, turned on them', async () => {
-  const world = fixture([summoning, beastKind('cre-sk', ['fly']), beastKind('cre-sea', ['aquatic'], 'loc-sea'), npc('chr-x', npcSim('loc-b')), npc('chr-y', npcSim('loc-b'))]);
+test('a summoning trap: one refused today who enters draws a creature card there from anywhere (the sea too), turned on them', async () => {
+  const world = fixture([summoning, beastKind('cre-sea', ['aquatic'], 'loc-sea'), npc('chr-far', npcSim('loc-c')), npc('chr-x', npcSim('loc-b')), npc('chr-y', npcSim('loc-b'))]);
   const state = newState(world, { seed: 1, mode: 'observer' });
   const [x, y] = [state.actors['chr-x'], state.actors['chr-y']];
   x.region = y.region = 'loc-a';
   x.refused = 0; // turned down today
   const offered: string[][] = [];
-  const summon: Llm['summon'] = async ({ kinds, intruders }) => (offered.push([...kinds.map((k) => k.id).sort(), ...intruders.map((a) => a.id)]), 'cre-sk');
+  const summon: Llm['summon'] = async ({ creatures, intruders }) => (offered.push([...creatures.map((c) => c.id).sort(), '|', ...intruders.map((a) => a.id)]), 'cre-sea');
+  const before = Object.keys(state.actors).length;
   await advance(state, world, 3, { summon });
-  assert.deepEqual(offered, [['cre-sk', 'chr-x']]); // a sea kind can't stand there; y was not refused
-  const born = Object.values(state.actors).find((a) => a.name === 'sk' && a.id.startsWith('tok-'));
-  assert.ok(born);
-  assert.equal(born.region, 'loc-b');
-  assert.deepEqual(born.abilities, ['fly']);
-  assert.equal(born.master, undefined);
-  assert.ok(texts(state).some((t) => t.includes('문간의 어둠에서 걸어 나왔다')));
+  // Anyone of a creature card, not already there, not the one who sprang it; y was not refused.
+  assert.deepEqual(offered, [['chr-far', 'cre-sea', '|', 'chr-x']]);
+  assert.equal(state.actors['cre-sea'].region, 'loc-b'); // moved, not made
+  assert.equal(Object.keys(state.actors).length, before);
+  assert.ok(texts(state).some((t) => t.includes('끌려와 문간의 어둠에서 걸어 나왔다')));
 });
 
 test('turned down: the player refusing to serve, or refusing the player, marks the one refused that day', async () => {
@@ -2131,12 +2130,14 @@ test('turned down: the player refusing to serve, or refusing the player, marks t
   assert.equal(s2.actors[PLAYER_ID].refused, 0);
 });
 
-test('the real Summoning Trap lies in Bala Ged, and could not call forth the Shoal Serpent there', () => {
+test('the real Summoning Trap lies in Bala Ged and may draw any creature card there, the Shoal Serpent too', () => {
   const world = loadWorld();
   const ev = world.events.find((e) => e.id === 'evt-summoning-trap');
   assert.equal(ev?.region, 'loc-bala-ged');
   assert.equal(ev?.refused, true);
   const state = newState(world, { seed: 1, mode: 'observer' });
-  const kinds = summonLibrary(state, world, 'loc-bala-ged');
-  assert.ok(kinds.includes('cre-baloth') && !kinds.includes('cre-shoal-serpent'));
+  const lib = summonLibrary(state, world, 'loc-bala-ged');
+  // Creature cards anywhere, the sea's too; not planeswalkers, not those already there.
+  assert.ok(lib.includes('cre-shoal-serpent') && lib.includes('chr-iona') && lib.includes('cre-sphinx'));
+  assert.ok(!lib.includes('chr-sorin-markov') && !lib.includes('chr-chandra') && !lib.includes('chr-rampaging-baloths'));
 });

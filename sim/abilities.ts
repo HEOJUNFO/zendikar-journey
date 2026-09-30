@@ -12,7 +12,7 @@ import { castSpell, spellDef } from './spells.ts';
 import { addLog, npcDef, outOfTime, present, ptOf, random, targetable } from './state.ts';
 import type { Actor, ChoiceEffect, State } from './state.ts';
 import { josa, shortName, toward } from './text.ts';
-import { ABILITY_LABELS, canStay, LAND_TYPE_LABELS, landTypes, region, spellColors } from './world.ts';
+import { ABILITY_LABELS, LAND_TYPE_LABELS, landTypes, region, spellColors } from './world.ts';
 import type { Ability, ActivatedAbility, BondEffect, Region, World } from './world.ts';
 
 // Why `a` can't bond with the land they stand on now, or null. One land per turn, as one
@@ -507,40 +507,40 @@ export function spawnWild(state: State, world: World, creature: string, pt: [num
 
 // --- Summoning Trap: "look at the top N cards of your library, put a creature onto the battlefield" ---
 
-// The world's creature cards, as a library: the kinds that live in it as their own card (a
-// creature entity's sim), those that could stand in `regionId`, in a random order.
-export function summonLibrary(state: State, world: World, regionId: string) {
-  const r = region(world, regionId);
-  const kinds = world.npcs.filter((n) => n.creature === n.id && canStay(r, n.abilities)).map((n) => n.id);
-  for (let i = kinds.length - 1; i > 0; i--) {
+// The world's creature cards, as a library: the characters that came of a creature card (every
+// card character but planeswalkers; not tokens), wherever they are, living, in time, not
+// already in `regionId` and not among `but`; in a random order. Those of the sea too.
+export function summonLibrary(state: State, world: World, regionId: string, but: string[] = []) {
+  const ids = world.npcs
+    .filter((n) => n.loyalty === undefined)
+    .map((n) => state.actors[n.id])
+    .filter((a) => a && !a.dead && !outOfTime(state, a) && a.region !== regionId && !but.includes(a.id))
+    .map((a) => a.id);
+  for (let i = ids.length - 1; i > 0; i--) {
     const j = Math.floor(random(state) * (i + 1));
-    [kinds[i], kinds[j]] = [kinds[j], kinds[i]];
+    [ids[i], ids[j]] = [ids[j], ids[i]];
   }
-  return kinds;
+  return ids;
 }
 
-// A new one of `kindId` comes forth in `regionId`, with no master, as its card (its powers
-// too), under its kind's name; it turns on those in `foes` for the rest of the day.
-export function summonKind(state: State, world: World, kindId: string, regionId: string, foes: string[], t: number) {
-  const base = world.npcs.find((n) => n.id === kindId);
-  if (!base) return undefined;
-  const kindName = world.lore.find((l) => l.id === kindId)?.name ?? base.name;
-  const id = freeTokenId(state, `tok-${state.nextLogId}-0`);
-  (state.tokens ??= {})[id] = { ...base, id, name: kindName, home: regionId, role: `${region(world, regionId).name}에 불려 나온 ${kindName}`, activated: [] };
-  const x: Actor = {
-    id,
-    name: kindName,
-    kind: 'npc',
-    region: regionId,
-    stats: { energy: 80, hunger: 0, coin: 0 },
-    pt: [...base.pt],
-    pace: 'normal',
-    abilities: [...base.abilities],
-    needs: [...base.needs],
-    enteredAt: t,
-  };
-  state.actors[id] = x;
-  addLog(state, { kind: 'event', text: `${josa(kindName, '이', '가')} 문간의 어둠에서 걸어 나왔다 (${base.pt.join('/')}).`, regions: [regionId], actors: [id], t });
+// `id` is drawn to `regionId` from wherever they were (not a new one: the one that is), and
+// turns on those in `foes` for the rest of the day. One of the sea stands on land until they
+// make their way back.
+export function callForth(state: State, world: World, id: string, regionId: string, foes: string[], t: number) {
+  const x = state.actors[id];
+  if (!x || x.dead) return undefined;
+  const from = x.travel ? '길 위' : region(world, x.region).name;
+  delete x.travel;
+  x.task = undefined;
+  x.forced = undefined;
+  x.region = regionId;
+  addLog(state, {
+    kind: 'event',
+    text: `${josa(shortName(x.name), '이', '가')} ${from}에서 끌려와 문간의 어둠에서 걸어 나왔다 (${ptOf(x).join('/')}).`,
+    regions: [regionId],
+    actors: [id],
+    t,
+  });
   for (const f of foes) addFoe(x, f, t);
   return x;
 }

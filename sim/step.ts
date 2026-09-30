@@ -292,9 +292,9 @@ function fire(state: State, world: World, ev: EventDef, t: number, omened: boole
       // They turn on whoever set it off, for the rest of the day.
       for (const b of born) for (const id of cause.by ?? []) addFoe(b, id, t);
     } else if (eff.type === 'summon') {
-      // Which of the kinds looked at comes forth (if any) is the trap's, asked after the hour.
-      const kinds = summonLibrary(state, world, ev.region).slice(0, eff.look);
-      if (kinds.length) (state.summons ??= []).push({ event: ev.id, kinds, by: cause.by ?? [], region: ev.region, t });
+      // Which of the creatures looked at is drawn here (if any) is the trap's, asked after the hour.
+      const creatures = summonLibrary(state, world, ev.region, cause.by ?? []).slice(0, eff.look);
+      if (creatures.length) (state.summons ??= []).push({ event: ev.id, creatures, by: cause.by ?? [], region: ev.region, t });
     } else {
       for (const id of regions) {
         state.regions[id] ??= { conditions: [] };

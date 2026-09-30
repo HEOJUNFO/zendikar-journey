@@ -339,9 +339,9 @@ const EffectSchema = z.discriminatedUnion('type', [
     colors: z.array(z.enum(COLORS)),
   }),
   // "Look at the top N cards of your library. You may put a creature card from among them onto
-  // the battlefield" (Summoning Trap): N creature kinds of the world at random (those that can
-  // be there); the LLM, as the trap, calls one forth (or none) after the hour: a new one of
-  // that kind, with no master, turning on whoever set it off for the rest of the day.
+  // the battlefield" (Summoning Trap): N of the world's creature-card characters at random,
+  // wherever they are; the LLM, as the trap, draws one there (or none) after the hour: that one
+  // is moved to the trap's land, and turns on whoever set it off for the rest of the day.
   z.strictObject({ type: z.literal('summon'), look: z.number().int().positive() }),
 ]);
 export type Effect = z.infer<typeof EffectSchema>;

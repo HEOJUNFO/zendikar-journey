@@ -19,7 +19,7 @@ import { castableSpells, castBlocked, castSpell, harmful, learnableSpells, spell
 import { opponentsOf, sealsDue, setSeal } from './seal.ts';
 import { COLORS } from './mana.ts';
 import type { Color } from './mana.ts';
-import { abilityBlocked, applyBondEffect, enteredToday, fetchBlocked, fetchTargets, growBlocked, growLand, summonKind } from './abilities.ts';
+import { abilityBlocked, applyBondEffect, enteredToday, fetchBlocked, fetchTargets, growBlocked, growLand, callForth } from './abilities.ts';
 import { bindRetainer, courtTargets, followsMaster, refuse, seize, swayBlocked } from './retainers.ts';
 import { josa, shortName } from './text.ts';
 import type { ScheduleBlock } from './types.ts';
@@ -55,8 +55,8 @@ export type ConverseInput = { world: World; state: State; a: Speaker; b: Speaker
 export type ChooseInput = { world: World; state: State; npc: Speaker; what: string; candidates: Actor[]; optional?: boolean };
 // One who seals a color (Iona) names it as a fight begins: against `opponents`.
 export type ChooseColorInput = { world: World; state: State; npc: Speaker; opponents: Actor[] };
-// A trap (`trap`) sprung by `intruders` picks one of `kinds` (creature kinds) to call forth.
-export type SummonInput = { world: World; state: State; trap: EventDef; kinds: NpcDef[]; intruders: Actor[] };
+// A trap (`trap`) sprung by `intruders` picks one of `creatures` (anywhere in the world) to draw there.
+export type SummonInput = { world: World; state: State; trap: EventDef; creatures: Actor[]; intruders: Actor[] };
 // Two NPCs' exchange: the lines, what each now thinks of the other (by id), and who, if
 // anyone, now attacks the other.
 // `follower`: one who, won over, now pledges to serve the other (as an NPC may to the player).
@@ -74,7 +74,7 @@ export type Llm = {
   converse?: (input: ConverseInput) => Promise<Conversation | null>;
   choose?: (input: ChooseInput) => Promise<string | null>;
   chooseColor?: (input: ChooseColorInput) => Promise<Color | null>;
-  // A summoning trap sprung (Summoning Trap): which of `kinds` it calls forth, or none.
+  // A summoning trap sprung (Summoning Trap): which of `creatures` it draws there, or none.
   summon?: (input: SummonInput) => Promise<string | null>;
 };
 
@@ -224,25 +224,25 @@ async function conversations(state: State, world: World, since: number, llm: Llm
   }
 }
 
-// Summoning traps sprung this hour (sim/step.ts): the LLM, as the trap, calls forth one of the
-// kinds looked at ("you may": none). With no answer, the first of them (the top card).
+// Summoning traps sprung this hour (sim/step.ts): the LLM, as the trap, draws one of the
+// creatures looked at there ("you may": none). With no answer, the first of them (the top card).
 async function summons(state: State, world: World, llm: Llm) {
   const due = state.summons ?? [];
   state.summons = [];
   for (const s of due) {
     const trap = world.events.find((e) => e.id === s.event);
-    const kinds = s.kinds.map((id) => world.npcs.find((n) => n.id === id)).filter((n) => !!n);
+    const creatures = s.creatures.map((id) => state.actors[id]).filter((a) => a && !a.dead);
     const intruders = s.by.map((id) => state.actors[id]).filter((a) => a && !a.dead);
-    if (!trap || !kinds.length) continue;
-    let pick: string | null = kinds[0].id;
+    if (!trap || !creatures.length) continue;
+    let pick: string | null = creatures[0].id;
     if (llm.summon) {
       try {
-        pick = await llm.summon({ world, state, trap, kinds, intruders });
+        pick = await llm.summon({ world, state, trap, creatures, intruders });
       } catch (e) {
         console.warn(`summon for ${trap.id} failed:`, e);
       }
     }
-    if (pick && kinds.some((k) => k.id === pick)) summonKind(state, world, pick, s.region, intruders.map((a) => a.id), state.minutes);
+    if (pick && creatures.some((c) => c.id === pick)) callForth(state, world, pick, s.region, intruders.map((a) => a.id), state.minutes);
     else addLog(state, { kind: 'event', text: `${trap.name}: 문간의 어둠은 끝내 잠잠했다.`, regions: [s.region] });
   }
 }

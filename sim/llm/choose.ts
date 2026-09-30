@@ -4,7 +4,7 @@ import { z } from 'zod';
 import { ptOf } from '../state.ts';
 import { COLOR_LABELS, COLORS, manaCapacity } from '../mana.ts';
 import type { Color } from '../mana.ts';
-import { spellColors } from '../world.ts';
+import { region, spellColors } from '../world.ts';
 import type { ChooseColorInput, ChooseInput, SummonInput } from '../run.ts';
 import { loreText } from './context.ts';
 import { relationsText } from '../relations.ts';
@@ -78,15 +78,15 @@ Answer with JSON only: {"color": "W" | "U" | "B" | "R" | "G"}.`,
   return parsed.data.color;
 }
 
-// A summoning trap (Summoning Trap), sprung by intruders, calls forth one of the creature kinds
-// it looked at, or none ("you may"): the LLM decides, as the ancient trap.
-export async function chooseSummon({ world, trap, kinds, intruders }: SummonInput): Promise<string | null> {
+// A summoning trap (Summoning Trap), sprung by intruders, draws one of the creatures it looked
+// at (wherever they are) to where it lies, or none ("you may"): the LLM decides, as the trap.
+export async function chooseSummon({ world, trap, creatures, intruders }: SummonInput): Promise<string | null> {
   const content = await chatCompletion(
     [
       {
         role: 'system',
         content: `You are an ancient trap of the plane of Zendikar: ${trap.name}. ${trap.summary}
-Someone sprang you. You may call forth one creature from the kinds below to stand where you are and turn on those who sprang you, or none.
+Someone sprang you. You may draw one of the creatures below, from wherever they are now, to where you lie, to turn on those who sprang you; or none.
 Answer with JSON only: {"pick": "<id>"} or {"pick": null}.`,
       },
       {
@@ -97,19 +97,19 @@ ${loreText(world)}
 Who sprang you:
 ${intruders.map((a) => `- ${shortName(a.name)}${a.kind === 'player' ? ' (the player)' : ''} (power/toughness ${ptOf(a).join('/')})`).join('\n') || '- (no one is left)'}
 
-Creatures you could call forth:
-${kinds.map((k) => `- ${k.id}: ${k.summary} (${k.pt.join('/')})`).join('\n')}
+Creatures you could draw here:
+${creatures.map((c) => `- ${c.id}: ${c.name}, now in ${region(world, c.region).name} (power/toughness ${ptOf(c).join('/')})`).join('\n')}
 
-Which do you call forth?`,
+Which do you draw here?`,
       },
     ],
     300,
   );
   const parsed = z.object({ pick: z.string().nullable() }).safeParse(extractJson(content));
   if (parsed.success && parsed.data.pick === null) return null;
-  if (!parsed.success || !kinds.some((k) => k.id === parsed.data.pick)) {
+  if (!parsed.success || !creatures.some((c) => c.id === parsed.data.pick)) {
     console.warn(`Unusable summon from ${trap.id}:`, content);
-    return kinds[0]?.id ?? null;
+    return creatures[0]?.id ?? null;
   }
   return parsed.data.pick;
 }
