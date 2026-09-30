@@ -33,6 +33,7 @@ import { upkeepWins } from './win.ts';
 import { CRAWL_FACTOR, dryOut, stranded } from './stranded.ts';
 import { wanderHour, withPositions } from './wander.ts';
 import { anthemHour, upkeepSacrifice } from './monument.ts';
+import { upkeepQuell } from './quell.ts';
 import { HIRE_HOURS, hireBlocked, hireMerc } from './allies.ts';
 import { bounceCandidates, joinedToday } from './bounce.ts';
 import { COURT_HOURS, courtBlocked, followsMaster, masterOf, readyCourt, refusedToday, upkeepPossessions } from './retainers.ts';
@@ -103,6 +104,7 @@ function startDay(state: State, world: World, t: number) {
     upkeepRevive(state, world, t);
     upkeepWins(state, world, t);
     upkeepSacrifice(state, world, t);
+    upkeepQuell(state, world, t);
     upkeepPossessions(state, t);
   }
   if (state.gm.day !== day) state.gm = { day, source: 'none', fires: [] };

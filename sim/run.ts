@@ -5,7 +5,7 @@ import { formatClock, gameDay, untapTime } from './clock.ts';
 import { startAction } from './actions.ts';
 import type { Action } from './actions.ts';
 import { addLog, hasAbility, npcDef, outOfTime, player, ptOf, random, speakerDef } from './state.ts';
-import type { Actor, GmPlan, LogEntry, State } from './state.ts';
+import type { Actor, Choice, GmPlan, LogEntry, State } from './state.ts';
 import { eligibleGmEvents, ruinsUntil, step } from './step.ts';
 import { addFoe, clash, dealDamage, unblockable } from './combat.ts';
 import { relationsText, remember } from './relations.ts';
@@ -20,6 +20,7 @@ import { loremastersOf, recallBlocked, recallCount } from './loremaster.ts';
 import { sacrifice } from './monument.ts';
 import { strandedText } from './stranded.ts';
 import { bounce, bounceCandidates } from './bounce.ts';
+import { applyQuell, permanentsOf, QUELL_KINDS, QUELL_LABELS, quellGive } from './quell.ts';
 import { applyRally, hireableFor, hireMerc, hirePrice, rallyText } from './allies.ts';
 import { answerAsk, askText, canServe } from './asks.ts';
 import { eonLand, eonsIn, spendBlocked, storeBlocked } from './eons.ts';
@@ -296,6 +297,41 @@ async function crushChoice(state: State, world: World, llm: Llm, a: Actor, npc: 
   }
 }
 
+// World Queller's upkeep, as the LLM picks for its controller: which type all there must give
+// up ("you may": none); or, for one who must give one up, which of theirs (with no usable
+// answer: the first).
+async function quellChoice(state: State, world: World, llm: Llm, a: Actor, npc: Speaker, c: Choice) {
+  const source = state.actors[(c.effect as { source: string }).source];
+  if (!source || source.dead) return;
+  if (c.effect.type === 'quell') {
+    const options = QUELL_KINDS.map((k) => ({ id: k as string, label: QUELL_LABELS[k] }));
+    let pick: string | null = null;
+    if (llm.pick) {
+      try {
+        const what = `${shortName(source.name)}의 새벽: 카드 유형 하나(땅·생물·마법물체·부여마법)를 부르면, ${shortName(source.name)} 곁의 모두(${shortName(source.name)}와 그를 부리는 이도)가 저마다 그 유형의 제 것 하나를 내놓는다 (땅: 유대 하나가 끊김, 생물: 부리는 생물 하나나 자신이 죽음, 마법물체: 길들인 아이템 하나가 사라짐, 부여마법: 몸의 오라 하나가 사라짐). 부르지 않을 수도 있다`;
+        pick = await llm.pick({ world, state, npc, what, options, optional: true });
+      } catch (e) {
+        console.warn(`pick (quell) for ${a.id} failed:`, e);
+      }
+    }
+    const kind = QUELL_KINDS.find((k) => k === pick);
+    if (kind) applyQuell(state, world, source, kind, state.minutes);
+    return;
+  }
+  if (c.effect.type !== 'quelled') return;
+  const owned = permanentsOf(state, world, a, c.effect.kind);
+  if (!owned.length) return;
+  let pick: string | null = null;
+  if (llm.pick) {
+    try {
+      pick = await llm.pick({ world, state, npc, what: `${shortName(source.name)} 앞에서 제 ${QUELL_LABELS[c.effect.kind]} 하나를 내놓아야 한다`, options: owned });
+    } catch (e) {
+      console.warn(`pick (quelled) for ${a.id} failed:`, e);
+    }
+  }
+  quellGive(state, world, a, owned.find((p) => p.id === pick)?.id ?? owned[0].id, source, state.minutes);
+}
+
 // Wandering places at a stop (sim/wander.ts): the LLM, for the place's folk, picks where it
 // goes next. With no answer, a stop at random (not the one it is at).
 async function wanderings(state: State, world: World, llm: Llm) {
@@ -468,6 +504,11 @@ async function choices(state: State, world: World, llm: Llm) {
     // Relics to destroy (candidates are things, not people).
     if (c.effect.type === 'crush') {
       if (by && !by.dead && npc) await crushChoice(state, world, llm, by, npc, c.effect);
+      continue;
+    }
+    // World Queller: a type to name (or none), then what each there gives up.
+    if (c.effect.type === 'quell' || c.effect.type === 'quelled') {
+      if (by && !by.dead && npc) await quellChoice(state, world, llm, by, npc, c);
       continue;
     }
     const land = world.regions.find((r) => r.id === c.land);

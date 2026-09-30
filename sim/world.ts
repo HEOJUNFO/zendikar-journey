@@ -329,6 +329,9 @@ export const CharacterSimSchema = z.strictObject({
   // "As this enters, choose a color. Your opponents can't cast spells of the chosen color"
   // (Iona): entering a fight, they name a color (sim/seal.ts).
   seal: z.boolean().default(false),
+  // "At the beginning of your upkeep, you may choose a card type. If you do, each player
+  // sacrifices a permanent of that type" (World Queller): sim/quell.ts.
+  quell: z.boolean().default(false),
   // They hold (know) every spell of these colors in the world: their hand.
   knows_colors: z.array(z.enum(COLORS)).default([]),
   // Powers the morning LLM may use for them ("{cost}, {T}: effect" or "+1: effect").
@@ -666,6 +669,7 @@ export type NpcDef = {
   activated?: ActivatedAbility[];
   // Names a color entering a fight; their opponents can't cast spells of it (sim/seal.ts).
   seal?: boolean;
+  quell?: boolean;
 };
 
 export type SpellDef = {

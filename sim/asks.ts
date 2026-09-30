@@ -9,6 +9,7 @@ import { applyRally, rallyText } from './allies.ts';
 import { bindRetainer, refuse } from './retainers.ts';
 import { discardOwed, letGo } from './discard.ts';
 import { sacrifice } from './monument.ts';
+import { applyQuell, permanentsOf, QUELL_KINDS, QUELL_LABELS, quellGive } from './quell.ts';
 import { castSpell } from './spells.ts';
 import { addLog, player } from './state.ts';
 import type { Actor, Choice, State } from './state.ts';
@@ -27,6 +28,11 @@ export function askText(state: State, world: World, c: Choice) {
   if (c.effect.type === 'sacrifice') return `${state.items?.[c.effect.item]?.name ?? c.effect.item}이(가) 오늘의 제물을 요구한다. 부리는 이 가운데 누구를 바칠까? (바친 이는 죽는다)`;
   if (c.effect.type === 'crush') return `${c.effect.spell}: 이 자리의 마법물체나 부여마법을 ${c.effect.first ? '부순다. 무엇을?' : '하나 더 부술 수 있다. 무엇을?'}`;
   if (c.effect.type === 'drain_grow') return `땅의 타락한 마나가 흐른다. 누구에게서 생명 ${c.effect.life}을 빼앗아 +1/+1 카운터 ${c.effect.counters}을 얻을까?`;
+  if (c.effect.type === 'quell') {
+    const s = shortName(state.actors[c.effect.source]?.name ?? '');
+    return `${s}의 새벽: 유형 하나를 부르면 ${s} 곁의 모두(당신도)가 그 유형의 제 것 하나를 내놓는다 (땅: 유대 하나, 생물: 부리는 생물 하나, 마법물체: 아이템 하나, 부여마법: 오라 하나). 무엇을?`;
+  }
+  if (c.effect.type === 'quelled') return `${shortName(state.actors[c.effect.source]?.name ?? '')} 앞에서 제 ${QUELL_LABELS[c.effect.kind]} 하나를 내놓아야 한다. 무엇을?`;
   if (c.effect.type === 'destroy') return `이곳에 들어서며 ${CREATURE_TYPE_LABELS[c.effect.kind]} 하나를 파괴할 수 있다. 누구를? (파괴된 이는 죽는다)`;
   return '';
 }
@@ -38,6 +44,12 @@ export function askOptions(state: State, world: World, c: Choice): { pick: strin
     const relics = relicsHere(state, world, c.land);
     const opts = c.candidates.map((id) => ({ pick: id as string | null, label: relics.find((r) => r.id === id)?.label ?? id }));
     return c.effect.first ? opts : [...opts, { pick: null, label: '그만둔다' }];
+  }
+  if (c.effect.type === 'quell') return [...QUELL_KINDS.map((k) => ({ pick: k as string | null, label: QUELL_LABELS[k] })), { pick: null, label: '부르지 않는다' }];
+  if (c.effect.type === 'quelled') {
+    const p = state.actors[c.by];
+    const owned = p ? permanentsOf(state, world, p, c.effect.kind) : [];
+    return owned.map((x) => ({ pick: x.id, label: x.label }));
   }
   // One must be given: no "none".
   if (c.effect.type === 'sacrifice') return c.candidates.map((id) => ({ pick: id, label: shortName(state.actors[id]?.name ?? id) }));
@@ -88,6 +100,15 @@ export function answerAsk(state: State, world: World, pick: string | null, t: nu
     crushRelic(state, world, id, p, t);
     const next = crushOwed(state, world, p, c.effect.spell, c.effect.left - 1, false, t);
     if (next) (state.asks ??= []).unshift(next);
+  } else if (c.effect.type === 'quell') {
+    const source = state.actors[c.effect.source];
+    const kind = QUELL_KINDS.find((k) => k === pick);
+    if (source && kind) applyQuell(state, world, source, kind, t);
+  } else if (c.effect.type === 'quelled') {
+    // One must be given: an answer that isn't one of theirs gives the first.
+    const source = state.actors[c.effect.source];
+    const owned = permanentsOf(state, world, p, c.effect.kind);
+    if (source && owned.length) quellGive(state, world, p, owned.find((x) => x.id === pick)?.id ?? owned[0].id, source, t);
   } else if (c.effect.type === 'drain_grow') {
     const target = pick && c.candidates.includes(pick) ? state.actors[pick] : undefined;
     if (target) applyDrainGrow(state, world, p, target, c.effect, t);

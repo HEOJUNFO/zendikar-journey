@@ -28,6 +28,7 @@ import { applyEnterDestroy, bondBlocked, enterDestroy, onEnter, bondLand, bondTa
 import { DEPLETED_LABEL, DESTROYED_DAYS, TRAVEL_UNITS_PER_HOUR } from './rules.ts';
 import { bindRetainer, retainersOf, swayBlocked } from './retainers.ts';
 import { joinedToday } from './bounce.ts';
+import { applyQuell, upkeepQuell } from './quell.ts';
 import { upkeepWins } from './win.ts';
 import { hirePrice } from './allies.ts';
 import { askOptions, askText } from './asks.ts';
@@ -2177,6 +2178,39 @@ test('a whiplash trap: one with two joined today who enters sets it off; two the
   await advance(s2, world, 3, { bounce: async () => ((sprung = true), []) });
   assert.equal(sprung, false);
   assert.equal(m2.master, 'chr-x');
+});
+
+test('world queller: at upkeep its controller names a type; all there give up one of theirs (the player picks), itself too', async () => {
+  const queller = { ...npcSim('loc-a', 'work', [4, 4]), mana: { W: 5 }, needs: ['energy'], beast: true, quell: true };
+  const world = fixture([npc('chr-q', queller), npc('chr-x', npcSim('loc-a'))]);
+  const state = character(world, 'loc-a');
+  const [p, q, x] = [state.actors[PLAYER_ID], state.actors['chr-q'], state.actors['chr-x']];
+  p.bonds = ['loc-a', 'loc-b'];
+  x.bonds = ['loc-c'];
+  upkeepQuell(state, world, state.minutes);
+  assert.deepEqual(state.choices?.map((c) => [c.by, c.effect.type]), [['chr-q', 'quell']]);
+  const asked: string[] = [];
+  await act(state, world, { type: 'wait', hours: 1 }, { pick: async ({ what, options }) => (asked.push(what), options.some((o) => o.id === 'land') ? 'land' : options[0].id) });
+  assert.equal(asked.length, 1); // the queller named it; x had one land: given, no pick
+  assert.deepEqual(x.bonds, []);
+  assert.ok(texts(state).some((t) => t.includes('땅 하나를 내놓아야 한다')));
+  // The player holds two: a pick they owe.
+  assert.equal(state.asks?.[0]?.effect.type, 'quelled');
+  assert.match(askText(state, world, state.asks![0]), /땅 하나를 내놓아야/);
+  await act(state, world, { type: 'choose', pick: 'land:loc-b' });
+  assert.deepEqual(p.bonds, ['loc-a']);
+  // Creatures, and it controls only itself: it gives itself.
+  applyQuell(state, world, q, 'creature', state.minutes);
+  assert.ok(q.dead);
+});
+
+test('the real World Queller rises in Ondu', () => {
+  const world = loadWorld();
+  const state = newState(world, { seed: 1, mode: 'observer' });
+  const q = state.actors['cre-world-queller'];
+  assert.equal(q.region, 'loc-ondu');
+  assert.ok(npcDef(state, world, q.id)?.quell);
+  assert.deepEqual(ptOf(q), [4, 4]);
 });
 
 test('turned down: the player refusing to serve, or refusing the player, marks the one refused that day', async () => {

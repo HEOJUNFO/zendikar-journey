@@ -3,6 +3,7 @@ import { gameDay, START_MINUTES } from './clock.ts';
 import { INITIAL_STATS } from './rules.ts';
 import { NEEDS } from './types.ts';
 import type { LifeKind, Need, Pace, Schedule, Stats } from './types.ts';
+import type { QuellKind } from './quell.ts';
 import { josa, shortName } from './text.ts';
 import { canStay, spellColors } from './world.ts';
 import type { Ability, BondEffect, CreatureType, NpcDef, Pt, Speaker, World } from './world.ts';
@@ -160,7 +161,7 @@ export type Actor = {
 // What falls on the one picked: a land's bonding effect, a burst of damage (Valakut), or a
 // spell an NPC casts (sim/spells.ts).
 export type Choice = { by: string; land: string; effect: ChoiceEffect; candidates: string[]; optional?: boolean; t: number };
-export type ChoiceEffect = BondEffect | { type: 'damage'; amount: number } | { type: 'cast'; spell: string; free?: boolean } | { type: 'follow' } | { type: 'rally'; source: string } | { type: 'seize' } | { type: 'pledge'; from: string } | { type: 'evade'; from: string } | { type: 'discard'; cause: string; count?: number } | { type: 'sacrifice'; item: string } | { type: 'destroy'; kind: CreatureType } | { type: 'drain_grow'; life: number; counters: number } | { type: 'crush'; spell: string; left: number; first: boolean };
+export type ChoiceEffect = BondEffect | { type: 'damage'; amount: number } | { type: 'cast'; spell: string; free?: boolean } | { type: 'follow' } | { type: 'rally'; source: string } | { type: 'seize' } | { type: 'pledge'; from: string } | { type: 'evade'; from: string } | { type: 'discard'; cause: string; count?: number } | { type: 'sacrifice'; item: string } | { type: 'destroy'; kind: CreatureType } | { type: 'drain_grow'; life: number; counters: number } | { type: 'crush'; spell: string; left: number; first: boolean } | { type: 'quell'; source: string } | { type: 'quelled'; kind: QuellKind; source: string };
 
 export type Condition = {
   label: string;
