@@ -20,7 +20,7 @@ import {
   TRAVEL_EFFECT,
 } from './rules.ts';
 import { gainedLifeToday, loseLife } from './life.ts';
-import { forget } from './relations.ts';
+import { forget, forgetAbout } from './relations.ts';
 import { addLog, alive, landUnusable, needsOf, npcDef, outOfTime, present, ptOf, random } from './state.ts';
 import { addFoe, attackBlocked, dealDamage, foesOf, hostileNpcs } from './combat.ts';
 import { bondBlocked, bondLand, expireGranted, FETCH_HOURS, fetchLand, fetchSource, growBlocked, growEntered, growLand, spawnWild, summonLibrary, upkeepRevive, useAbility } from './abilities.ts';
@@ -298,8 +298,22 @@ function fire(state: State, world: World, ev: EventDef, t: number, omened: boole
       for (const id of cause.by ?? []) {
         const a = state.actors[id];
         if (!a || a.dead || a.travel) continue;
-        const gone = forget(a, eff.count, () => random(state));
         const name = shortName(a.name);
+        // The player: those who know them forget them.
+        if (a.kind === 'player') {
+          const forgot = forgetAbout(alive(state), a.id, eff.count, () => random(state));
+          addLog(state, {
+            kind: 'effect',
+            text: forgot.length
+              ? `${forgot.map((x) => shortName(x.name)).join(', ')}의 기억에서 ${josa(name, '이', '가')} 지워졌다 (${forgot.length}명).`
+              : `${josa(name, '을', '를')} 기억하는 이가 없어 지워질 것도 없었다.`,
+            regions: [a.region],
+            actors: [a.id, ...forgot.map((x) => x.id)],
+            t,
+          });
+          continue;
+        }
+        const gone = forget(a, eff.count, () => random(state));
         addLog(state, {
           kind: 'effect',
           text: gone.length

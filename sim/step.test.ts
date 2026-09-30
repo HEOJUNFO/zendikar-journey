@@ -2220,3 +2220,22 @@ test('the real Archive Trap lies on Jwar Isle, for those who searched', () => {
   assert.equal(ev?.region, 'loc-jwar-isle');
   assert.equal(ev?.searched, true);
 });
+
+test('an archive trap on the player: those who know them forget them', async () => {
+  const archive: RawEntity = {
+    id: 'evt-arc',
+    kind: 'event',
+    name: '기록보관소 함정',
+    status: 'canon',
+    sim: { region: 'loc-b', trigger: 'enter', searched: true, text: '천장이 무너졌다.', effects: [{ type: 'forget', count: 13 }] },
+  };
+  const world = fixture([archive, npc('chr-x', npcSim('loc-c')), npc('chr-y', npcSim('loc-c'))]);
+  const state = character(world, 'loc-a');
+  const p = state.actors[PLAYER_ID];
+  state.actors['chr-x'].relations = { [PLAYER_ID]: { name: 'me', text: '은인', t: 0 }, 'chr-y': { name: 'y', text: '벗', t: 0 } };
+  p.searched = 0;
+  await act(state, world, { type: 'move', to: 'loc-b' });
+  assert.equal(state.actors['chr-x'].relations?.[PLAYER_ID], undefined); // forgot the player
+  assert.equal(state.actors['chr-x'].relations?.['chr-y']?.text, '벗'); // not the others
+  assert.ok(texts(state).some((t) => t.includes('의 기억에서') && t.includes('지워졌다 (1명)')));
+});

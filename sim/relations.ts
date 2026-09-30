@@ -37,6 +37,20 @@ export function forget(a: Actor, n: number, pick: () => number) {
   return gone;
 }
 
+// The player keeps no impressions (their memory is the person playing): "mills N" on them
+// makes up to `n` of those who know them forget them instead, picked by `pick`. Returns those
+// who forgot.
+export function forgetAbout(others: Actor[], id: string, n: number, pick: () => number) {
+  const knowers = others.filter((x) => x.relations?.[id]);
+  const gone: Actor[] = [];
+  while (knowers.length && gone.length < n) {
+    const [x] = knowers.splice(Math.floor(pick() * knowers.length), 1);
+    delete x.relations![id];
+    gone.push(x);
+  }
+  return gone;
+}
+
 export function relationTo(a: Actor, otherId: string) {
   return a.relations?.[otherId]?.text;
 }
