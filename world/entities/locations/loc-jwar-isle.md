@@ -5,11 +5,12 @@ name: 즈와르 섬
 name_en: Jwar Isle
 summary: 온두 남쪽 앞바다의 안개 낀 작은 바위섬. 거친 해류와 짐승 머리 같은 검은 암초가 둘러싸고, 섬 안에는 초록빛이 어린다. 비밀의 섬이라 불린다
 status: canon
-sources: [ZEN-215]
+sources: [ZEN-215, ZEN-68]
 tags: [섬, 해안, 암초, 청색]
 links:
   - { to: loc-jwar-isle-refuge, rel: 안의 구역 }
   - { to: loc-ondu, rel: 붙어 있는 대륙 }
+  - { to: cre-sphinx, rel: 사는 스핑크스 }
 map: { x: 345, y: 339, terrain: beach, size: island, of: loc-ondu }
 ---
 
@@ -24,8 +25,9 @@ map: { x: 345, y: 339, terrain: beach, size: island, of: loc-ondu }
 - 온두 남쪽의 지역이다 (지형 `beach`, 청색 땅, 섬) ([결정] 2026-09-30). 온두까지 약 5시간. 위치 (345, 339)는 [배경]의 "온두 남쪽 해안 앞"에서 정한 [가공]이다. 온두에 딸린 섬이라 `map.of: loc-ondu` 로 적고, 지도에서 온두와 얕은 바다로 이어 그린다 ([결정] 2026-09-30).
 - 온두 대륙에 딸린 작은 섬이라 지도에 작게 그린다 (`size: island`) ([결정]).
 - 안에 구역 즈와르 섬 피난처(`loc-jwar-isle-refuge`)가 있다.
+- 즈와르 섬의 스핑크스(`cre-sphinx`)가 산다 (ZEN-68). 섬 안쪽의 초록빛과 빛나는 수정이 그의 둥지다 ([가공]).
 
 ## 미정/질문
 
 - 해류, 암초, 바다뱀은 설정일 뿐 규칙이 없다 (카드에 없음). 배, 항로 카드가 나오면 건너기 어려운 바다로 다시 본다.
-- 섬의 초록빛과 옛 수수께끼: 관련 카드가 나오면.
+- 옛 수수께끼: 관련 카드가 나오면. (초록빛은 스핑크스의 둥지로 보았다, ZEN-68.)

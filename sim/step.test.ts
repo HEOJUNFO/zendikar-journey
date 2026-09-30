@@ -15,7 +15,8 @@ import { COLORS, formatMana, manaAvailable, manaCapacity, parseManaCost, planPay
 import { MAX_TALKS_PER_DAY, usableAbilities } from './run.ts';
 import { eligibleGmEvents, travelBlocked } from './step.ts';
 import { gainLife, lifeOf } from './life.ts';
-import { hasAbility, newState, outOfTime, PLAYER_ID, present, ptOf, syncWorld } from './state.ts';
+import { hasAbility, newState, outOfTime, PLAYER_ID, present, ptOf, syncWorld, targetable } from './state.ts';
+import { foresightText } from './foresight.ts';
 import { spendBlocked, storeBlocked } from './eons.ts';
 import { bondBlocked, bondLand, bondTargets, fetchTargets, fireTargets, firesOnBond, growBlocked, spawnWild, useAbility } from './abilities.ts';
 import { DEPLETED_LABEL, DESTROYED_DAYS } from './rules.ts';
@@ -1939,4 +1940,62 @@ test('the real Sorin Markov walks Guul Draz; Chandra has life too', () => {
   assert.equal(so.loyalty, 4);
   assert.equal(lifeOf(so), 20);
   assert.equal(lifeOf(state.actors['chr-chandra']), 20);
+});
+
+const sphinx = (): RawEntity => planned({
+  id: 'cre-sx',
+  kind: 'creature',
+  name: '스핑크스',
+  status: 'canon',
+  sim: { pt: [5, 5], mana: { U: 6 }, role: 'r', home: 'loc-a', persona: 'p', goal: 'g', needs: ['energy'], abilities: ['fly', 'shroud'], foresight: true },
+});
+
+test('shroud: no spell, power, land or seizing may pick the sphinx, not even its own side; it can still be fought', async () => {
+  const world = fixture([sphinx(), sorin, tribute('loc-a'), lore('cre-v', 'creature'), roil(roilDay), npc('chr-x', npcSim('loc-a'))]);
+  const state = character(world, 'loc-a');
+  const [p, sx, x] = [state.actors[PLAYER_ID], state.actors['cre-sx'], state.actors['chr-x']];
+  assert.equal(targetable(sx, state.minutes), false);
+  // A planeswalker's power, a spell (the player's own), a land's gift.
+  assert.match(useAbility(state, world, 'chr-so', 'plus', 'cre-sx', state.minutes)!, /방어막/);
+  assert.equal(woundsOf(sx, state.minutes), 0);
+  p.spells = ['spl-t'];
+  p.bonds = ['loc-a'];
+  assert.match(castBlocked(state, world, p, 'spl-t', 'cre-sx', false, state.minutes)!, /방어막/);
+  assert.ok(!bondTargets(state, world, x, 'loc-a', { type: 'pump', pt: [2, 0] }).some((y) => y.id === 'cre-sx'));
+  // The Roil Elemental can't swallow it.
+  const asked: string[][] = [];
+  await act(state, world, { type: 'wait', hours: 4 }, { choose: async ({ npc, candidates }) => (asked.push([npc.id, ...candidates.map((c) => c.id).sort()]), null) });
+  assert.equal(asked.length, 1);
+  assert.equal(asked[0][0], 'cre-r');
+  assert.ok(asked[0].includes('chr-x') && !asked[0].includes('cre-sx'));
+  // A fight is no targeting.
+  (await import('./combat.ts')).clash(state, x, sx, state.minutes);
+  assert.equal(woundsOf(sx, state.minutes), 1);
+});
+
+test('one who foresees plans after the morning picks, knowing what is still to come today', async () => {
+  const world = fixture([sphinx(), tide, npc('chr-x', npcSim('loc-a'))]);
+  const state = newState(world, { seed: 1, mode: 'observer' });
+  const seen = new Map<string, string[] | undefined>();
+  const llm: Llm = {
+    planDay: async (input) => (seen.set(input.id, input.foresight), planDay!(input)),
+    gmDay: async ({ day }) => ({ day, source: 'llm', fires: [{ eventId: 'evt-tide', hour: 20 }] }),
+  };
+  await advance(state, world, 1, llm);
+  assert.equal(seen.get('cre-sx')?.length, 1);
+  assert.match(seen.get('cre-sx')![0], /^20:00 loc-sea에서 조수/);
+  assert.ok(seen.has('chr-x'));
+  assert.equal(seen.get('chr-x'), undefined);
+  // Past 20:00, nothing is left to come.
+  assert.deepEqual(foresightText(state, world, state.minutes + 15 * 60), []);
+});
+
+test('the real Sphinx of Jwar Isle lives on Jwar Isle, shrouded, seeing ahead', () => {
+  const world = loadWorld();
+  const state = newState(world, { seed: 1, mode: 'observer' });
+  const sx = state.actors['cre-sphinx'];
+  assert.equal(sx?.region, 'loc-jwar-isle');
+  assert.deepEqual(sx.abilities, ['fly', 'shroud']);
+  assert.equal(world.npcs.find((x) => x.id === 'cre-sphinx')?.foresight, true);
+  assert.ok(!world.npcs.find((x) => x.id === 'cre-sphinx')?.beast); // it talks, if rarely
 });

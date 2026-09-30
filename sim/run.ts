@@ -11,6 +11,7 @@ import { addFoe, clash } from './combat.ts';
 import { relationsText, remember } from './relations.ts';
 import { claimableItems } from './items.ts';
 import { lifeOf } from './life.ts';
+import { foresightText } from './foresight.ts';
 import { answerAsk, applyRally, askText, hireableFor, hireMerc, hirePrice, rallyText } from './allies.ts';
 import { eonLand, eonsIn, spendBlocked, storeBlocked } from './eons.ts';
 import { castableSpells, castBlocked, castSpell, harmful, learnableSpells, spellDef } from './spells.ts';
@@ -407,9 +408,30 @@ async function prepare(state: State, world: World, llm: Llm): Promise<string | n
   const unplanned = Object.values(state.actors).filter((a) => a.kind === 'npc' && !a.dead && a.schedule?.day !== day && !outOfTime(state, a) && !followsMaster(state, a));
   if (unplanned.length && !llm.planDay) return 'LLM 설정이 없어 인물들의 하루를 짤 수 없다. 세계가 멈춰 있다.';
   const news = recentNews(state, world);
+  // The day's events and powers, once a day. Those who foresee (sim/foresight.ts) plan after it.
+  let gmJob: Promise<void> = Promise.resolve();
+  if (state.preparedDay < day && llm.gmDay) {
+    state.preparedDay = day;
+    const gmDay = llm.gmDay;
+    gmJob = (async () => {
+      // Someone's extra day: the world stands still, nothing is raised; only they may use a power.
+      const extra = state.extraDays?.find((x) => x.day === day);
+      const eligible = extra ? [] : eligibleGmEvents(state, world, state.minutes);
+      const abilities = usableAbilities(state, world, state.minutes);
+      if (!eligible.length && !abilities.length) return void (state.gm = { day, source: 'llm', fires: [] });
+      try {
+        const hour = Math.floor((state.minutes % 1440) / 60);
+        const plan = await gmDay({ day, hour, world, state, eligible, abilities, news });
+        if (plan) state.gm = plan;
+      } catch (e) {
+        console.warn('gmDay failed, no events today:', e);
+      }
+    })();
+  }
   const jobs: Promise<void>[] = unplanned.map(async (a) => {
     const npc = npcDef(state, world, a.id);
     if (!npc) return;
+    if (npc.foresight) await gmJob;
     for (let i = 0; i < PLAN_TRIES && a.schedule?.day !== day; i++) {
       try {
         const blocks = await llm.planDay!({
@@ -433,6 +455,7 @@ async function prepare(state: State, world: World, llm: Llm): Promise<string | n
           fetch: fetchInput(state, world, a),
           court: courtInput(state, world, a),
           hire: hireInput(state, world, a),
+          ...(npc.foresight ? { foresight: foresightText(state, world, state.minutes) } : {}),
           ...spellsInput(state, world, a, npc),
           news,
         });
@@ -442,27 +465,7 @@ async function prepare(state: State, world: World, llm: Llm): Promise<string | n
       }
     }
   });
-  if (state.preparedDay < day && llm.gmDay) {
-    state.preparedDay = day;
-    const gmDay = llm.gmDay;
-    jobs.push(
-      (async () => {
-        // Someone's extra day: the world stands still, nothing is raised; only they may use a power.
-        const extra = state.extraDays?.find((x) => x.day === day);
-        const eligible = extra ? [] : eligibleGmEvents(state, world, state.minutes);
-        const abilities = usableAbilities(state, world, state.minutes);
-        if (!eligible.length && !abilities.length) return void (state.gm = { day, source: 'llm', fires: [] });
-        try {
-          const hour = Math.floor((state.minutes % 1440) / 60);
-          const plan = await gmDay({ day, hour, world, state, eligible, abilities, news });
-          if (plan) state.gm = plan;
-        } catch (e) {
-          console.warn('gmDay failed, no events today:', e);
-        }
-      })(),
-    );
-  }
-  await Promise.all(jobs);
+  await Promise.all([...jobs, gmJob]);
   const missing = unplanned.filter((a) => a.schedule?.day !== day);
   if (!missing.length) return null;
   return `LLM이 ${missing.map((a) => shortName(a.name)).join(', ')}의 하루를 짜지 못해 세계가 멈췄다. 다시 진행하면 이어서 짠다.`;

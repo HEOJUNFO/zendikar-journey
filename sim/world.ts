@@ -12,9 +12,9 @@ export const MAP_WIDTH = 600;
 export const MAP_HEIGHT = 450;
 
 // fly: can reach sky islands. aquatic: lives in the sea, and only there.
-export const ABILITIES = ['fly', 'aquatic', 'lifelink', 'vigilance', 'haste', 'trample', 'defender'] as const;
+export const ABILITIES = ['fly', 'aquatic', 'lifelink', 'vigilance', 'haste', 'trample', 'defender', 'shroud'] as const;
 export type Ability = (typeof ABILITIES)[number];
-export const ABILITY_LABELS: Record<Ability, string> = { fly: '비행', aquatic: '물에 삶', lifelink: '생명연결', vigilance: '경계', haste: '속공', trample: '돌진', defender: '수비대' };
+export const ABILITY_LABELS: Record<Ability, string> = { fly: '비행', aquatic: '물에 삶', lifelink: '생명연결', vigilance: '경계', haste: '속공', trample: '돌진', defender: '수비대', shroud: '방어막' };
 
 export const TERRAIN_IDS = [
   'grassland',
@@ -240,6 +240,10 @@ export const CharacterSimSchema = z.strictObject({
   // "Whenever this or another Ally enters under your control, …": when an Ally joins their
   // party. damage_allies: damage to one there equal to the party's Allies (Murasa Pyromancer).
   rally: z.array(z.discriminatedUnion('type', [z.strictObject({ type: z.literal('damage_allies') })])).default([]),
+  // "You may look at the top card of your library any time" (Sphinx of Jwar Isle): they see
+  // what is coming. The rest of today's events and powers the morning LLM picked are in their
+  // plan (made after it) and their talk (sim/foresight.ts).
+  foresight: z.boolean().default(false),
   // A mercenary: anyone who pays (their card's mana value × 10 coin) hires them for good.
   hireable: z.boolean().default(false),
   // Landfall: when they bond with a land, they get +P/+T (and trample) until the turn ends.
@@ -483,6 +487,7 @@ export type NpcDef = {
   ally?: boolean;
   rally?: { type: 'damage_allies' }[];
   hireable?: boolean;
+  foresight?: boolean;
   landfall?: { pt: [number, number]; trample: boolean };
   landfallToken?: { creature: string; pt: Pt; colors: Color[] };
   landfallSeize?: boolean;

@@ -9,7 +9,7 @@ import { gainLife, lifeOf, loseLife, setLife } from './life.ts';
 import { allyJoined } from './allies.ts';
 import { DEPLETED_LABEL } from './rules.ts';
 import { castSpell, spellDef } from './spells.ts';
-import { addLog, npcDef, outOfTime, present, ptOf, random } from './state.ts';
+import { addLog, npcDef, outOfTime, present, ptOf, random, targetable } from './state.ts';
 import type { Actor, ChoiceEffect, State } from './state.ts';
 import { josa, shortName, toward } from './text.ts';
 import { ABILITY_LABELS, LAND_TYPE_LABELS, landTypes, region, spellColors } from './world.ts';
@@ -40,7 +40,7 @@ export function targetedBondEffect(r: Region) {
 // 2026-09-30); `a` too when it is a gift ("target creature" may be one's own), not when it
 // takes life ("target player", as one's opponent).
 export function bondTargets(state: State, world: World, a: Actor, regionId: string, eff: BondEffect) {
-  return present(state, regionId).filter((x) => x.id !== a.id || eff.type !== 'lose_life');
+  return present(state, regionId).filter((x) => (x.id !== a.id || eff.type !== 'lose_life') && targetable(x, state.minutes));
 }
 
 // The effect falls on `target`, if they are still there.
@@ -98,7 +98,7 @@ export function expireGranted(state: State, t: number) {
 export function fireTargets(state: State, world: World, a: Actor, land: Region) {
   const home = land.parent ?? land.id;
   const lands = [home, ...world.regions.filter((r) => r.parent === home).map((r) => r.id)];
-  return Object.values(state.actors).filter((x) => !x.dead && !x.travel && x.id !== a.id && lands.includes(x.region) && !outOfTime(state, x));
+  return Object.values(state.actors).filter((x) => !x.dead && !x.travel && x.id !== a.id && lands.includes(x.region) && !outOfTime(state, x) && targetable(x, state.minutes));
 }
 
 // The lands like Valakut that answer as `a` bonds with `mountainId`: held, standing, and with
@@ -165,7 +165,7 @@ export function bondLand(state: State, world: World, a: Actor, t: number, region
   }
   // "Landfall — gain control of target creature": whom (if anyone) is theirs to pick, after the hour.
   if (def?.landfallSeize) {
-    const candidates = present(state, a.region).filter((x) => x.id !== a.id && x.master !== a.id).map((x) => x.id);
+    const candidates = present(state, a.region).filter((x) => x.id !== a.id && x.master !== a.id && targetable(x, t)).map((x) => x.id);
     if (candidates.length) (state.choices ??= []).push({ by: a.id, land: a.region, effect: { type: 'seize' }, candidates, optional: true, t });
   }
   // "Landfall — create a token": one more of their kind, born at their side and theirs.
@@ -325,6 +325,7 @@ export function useAbility(state: State, world: World, beingId: string, abilityI
   if (!being || !ability) return '그런 능력은 없다.';
   const target = ability.target ? state.actors[targetId] : undefined;
   if (ability.target && (!target || target.dead || target.id === beingId)) return '대상이 없다.';
+  if (target && !targetable(target, t)) return `${josa(shortName(target.name), '은', '는')} 방어막에 싸여 대상이 될 수 없다.`;
   const why = abilityBlocked(state, world, beingId, ability, t);
   if (why) return why;
   const bs = state.actors[beingId];

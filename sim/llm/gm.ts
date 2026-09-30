@@ -2,7 +2,7 @@
 // abilities characters use on whom. It can only pick what world/entities defines; what it does
 // is up to the engine.
 import { z } from 'zod';
-import { ptOf } from '../state.ts';
+import { ptOf, targetable } from '../state.ts';
 import type { GmPlan } from '../state.ts';
 import type { GmDayInput } from '../run.ts';
 import { chatCompletion, extractJson } from './chat.ts';
@@ -25,7 +25,7 @@ export async function gmDay(input: GmDayInput): Promise<GmPlan | null> {
     ],
     1500,
   );
-  const targets = Object.values(input.state.actors).filter((a) => !a.dead).map((a) => a.id);
+  const targets = Object.values(input.state.actors).filter((a) => !a.dead && targetable(a, input.state.minutes)).map((a) => a.id);
   const plan = parseGmPlan(content, { ...input, targets });
   if (!plan) console.warn('Unusable events plan, no events today:', content);
   return plan;
@@ -72,7 +72,7 @@ function userPrompt({ day, hour, world, state, eligible, abilities, news }: GmDa
     )
     .join('\n');
   const targets = Object.values(state.actors)
-    .filter((a) => !a.dead)
+    .filter((a) => !a.dead && targetable(a, state.minutes))
     .map((a) => `- ${a.id}: ${a.name}${a.kind === 'player' ? ' (the player)' : ''}, ${ptOf(a).join('/')}, in ${a.region}`)
     .join('\n');
   return `Day ${day + 1}, now ${clockText(state)}.

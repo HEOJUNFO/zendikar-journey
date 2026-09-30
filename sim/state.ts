@@ -402,6 +402,12 @@ export function hasAbility(a: Actor, ability: Ability, t: number) {
   return a.abilities.includes(ability) && !a.lost?.some((x) => x.ability === ability && x.until > t);
 }
 
+// Whether spells and abilities may pick them ("target"): not with shroud (Sphinx of Jwar
+// Isle), not even their own side's. Fights are no targeting: they may still be attacked.
+export function targetable(a: Actor, t: number) {
+  return !hasAbility(a, 'shroud', t);
+}
+
 export function ptOf(a: Actor): Pt {
   let [p, t] = a.pt ?? PLAYER_PT;
   if (a.plusCounters) [p, t] = [p + a.plusCounters, t + a.plusCounters];

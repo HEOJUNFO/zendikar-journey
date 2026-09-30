@@ -1,5 +1,6 @@
 // An NPC answers the player, in character.
 import { formatClock } from '../clock.ts';
+import { foresees, foresightText } from '../foresight.ts';
 import { z } from 'zod';
 import { player, ptOf } from '../state.ts';
 import type { EvadeInput, Reply, ReplyInput } from '../run.ts';
@@ -29,6 +30,8 @@ export async function reply({ world, state, npc, say, beast }: ReplyInput): Prom
     .slice(-12)
     .map((e) => `${formatClock(e.t)} ${e.text}`);
   const news = recentNews(state, world);
+  // One who foresees knows what is still to come today (sim/foresight.ts); telling it is theirs to choose.
+  const ahead = foresees(state, world, npc.id) ? foresightText(state, world, state.minutes) : null;
   const content = await chatCompletion(
     [
       {
@@ -46,7 +49,7 @@ ${beast ? `You are a beast: you have no words and do not understand speech as pe
 ${loreText(world)}
 
 Now: ${formatClock(state.minutes)}, in ${region(world, me.region).name}. You are doing: ${me.task?.activity ?? '(nothing)'}.
-${news.length ? `Lately:\n${news.map((n) => `- ${n}`).join('\n')}\n` : ''}
+${news.length ? `Lately:\n${news.map((n) => `- ${n}`).join('\n')}\n` : ''}${ahead ? `You see what is coming. Still to come today (yours to tell or keep, in character):\n${ahead.length ? ahead.map((n) => `- ${n}`).join('\n') : '- nothing out of the ordinary'}\n` : ''}
 The one speaking to you: ${playerText(state)}
 What you think of them: ${relationTo(me, p.id) ?? '(you have not met before)'}
 ${relationsText(me).length ? `Others you know:\n${relationsText(me).join('\n')}\n` : ''}

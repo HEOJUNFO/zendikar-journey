@@ -7,7 +7,7 @@
 // sim/run.ts) or, for an NPC, the LLM's. Mercenaries (`sim.hireable`) serve whoever pays.
 import { addFoe, dealDamage } from './combat.ts';
 import { bindRetainer, masterOf, retainersOf, swayBlocked } from './retainers.ts';
-import { addLog, npcDef, present } from './state.ts';
+import { addLog, npcDef, present, targetable } from './state.ts';
 import type { Actor, Choice, State } from './state.ts';
 import { josa, shortName } from './text.ts';
 import type { NpcDef, World } from './world.ts';
@@ -32,7 +32,7 @@ export function allyJoined(state: State, world: World, a: Actor, master: Actor, 
   if (!isAlly(state, world, a.id)) return;
   for (const x of alliesOf(state, world, master)) {
     if (!npcDef(state, world, x.id)?.rally?.length) continue;
-    const candidates = present(state, x.region).filter((y) => y.id !== x.id).map((y) => y.id);
+    const candidates = present(state, x.region).filter((y) => y.id !== x.id && targetable(y, t)).map((y) => y.id);
     if (candidates.length) (state.choices ??= []).push({ by: master.id, land: x.region, effect: { type: 'rally', source: x.id }, candidates, optional: true, t });
   }
 }
@@ -50,7 +50,7 @@ export function rallyText(state: State, world: World, sourceId: string) {
 export function applyRally(state: State, world: World, sourceId: string, targetId: string, t: number) {
   const x = state.actors[sourceId];
   const target = state.actors[targetId];
-  if (!x || x.dead || !target || target.dead || target.region !== x.region || target.travel) return;
+  if (!x || x.dead || !target || target.dead || target.region !== x.region || target.travel || !targetable(target, t)) return;
   const controller = masterOf(state, x) ?? x;
   for (const eff of npcDef(state, world, x.id)?.rally ?? []) {
     if (eff.type !== 'damage_allies') continue;

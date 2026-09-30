@@ -38,6 +38,8 @@ export type PlanDayInput = {
   regions: { id: string; name: string; summary: string }[];
   // Today's news the character would know about (conditions, recent events).
   news: string[];
+  // What is still to come today, for one who foresees (sim/foresight.ts).
+  foresight?: string[];
   // What they think of the people they know ("- 이오나 (…): …").
   relations?: string[];
   // Items no one holds that they could tame today ("- itm-… in loc-…: …").
@@ -113,7 +115,7 @@ role and goals, their needs, what they know happened, and the people they know.
 Answer with JSON only, no prose.`;
 
 function userPrompt(input: PlanDayInput) {
-  const { day, now, name, persona, goal, role, home, here, stats, life, needs, regions, news, relations = [], items = [], days, grow, fetch = [], learn = [], cast = [], court = [], hire = [] } = input;
+  const { day, now, name, persona, goal, role, home, here, stats, life, needs, regions, news, foresight, relations = [], items = [], days, grow, fetch = [], learn = [], cast = [], court = [], hire = [] } = input;
   const kinds = kindsFor(input);
   const state = [
     needs.includes('energy') && `energy ${Math.round(stats.energy)}/100 (low = tired; sleep restores it)`,
@@ -131,6 +133,8 @@ Home: ${home}
 Now: ${formatTimeOfDay(now)} in ${here}${now ? ' (the hours before now are already past; plan the whole day anyway)' : ''}
 Current state: ${state.length ? state.join(', ') : 'never tires or hungers'}${needs.includes('hunger') || !state.length ? '' : ' (does not need food)'}
 ${news.length ? `\nWhat they know happened lately:\n${news.map((n) => `- ${n}`).join('\n')}\n` : ''}${
+    foresight ? `\nThey see what is coming (foresight). Still to come today, as the world has it set:\n${foresight.length ? foresight.map((n) => `- ${n}`).join('\n') : '- nothing out of the ordinary'}\n` : ''
+  }${
     relations.length ? `\nPeople they know, and what they think of them:\n${relations.join('\n')}\n` : ''
   }
 Regions (use these ids only):

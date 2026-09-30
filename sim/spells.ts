@@ -9,7 +9,7 @@ import { gainLife, lifeOf, loseLife } from './life.ts';
 import { formatMana, manaAvailable, manaCapacity, payMana, planPayment } from './mana.ts';
 import { remember } from './relations.ts';
 import { creatureOf, retainersOf } from './retainers.ts';
-import { addLog, present, ptOf } from './state.ts';
+import { addLog, present, ptOf, targetable } from './state.ts';
 import type { Actor, State } from './state.ts';
 import { sealedBy, sealText } from './seal.ts';
 import { josa, shortName } from './text.ts';
@@ -55,6 +55,7 @@ export function castBlocked(state: State, world: World, a: Actor, spellId: strin
   if (!target || target.dead || (target.id === a.id && s.target !== 'any_here')) return '그런 대상은 없다.';
   if (target.id !== a.id && !present(state, a.region).some((x) => x.id === target.id))
     return `${josa(shortName(target.name), '은', '는')} 여기 없다.`;
+  if (!targetable(target, t)) return `${josa(shortName(target.name), '은', '는')} 방어막에 싸여 대상이 될 수 없다.`;
   if (!planPayment(manaAvailable(state, world, a, t), s.cost))
     return `마나가 모자라다 (${s.costText}, 지금 ${formatMana(manaAvailable(state, world, a, t))}).`;
   if (kick && !s.kicker) return '추가 비용이 없는 주문이다.';
@@ -64,7 +65,7 @@ export function castBlocked(state: State, world: World, a: Actor, spellId: strin
 
 // Whom `a` could cast `s` on where they stand: anyone else there, or themselves too.
 export function castTargets(state: State, a: Actor, s: SpellDef) {
-  return present(state, a.region).filter((x) => x.id !== a.id || s.target === 'any_here');
+  return present(state, a.region).filter((x) => (x.id !== a.id || s.target === 'any_here') && targetable(x, state.minutes));
 }
 
 // An NPC's cast block: why they can't cast `spellId` now (before picking whom), or null.
