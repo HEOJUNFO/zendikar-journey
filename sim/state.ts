@@ -107,8 +107,9 @@ export type Actor = {
   background?: string; // player
 };
 
-// What falls on the one picked: a land's bonding effect, or a burst of damage (Valakut).
-export type ChoiceEffect = BondEffect | { type: 'damage'; amount: number };
+// What falls on the one picked: a land's bonding effect, a burst of damage (Valakut), or a
+// spell an NPC casts (sim/spells.ts).
+export type ChoiceEffect = BondEffect | { type: 'damage'; amount: number } | { type: 'cast'; spell: string };
 
 export type Condition = {
   label: string;

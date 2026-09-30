@@ -11,7 +11,7 @@ import { addFoe, clash } from './combat.ts';
 import { relationsText, remember } from './relations.ts';
 import { claimableItems } from './items.ts';
 import { eonLand, eonsIn, spendBlocked, storeBlocked } from './eons.ts';
-import { castSpell } from './spells.ts';
+import { castableSpells, castBlocked, castSpell, harmful, learnableSpells, spellDef } from './spells.ts';
 import { opponentsOf, sealsDue, setSeal } from './seal.ts';
 import { COLORS } from './mana.ts';
 import type { Color } from './mana.ts';
@@ -20,7 +20,7 @@ import { bindRetainer, swayBlocked } from './retainers.ts';
 import { josa, shortName } from './text.ts';
 import type { ScheduleBlock } from './types.ts';
 import { ABILITY_LABELS, canStay, LAND_TYPE_LABELS, landTypes, placeName } from './world.ts';
-import type { ActivatedAbility, EventDef, NpcDef, Speaker, World } from './world.ts';
+import type { ActivatedAbility, EventDef, NpcDef, Speaker, SpellDef, World } from './world.ts';
 import type { PlanDayInput } from './llm/planner.ts';
 
 export type GmDayInput = {
@@ -194,6 +194,10 @@ async function choices(state: State, world: World, llm: Llm) {
     const land = world.regions.find((r) => r.id === c.land);
     const candidates = c.candidates.map((id) => state.actors[id]).filter((x) => x && !x.dead);
     if (!by || by.dead || !npc || !land || !candidates.length) continue;
+    if (c.effect.type === 'cast') {
+      await castChoice(state, world, llm, by, npc, c.effect.spell, candidates);
+      continue;
+    }
     let pick: string | null = null;
     if (llm.choose) {
       try {
@@ -219,6 +223,29 @@ async function choices(state: State, world: World, llm: Llm) {
     applyBondEffect(state, world, by, land.id, c.effect, pick!, state.minutes);
   }
   await seals(state, world, llm);
+}
+
+// An NPC casts a spell they readied (sim/spells.ts `readyCast`): the LLM picks whom, in
+// character, or no one (they hold it back and keep their mana). The kicker is paid when they
+// can ([가공]: it only ever helps them).
+async function castChoice(state: State, world: World, llm: Llm, by: Actor, npc: Speaker, spellId: string, candidates: Actor[]) {
+  const s = spellDef(world, spellId);
+  if (!s || !llm.choose) return;
+  let pick: string | null = null;
+  try {
+    const what = `당신은 주문 ${s.name}(${s.costText})을 걸 준비를 마쳤다: ${s.summary}.${harmful(s) ? ' 해로운 주문이라, 맞은 이는 당신을 적으로 삼는다.' : ''} 누구에게 걸지, 아니면 거두어들일지 고른다`;
+    pick = await llm.choose({ world, state, npc, candidates, optional: true, what });
+  } catch (e) {
+    console.warn(`choose (cast) for ${by.id} failed:`, e);
+  }
+  if (!pick || !candidates.some((x) => x.id === pick)) return;
+  const kick = !!s.kicker && !castBlocked(state, world, by, s.id, pick, true, state.minutes);
+  const why = castBlocked(state, world, by, s.id, pick, kick, state.minutes);
+  if (why) {
+    addLog(state, { kind: 'status', text: `${josa(shortName(by.name), '은', '는')} ${josa(s.name, '을', '를')} 걸지 못했다: ${why}`, regions: [by.region], actors: [by.id], t: state.minutes });
+    return;
+  }
+  castSpell(state, world, by, s.id, pick, kick, state.minutes);
 }
 
 // Those who seal a color (Iona) and just entered a fight name one (sim/seal.ts). The LLM
@@ -336,6 +363,7 @@ async function prepare(state: State, world: World, llm: Llm): Promise<string | n
           days: daysInput(state, world, a),
           grow: growInput(state, world, a),
           fetch: fetchInput(state, world, a),
+          ...spellsInput(state, world, a, npc),
           news,
         });
         if (blocks) a.schedule = { day, source: 'llm', blocks };
@@ -382,6 +410,14 @@ function growInput(state: State, world: World, a: Actor): PlanDayInput['grow'] {
   const land = growLand(world, a);
   if (!land || growBlocked(state, world, a, land.id, state.minutes)) return undefined;
   return { land: land.name, creatures: enteredToday(state, world, land.growEntered!.color, state.minutes).map((x) => shortName(x.name)) };
+}
+
+// Spells they could learn (not beasts), and spells they hold and could pay for, for their plan.
+function spellsInput(state: State, world: World, a: Actor, npc: NpcDef): Pick<PlanDayInput, 'learn' | 'cast'> {
+  const text = (s: SpellDef) => `${s.name} (${s.summary}), costs ${s.costText}${s.target === 'any_here' ? ', on someone there or themselves' : ', on someone else there'}`;
+  const learn = npc.beast ? [] : learnableSpells(world, a).map((s) => ({ id: s.id, at: s.learnAt, text: `${text(s)}; learning takes ${s.learnHours} hours` }));
+  const cast = castableSpells(state, world, a, state.minutes).map((s) => ({ id: s.id, text: text(s) }));
+  return { ...(learn.length ? { learn } : {}), ...(cast.length ? { cast } : {}) };
 }
 
 // Lands they could seek out with the fetch lands they hold, for their plan.

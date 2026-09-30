@@ -1,10 +1,12 @@
 // Spells (world/entities/spells): learned at a place, cast with mana on someone standing in
-// the same place. The player learns and casts them; NPCs hold theirs by color (knows_colors)
-// and cast them by their powers (Chandra). A sealed color can't be cast (sim/seal.ts).
+// the same place. The player learns and casts them by actions; NPCs by `learn` / `cast`
+// blocks of their LLM-planned day (whom a spell falls on, the LLM picks as it is cast), and
+// hold some by color (knows_colors) to cast by their powers (Chandra). A sealed color can't
+// be cast (sim/seal.ts).
 import { untapTime } from './clock.ts';
 import { addFoe } from './combat.ts';
 import { gainLife, lifeOf, loseLife } from './life.ts';
-import { formatMana, manaAvailable, payMana, planPayment } from './mana.ts';
+import { formatMana, manaAvailable, manaCapacity, payMana, planPayment } from './mana.ts';
 import { remember } from './relations.ts';
 import { creatureOf, retainersOf } from './retainers.ts';
 import { addLog, present, ptOf } from './state.ts';
@@ -58,6 +60,41 @@ export function castBlocked(state: State, world: World, a: Actor, spellId: strin
   if (kick && !s.kicker) return '추가 비용이 없는 주문이다.';
   if (kick && !tappable(state, world, a, s.kicker!.tap).length) return '추가 비용으로 탭할 것이 없다.';
   return null;
+}
+
+// Whom `a` could cast `s` on where they stand: anyone else there, or themselves too.
+export function castTargets(state: State, a: Actor, s: SpellDef) {
+  return present(state, a.region).filter((x) => x.id !== a.id || s.target === 'any_here');
+}
+
+// An NPC's cast block: why they can't cast `spellId` now (before picking whom), or null.
+export function npcCastBlocked(state: State, world: World, a: Actor, spellId: string, t: number): string | null {
+  const s = spellDef(world, spellId);
+  if (!s || !a.spells?.includes(s.id)) return '모르는 주문이다.';
+  const by = sealedBy(state, a, s, t);
+  if (by) return sealText(by, t);
+  if (!planPayment(manaAvailable(state, world, a, t), s.cost)) return `마나가 모자라다 (${s.costText}).`;
+  return null;
+}
+
+// An NPC finished readying a spell: whom it falls on is theirs to pick (the LLM, after the
+// hour), or no one (they hold it back). sim/run.ts `choices` casts it.
+export function readyCast(state: State, world: World, a: Actor, spellId: string, t: number) {
+  const s = spellDef(world, spellId);
+  if (!s || npcCastBlocked(state, world, a, s.id, t)) return;
+  const candidates = castTargets(state, a, s).map((x) => x.id);
+  if (!candidates.length) return;
+  (state.choices ??= []).push({ by: a.id, land: a.region, effect: { type: 'cast', spell: s.id }, candidates, optional: true, t });
+}
+
+// Spells an NPC could learn: those taught somewhere they don't know yet.
+export function learnableSpells(world: World, a: Actor) {
+  return world.spells.filter((s) => !a.spells?.includes(s.id));
+}
+
+// Spells an NPC holds and could pay for today.
+export function castableSpells(state: State, world: World, a: Actor, t: number) {
+  return world.spells.filter((s) => a.spells?.includes(s.id) && planPayment(manaCapacity(state, world, a, t), s.cost));
 }
 
 // Whether a spell does harm (the target takes it as an attack).

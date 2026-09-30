@@ -5,7 +5,9 @@
 // store_day / spend_day: leaving a day in a land that keeps them, or taking one back (sim/eons.ts).
 // grow: tapping a land like Oran-Rief for the creatures that came into play today (abilities.ts).
 // fetch: giving up a fetch land they hold to bond with the block's `land` from afar (abilities.ts).
-export const LIFE_KINDS = ['sleep', 'eat', 'work', 'social', 'leisure', 'bond', 'claim', 'store_day', 'spend_day', 'grow', 'fetch'] as const;
+// learn / cast: learning the block's `spell` where it is taught, or casting one they hold on
+// someone there (spells.ts).
+export const LIFE_KINDS = ['sleep', 'eat', 'work', 'social', 'leisure', 'bond', 'claim', 'store_day', 'spend_day', 'grow', 'fetch', 'learn', 'cast'] as const;
 export type LifeKind = (typeof LIFE_KINDS)[number];
 
 // start/end are minutes of the game day, 0..1440, end exclusive.
@@ -18,6 +20,8 @@ export type ScheduleBlock = {
   kind: LifeKind;
   // fetch: the land sought.
   land?: string;
+  // learn / cast: the spell.
+  spell?: string;
 };
 
 export type Schedule = {

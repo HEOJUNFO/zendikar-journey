@@ -25,7 +25,7 @@ import { addFoe, dealDamage, hostileNpcs } from './combat.ts';
 import { bondBlocked, bondLand, expireGranted, FETCH_HOURS, fetchLand, fetchSource, growBlocked, growEntered, growLand, spawnWild, upkeepRevive, useAbility } from './abilities.ts';
 import { CLAIM_HOURS, claimBlocked, claimItem, itemsAt } from './items.ts';
 import { EON_HOURS, eonLand, holdStill, spendBlocked, spendDay, storeBlocked, storeDay, timeNews } from './eons.ts';
-import { learnSpell } from './spells.ts';
+import { learnBlocked, learnSpell, npcCastBlocked, readyCast, spellDef } from './spells.ts';
 import { masterOf } from './retainers.ts';
 import { payMana } from './mana.ts';
 import type { Actor, GmPlan, State, Task } from './state.ts';
@@ -50,7 +50,7 @@ export function step(state: State, world: World) {
     actorHour(state, world, a, t);
     // A timed task done: the player's action, or an NPC's bonding, taming or keeping days.
     const done = a.task?.until !== undefined && a.task.until <= t + STEP_MINUTES && !a.travel;
-    const timed = ['bond', 'claim', 'store_day', 'spend_day', 'grow', 'fetch'];
+    const timed = ['bond', 'claim', 'store_day', 'spend_day', 'grow', 'fetch', 'learn', 'cast'];
     if (done && (a.kind === 'player' || timed.includes(a.task!.kind))) {
       const at = t + STEP_MINUTES;
       if (a.task!.kind === 'bond') bondLand(state, world, a, at, a.region, a.task!.target);
@@ -60,6 +60,8 @@ export function step(state: State, world: World) {
       if (a.task!.kind === 'store_day' && a.task!.land) storeDay(state, world, a, a.task!.land, at);
       if (a.task!.kind === 'spend_day' && a.task!.land) spendDay(state, world, a, a.task!.land, at);
       if (a.task!.kind === 'grow' && a.task!.land) growEntered(state, world, a, a.task!.land, at);
+      // An NPC's spell: whom it falls on is asked of the LLM after the hour (the player's was cast as they began).
+      if (a.task!.kind === 'cast' && a.kind === 'npc' && a.task!.spell) readyCast(state, world, a, a.task!.spell, at);
       a.task = undefined;
     }
   }
@@ -369,7 +371,7 @@ function actorHour(state: State, world: World, a: Actor, t: number) {
   const effect =
     task.kind === 'explore' ? EXPLORE_EFFECT
     : task.kind === 'fight' ? FIGHT_EFFECT
-    : KIND_EFFECTS[task.kind === 'travel' || task.kind === 'learn' || task.kind === 'cast' ? 'leisure' : task.kind];
+    : KIND_EFFECTS[task.kind === 'travel' ? 'leisure' : task.kind];
   applyEffect(a.stats, effect, 60, needs);
   if (needs.includes('hunger') && a.stats.hunger >= STARVING) applyEffect(a.stats, { energy: STARVING_ENERGY }, 60, needs);
   // A beast feeding hunts the land out: it will have to move on.
@@ -402,16 +404,21 @@ function npcTask(state: State, world: World, a: Actor, t: number): Task | undefi
   const land = block.kind === 'grow' ? growLand(world, a) : power ? eonLand(world, a) : undefined;
   // A fetch: the land sought, and a fetch land they hold that can reach it.
   const fetchFrom = block.kind === 'fetch' ? fetchSource(state, world, a, block.land) : undefined;
+  // A spell to learn here, or to cast on someone here.
+  const spell = block.kind === 'learn' || block.kind === 'cast' ? spellDef(world, block.spell ?? '') : undefined;
   const cannot =
     block.kind === 'bond' ? bondBlocked(state, world, a, t)
     : fetchFrom && 'why' in fetchFrom ? fetchFrom.why
+    : (block.kind === 'learn' || block.kind === 'cast') && !spell ? '그런 주문은 없다.'
+    : block.kind === 'learn' ? learnBlocked(world, a, spell!.id)
+    : block.kind === 'cast' ? npcCastBlocked(state, world, a, spell!.id, t)
     : block.kind === 'claim' && !item ? (itemsAt(world, a.region).map((x) => claimBlocked(state, world, a, x.id, t))[0] ?? '길들일 것이 없다.')
     : power && !land ? '그런 힘을 가진 땅이 없다.'
     : block.kind === 'store_day' ? storeBlocked(state, world, a, land!.id, t)
     : block.kind === 'spend_day' ? spendBlocked(state, world, a, land!.id, t)
     : block.kind === 'grow' ? growBlocked(state, world, a, land!.id, t)
     : null;
-  const timed = ['bond', 'claim', 'store_day', 'spend_day', 'grow', 'fetch'];
+  const timed = ['bond', 'claim', 'store_day', 'spend_day', 'grow', 'fetch', 'learn', 'cast'];
   if (!cannot && timed.includes(block.kind) && a.task?.kind === block.kind) return a.task;
   const task: Task =
     block.kind === 'work' && landUnusable(state, a.region)
@@ -420,6 +427,8 @@ function npcTask(state: State, world: World, a: Actor, t: number): Task | undefi
         ? { kind: 'leisure', activity: `${block.activity} (${cannot.replace(/\.$/, '')})`, emoji: block.emoji }
         : block.kind === 'bond'
           ? { kind: 'bond', activity: block.activity, emoji: block.emoji, until: t + BOND_HOURS * 60 }
+          : spell
+            ? { kind: block.kind, activity: block.activity, emoji: block.emoji, until: t + (block.kind === 'learn' ? spell.learnHours : 1) * 60, spell: spell.id }
           : fetchFrom && 'from' in fetchFrom
             ? { kind: 'fetch', activity: block.activity, emoji: block.emoji, until: t + FETCH_HOURS * 60, from: fetchFrom.from.id, land: block.land }
           : item

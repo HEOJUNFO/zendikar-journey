@@ -11,7 +11,7 @@ rarity: rare
 artist: "Alex Horley-Orlandelli"
 scryfall: https://scryfall.com/card/zen/81/blood-tribute
 added: 2026-09-29
-entities: [spl-blood-tribute, cre-vampire, law-life, law-retainers]
+entities: [spl-blood-tribute, cre-vampire, law-life, law-retainers, loc-malakir]
 ---
 
 ## 카드 원문
@@ -46,3 +46,9 @@ entities: [spl-blood-tribute, cre-vampire, law-life, law-retainers]
   - 대상은 같은 곳에 있는 이.
 - 2026-09-29 결정 (이어서): "당신이 통제하는 생물" = 권속 (`law-retainers`). 플레이어는 대화로 설득해 권속을 얻는다.
 - 게임에 아직 없는 것: 플레이어가 흡혈귀 권속을 얻을 현실적인 길 (지금 흡혈귀는 모두 칼리타스의 권속). 여섯 번째 땅(그래서 아직 시전할 마나가 안 모임).
+- 2026-09-30 다시 놓기 (지역 초기화 뒤, 대지 20장을 깐 다음):
+  - 배우는 곳: 말라키르(`loc-malakir`) ([결정] 예전과 같은 자리). `spl-blood-tribute` 를 canon 으로 되돌렸다.
+  - [결정] NPC도 주문을 배우고 쓴다. 엔진:
+    - LLM 하루 계획의 `learn` 블록(배우는 곳에서, `spell`)과 `cast` 블록(1시간, `spell`). 배울 수 있는 주문과 쥔 주문 가운데 마나를 낼 수 있는 것만 열린다. 짐승은 배우지 못한다.
+    - `cast` 가 끝나면 LLM이 그로서 그 자리의 누구에게 걸지 고른다 (`state.choices`, 거두어들일 수도 있다). 킥커는 낼 수 있으면 쓴다 ([가공]).
+    - 이오나의 색 봉인은 NPC의 시전도 막는다.

@@ -4,6 +4,7 @@ import { formatClock, parseTimeOfDay } from './clock.ts';
 import { loadWorld } from './load.ts';
 import { act as runAct, advance as runAdvance } from './run.ts';
 import type { Llm } from './run.ts';
+import type { PlanDayInput } from './llm/planner.ts';
 import type { Action } from './actions.ts';
 import type { World } from './world.ts';
 import { addFoe, die, knockedOut, woundsOf } from './combat.ts';
@@ -31,7 +32,7 @@ const loc = (id: string, x: number, y: number, terrain: string): RawEntity => ({
 });
 // No one's day is written anywhere: the LLM plans it. Here a fake planner stands in, giving
 // each character the day a test writes for them (`plan` in these helpers, as
-// [start, end, region, kind, activity, emoji, land?] rows), or a day at leisure where they stand.
+// [start, end, region, kind, activity, emoji, land?, spell?] rows), or a day at leisure where they stand.
 const PLANS = new Map<string, unknown[][]>();
 const planned = (e: RawEntity): RawEntity => {
   const { plan, ...sim } = e.sim as { plan?: unknown[][] };
@@ -40,7 +41,7 @@ const planned = (e: RawEntity): RawEntity => {
   return { ...e, sim };
 };
 const planDay: Llm['planDay'] = async (input) =>
-  (PLANS.get(input.id) ?? [['00:00', '24:00', input.here, 'leisure', '머무름', '🙂']]).map(([start, end, regionId, kind, activity, emoji, land]) => ({
+  (PLANS.get(input.id) ?? [['00:00', '24:00', input.here, 'leisure', '머무름', '🙂']]).map(([start, end, regionId, kind, activity, emoji, land, spell]) => ({
     start: parseTimeOfDay(start as string),
     end: parseTimeOfDay(end as string),
     regionId: regionId as string,
@@ -48,6 +49,7 @@ const planDay: Llm['planDay'] = async (input) =>
     activity: activity as string,
     emoji: emoji as string,
     ...(land ? { land: land as string } : {}),
+    ...(spell ? { spell: spell as string } : {}),
   }));
 const act = (state: State, world: World, action: Action | string, llm: Llm = {}) => runAct(state, world, action, { planDay, ...llm });
 const advance = (state: State, world: World, hours: number, llm: Llm = {}) => runAdvance(state, world, hours, { planDay, ...llm });
@@ -1393,4 +1395,43 @@ test('the real baloth starts out in the jungle of Bala Ged', () => {
   const world = loadWorld();
   const state = newState(world, { seed: 1, mode: 'observer' });
   assert.equal(state.actors['cre-baloth']?.region, 'loc-bala-ged');
+});
+
+test('an NPC learns a spell by a learn block where it is taught, then casts it by a cast block on the one the LLM picks', async () => {
+  const plan = [
+    ['00:00', '06:00', 'loc-a', 'sleep', '잠', '😴'],
+    ['06:00', '10:00', 'loc-a', 'learn', '주문 익히기', '📖', undefined, 'spl-t'],
+    ['10:00', '11:00', 'loc-a', 'cast', '주문', '🩸', undefined, 'spl-t'],
+    ['11:00', '24:00', 'loc-a', 'leisure', '쉼', '🙂'],
+  ];
+  const world = fixture([tribute('loc-a'), lore('cre-v', 'creature'), npc('chr-v', { ...npcSim('loc-a'), mana: { B: 2 }, plan }), npc('chr-x', npcSim('loc-a'))]);
+  const state = newState(world, { seed: 1, mode: 'observer' });
+  const v = state.actors['chr-v'];
+  const x = state.actors['chr-x'];
+  let offered: PlanDayInput | undefined;
+  const asked: string[][] = [];
+  const llm: Llm = {
+    planDay: async (input) => (input.id === 'chr-v' && (offered = input), planDay!(input)),
+    choose: async ({ candidates }) => (asked.push(candidates.map((c) => c.id)), 'chr-x'),
+  };
+  await advance(state, world, 4, llm); // 06:00 → 10:00
+  assert.deepEqual(offered?.learn?.map((s) => [s.id, s.at]), [['spl-t', 'loc-a']]);
+  assert.deepEqual(v.spells, ['spl-t']);
+  const energy = x.stats.energy;
+  await advance(state, world, 1, llm); // the cast
+  assert.deepEqual(asked, [['chr-x']]); // not themselves: "target opponent"
+  assert.ok(texts(state).some((t) => t.includes('공물을 걸었다')));
+  assert.ok(x.stats.energy <= energy - Math.ceil(energy / 10 / 2) * 10); // half their life, and the hour's own toll
+  assert.deepEqual(x.foes?.ids, ['chr-v']);
+  assert.equal(formatMana(manaAvailable(state, world, v, state.minutes)), '없음'); // paid
+});
+
+test('an NPC who readies a spell may hold it back, keeping its mana', async () => {
+  const plan = [['00:00', '24:00', 'loc-a', 'cast', '주문', '🩸', undefined, 'spl-t']];
+  const world = fixture([tribute('loc-a'), lore('cre-v', 'creature'), npc('chr-v', { ...npcSim('loc-a'), mana: { B: 2 }, plan }), npc('chr-x', npcSim('loc-a'))]);
+  const state = newState(world, { seed: 1, mode: 'observer' });
+  state.actors['chr-v'].spells = ['spl-t'];
+  await advance(state, world, 1, { choose: async () => null });
+  assert.equal(state.actors['chr-x'].foes, undefined);
+  assert.deepEqual(manaAvailable(state, world, state.actors['chr-v'], state.minutes), { B: 2 });
 });

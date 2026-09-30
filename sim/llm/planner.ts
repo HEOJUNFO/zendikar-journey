@@ -12,6 +12,7 @@ const BlockSchema = z.object({
   emoji: z.string().min(1).max(8),
   kind: z.enum(LIFE_KINDS),
   land: z.string().optional(),
+  spell: z.string().optional(),
 });
 const PlanSchema = z.object({ blocks: z.array(BlockSchema).min(1).max(24) });
 
@@ -45,11 +46,14 @@ export type PlanDayInput = {
   grow?: { land: string; creatures: string[] };
   // Lands they could seek out today by giving up a fetch land they hold (Arid Mesa...).
   fetch?: { id: string; text: string }[];
+  // Spells they could learn (where each is taught), and spells they hold and could pay for.
+  learn?: { id: string; at: string; text: string }[];
+  cast?: { id: string; text: string }[];
 };
 
 // Kinds of blocks they may plan: no meals without hunger, taming only if there is an item for
 // them to tame, keeping days only with a land that keeps them.
-function kindsFor(input: Pick<PlanDayInput, 'needs' | 'items' | 'days' | 'grow' | 'fetch'>) {
+function kindsFor(input: Pick<PlanDayInput, 'needs' | 'items' | 'days' | 'grow' | 'fetch' | 'learn' | 'cast'>) {
   return LIFE_KINDS.filter(
     (k) =>
       (k !== 'eat' || input.needs.includes('hunger')) &&
@@ -57,7 +61,9 @@ function kindsFor(input: Pick<PlanDayInput, 'needs' | 'items' | 'days' | 'grow' 
       (k !== 'store_day' || !!input.days?.store) &&
       (k !== 'spend_day' || !!input.days?.spend) &&
       (k !== 'grow' || !!input.grow) &&
-      (k !== 'fetch' || !!input.fetch?.length),
+      (k !== 'fetch' || !!input.fetch?.length) &&
+      (k !== 'learn' || !!input.learn?.length) &&
+      (k !== 'cast' || !!input.cast?.length),
   );
 }
 
@@ -74,8 +80,17 @@ export async function planDay(input: PlanDayInput): Promise<ScheduleBlock[] | nu
   );
   let blocks = parsePlan(content, new Set(input.regions.map((r) => r.id)));
   // A fetch must name one of the lands it can reach.
+  // A fetch must name one of the lands it can reach; a learn, a spell taught where the block
+  // is; a cast, a spell they can cast.
   const sought = new Set(input.fetch?.map((x) => x.id));
-  if (blocks?.some((b) => !kinds.has(b.kind) || (b.kind === 'fetch' && !sought.has(b.land ?? '')))) blocks = null;
+  const taught = new Map(input.learn?.map((x) => [x.id, x.at]));
+  const castable = new Set(input.cast?.map((x) => x.id));
+  const bad = (b: ScheduleBlock) =>
+    !kinds.has(b.kind) ||
+    (b.kind === 'fetch' && !sought.has(b.land ?? '')) ||
+    (b.kind === 'learn' && taught.get(b.spell ?? '') !== b.regionId) ||
+    (b.kind === 'cast' && !castable.has(b.spell ?? ''));
+  if (blocks?.some(bad)) blocks = null;
   if (!blocks) console.warn(`Unusable plan for ${input.name}:`, content);
   return blocks;
 }
@@ -86,7 +101,7 @@ role and goals, their needs, what they know happened, and the people they know.
 Answer with JSON only, no prose.`;
 
 function userPrompt(input: PlanDayInput) {
-  const { day, now, name, persona, goal, role, home, here, stats, needs, regions, news, relations = [], items = [], days, grow, fetch = [] } = input;
+  const { day, now, name, persona, goal, role, home, here, stats, needs, regions, news, relations = [], items = [], days, grow, fetch = [], learn = [], cast = [] } = input;
   const kinds = kindsFor(input);
   const state = [
     needs.includes('energy') && `energy ${Math.round(stats.energy)}/100 (low = tired)`,
@@ -133,13 +148,23 @@ Rules:
     kinds.includes('fetch')
       ? `\n- "fetch" takes 1 hour, anywhere, and needs "land": the id of the land sought. They give up a fetch land they hold (the bond with it ends) and some life, and bond from afar with the land sought, drawing its mana from then on. It is not their one land of the day. Lands they could seek:\n${fetch.map((x) => `  - "${x.id}": ${x.text}`).join('\n')}`
       : ''
+  }${
+    kinds.includes('learn')
+      ? `\n- "learn" takes the hours given, in the region where the spell is taught (regionId must be that region), and needs "spell": its id. They come to know it for good. Spells they could learn:\n${learn.map((x) => `  - "${x.id}" in ${x.at}: ${x.text}`).join('\n')}`
+      : ''
+  }${
+    kinds.includes('cast')
+      ? `\n- "cast" takes 1 hour, and needs "spell": its id. At the end they pay its mana and cast it on someone in the same region (who, is decided then; they may hold it back). A harmful spell makes its target their enemy. Only when it fits who they are. Spells they hold:\n${cast.map((x) => `  - "${x.id}": ${x.text}`).join('\n')}`
+      : ''
   }
 - Travel between regions takes hours; only change region when there is a reason.
 - Let today follow from their state, news, goal and the people they know; days need not repeat.
 - activity is a short Korean phrase shown on screen (e.g. "폐허 순찰"); emoji is a single emoji.
 
 Answer: {"blocks":[{"start":0,"end":360,"regionId":"...","activity":"...","emoji":"...","kind":"sleep"}, ...]}${
-    kinds.includes('fetch') ? ' (a "fetch" block also has "land")' : ''
+    kinds.includes('fetch') || kinds.includes('learn') || kinds.includes('cast')
+      ? ` (${[kinds.includes('fetch') && 'a "fetch" block also has "land"', (kinds.includes('learn') || kinds.includes('cast')) && '"learn" and "cast" blocks also have "spell"'].filter(Boolean).join('; ')})`
+      : ''
   }`;
 }
 
