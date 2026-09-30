@@ -22,7 +22,8 @@ import { bondBlocked, bondLand, bondTargets, fetchTargets, fireTargets, firesOnB
 import { DEPLETED_LABEL, DESTROYED_DAYS } from './rules.ts';
 import { swayBlocked } from './retainers.ts';
 import { upkeepWins } from './win.ts';
-import { askText, hirePrice } from './allies.ts';
+import { hirePrice } from './allies.ts';
+import { askText } from './asks.ts';
 import type { State } from './state.ts';
 import { affectedRegions, buildWorld, region, travelHours } from './world.ts';
 import type { RawEntity } from './world.ts';
@@ -2050,4 +2051,40 @@ test('a flyer NPC set on by an NPC who can\'t fly may take to the air until midn
   addFoe(s2.actors['chr-x'], 'chr-f', s2.minutes);
   await advance(s2, world, 2, { evade: async () => false });
   assert.ok(woundsOf(s2.actors['chr-f'], s2.minutes) > 0);
+});
+
+// And NPCs toward the player, what the player may toward them (user decision 2026-09-30).
+test('an NPC may seek out the player and speak first, and ask them to serve; the player answers', async () => {
+  const seeker = { ...npcSim('loc-b', 'work'), plan: [['00:00', '24:00', 'loc-b', 'social', '그를 찾아감', '💬', null, null, PLAYER_ID]] };
+  const world = fixture([npc('chr-x', seeker)]);
+  const state = character(world, 'loc-a');
+  const p = state.actors[PLAYER_ID];
+  const heard: (string | undefined)[] = [];
+  const reply: Llm['reply'] = async ({ say }) => (heard.push(say), { say: '나를 따르게.', attack: false, recruit: true });
+  await act(state, world, { type: 'wait', hours: 8 }, { reply });
+  assert.deepEqual(heard, [undefined]); // they spoke first
+  assert.equal(state.actors['chr-x'].region, 'loc-a');
+  assert.ok(texts(state).some((t) => t.includes('나를 따르게')));
+  assert.equal(state.asks?.[0]?.effect.type, 'pledge');
+  assert.match((await act(state, world, { type: 'wait', hours: 1 })).error!, /먼저 골라야/);
+  await act(state, world, { type: 'choose', pick: 'chr-x' });
+  assert.equal(p.master, 'chr-x');
+});
+
+test('an NPC may go after the player; a flying player picks whether to take to the air', async () => {
+  const hunter = { ...npcSim('loc-a', 'work', [3, 3]), plan: [['00:00', '24:00', 'loc-a', 'attack', '그를 노림', '⚔️', null, null, PLAYER_ID]] };
+  const world = fixture([npc('chr-x', hunter)]);
+  const state = character(world, 'loc-a');
+  const p = state.actors[PLAYER_ID];
+  p.abilities = [...p.abilities, 'fly'];
+  p.pt = [1, 9];
+  await act(state, world, { type: 'wait', hours: 4 });
+  assert.ok(texts(state).some((t) => t.includes('에게 덤벼들었다'))); // the player stops what they were doing
+  await act(state, world, { type: 'wait', hours: 1 });
+  assert.equal(state.asks?.[0]?.effect.type, 'evade');
+  assert.equal(woundsOf(p, state.minutes), 0);
+  await act(state, world, { type: 'choose', pick: 'chr-x' });
+  await act(state, world, { type: 'wait', hours: 3 });
+  assert.equal(woundsOf(p, state.minutes), 0); // out of reach until midnight
+  assert.ok(!state.asks?.length);
 });

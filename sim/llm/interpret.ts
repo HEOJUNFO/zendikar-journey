@@ -3,7 +3,8 @@ import { z } from 'zod';
 import { ActionSchema } from '../actions.ts';
 import type { Action } from '../actions.ts';
 import { isPerson, npcDef, player, present, ptOf } from '../state.ts';
-import { askText, hireBlocked, hirePrice } from '../allies.ts';
+import { hireBlocked, hirePrice } from '../allies.ts';
+import { askOptions, askText } from '../asks.ts';
 import type { InterpretInput } from '../run.ts';
 import { travelBlocked } from '../step.ts';
 import { shortName } from '../text.ts';
@@ -71,11 +72,11 @@ export async function interpret({ world, state, text }: InterpretInput): Promise
   // A pick they owe comes before anything else: the only action now.
   const ask = state.asks?.[0];
   if (ask) {
-    const options = ask.candidates.map((id) => `- {"type":"choose","pick":"${id}"}  (${shortName(state.actors[id]?.name ?? id)})`);
+    const options = askOptions(state, ask).map((o) => `- {"type":"choose","pick":${o.pick ? `"${o.pick}"` : 'null'}}  (${o.label})`);
     const content = await chatCompletion(
       [
         { role: 'system', content: SYSTEM_PROMPT },
-        { role: 'user', content: `The player must first pick: ${askText(state, world, ask)}\n\nActions:\n${options.join('\n')}\n- {"type":"choose","pick":null}  (no one)\n\nPlayer typed: ${text}\n\nAnswer: {"action": {...}}` },
+        { role: 'user', content: `The player must first pick: ${askText(state, world, ask)}\n\nActions:\n${options.join('\n')}\n\nPlayer typed: ${text}\n\nAnswer: {"action": {...}}` },
       ],
       300,
     );

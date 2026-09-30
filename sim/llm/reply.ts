@@ -11,11 +11,13 @@ import { chatCompletion, extractJson } from './chat.ts';
 import { bearingText, loreText, playerText } from './context.ts';
 import { relationsText, relationTo } from '../relations.ts';
 import { swayBlocked } from '../retainers.ts';
+import { canServe } from '../asks.ts';
 
 const ReplySchema = z.object({
   say: z.string().min(1),
   attack: z.boolean().default(false),
   follow: z.boolean().default(false),
+  recruit: z.boolean().default(false),
   impression: z.string().optional(),
 });
 
@@ -23,6 +25,8 @@ export async function reply({ world, state, npc, say, beast }: ReplyInput): Prom
   const p = player(state)!;
   const me = state.actors[npc.id];
   const canFollow = !swayBlocked(state, world, me);
+  // Whether they could ask the player to serve them, as the player may ask it of them.
+  const canRecruit = !beast && canServe(p, me) && !me.master;
   const name = shortName(npc.name);
   // Their past exchanges, oldest first (the player's new line is already logged).
   const history = state.log
@@ -41,7 +45,7 @@ Who you are: ${npc.persona}
 Your goal: ${npc.goal}
 Your role: ${npc.role}
 Your power/toughness is ${ptOf(state.actors[npc.id]).join('/')}; theirs is ${ptOf(p).join('/')}. Fights here are deadly.
-${beast ? `You are a beast: you have no words and do not understand speech as people do, only tone, bearing and deeds.\n` : ''}${canFollow ? `You serve no one. If, in character and won over by ${beast ? 'who they are and how they carry themselves' : 'what they say and who they are'}, you now ${beast ? 'accept them as the one you follow' : 'pledge to follow and serve them as their retainer'}, set "follow": true. That is rare and a big step.\n` : ''}Answer with JSON only: {"say": "${beast ? `<in Korean, 1 or 2 sentences of third-person narration of what you do in answer (a look, a sound, a movement), beginning with ${shortName(npc.name)}; no speech>` : '<your spoken words in Korean, 1 to 3 sentences, no name prefix or narration>'}", "attack": <true only if, in character, you now attack them>,${canFollow ? ' "follow": <true only if you now pledge to serve them>,' : ''} "impression": "<Korean, one short line: what you now think of them>"}`,
+${beast ? `You are a beast: you have no words and do not understand speech as people do, only tone, bearing and deeds.\n` : ''}${canFollow ? `You serve no one. If, in character and won over by ${beast ? 'who they are and how they carry themselves' : 'what they say and who they are'}, you now ${beast ? 'accept them as the one you follow' : 'pledge to follow and serve them as their retainer'}, set "follow": true. That is rare and a big step.\n` : ''}${canRecruit ? `If, in character, you now ask them to follow and serve you as your retainer, set "recruit": true (they will answer). Only with real cause.\n` : ''}${say === undefined ? `You sought them out, and now speak to them first: say what you came to say.\n` : ''}Answer with JSON only: {"say": "${beast ? `<in Korean, 1 or 2 sentences of third-person narration of what you do in answer (a look, a sound, a movement), beginning with ${shortName(npc.name)}; no speech>` : '<your spoken words in Korean, 1 to 3 sentences, no name prefix or narration>'}", "attack": <true only if, in character, you now attack them>,${canFollow ? ' "follow": <true only if you now pledge to serve them>,' : ''}${canRecruit ? ' "recruit": <true only if you ask them to serve you>,' : ''} "impression": "<Korean, one short line: what you now think of them>"}`,
       },
       {
         role: 'user',
@@ -56,7 +60,7 @@ ${relationsText(me).length ? `Others you know:\n${relationsText(me).join('\n')}\
 Conversation so far:
 ${history.join('\n')}
 
-Reply as ${name} to: ${say}`,
+${say === undefined ? `Speak first, as ${name}.` : `Reply as ${name} to: ${say}`}`,
       },
     ],
     800,
@@ -68,7 +72,7 @@ Reply as ${name} to: ${say}`,
   }
   const text = parsed.data.say.trim().replace(/^["“”']+|["“”']+$/g, '').replace(new RegExp(`^${name}\\s*:\\s*`), '');
   return text
-    ? { say: text, attack: parsed.data.attack, follow: canFollow && parsed.data.follow, impression: parsed.data.impression?.trim() || undefined }
+    ? { say: text, attack: parsed.data.attack, follow: canFollow && parsed.data.follow, recruit: canRecruit && parsed.data.recruit && !parsed.data.follow, impression: parsed.data.impression?.trim() || undefined }
     : null;
 }
 

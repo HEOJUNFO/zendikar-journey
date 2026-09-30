@@ -4,7 +4,8 @@ import type { Action } from '../sim/actions.ts';
 import { PACE_LABELS } from '../sim/actions.ts';
 import { formatClock, formatTimeOfDay, gameDay, minuteOfDay } from '../sim/clock.ts';
 import { isPerson, needsOf, npcDef, outOfTime, player, present, ptOf } from '../sim/state.ts';
-import { askText, hireBlocked, hirePrice } from '../sim/allies.ts';
+import { hireBlocked, hirePrice } from '../sim/allies.ts';
+import { askOptions, askText } from '../sim/asks.ts';
 import { woundsOf } from '../sim/combat.ts';
 import { COLOR_LABELS, formatMana, manaAvailable, manaCapacity, manaLabel } from '../sim/mana.ts';
 import { bondBlocked, bondTargets, enteredToday, fetchTargets, fireTargets, firesOnBond, growBlocked, growLand, targetedBondEffect } from '../sim/abilities.ts';
@@ -411,21 +412,19 @@ export function CharacterControls(props: {
     );
   }
 
-  // A pick they owe (an Ally's rally in their party): nothing else until they answer.
+  // A pick they owe (an Ally's rally in their party, one asking them to serve, a blow to fly
+  // from): nothing else until they answer.
   const ask = state.asks?.[0];
   if (ask) {
     return (
       <div className="controls controls-player">
-        <p>🔥 {askText(state, world, ask)}. 누구에게?</p>
+        <p>{ask.effect.type === 'rally' ? '🔥' : ask.effect.type === 'evade' ? '🪽' : '🤝'} {askText(state, world, ask)}</p>
         <div className="row">
-          {ask.candidates.map((id) => (
-            <button key={id} disabled={busy} onClick={() => onAct({ type: 'choose', pick: id })}>
-              {shortName(state.actors[id]?.name ?? id)}
+          {askOptions(state, ask).map((o) => (
+            <button key={o.pick ?? '-'} disabled={busy} onClick={() => onAct({ type: 'choose', pick: o.pick })}>
+              {o.label}
             </button>
           ))}
-          <button disabled={busy} onClick={() => onAct({ type: 'choose', pick: null })}>
-            하지 않는다
-          </button>
         </div>
       </div>
     );

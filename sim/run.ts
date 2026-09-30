@@ -12,7 +12,8 @@ import { relationsText, remember } from './relations.ts';
 import { claimableItems } from './items.ts';
 import { lifeOf } from './life.ts';
 import { foresightText } from './foresight.ts';
-import { answerAsk, applyRally, askText, hireableFor, hireMerc, hirePrice, rallyText } from './allies.ts';
+import { applyRally, hireableFor, hireMerc, hirePrice, rallyText } from './allies.ts';
+import { answerAsk, askText, canServe } from './asks.ts';
 import { eonLand, eonsIn, spendBlocked, storeBlocked } from './eons.ts';
 import { castableSpells, castBlocked, castSpell, harmful, learnableSpells, spellDef } from './spells.ts';
 import { opponentsOf, sealsDue, setSeal } from './seal.ts';
@@ -39,10 +40,12 @@ export type NarrateInput = { world: World; state: State; entries: LogEntry[] };
 export type InterpretInput = { world: World; state: State; text: string };
 // `beast`: they have no words (a beast that may still follow someone, sim/retainers.ts): the
 // reply is what they do, narrated.
-export type ReplyInput = { world: World; state: State; npc: Speaker; say: string; beast?: boolean };
+// Without `say`, the NPC sought the player out and speaks first.
+export type ReplyInput = { world: World; state: State; npc: Speaker; say?: string; beast?: boolean };
 // What the NPC says, whether they now attack the player or pledge to serve them (become their
 // retainer), and what they now think of them.
-export type Reply = { say: string; attack: boolean; follow?: boolean; impression?: string };
+// `recruit`: they ask the player to follow and serve them (the player answers: sim/asks.ts).
+export type Reply = { say: string; attack: boolean; follow?: boolean; recruit?: boolean; impression?: string };
 export type EvadeInput = { world: World; state: State; npc: Speaker; attacker: Actor };
 export type ConverseInput = { world: World; state: State; a: Speaker; b: Speaker };
 // An NPC picks whom an effect falls on (e.g. a land's "target player loses 1 life"): one of
@@ -146,8 +149,11 @@ export async function act(state: State, world: World, input: Action | string, ll
     await choices(state, world, llm);
     // Something is happening right here: stop and let the player decide. News from afar
     // (world-scope events elsewhere) doesn't interrupt.
+    // So is someone speaking to them (one who sought them out).
     const alarm = state.log.some(
-      (e) => e.id >= before && (e.kind === 'omen' || e.kind === 'event' || e.kind === 'combat') && e.regions.includes(p.region),
+      (e) =>
+        e.id >= before &&
+        (((e.kind === 'omen' || e.kind === 'event' || e.kind === 'combat') && e.regions.includes(p.region)) || (e.kind === 'speech' && e.actors.includes(p.id))),
     );
     if (alarm && p.task && p.task.kind !== 'fight' && !p.travel && !p.forced && p.boundUntil === undefined) {
       p.task = undefined;
@@ -159,9 +165,9 @@ export async function act(state: State, world: World, input: Action | string, ll
 }
 
 // NPCs who met this hour talk (step.ts logs the meeting; the words need the LLM). What they
-// think of each other is remembered, and one may turn on the other: they fight next hour.
+// think of each other is remembered, and one may turn on the other: they fight next hour. One
+// who sought out the player speaks to them first.
 async function conversations(state: State, world: World, since: number, llm: Llm) {
-  if (!llm.converse) return;
   const day = gameDay(state.minutes);
   const met = state.log.filter((e) => e.id >= since && e.kind === 'meet' && e.actors.length === 2);
   for (const m of met) {
@@ -169,6 +175,13 @@ async function conversations(state: State, world: World, since: number, llm: Llm
     if (state.talks.count >= MAX_TALKS_PER_DAY) return;
     const [x, y] = m.actors.map((id) => state.actors[id]);
     if (!x || !y || x.dead || y.dead || npcDef(state, world, x.id)?.beast || npcDef(state, world, y.id)?.beast) continue;
+    const p = [x, y].find((a) => a.kind === 'player');
+    if (p) {
+      state.talks.count++;
+      await approach(state, world, p === x ? y : x, p, llm);
+      continue;
+    }
+    if (!llm.converse) continue;
     const [a, b] = [speakerDef(state, world, x.id), speakerDef(state, world, y.id)];
     if (!a || !b) continue;
     state.talks.count++;
@@ -249,6 +262,7 @@ async function choices(state: State, world: World, llm: Llm) {
     const land = world.regions.find((r) => r.id === c.land);
     const candidates = c.candidates.map((id) => state.actors[id]).filter((x) => x && !x.dead);
     if (!by || by.dead || !npc || !land || !candidates.length) continue;
+    if (c.effect.type === 'pledge' || c.effect.type === 'evade') continue; // the player's alone
     if (c.effect.type === 'cast') {
       await castChoice(state, world, llm, by, npc, c.effect.spell, candidates);
       continue;
@@ -395,13 +409,37 @@ async function talk(state: State, world: World, p: Actor, npcId: string, say: st
     regions: [p.region],
     actors: [npc.id, p.id],
   });
-  if (reply?.impression) remember(state.actors[npc.id], p, reply.impression, state.minutes);
-  if (reply?.follow && !reply.attack && !swayBlocked(state, world, state.actors[npc.id]))
-    bindRetainer(state, world, state.actors[npc.id], p, state.minutes, '설득');
-  if (reply?.attack) {
-    addFoe(state.actors[npc.id], p.id, state.minutes);
-    addLog(state, { kind: 'combat', text: `${josa(name, '이', '가')} 적의를 드러냈다.`, regions: [p.region], actors: [npc.id, p.id] });
+  if (reply) applyReply(state, world, state.actors[npc.id], p, reply);
+}
+
+// What an NPC's words to the player lead to: what they now think of them, and whether they
+// pledge to serve them, ask the player to serve them (the player answers: sim/asks.ts), or
+// turn on them.
+function applyReply(state: State, world: World, me: Actor, p: Actor, reply: Reply) {
+  const name = shortName(me.name);
+  if (reply.impression) remember(me, p, reply.impression, state.minutes);
+  if (reply.follow && !reply.attack && !swayBlocked(state, world, me)) bindRetainer(state, world, me, p, state.minutes, '설득');
+  else if (reply.recruit && !reply.attack && canServe(p, me))
+    (state.asks ??= []).push({ by: p.id, land: p.region, effect: { type: 'pledge', from: me.id }, candidates: [me.id], t: state.minutes });
+  if (reply.attack) {
+    addFoe(me, p.id, state.minutes);
+    addLog(state, { kind: 'combat', text: `${josa(name, '이', '가')} 적의를 드러냈다.`, regions: [p.region], actors: [me.id, p.id] });
   }
+}
+
+// An NPC who sought the player out speaks to them first (the player answers by talking).
+async function approach(state: State, world: World, me: Actor, p: Actor, llm: Llm) {
+  const npc = speakerDef(state, world, me.id);
+  if (!npc || !llm.reply) return;
+  let reply: Reply | null = null;
+  try {
+    reply = await llm.reply({ world, state, npc });
+  } catch (e) {
+    console.warn(`approach from ${me.id} failed:`, e);
+  }
+  if (!reply) return;
+  addLog(state, { kind: 'speech', text: `${shortName(me.name)}: “${reply.say}”`, regions: [p.region], actors: [me.id, p.id] });
+  applyReply(state, world, me, p, reply);
 }
 
 // The player's blow. A flyer may take to the air instead (only if the attacker can't fly).
@@ -546,19 +584,19 @@ function hireInput(state: State, world: World, a: Actor): PlanDayInput['hire'] {
   return out.length ? out : undefined;
 }
 
-// Everyone else in the world, and where each is now: whom they could seek out to talk with (not
-// beasts) or go after, for their plan. A defender strikes no one first; one seized, not the
+// Everyone else in the world (the player too), and where each is now: whom they could seek out
+// to talk with (not beasts) or go after, for their plan. A defender strikes no one first; one seized, not the
 // one who holds them.
 function peopleInput(state: State, world: World, a: Actor): PlanDayInput['people'] {
   const canAttack = !hasAbility(a, 'defender', state.minutes);
   const out = Object.values(state.actors)
-    .filter((x) => x.kind === 'npc' && !x.dead && x.id !== a.id && !outOfTime(state, x))
+    .filter((x) => !x.dead && x.id !== a.id && !outOfTime(state, x))
     .map((x) => {
       const def = npcDef(state, world, x.id);
       return {
         id: x.id,
         at: x.travel?.to ?? x.region,
-        text: `${x.name} (${def?.beast ? 'beast' : (def?.role ?? '')}, ${ptOf(x).join('/')})`,
+        text: `${x.name} (${x.kind === 'player' ? 'the player' : def?.beast ? 'beast' : (def?.role ?? '')}, ${ptOf(x).join('/')})`,
         talk: !def?.beast,
         attack: canAttack && !(a.seized && a.master === x.id),
       };

@@ -4,11 +4,11 @@
 // your control" is an Ally joining one's party: becoming their retainer (hired, won over, raised
 // back). Every Ally in that party with a rally power (`sim.rally`) then answers, the joiner too
 // ("this or another Ally"). What it falls on is the controller's pick: the player's (state.asks,
-// sim/run.ts) or, for an NPC, the LLM's. Mercenaries (`sim.hireable`) serve whoever pays.
+// sim/asks.ts) or, for an NPC, the LLM's. Mercenaries (`sim.hireable`) serve whoever pays.
 import { addFoe, dealDamage } from './combat.ts';
 import { bindRetainer, masterOf, retainersOf, swayBlocked } from './retainers.ts';
 import { addLog, npcDef, present, targetable } from './state.ts';
-import type { Actor, Choice, State } from './state.ts';
+import type { Actor, State } from './state.ts';
 import { josa, shortName } from './text.ts';
 import type { NpcDef, World } from './world.ts';
 
@@ -111,18 +111,4 @@ export function hireableFor(state: State, world: World, a: Actor) {
     const def = npcDef(state, world, x.id);
     return def?.hireable && !x.dead && x.id !== a.id && !swayBlocked(state, world, x) && a.stats.coin >= hirePrice(def);
   });
-}
-
-// What a pick the player owes is about (state.asks), for them.
-export function askText(state: State, world: World, c: Choice) {
-  return c.effect.type === 'rally' ? rallyText(state, world, c.effect.source) : '';
-}
-
-// The player answers the pick they owe first: someone (by id), or no one.
-export function answerAsk(state: State, world: World, pick: string | null, t: number) {
-  const c = state.asks?.shift();
-  if (!c || c.effect.type !== 'rally') return;
-  const target = pick ? state.actors[pick] : undefined;
-  if (target && c.candidates.includes(target.id)) applyRally(state, world, c.effect.source, target.id, t);
-  else addLog(state, { kind: 'status', text: `${shortName(state.actors[c.effect.source]?.name ?? '')}의 불길을 거두었다.`, regions: [c.land], actors: [c.by], t });
 }

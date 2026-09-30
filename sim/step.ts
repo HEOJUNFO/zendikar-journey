@@ -539,10 +539,12 @@ function travelHour(state: State, world: World, a: Actor, t: number) {
 // eating or socialising in the same region meet by chance. Sought meetings come first.
 function meetings(state: State, world: World) {
   const free = (a: Actor) => a.kind === 'npc' && !a.dead && !a.travel && a.boundUntil === undefined && !outOfTime(state, a);
+  // The player, sought out: they are met as they stand (they will be spoken to first, sim/run.ts).
+  const findable = (b: Actor) => (b.kind === 'player' ? !b.dead && !b.travel && !outOfTime(state, b) : free(b));
   const pairs: { x: Actor; y: Actor; seeker?: Actor }[] = [];
   for (const a of alive(state)) {
     const b = a.task?.kind === 'social' && a.task.who ? state.actors[a.task.who] : undefined;
-    if (b && free(a) && free(b) && a.region === b.region) pairs.push({ x: a, y: b, seeker: a });
+    if (b && free(a) && findable(b) && a.region === b.region) pairs.push({ x: a, y: b, seeker: a });
   }
   const open = alive(state).filter((a) => free(a) && (a.task?.kind === 'social' || a.task?.kind === 'eat'));
   for (let i = 0; i < open.length; i++) for (let j = i + 1; j < open.length; j++) if (open[i].region === open[j].region) pairs.push({ x: open[i], y: open[j] });

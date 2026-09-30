@@ -221,20 +221,21 @@ function extraCombat(state: State, world: World, a: Actor, foe: Actor, t: number
   for (const x of band) if (!down(x) && !down(foe)) clash(state, x, foe, t);
 }
 
-// A flyer NPC set on by one who can't fly may take to the air, as when the player attacks them
-// (sim/run.ts `attack`): 'evade' if they are out of `a`'s reach until midnight, 'ask' if they
-// have yet to answer (the LLM, after the hour: sim/run.ts `evasions`), null if they stand.
+// A flyer set on by one who can't fly may take to the air, as an NPC the player attacks (sim/run.ts
+// `attack`): 'evade' if they are out of `a`'s reach until midnight, 'ask' if they have yet to
+// answer (an NPC: the LLM, after the hour, sim/run.ts `evasions`; the player: a pick they owe,
+// sim/asks.ts), null if they stand.
 function evasion(a: Actor, b: Actor, t: number): 'evade' | 'ask' | null {
-  if (b.kind !== 'npc' || !hasAbility(b, 'fly', t) || hasAbility(a, 'fly', t) || b.boundUntil !== undefined || down(b)) return null;
+  if (!hasAbility(b, 'fly', t) || hasAbility(a, 'fly', t) || b.boundUntil !== undefined || down(b)) return null;
   const e = b.evasions?.find((x) => x.from === a.id && x.until > t);
   return e ? (e.evade ? 'evade' : null) : 'ask';
 }
 
-// Why an NPC can't go after `whoId` now (a planned attack, sim/step.ts), or null. The player
-// may attack anyone standing with them; an NPC too, but for these.
+// Why an NPC can't go after `whoId` (an NPC or the player) now (a planned attack, sim/step.ts),
+// or null. The player may attack anyone standing with them; an NPC too, but for these.
 export function attackBlocked(state: State, a: Actor, whoId: string | undefined, t: number): string | null {
   const b = whoId ? state.actors[whoId] : undefined;
-  if (!b || b.dead || b.kind !== 'npc') return '그런 이는 없다.';
+  if (!b || b.dead) return '그런 이는 없다.';
   if (b.id === a.id) return '자신에게 덤빌 수는 없다.';
   if (hasAbility(a, 'defender', t)) return '먼저 덤비지 않는다.';
   if (a.seized && a.master === b.id) return `붙들린 몸이라 ${shortName(b.name)}에게 덤빌 수 없다.`;
@@ -269,7 +270,11 @@ export function hostileNpcs(state: State, world: World, t: number) {
     if (!foe) continue;
     // A flyer yet to answer: the blow waits for it (asked after the hour).
     if (evasion(a, foe, t) === 'ask') {
-      if (!state.evades?.some((e) => e.by === foe!.id && e.from === a.id)) (state.evades ??= []).push({ by: foe.id, from: a.id, t });
+      const f = foe;
+      if (f.kind === 'player') {
+        const owed = [...(state.choices ?? []), ...(state.asks ?? [])].some((c) => c.effect.type === 'evade' && c.effect.from === a.id);
+        if (!owed) (state.choices ??= []).push({ by: f.id, land: f.region, effect: { type: 'evade', from: a.id }, candidates: [a.id], t });
+      } else if (!state.evades?.some((e) => e.by === f.id && e.from === a.id)) (state.evades ??= []).push({ by: f.id, from: a.id, t });
       continue;
     }
     a.forced = { kind: 'fight', activity: `${josa(shortName(foe.name), '과', '와')} 싸움`, emoji: '⚔️', until: t + STEP_MINUTES };
