@@ -12,7 +12,7 @@ import { manaAvailable, payMana, planPayment } from './mana.ts';
 import { HUNT_HUNGER, KILL_FEED, KO_ACTIVITY, KO_HOURS } from './rules.ts';
 import { addLog, hasAbility, needsOf, npcDef, outOfTime, present, ptOf, random } from './state.ts';
 import type { Actor, State } from './state.ts';
-import { hasPowers } from './world.ts';
+import { hasPowers, landTypes } from './world.ts';
 import type { World } from './world.ts';
 import { josa, shortName } from './text.ts';
 
@@ -116,17 +116,27 @@ export function foesOf(a: Actor, t: number) {
 }
 
 // One exchange. The defender turns hostile to the attacker.
-export function clash(state: State, attacker: Actor, defender: Actor, t: number) {
+// Swampwalk ("can't be blocked as long as defending player controls a Swamp"): one bonded
+// with a swamp (a basic one) can't strike back at a swampwalker, nor fly from it.
+export function landwalked(world: World, attacker: Actor, defender: Actor, t: number) {
+  return hasAbility(attacker, 'swampwalk', t) && (defender.bonds ?? []).some((id) => {
+    const r = world.regions.find((x) => x.id === id);
+    return !!r && landTypes(r).includes('swamp');
+  });
+}
+
+// `unblocked`: the defender can't strike back this exchange (landwalk).
+export function clash(state: State, attacker: Actor, defender: Actor, t: number, unblocked = false) {
   const [ap] = ptOf(attacker);
-  // A tapped (bound) or knocked-out defender can't strike back.
-  const helpless = defender.boundUntil !== undefined ? '묶여' : knockedOut(defender) ? '기절해' : null;
+  // A tapped (bound) or knocked-out defender can't strike back, nor one the attacker walks through.
+  const helpless = defender.boundUntil !== undefined ? '묶여 있어' : knockedOut(defender) ? '기절해 있어' : unblocked ? '늪과 이어진 몸이라 늪을 걷는 적에게' : null;
   const tapped = !!helpless;
   const [dp] = tapped ? [0] : ptOf(defender);
   const a = shortName(attacker.name);
   const d = shortName(defender.name);
   addLog(state, {
     kind: 'combat',
-    text: `${josa(a, '이', '가')} ${josa(d, '을', '를')} 공격했다.${helpless ? ` ${josa(d, '은', '는')} ${helpless} 있어 맞서지 못한다.` : ''}`,
+    text: `${josa(a, '이', '가')} ${josa(d, '을', '를')} 공격했다.${helpless ? ` ${josa(d, '은', '는')} ${helpless} 맞서지 못한다.` : ''}`,
     regions: [attacker.region],
     actors: [attacker.id, defender.id],
   });
@@ -222,7 +232,7 @@ function extraCombat(state: State, world: World, a: Actor, foe: Actor, t: number
     actors: [a.id, foe.id],
   });
   const band = [a, ...retainersOf(state, a.id).filter((r) => r.region === a.region && !r.travel && r.lastClash === t)];
-  for (const x of band) if (!down(x) && !down(foe)) clash(state, x, foe, t);
+  for (const x of band) if (!down(x) && !down(foe)) clash(state, x, foe, t, landwalked(world, x, foe, t));
 }
 
 // A flyer set on by one who can't fly may take to the air, as an NPC the player attacks (sim/run.ts
@@ -259,7 +269,7 @@ export function hostileNpcs(state: State, world: World, t: number) {
     // Their own foes, and (a retainer) whoever their master is fighting right here.
     const m = masterOf(state, a);
     const theirs = [...foesOf(a, t), ...(m && m.region === a.region && !m.travel ? foesOf(m, t) : [])];
-    let foe = present(state, a.region).find((b) => theirs.includes(b.id) && b.id !== a.master && !down(b) && evasion(a, b, t) !== 'evade');
+    let foe = present(state, a.region).find((b) => theirs.includes(b.id) && b.id !== a.master && !down(b) && (evasion(a, b, t) !== 'evade' || landwalked(world, a, b, t)));
     const hunted = !foe && prey(state, world, a, t);
     if (hunted) {
       foe = hunted;
@@ -273,7 +283,9 @@ export function hostileNpcs(state: State, world: World, t: number) {
     }
     if (!foe) continue;
     // A flyer yet to answer: the blow waits for it (asked after the hour).
-    if (evasion(a, foe, t) === 'ask') {
+    // One it walks through can't fly from it either.
+    const walked = landwalked(world, a, foe, t);
+    if (!walked && evasion(a, foe, t) === 'ask') {
       const f = foe;
       if (f.kind === 'player') {
         const owed = [...(state.choices ?? []), ...(state.asks ?? [])].some((c) => c.effect.type === 'evade' && c.effect.from === a.id);
@@ -282,7 +294,7 @@ export function hostileNpcs(state: State, world: World, t: number) {
       continue;
     }
     a.forced = { kind: 'fight', activity: `${josa(shortName(foe.name), '과', '와')} 싸움`, emoji: '⚔️', until: t + STEP_MINUTES };
-    clash(state, a, foe, t);
+    clash(state, a, foe, t, walked);
     extraCombat(state, world, a, foe, t);
     // A beast feeds on what it brought down (a kill, or an NPC knocked out).
     if (down(foe) && !down(a) && npcDef(state, world, a.id)?.beast) {

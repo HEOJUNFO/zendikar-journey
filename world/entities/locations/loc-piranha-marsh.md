@@ -5,9 +5,10 @@ name: 피라냐 습지
 name_en: Piranha Marsh
 summary: 굴 드라즈의 얽힌 나무 아래 고인 검푸른 늪. 잔잔한 물 밑에 이빨 드러낸 피라냐 떼가 도사린다
 status: canon
-sources: [ZEN-222]
+sources: [ZEN-222, ZEN-84]
 tags: [늪, 피라냐, 위험, 흑색]
 links:
+  - { to: cre-bog-tatters, rel: 떠도는 망령 }
   - { to: loc-guul-draz, rel: 바깥 지역 }
   - { to: law-life, rel: 생명을 앗는 땅 }
 map: { in: loc-guul-draz, terrain: swamp, color: B }
@@ -33,6 +34,8 @@ sim:
   - 플레이어는 유대 맺기를 할 때 고른다. NPC는 유대가 맺어진 뒤 LLM이 고른다 (답이 없으면 무작위).
   - 다른 이가 없으면 아무도 잃지 않는다. 고른 이가 유대가 맺어지기 전에 떠나면 헛된다.
   - 짐승도 고를 수 있다 ([결정] 2026-09-30). 모든 존재가 생명을 가지므로 누구든 잃는다 (2026-09-30).
+
+- 늪의 누더기(`cre-bog-tatters`, ZEN-84)가 떠돈다. 스스로 희생자를 찾아가 덤비는 망령이고, 늪과 유대를 맺은 자는 그를 막아내지 못한다.
 
 ## 미정/질문
 

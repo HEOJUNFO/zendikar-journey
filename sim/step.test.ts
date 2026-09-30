@@ -8,7 +8,7 @@ import type { PlanDayInput } from './llm/planner.ts';
 import type { Action } from './actions.ts';
 import { startAction } from './actions.ts';
 import type { World } from './world.ts';
-import { addFoe, attackBlocked, die, knockedOut, woundsOf } from './combat.ts';
+import { addFoe, attackBlocked, die, knockedOut, landwalked, woundsOf } from './combat.ts';
 import { sealedBy, sealToday } from './seal.ts';
 import { castBlocked, castSpell } from './spells.ts';
 import { COLORS, formatMana, manaAvailable, manaCapacity, parseManaCost, planPayment } from './mana.ts';
@@ -2320,4 +2320,37 @@ test('a hungry token hunts only with no master: a herd\'s young keeps to its mas
   assert.ok(texts(state).some((t) => t.includes(`굶주린`) && t.includes('덮쳤다')));
   assert.equal(state.log.filter((e) => e.kind === 'combat' && e.text.includes('굶주린') && e.actors[0] === young.id).length, 0);
   assert.ok(state.log.some((e) => e.kind === 'combat' && e.text.includes('굶주린') && e.actors[0] === wild.id));
+});
+
+test('swampwalk: one bonded with a swamp can\'t strike back at it, nor fly from it', async () => {
+  const wraith = { ...npcSim('loc-a', 'work', [4, 2]), needs: [], beast: true, abilities: ['swampwalk'] };
+  const world = fixture([loc('loc-swamp', 12, 10, 'swamp'), npc('chr-w', wraith), npc('chr-x', npcSim('loc-a', 'work', [3, 9])), npc('chr-f', { ...npcSim('loc-a', 'work', [3, 9]), abilities: ['fly'] })]);
+  const state = newState(world, { seed: 1, mode: 'observer' });
+  const [w, x, f] = [state.actors['chr-w'], state.actors['chr-x'], state.actors['chr-f']];
+  x.bonds = ['loc-swamp'];
+  f.bonds = ['loc-swamp'];
+  addFoe(w, 'chr-x', state.minutes);
+  let asked = 0;
+  await advance(state, world, 1, { evade: async () => (asked++, true) });
+  assert.equal(woundsOf(x, state.minutes), 4);
+  assert.equal(woundsOf(w, state.minutes), 0); // no blow back
+  assert.ok(texts(state).some((t) => t.includes('늪을 걷는 적에게 맞서지 못한다')));
+  // A flyer bonded with a swamp can't take to the air from it.
+  x.region = 'loc-b';
+  addFoe(w, 'chr-f', state.minutes);
+  await advance(state, world, 1, { evade: async () => (asked++, true) });
+  assert.equal(asked, 0);
+  assert.equal(woundsOf(f, state.minutes), 4);
+  // One with no swamp strikes back.
+  f.bonds = [];
+  x.bonds = [];
+  assert.equal(landwalked(world, w, x, state.minutes), false);
+});
+
+test('the real Bog Tatters drifts in Piranha Marsh, swampwalking', () => {
+  const world = loadWorld();
+  const state = newState(world, { seed: 1, mode: 'observer' });
+  const w = state.actors['cre-bog-tatters'];
+  assert.equal(w?.region, 'loc-piranha-marsh');
+  assert.ok(hasAbility(w, 'swampwalk', state.minutes));
 });
