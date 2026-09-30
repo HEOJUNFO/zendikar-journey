@@ -494,7 +494,7 @@ test('areas: a land inside a region, an hour from it, reached by events on the r
   assert.deepEqual(affectedRegions(world, { region: 'loc-in', range: 0 } as never).map((r) => r.id), ['loc-in']);
 });
 
-test('buildWorld rejects areas in nowhere, in areas, or of sea; a sea may hold a land area (its coast)', () => {
+test('buildWorld rejects areas in nowhere, in areas, or at sea', () => {
   const area = (id: string, parent: string, terrain = 'swamp'): RawEntity => ({ id, kind: 'location', name: id, status: 'canon', map: { in: parent, terrain } });
   const { errors } = buildWorld([
     loc('loc-a', 10, 10, 'grassland'),
@@ -503,14 +503,12 @@ test('buildWorld rejects areas in nowhere, in areas, or of sea; a sea may hold a
     area('loc-nowhere', 'loc-moon'),
     area('loc-nested', 'loc-in'),
     area('loc-wet', 'loc-sea', 'deepsea'),
-    area('loc-coast', 'loc-sea', 'beach'),
   ]);
   const has = (id: string) => errors.some((e) => e.startsWith(`${id}:`));
   assert.ok(!has('loc-in'));
   assert.ok(has('loc-nowhere'));
   assert.ok(has('loc-nested'));
   assert.ok(has('loc-wet'));
-  assert.ok(!has('loc-coast'));
 });
 
 const needle: RawEntity = {
@@ -3108,12 +3106,12 @@ test('an Ally\'s gift of the sky: each Ally joining gives every Ally of the part
   assert.equal(hasAbility(o, 'fly', state.minutes), false);
 });
 
-test('the real Seascape Aerialist lives on the Silundi Coast, a land in the Silundi Sea one can walk to', () => {
+test('the real Seascape Aerialist lives on the Silundi Coast, a shore of Tazeem', () => {
   const world = loadWorld();
   const state = newState(world, { seed: 1, mode: 'observer' });
   const a = state.actors['chr-seascape-aerialist'];
   assert.equal(a?.region, 'loc-silundi-coast');
-  assert.equal(region(world, 'loc-silundi-coast').parent, 'loc-silundi-sea');
+  assert.equal(region(world, 'loc-silundi-coast').parent, 'loc-tazeem');
   assert.deepEqual(landTypes(region(world, 'loc-silundi-coast')), ['island']);
   assert.equal(travelBlocked(state, world, a, 'loc-tazeem'), null);
   assert.deepEqual(world.npcs.find((x) => x.id === 'chr-seascape-aerialist')?.rally, [{ type: 'grant_allies', ability: 'fly' }]);
