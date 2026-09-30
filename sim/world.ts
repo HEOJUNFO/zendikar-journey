@@ -77,6 +77,8 @@ export const LandSimSchema = z.strictObject({
   nonbasic: z.boolean().default(false),
   // It gives no mana at all (e.g. a fetch land).
   no_mana: z.boolean().default(false),
+  // Not a land at all, a place (e.g. Goma Fada, a walking city): no one bonds with it.
+  not_land: z.boolean().default(false),
   enters_tapped: z.boolean().default(false),
   // "{T}, Pay N life, Sacrifice this land: Search your library for a <type> or <type> card, put
   // it onto the battlefield": whoever holds it gives it up and N life, and bonds with a land of
@@ -477,6 +479,7 @@ export type Region = {
   onBond: BondEffect[];
   nonbasic: boolean;
   noMana: boolean;
+  notLand?: boolean;
   fetch?: { types: LandType[]; life: number };
   fallenMana?: { color: Color; cost: number };
   climbHours?: number;
@@ -642,6 +645,7 @@ export function buildWorld(entities: RawEntity[]): { world: World; errors: strin
           onBond: land.data?.on_bond ?? [],
           nonbasic: land.data?.nonbasic ?? false,
           noMana: land.data?.no_mana ?? false,
+          ...(land.data?.not_land ? { notLand: true, noMana: true } : {}),
           fetch: land.data?.fetch,
           fallenMana: land.data?.fallen_mana,
           climbHours: land.data?.climb_hours,

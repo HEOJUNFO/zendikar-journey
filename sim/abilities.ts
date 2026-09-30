@@ -19,6 +19,7 @@ import type { Ability, ActivatedAbility, BondEffect, Region, World } from './wor
 // land drop per turn in MTG.
 export function bondBlocked(state: State, world: World, a: Actor, t: number): string | null {
   const r = region(world, a.region);
+  if (r.notLand) return `${josa(r.name, '은', '는')} 땅이 아니라 유대를 맺을 수 없다.`;
   if (a.bonds?.includes(r.id)) return `이미 ${josa(r.name, '과', '와')} 유대를 맺었다.`;
   if (state.regions[r.id]?.destroyed) return '부서진 땅과는 유대를 맺을 수 없다.';
   if (npcDef(state, world, a.id)?.beast && state.regions[r.id]?.conditions.some((c) => c.label === DEPLETED_LABEL))

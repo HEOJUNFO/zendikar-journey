@@ -5,9 +5,10 @@ name: 아쿰
 name_en: Akoum
 summary: 젠디카르 동쪽의 험한 화산 대륙. 검붉은 바위 협곡이 이어지고, 뒤틀린 땅에서 떨어져 나온 바위 조각들이 하늘에 떠 있다
 status: canon
-sources: [ZEN-210, ZEN-223, ZEN-226, ZEN-228, ZEN-120, ZEN-131, ZEN-146]
+sources: [ZEN-210, ZEN-223, ZEN-226, ZEN-228, ZEN-120, ZEN-131, ZEN-146, ZEN-5]
 tags: [대륙, 화산, 협곡, 적색]
 links:
+  - { to: loc-goma-fada, rel: 떠도는 대상단 (안의 구역) }
   - { to: loc-akoum-refuge, rel: 안의 구역 }
   - { to: loc-scalding-tarn, rel: 안의 구역 }
   - { to: loc-teetering-peaks, rel: 안의 구역 }
@@ -33,6 +34,8 @@ map: { x: 488, y: 240, terrain: volcanic, size: continent }
 - 불의 플레인즈워커 찬드라(`chr-chandra`, ZEN-120)가 무언가를 찾아 이곳을 헤맨다 ([배경] 우긴의 눈, [결정] 2026-09-30 다시 놓기).
 - 붉은 용 헬카이트 돌격대(`cre-hellkite`, ZEN-131)가 아쿰의 하늘을 날며 사냥한다 ([배경] 아쿰의 용, [결정] 2026-09-30).
 - 룬 새긴 헤드론 폐허에 룬불꽃 함정(`evt-runeflare-trap`, ZEN-146)이 깃들어 있다. 그날 주문을 셋 이상 뽑은 이가 아쿰(구역 포함)에 있으면 불길을 뿜는다 ([결정] 2026-09-30).
+
+- 안의 구역 고마 파다(`loc-goma-fada`, ZEN-5): 아쿰을 떠도는 "걸어 다니는 도시", 코르·인간 유목민의 대상단. 땅이 아니라 유대를 맺을 수 없다. 짐꾼 후르다를 고용할 수 있다.
 
 ## 미정/질문
 

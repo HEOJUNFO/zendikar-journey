@@ -2354,3 +2354,15 @@ test('the real Bog Tatters drifts in Piranha Marsh, swampwalking', () => {
   assert.equal(w?.region, 'loc-piranha-marsh');
   assert.ok(hasAbility(w, 'swampwalk', state.minutes));
 });
+
+test('the real Caravan Hurda hauls for Goma Fada in Akoum, for 50 coin; the walking city is no land to bond with', () => {
+  const world = loadWorld();
+  const state = newState(world, { seed: 1, mode: 'observer' });
+  const h = state.actors['cre-hurda'];
+  assert.equal(h?.region, 'loc-goma-fada');
+  assert.equal(region(world, 'loc-goma-fada').parent, 'loc-akoum');
+  assert.deepEqual(ptOf(h), [1, 5]);
+  assert.ok(hasAbility(h, 'lifelink', state.minutes));
+  assert.equal(hirePrice(world.npcs.find((x) => x.id === 'cre-hurda')!), 50);
+  assert.match(bondBlocked(state, world, h, state.minutes)!, /땅이 아니라/);
+});
