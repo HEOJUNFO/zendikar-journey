@@ -7,10 +7,11 @@ import type { Color } from './mana.ts';
 import { itemsOnLandfall } from './items.ts';
 import { gainLife, lifeOf, loseLife, setLife } from './life.ts';
 import { allyJoined } from './allies.ts';
+import { masterOf, retainersOf } from './retainers.ts';
 import { DEPLETED_LABEL } from './rules.ts';
 import { castSpell, spellDef } from './spells.ts';
 import { landSealed, powersSealed, sealText } from './seal.ts';
-import { addLog, hasAbility, npcDef, outOfTime, present, ptOf, random, targetable } from './state.ts';
+import { addLog, hasAbility, npcDef, outOfTime, present, ptOf, random, targetable, untargetableText } from './state.ts';
 import type { Actor, ChoiceEffect, State } from './state.ts';
 import { josa, shortName, toward } from './text.ts';
 import { ABILITY_LABELS, LAND_TYPE_LABELS, landTypes, region, spellColors } from './world.ts';
@@ -38,11 +39,17 @@ export function targetedBondEffect(r: Region) {
   return r.onBond.find((x) => x.type !== 'gain_life');
 }
 
+// A land's colors (what it picks with).
+export function landColorsOf(r: Region): string[] {
+  return r.color ? r.color.split('/') : [];
+}
+
 // Whom it may fall on as `a` bonds with it: anyone standing there, beasts too (user decision
 // 2026-09-30); `a` too when it is a gift ("target creature" may be one's own), not when it
 // takes life ("target player", as one's opponent).
 export function bondTargets(state: State, world: World, a: Actor, regionId: string, eff: BondEffect) {
-  return present(state, regionId).filter((x) => (x.id !== a.id || eff.type !== 'lose_life') && targetable(x, state.minutes));
+  const colors = landColorsOf(region(world, regionId));
+  return present(state, regionId).filter((x) => (x.id !== a.id || eff.type !== 'lose_life') && targetable(x, state.minutes, colors));
 }
 
 // The effect falls on `target`, if they are still there.
@@ -100,7 +107,7 @@ export function expireGranted(state: State, t: number) {
 export function fireTargets(state: State, world: World, a: Actor, land: Region) {
   const home = land.parent ?? land.id;
   const lands = [home, ...world.regions.filter((r) => r.parent === home).map((r) => r.id)];
-  return Object.values(state.actors).filter((x) => !x.dead && !x.travel && x.id !== a.id && lands.includes(x.region) && !outOfTime(state, x) && targetable(x, state.minutes));
+  return Object.values(state.actors).filter((x) => !x.dead && !x.travel && x.id !== a.id && lands.includes(x.region) && !outOfTime(state, x) && targetable(x, state.minutes, landColorsOf(land)));
 }
 
 // The lands like Valakut that answer as `a` bonds with `mountainId`: held, standing, and with
@@ -171,7 +178,7 @@ export function bondLand(state: State, world: World, a: Actor, t: number, region
   for (const ability of lf?.landfallGrant ?? []) grantAbility(state, a, ability, untapTime(t), '땅에서 솟구친 열기', t);
   // "Landfall — gain control of target creature": whom (if anyone) is theirs to pick, after the hour.
   if (lf?.landfallSeize) {
-    const candidates = present(state, a.region).filter((x) => x.id !== a.id && x.master !== a.id && targetable(x, t)).map((x) => x.id);
+    const candidates = present(state, a.region).filter((x) => x.id !== a.id && x.master !== a.id && targetable(x, t, creatureColors(def))).map((x) => x.id);
     if (candidates.length) (state.choices ??= []).push({ by: a.id, land: a.region, effect: { type: 'seize' }, candidates, optional: true, t });
   }
   // "Landfall — create a token": one more of their kind, born at their side and theirs.
@@ -335,7 +342,8 @@ export function useAbility(state: State, world: World, beingId: string, abilityI
   if (!being || !ability) return '그런 능력은 없다.';
   const target = ability.target ? state.actors[targetId] : undefined;
   if (ability.target && (!target || target.dead || target.id === beingId)) return '대상이 없다.';
-  if (target && !targetable(target, t)) return `${josa(shortName(target.name), '은', '는')} 방어막에 싸여 대상이 될 수 없다.`;
+  const own = creatureColors(being);
+  if (target && !targetable(target, t, own)) return untargetableText(target, t, own);
   const why = abilityBlocked(state, world, beingId, ability, t);
   if (why) return why;
   const bs = state.actors[beingId];
@@ -553,25 +561,63 @@ export function callForth(state: State, world: World, id: string, regionId: stri
     t,
   });
   for (const f of foes) addFoe(x, f, t);
-  enterDestroy(state, world, x, t);
+  onEnter(state, world, x, t);
   return x;
 }
 
-// "When this enters, destroy target <type>" (Halo Hunter: an Angel). Each time they arrive in
-// a land (or are brought there), whom of that type there (if anyone) to destroy is theirs to
-// pick, after the hour (state.choices).
+// "When this enters, …": on their first arrival in a land each day (or being brought there),
+// once a day for balance (user decision 2026-09-30).
+export function onEnter(state: State, world: World, a: Actor, t: number) {
+  const def = npcDef(state, world, a.id);
+  if (!def?.enterDestroy && !def?.enterDrain) return;
+  if (a.dead || a.enteredDay === gameDay(t)) return;
+  a.enteredDay = gameDay(t);
+  enterDestroy(state, world, a, t);
+  enterDrain(state, world, a, t);
+}
+
+// "When this enters, each opponent loses life equal to the number of <kind>s you control. You
+// gain life equal to the life lost this way" (Malakir Bloodwitch). Everyone standing there but
+// their side (their controller and the controller's retainers) loses it and takes them for a
+// foe; the controller gains it all.
+export function enterDrain(state: State, world: World, a: Actor, t: number) {
+  const drain = npcDef(state, world, a.id)?.enterDrain;
+  if (!drain || a.dead || powersSealed(state, world, a, t)) return;
+  const controller = masterOf(state, a) ?? a;
+  const side = [controller, ...retainersOf(state, controller.id)];
+  const n = side.filter((x) => !x.dead && npcDef(state, world, x.id)?.creature === drain.per).length;
+  const victims = present(state, a.region).filter((x) => !side.some((y) => y.id === x.id));
+  if (!n || !victims.length) return;
+  const cause = `${shortName(a.name)}의 흡혈`;
+  addLog(state, {
+    kind: 'event',
+    text: `${josa(shortName(a.name), '이', '가')} 들어서자 피가 붉은 안개처럼 피어올라 곁의 모두에게서 생명 ${n}씩을 빨아들인다.`,
+    regions: [a.region],
+    actors: [a.id, ...victims.map((x) => x.id)],
+    t,
+  });
+  for (const v of victims) {
+    loseLife(state, v, n, t, cause, a);
+    if (!v.dead) addFoe(v, a.id, t);
+  }
+  gainLife(state, controller, n * victims.length, t, cause);
+}
+
+// "When this enters, destroy target <type>" (Halo Hunter: an Angel). On their first arrival of
+// the day (onEnter), whom of that type there (if anyone) to destroy is theirs to pick, after
+// the hour (state.choices).
 export function enterDestroy(state: State, world: World, a: Actor, t: number) {
   const kind = npcDef(state, world, a.id)?.enterDestroy;
   if (!kind || a.dead || powersSealed(state, world, a, t)) return;
   const candidates = present(state, a.region)
-    .filter((x) => x.id !== a.id && (npcDef(state, world, x.id)?.types ?? []).includes(kind) && targetable(x, t))
+    .filter((x) => x.id !== a.id && (npcDef(state, world, x.id)?.types ?? []).includes(kind) && targetable(x, t, creatureColors(npcDef(state, world, a.id))))
     .map((x) => x.id);
   if (candidates.length) (state.choices ??= []).push({ by: a.id, land: a.region, effect: { type: 'destroy', kind }, candidates, optional: true, t });
 }
 
 // Their pick lands: the one picked, still there, is destroyed.
 export function applyEnterDestroy(state: State, world: World, a: Actor, target: Actor, t: number) {
-  if (a.dead || target.dead || target.region !== a.region || target.travel || !targetable(target, t)) return;
+  if (a.dead || target.dead || target.region !== a.region || target.travel || !targetable(target, t, creatureColors(npcDef(state, world, a.id)))) return;
   const sealer = powersSealed(state, world, a, t);
   if (sealer) {
     addLog(state, { kind: 'effect', text: `${sealText(sealer, t)} ${josa(shortName(a.name), '은', '는')} 그 힘을 쓰지 못한다.`, regions: [a.region], actors: [a.id, sealer.id], t });

@@ -8,6 +8,7 @@
 import { addFoe, dealDamage } from './combat.ts';
 import { loseLife } from './life.ts';
 import { bindRetainer, masterOf, retainersOf, swayBlocked } from './retainers.ts';
+import { creatureColors } from './mana.ts';
 import { powersSealed } from './seal.ts';
 import { addLog, npcDef, present, targetable } from './state.ts';
 import type { Actor, State } from './state.ts';
@@ -39,7 +40,7 @@ export function allyJoined(state: State, world: World, a: Actor, master: Actor, 
     // only helps ("may": always, [가공]). Every Ally of the party, wherever they are.
     for (const eff of rally) if (eff.type === 'counters_allies') alliesCounter(state, world, x, master, t);
     if (!rally.some(targeted)) continue;
-    const candidates = present(state, x.region).filter((y) => y.id !== x.id && targetable(y, t)).map((y) => y.id);
+    const candidates = present(state, x.region).filter((y) => y.id !== x.id && targetable(y, t, creatureColors(npcDef(state, world, x.id)))).map((y) => y.id);
     if (candidates.length) (state.choices ??= []).push({ by: master.id, land: x.region, effect: { type: 'rally', source: x.id }, candidates, optional: true, t });
   }
 }
@@ -83,7 +84,7 @@ export function rallyText(state: State, world: World, sourceId: string) {
 export function applyRally(state: State, world: World, sourceId: string, targetId: string, t: number) {
   const x = state.actors[sourceId];
   const target = state.actors[targetId];
-  if (!x || x.dead || !target || target.dead || target.region !== x.region || target.travel || !targetable(target, t)) return;
+  if (!x || x.dead || !target || target.dead || target.region !== x.region || target.travel || !targetable(target, t, creatureColors(npcDef(state, world, sourceId)))) return;
   const controller = masterOf(state, x) ?? x;
   for (const eff of (npcDef(state, world, x.id)?.rally ?? []).filter(targeted)) {
     const n = alliesOf(state, world, controller).length;

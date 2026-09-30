@@ -8,9 +8,9 @@ import type { PlanDayInput } from './llm/planner.ts';
 import type { Action } from './actions.ts';
 import { startAction } from './actions.ts';
 import type { World } from './world.ts';
-import { addFoe, attackBlocked, die, intimidated, knockedOut, landwalked, unblockable, woundsOf } from './combat.ts';
+import { addFoe, attackBlocked, clash, die, intimidated, knockedOut, landwalked, unblockable, woundsOf } from './combat.ts';
 import { landSealed, powersSealed, sealedBy, sealToday, setSeal } from './seal.ts';
-import { castBlocked, castSpell, readyCast } from './spells.ts';
+import { castBlocked, castSpell, castTargets, readyCast } from './spells.ts';
 import { actorColors, COLORS, formatMana, manaAvailable, manaCapacity, parseManaCost, planPayment } from './mana.ts';
 import { MAX_TALKS_PER_DAY, usableAbilities, volleyShares } from './run.ts';
 import { eligibleGmEvents, travelBlocked } from './step.ts';
@@ -20,7 +20,7 @@ import { foresightText } from './foresight.ts';
 import { withPositions } from './wander.ts';
 import { claimBlocked } from './items.ts';
 import { spendBlocked, storeBlocked } from './eons.ts';
-import { applyEnterDestroy, bondBlocked, enterDestroy, bondLand, bondTargets, callForth, fetchTargets, fireTargets, firesOnBond, growBlocked, spawnWild, summonLibrary, useAbility } from './abilities.ts';
+import { applyEnterDestroy, bondBlocked, enterDestroy, onEnter, bondLand, bondTargets, callForth, fetchTargets, fireTargets, firesOnBond, growBlocked, spawnWild, summonLibrary, useAbility } from './abilities.ts';
 import { DEPLETED_LABEL, DESTROYED_DAYS } from './rules.ts';
 import { swayBlocked } from './retainers.ts';
 import { upkeepWins } from './win.ts';
@@ -1786,7 +1786,7 @@ test('a Roil Elemental bonding may seize anyone there, from their master too; on
   assert.equal(x.seized, true);
   assert.ok(texts(state).some((t) => t.includes('소용돌이가') && t.includes('삼켰다')));
   // Struck by it, they stay its; its end frees them.
-  (await import('./combat.ts')).clash(state, state.actors['cre-r'], x, state.minutes);
+  (await import('./combat.ts')).clash(state, world, state.actors['cre-r'], x, state.minutes);
   assert.equal(x.master, 'cre-r');
   die(state, state.actors['cre-r'], state.minutes, '시험');
   assert.equal(x.master, undefined);
@@ -1974,7 +1974,7 @@ test('shroud: no spell, power, land or seizing may pick the sphinx, not even its
   assert.equal(asked[0][0], 'cre-r');
   assert.ok(asked[0].includes('chr-x') && !asked[0].includes('cre-sx'));
   // A fight is no targeting.
-  (await import('./combat.ts')).clash(state, x, sx, state.minutes);
+  (await import('./combat.ts')).clash(state, world, x, sx, state.minutes);
   assert.equal(woundsOf(sx, state.minutes), 1);
 });
 
@@ -2716,13 +2716,14 @@ test('enter_destroy: arriving where an Angel is, the hunter may destroy it; shro
   g.abilities = ['indestructible'];
   applyEnterDestroy(state, world, state.actors['chr-h'], g, t);
   assert.ok(!g.dead);
-  // Brought there by a trap, too.
+  // Once a day: the first arrival only (it already came today).
   state.choices = [];
-  callForth(state, world, 'chr-h', 'loc-b', [], t);
-  assert.equal(state.choices.length, 0); // no angel in loc-b
   g.abilities = [];
   g.region = 'loc-b';
   callForth(state, world, 'chr-h', 'loc-b', [], t);
+  assert.equal(state.choices.length, 0);
+  // Brought there by a trap on another day, it answers.
+  callForth(state, world, 'chr-h', 'loc-b', [], t + 24 * 60);
   assert.equal(state.choices.at(-1)?.effect.type, 'destroy');
 });
 
@@ -2825,4 +2826,61 @@ test('the real Landbind Ritual is taught in Ondu: 2 life per plains', () => {
   assert.equal(s.learnAt, 'loc-ondu');
   assert.equal(s.target, 'self');
   assert.deepEqual(s.effects, [{ type: 'gain_life_per_land', land: 'plains', amount: 2 }]);
+});
+
+test('enter_drain: on the first arrival of the day, all others there lose life per Vampire of her side; her controller gains it', async () => {
+  const witch = { ...npcSim('loc-c', 'work', [4, 4]), home: 'loc-a', mana: { B: 5 }, needs: [], creature: 'cre-v', enter_drain: { per: 'cre-v' } };
+  const world = fixture([lore('cre-v', 'creature'), npc('chr-w', witch), npc('chr-v', { ...npcSim('loc-c'), creature: 'cre-v' }), npc('chr-x', npcSim('loc-c')), npc('chr-y', npcSim('loc-c'))]);
+  const state = newState(world, { seed: 1, mode: 'observer' });
+  const [w, v, x, y] = [state.actors['chr-w'], state.actors['chr-v'], state.actors['chr-x'], state.actors['chr-y']];
+  v.master = 'chr-w'; // a Vampire of her side
+  v.region = 'loc-a';
+  await advance(state, world, 2);
+  assert.equal(w.region, 'loc-c');
+  // Two Vampires (herself and hers): x and y lose 2 each, she gains 4. Hers is spared.
+  assert.equal(lifeOf(x), 18);
+  assert.equal(lifeOf(y), 18);
+  assert.equal(lifeOf(w), 24);
+  assert.ok(texts(state).some((t) => t.includes('생명 2씩을 빨아들인다')));
+  assert.ok(texts(state).some((t) => t.includes('chr-x가 chr-w를 공격했다'))); // it took her for a foe
+  // Once a day.
+  onEnter(state, world, w, state.minutes);
+  assert.equal(lifeOf(x), 18);
+});
+
+test('protection from white: white does not hurt her, block her, nor pick her', async () => {
+  const witch = { ...npcSim('loc-a', 'work', [4, 4]), mana: { B: 5 }, needs: [], protection: ['W'] };
+  const white = (pt: number[]) => ({ ...npcSim('loc-a', 'work', pt), mana: { W: 3 }, needs: [] });
+  const mantle: RawEntity = { id: 'spl-wm', kind: 'spell', name: '백색 오라', status: 'canon', sim: { cost: '{W}', learn_at: 'loc-a', target: 'any_here', effects: [{ type: 'aura', pt: [1, 1] }] } };
+  const world = fixture([mantle, npc('chr-w', witch), npc('chr-k', white([5, 9])), npc('chr-g', { ...npcSim('loc-a', 'work', [2, 9]), mana: { G: 2 }, needs: [] })]);
+  const state = newState(world, { seed: 1, mode: 'observer' });
+  const [w, k, g] = [state.actors['chr-w'], state.actors['chr-k'], state.actors['chr-g']];
+  const t = state.minutes;
+  assert.deepEqual(w.protection, ['W']);
+  // A white one strikes her: no damage. She strikes it: it can't strike back.
+  clash(state, world, k, w, t);
+  assert.equal(woundsOf(w, t), 0);
+  assert.ok(texts(state).some((x) => x.includes('백색으로부터 보호받아')));
+  assert.match(unblockable(state, world, w, k, t)!, /백색이라/);
+  assert.equal(unblockable(state, world, w, g, t), null);
+  // A white spell can't pick her; the player bonded with plains is white too.
+  assert.equal(targetable(w, t, ['W']), false);
+  assert.equal(targetable(w, t, ['G']), true);
+  const s2 = character(world, 'loc-a');
+  const p = s2.actors[PLAYER_ID];
+  p.spells = ['spl-wm'];
+  p.bonds = ['loc-a'];
+  assert.match(castBlocked(s2, world, p, 'spl-wm', 'chr-w', false, s2.minutes)!, /백색으로부터 보호받아 대상이 될 수 없다/);
+  assert.equal(castTargets(s2, p, world.spells.find((x) => x.id === 'spl-wm')!).some((x) => x.id === 'chr-w'), false);
+});
+
+test('the real Malakir Bloodwitch flies over Malakir, a Vampire shielded from white', () => {
+  const world = loadWorld();
+  const state = newState(world, { seed: 1, mode: 'observer' });
+  const w = state.actors['chr-malakir-bloodwitch'];
+  assert.equal(w.region, 'loc-malakir');
+  assert.ok(hasAbility(w, 'fly', state.minutes));
+  assert.deepEqual(w.protection, ['W']);
+  assert.deepEqual(npcDef(state, world, w.id)?.enterDrain, { per: 'cre-vampire' });
+  assert.equal(npcDef(state, world, w.id)?.creature, 'cre-vampire');
 });

@@ -240,6 +240,13 @@ export const CharacterSimSchema = z.strictObject({
   // in a land (or are brought there), they may destroy one of that type there
   // (sim/abilities.ts `enterDestroy`, picked by the LLM after the hour).
   enter_destroy: z.enum(CREATURE_TYPES).optional(),
+  // "When this enters, each opponent loses life equal to the number of <kind>s you control. You
+  // gain life equal to the life lost this way" (Malakir Bloodwitch: Vampires). Everyone else
+  // standing there (not their side) loses it; their controller gains it (sim/abilities.ts).
+  enter_drain: z.strictObject({ per: z.string() }).optional(),
+  // "Protection from <color>" (Malakir Bloodwitch: white): nothing of that color damages them,
+  // blocks them (strikes back, flies from them), or picks them (spells, abilities, lands).
+  protection: z.array(z.enum(COLORS)).default([]),
   // Stats they live by (default: all). Without hunger they never eat; without coin work earns
   // nothing; with none (e.g. Kalitas) they neither tire nor gain or lose life.
   needs: z.array(z.enum(NEEDS)).default([...NEEDS]),
@@ -584,6 +591,8 @@ export type NpcDef = {
   landfallGrant?: Ability[];
   types?: CreatureType[];
   enterDestroy?: CreatureType;
+  enterDrain?: { per: string };
+  protection?: Color[];
   // The creature kind they are (e.g. cre-vampire), for "a Vampire you control".
   creature?: string;
   // Their colors when their mana doesn't say (e.g. a black Vampire risen in play).
@@ -746,7 +755,7 @@ export function buildWorld(entities: RawEntity[]): { world: World; errors: strin
         err(e.id, `sim 오류: ${issues(sim.error)}`);
         continue;
       }
-      const { knows_colors, activated, wins_at_life, extra_combat, landfall_token, landfall_seize, landfall_lose, landfall_grant, enter_destroy, name, ...rest } = sim.data;
+      const { knows_colors, activated, wins_at_life, extra_combat, landfall_token, landfall_seize, landfall_lose, landfall_grant, enter_destroy, enter_drain, name, ...rest } = sim.data;
 
       world.npcs.push({
         id: e.id,
@@ -761,6 +770,7 @@ export function buildWorld(entities: RawEntity[]): { world: World; errors: strin
         ...(landfall_lose.length ? { landfallLose: landfall_lose } : {}),
         ...(landfall_grant.length ? { landfallGrant: landfall_grant } : {}),
         ...(enter_destroy ? { enterDestroy: enter_destroy } : {}),
+        ...(enter_drain ? { enterDrain: enter_drain } : {}),
         ...(extra_combat ? { extraCombat: { cost: parseManaCost(extra_combat.cost)!, costText: extra_combat.cost } } : {}),
         activated: activated.map((x) => ({ ...x, cost: parseManaCost(x.cost)!, costText: x.cost })),
       });

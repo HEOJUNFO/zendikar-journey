@@ -640,7 +640,7 @@ async function attack(state: State, world: World, p: Actor, npcId: string, llm: 
       return;
     }
   }
-  clash(state, p, target, state.minutes, unblocked);
+  clash(state, world, p, target, state.minutes, unblocked);
 }
 
 // An NPC's day is asked for this many times before the world halts.

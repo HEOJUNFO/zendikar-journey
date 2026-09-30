@@ -11,7 +11,7 @@ import { doubleLife, gainLife, lifeOf } from './life.ts';
 import { actorColors, COLOR_LABELS, manaAvailable, payMana, planPayment } from './mana.ts';
 import { HUNT_HUNGER, KILL_FEED, KO_ACTIVITY, KO_HOURS } from './rules.ts';
 import { powersSealed } from './seal.ts';
-import { addLog, hasAbility, needsOf, npcDef, outOfTime, present, ptOf, random } from './state.ts';
+import { addLog, hasAbility, needsOf, npcDef, outOfTime, present, protectedFrom, ptOf, random } from './state.ts';
 import type { Actor, State } from './state.ts';
 import { hasPowers, landTypes } from './world.ts';
 import type { World } from './world.ts';
@@ -146,6 +146,9 @@ export function intimidated(state: State, world: World, attacker: Actor, defende
 // Why the defender can't block the attacker (strike back, or fly from them), or null.
 export function unblockable(state: State, world: World, attacker: Actor, defender: Actor, t: number): string | null {
   if (landwalked(world, attacker, defender, t)) return '늪과 이어진 몸이라 늪을 걷는 적에게';
+  // Protection from a color: one of that color can't block them.
+  const shield = protectedFrom(attacker, actorColors(state, world, defender), t);
+  if (shield) return `${COLOR_LABELS[shield]}색이라 ${COLOR_LABELS[shield]}색으로부터 보호받는 적에게`;
   if (intimidated(state, world, attacker, defender, t)) {
     const colors = actorColors(state, world, attacker).map((c) => COLOR_LABELS[c]).join('·');
     return `${colors}의 기운이 없어 위협하는 적에게`;
@@ -164,12 +167,14 @@ export function destroy(state: State, target: Actor, t: number, cause: string) {
 }
 
 // `unblocked`: why the defender can't strike back this exchange (landwalk, intimidate), if so.
-export function clash(state: State, attacker: Actor, defender: Actor, t: number, unblocked: string | null = null) {
-  const [ap] = ptOf(attacker);
+export function clash(state: State, world: World, attacker: Actor, defender: Actor, t: number, unblocked: string | null = null) {
+  // Protection from a color: no damage from one of that color.
+  const shielded = (from: Actor, to: Actor) => protectedFrom(to, actorColors(state, world, from), t);
+  const [ap] = shielded(attacker, defender) ? [0] : ptOf(attacker);
   // A tapped (bound) or knocked-out defender can't strike back, nor one who can't block the attacker.
   const helpless = defender.boundUntil !== undefined ? '묶여 있어' : knockedOut(defender) ? '기절해 있어' : unblocked;
   const tapped = !!helpless;
-  const [dp] = tapped ? [0] : ptOf(defender);
+  const [dp] = tapped || shielded(defender, attacker) ? [0] : ptOf(defender);
   const a = shortName(attacker.name);
   const d = shortName(defender.name);
   addLog(state, {
@@ -178,6 +183,10 @@ export function clash(state: State, attacker: Actor, defender: Actor, t: number,
     regions: [attacker.region],
     actors: [attacker.id, defender.id],
   });
+  for (const [from, to] of [[attacker, defender], [defender, attacker]] as const) {
+    const c = shielded(from, to);
+    if (c && (from === attacker || !tapped)) addLog(state, { kind: 'combat', text: `${josa(shortName(to.name), '은', '는')} ${COLOR_LABELS[c]}색으로부터 보호받아 ${shortName(from.name)}의 공격에 다치지 않는다.`, regions: [attacker.region], actors: [to.id, from.id] });
+  }
   attacker.lastClash = t;
   attacker.attackedAt = t;
   defender.lastClash = t;
@@ -270,7 +279,7 @@ function extraCombat(state: State, world: World, a: Actor, foe: Actor, t: number
     actors: [a.id, foe.id],
   });
   const band = [a, ...retainersOf(state, a.id).filter((r) => r.region === a.region && !r.travel && r.lastClash === t)];
-  for (const x of band) if (!down(x) && !down(foe)) clash(state, x, foe, t, unblockable(state, world, x, foe, t));
+  for (const x of band) if (!down(x) && !down(foe)) clash(state, world, x, foe, t, unblockable(state, world, x, foe, t));
 }
 
 // A flyer set on by one who can't fly may take to the air, as an NPC the player attacks (sim/run.ts
@@ -332,7 +341,7 @@ export function hostileNpcs(state: State, world: World, t: number) {
       continue;
     }
     a.forced = { kind: 'fight', activity: `${josa(shortName(foe.name), '과', '와')} 싸움`, emoji: '⚔️', until: t + STEP_MINUTES };
-    clash(state, a, foe, t, walked);
+    clash(state, world, a, foe, t, walked);
     extraCombat(state, world, a, foe, t);
     // A beast feeds on what it brought down (a kill, or an NPC knocked out).
     if (down(foe) && !down(a) && npcDef(state, world, a.id)?.beast) {

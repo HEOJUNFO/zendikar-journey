@@ -3,6 +3,7 @@ import { gameDay, START_MINUTES } from './clock.ts';
 import { INITIAL_STATS } from './rules.ts';
 import { NEEDS } from './types.ts';
 import type { LifeKind, Need, Pace, Schedule, Stats } from './types.ts';
+import { josa, shortName } from './text.ts';
 import { canStay, spellColors } from './world.ts';
 import type { Ability, BondEffect, CreatureType, NpcDef, Pt, Speaker, World } from './world.ts';
 import type { Color, Mana } from './mana.ts';
@@ -84,6 +85,11 @@ export type Actor = {
   seal?: { day: number; color: Color };
   // The day a color of theirs is sealed against them (sim/seal.ts): none of their powers then.
   sealedOut?: number;
+  // Protection from these colors (a card's, e.g. Malakir Bloodwitch: white).
+  protection?: Color[];
+  // The day their "when this enters" last answered: once a day, on the first arrival (user
+  // decision 2026-09-30).
+  enteredDay?: number;
   // Whom they serve: they are that one's retainer (sim/retainers.ts).
   master?: string;
   // Abilities they have lost for a while ("loses defender until end of turn").
@@ -381,6 +387,7 @@ function npcActor(npc: NpcDef): Actor {
     pace: 'normal',
     abilities: [...npc.abilities],
     needs: [...npc.needs],
+    ...(npc.protection?.length ? { protection: [...npc.protection] } : {}),
   };
 }
 
@@ -441,9 +448,25 @@ export function hasAbility(a: Actor, ability: Ability, t: number) {
 
 // Whether spells and abilities may pick them ("target"): not with shroud (Sphinx of Jwar
 // Isle), not even their own side's. Fights are no targeting: they may still be attacked.
-export function targetable(a: Actor, t: number) {
-  return !hasAbility(a, 'shroud', t);
+// `colors`: the colors of what picks them (a spell, a being, a land); protection from any of
+// them keeps them out of reach too.
+export function targetable(a: Actor, t: number, colors: readonly string[] = []) {
+  return !hasAbility(a, 'shroud', t) && !protectedFrom(a, colors, t);
 }
+
+// Protection from one of `colors` (while their powers aren't sealed): the first one, if any.
+export function protectedFrom(a: Actor, colors: readonly string[], t: number): Color | undefined {
+  if (a.sealedOut === gameDay(t)) return undefined;
+  return (a.protection ?? []).find((c) => colors.includes(c));
+}
+
+// Why they can't be picked (shroud, protection), for the one trying.
+export function untargetableText(a: Actor, t: number, colors: readonly string[] = []) {
+  const c = protectedFrom(a, colors, t);
+  const name = josa(shortName(a.name), '은', '는');
+  return c ? `${name} ${COLOR_WORDS[c]}으로부터 보호받아 대상이 될 수 없다.` : `${name} 방어막에 싸여 대상이 될 수 없다.`;
+}
+const COLOR_WORDS: Record<Color, string> = { W: '백색', U: '청색', B: '흑색', R: '적색', G: '녹색' };
 
 export function ptOf(a: Actor): Pt {
   let [p, t] = [...(a.auras ?? [])].reverse().find((x) => x.base)?.base ?? a.pt ?? PLAYER_PT;
