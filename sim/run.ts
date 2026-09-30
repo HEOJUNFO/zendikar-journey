@@ -14,6 +14,7 @@ import { lifeOf } from './life.ts';
 import { foresightText } from './foresight.ts';
 import { setOff, wandersDue, withPositions } from './wander.ts';
 import { discardOwed, letGo } from './discard.ts';
+import { crushRelic, relicsHere } from './relics.ts';
 import { sacrifice } from './monument.ts';
 import { strandedText } from './stranded.ts';
 import { applyRally, hireableFor, hireMerc, hirePrice, rallyText } from './allies.ts';
@@ -63,6 +64,8 @@ export type ChooseColorInput = { world: World; state: State; npc: Speaker; oppon
 export type SummonInput = { world: World; state: State; trap: EventDef; creatures: Actor[]; intruders: Actor[] };
 // An NPC (`npc`) must let go of one of `spells` (their hand), for `cause`.
 export type DiscardInput = { world: World; state: State; npc: Speaker; spells: SpellDef[]; cause: string };
+// An NPC (`npc`) picks one of `options` (things, not people: e.g. relics to destroy), or none if `optional`.
+export type PickInput = { world: World; state: State; npc: Speaker; what: string; options: { id: string; label: string }[]; optional?: boolean };
 // A wandering place (`place`), at stop `at` (if any), picks the next of `stops`.
 export type WanderInput = { world: World; state: State; place: Region; at?: string; stops: string[] };
 // A trap (`trap`) divides `amount` damage among `targets`, the attackers who set it off.
@@ -88,6 +91,8 @@ export type Llm = {
   summon?: (input: SummonInput) => Promise<string | null>;
   // One who must let go of a spell (discard): which of `spells` they give up.
   discard?: (input: DiscardInput) => Promise<string | null>;
+  // One of some things (not people): which, or none.
+  pick?: (input: PickInput) => Promise<string | null>;
   // A wandering place (Goma Fada) at a stop: which of `stops` it heads for next.
   wander?: (input: WanderInput) => Promise<string | null>;
   // An arrow volley (Arrow Volley Trap): how much of `amount` falls on each of `targets`, by id.
@@ -258,6 +263,32 @@ async function discardChoice(state: State, world: World, llm: Llm, a: Actor, npc
   letGo(state, world, a, pick, state.minutes);
 }
 
+// Relic Crush: the NPC caster picks what to destroy, one at a time (the LLM); the first must go
+// (with no usable answer, one at random), the rest they may let be.
+async function crushChoice(state: State, world: World, llm: Llm, a: Actor, npc: Speaker, eff: { spell: string; left: number; first: boolean }) {
+  let { left, first } = eff;
+  while (left > 0) {
+    const relics = relicsHere(state, world, a.region);
+    if (!relics.length) return;
+    let pick: string | null = null;
+    if (llm.pick) {
+      try {
+        const what = `${eff.spell}: 이 자리의 마법물체(아이템)와 부여마법(누군가에게 걸린 오라) 가운데 ${first ? '하나를 골라 부순다' : '하나를 더 부술 수 있다. 그만둘 수도 있다'}`;
+        pick = await llm.pick({ world, state, npc, what, options: relics, optional: !first });
+      } catch (e) {
+        console.warn(`pick (crush) for ${a.id} failed:`, e);
+      }
+    }
+    if (!relics.some((r) => r.id === pick)) {
+      if (!first) return;
+      pick = relics[Math.floor(random(state) * relics.length)].id;
+    }
+    crushRelic(state, world, pick!, a, state.minutes);
+    left--;
+    first = false;
+  }
+}
+
 // Wandering places at a stop (sim/wander.ts): the LLM, for the place's folk, picks where it
 // goes next. With no answer, a stop at random (not the one it is at).
 async function wanderings(state: State, world: World, llm: Llm) {
@@ -397,6 +428,11 @@ async function choices(state: State, world: World, llm: Llm) {
         if (!next || !by || by.dead || !npc) break;
         await discardChoice(state, world, llm, by, npc, next.candidates, c.effect.cause);
       }
+      continue;
+    }
+    // Relics to destroy (candidates are things, not people).
+    if (c.effect.type === 'crush') {
+      if (by && !by.dead && npc) await crushChoice(state, world, llm, by, npc, c.effect);
       continue;
     }
     const land = world.regions.find((r) => r.id === c.land);

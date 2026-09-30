@@ -4,6 +4,7 @@
 // the air when one who can't fly sets on them.
 import { untapTime } from './clock.ts';
 import { applyDrainGrow, applyEnterDestroy } from './abilities.ts';
+import { crushOwed, crushRelic, relicsHere } from './relics.ts';
 import { applyRally, rallyText } from './allies.ts';
 import { bindRetainer, refuse } from './retainers.ts';
 import { discardOwed, letGo } from './discard.ts';
@@ -24,6 +25,7 @@ export function askText(state: State, world: World, c: Choice) {
   if (c.effect.type === 'discard') return `${c.effect.cause}: 지닌 주문 ${c.effect.count ? `${c.effect.count}개를` : '하나를'} 잊어야 한다. 먼저 무엇을?`;
   if (c.effect.type === 'cast') return `${world.spells.find((s) => s.id === (c.effect as { spell: string }).spell)?.name ?? ''}을(를) 하나 더, 값 없이 걸 수 있다. 누구에게?`;
   if (c.effect.type === 'sacrifice') return `${state.items?.[c.effect.item]?.name ?? c.effect.item}이(가) 오늘의 제물을 요구한다. 부리는 이 가운데 누구를 바칠까? (바친 이는 죽는다)`;
+  if (c.effect.type === 'crush') return `${c.effect.spell}: 이 자리의 마법물체나 부여마법을 ${c.effect.first ? '부순다. 무엇을?' : '하나 더 부술 수 있다. 무엇을?'}`;
   if (c.effect.type === 'drain_grow') return `땅의 타락한 마나가 흐른다. 누구에게서 생명 ${c.effect.life}을 빼앗아 +1/+1 카운터 ${c.effect.counters}을 얻을까?`;
   if (c.effect.type === 'destroy') return `이곳에 들어서며 ${CREATURE_TYPE_LABELS[c.effect.kind]} 하나를 파괴할 수 있다. 누구를? (파괴된 이는 죽는다)`;
   return '';
@@ -32,6 +34,11 @@ export function askText(state: State, world: World, c: Choice) {
 // The answers they may give: a pick (someone's id), or null.
 export function askOptions(state: State, world: World, c: Choice): { pick: string | null; label: string }[] {
   if (c.effect.type === 'discard') return c.candidates.map((id) => ({ pick: id, label: world.spells.find((s) => s.id === id)?.name ?? id }));
+  if (c.effect.type === 'crush') {
+    const relics = relicsHere(state, world, c.land);
+    const opts = c.candidates.map((id) => ({ pick: id as string | null, label: relics.find((r) => r.id === id)?.label ?? id }));
+    return c.effect.first ? opts : [...opts, { pick: null, label: '그만둔다' }];
+  }
   // One must be given: no "none".
   if (c.effect.type === 'sacrifice') return c.candidates.map((id) => ({ pick: id, label: shortName(state.actors[id]?.name ?? id) }));
   if (c.effect.type === 'pledge') return [{ pick: c.effect.from, label: '따른다' }, { pick: null, label: '거절한다' }];
@@ -72,6 +79,14 @@ export function answerAsk(state: State, world: World, pick: string | null, t: nu
     letGo(state, world, p, pick && c.candidates.includes(pick) ? pick : c.candidates[0], t);
     // More owed (Mind Sludge): the next pick comes first.
     const next = discardOwed(state, world, p, c.effect.cause, t, (c.effect.count ?? 1) - 1);
+    if (next) (state.asks ??= []).unshift(next);
+  } else if (c.effect.type === 'crush') {
+    // The first must go: an answer that isn't one goes to the first there.
+    const relics = relicsHere(state, world, p.region);
+    const id = pick && relics.some((r) => r.id === pick) ? pick : c.effect.first ? relics[0]?.id : undefined;
+    if (!id) return;
+    crushRelic(state, world, id, p, t);
+    const next = crushOwed(state, world, p, c.effect.spell, c.effect.left - 1, false, t);
     if (next) (state.asks ??= []).unshift(next);
   } else if (c.effect.type === 'drain_grow') {
     const target = pick && c.candidates.includes(pick) ? state.actors[pick] : undefined;

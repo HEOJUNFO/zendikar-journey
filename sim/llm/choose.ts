@@ -5,7 +5,7 @@ import { npcDef, ptOf } from '../state.ts';
 import { COLOR_LABELS, COLORS, creatureColors, manaCapacity } from '../mana.ts';
 import type { Color } from '../mana.ts';
 import { region, spellColors } from '../world.ts';
-import type { ChooseColorInput, ChooseInput, DiscardInput, SummonInput, VolleyInput, WanderInput } from '../run.ts';
+import type { ChooseColorInput, ChooseInput, DiscardInput, PickInput, SummonInput, VolleyInput, WanderInput } from '../run.ts';
 import { loreText } from './context.ts';
 import { recentNews } from '../run.ts';
 import { relationsText } from '../relations.ts';
@@ -208,6 +208,40 @@ Which do you let go of?`,
   const parsed = z.object({ pick: z.string() }).safeParse(extractJson(content));
   if (!parsed.success || !spells.some((s) => s.id === parsed.data.pick)) {
     console.warn(`Unusable discard from ${npc.id}:`, content);
+    return null;
+  }
+  return parsed.data.pick;
+}
+
+// An NPC picks one of some things (not people), in character: which relic to destroy, etc.
+export async function choosePick({ state, npc, what, options, optional }: PickInput): Promise<string | null> {
+  const me = state.actors[npc.id];
+  const content = await chatCompletion(
+    [
+      {
+        role: 'system',
+        content: `You are ${npc.name}, a character in the plane of Zendikar.
+Who you are: ${npc.persona}
+Your goal: ${npc.goal}
+${optional ? 'Pick one of the things listed, or none. Answer with JSON only: {"pick": "<id>"} or {"pick": null}.' : 'You must pick exactly one of the things listed. Answer with JSON only: {"pick": "<id>"}.'}`,
+      },
+      {
+        role: 'user',
+        content: `${what}
+
+Things here:
+${options.map((o) => `- ${o.id}: ${o.label}`).join('\n')}
+${me ? `\nWhat you think of those you know:\n${relationsText(me).join('\n') || '(no one yet)'}` : ''}
+
+Which do you pick?`,
+      },
+    ],
+    300,
+  );
+  const parsed = z.object({ pick: z.string().nullable() }).safeParse(extractJson(content));
+  if (optional && parsed.success && parsed.data.pick === null) return null;
+  if (!parsed.success || !options.some((o) => o.id === parsed.data.pick)) {
+    console.warn(`Unusable pick from ${npc.id}:`, content);
     return null;
   }
   return parsed.data.pick;

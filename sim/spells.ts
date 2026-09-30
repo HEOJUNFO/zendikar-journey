@@ -10,6 +10,7 @@ import { addCosts, formatMana, manaAvailable, manaCapacity, payMana, planPayment
 import { spawnWild } from './abilities.ts';
 import { destroyLand } from './step.ts';
 import { owesDiscard } from './discard.ts';
+import { crushOwed, relicsHere } from './relics.ts';
 import { remember } from './relations.ts';
 import { creatureOf, retainersOf } from './retainers.ts';
 import { addLog, present, ptOf, targetable, untargetableText } from './state.ts';
@@ -61,6 +62,7 @@ export function castBlocked(state: State, world: World, a: Actor, spellId: strin
     return `${josa(shortName(target.name), '은', '는')} 여기 없다.`;
   if (s.effects.some((e) => e.type === 'destroy_land') && !landToDestroy(state, target))
     return `${josa(shortName(target.name), '은', '는')} 부술 땅을 쥐고 있지 않다.`;
+  if (s.effects.some((e) => e.type === 'destroy_relics') && !relicsHere(state, world, a.region).length) return '여기엔 부술 마법물체도 부여마법도 없다.';
   if (s.target !== 'self' && !targetable(target, t, spellColors(s))) return untargetableText(target, t, spellColors(s));
   if (!planPayment(manaAvailable(state, world, a, t), s.cost))
     return `마나가 모자라다 (${s.costText}, 지금 ${formatMana(manaAvailable(state, world, a, t))}).`;
@@ -175,6 +177,9 @@ export function castSpell(state: State, world: World, a: Actor, spellId: string,
       if (land) destroyLand(state, world, land, [a.id], t, s.id);
     } else if (eff.type === 'discard') {
       owesDiscard(state, world, target, s.name, t);
+    } else if (eff.type === 'destroy_relics') {
+      const owed = crushOwed(state, world, a, s.name, eff.count, true, t);
+      if (owed) (state.choices ??= []).push(owed);
     } else if (eff.type === 'discard_per_land') {
       const n = landsOfType(state, world, a, eff.land).length;
       if (n > 0) owesDiscard(state, world, target, s.name, t, n);
@@ -190,7 +195,8 @@ export function castSpell(state: State, world: World, a: Actor, spellId: string,
       const kind = world.lore.find((l) => l.id === eff.creature)?.name ?? eff.creature;
       addLog(state, { kind: 'event', text: `${kind} ${n}명이 나타나 ${shortName(a.name)}에게 서약했다 (${eff.pt.join('/')}, 권속).`, regions: [a.region], actors: [a.id, ...born.map((b) => b.id)] });
     } else if (eff.type === 'aura') {
-      target.auras = [...(target.auras ?? []), { spell: s.id, name: s.name, by: a.id, pt: [...eff.pt], ...(eff.base_pt ? { base: [...eff.base_pt] as [number, number] } : {}), doubleLifeOnHit: eff.double_life_on_hit }];
+      const added = eff.abilities.filter((ab) => !target.abilities.includes(ab));
+      target.auras = [...(target.auras ?? []), { spell: s.id, name: s.name, by: a.id, pt: [...eff.pt], ...(eff.base_pt ? { base: [...eff.base_pt] as [number, number] } : {}), doubleLifeOnHit: eff.double_life_on_hit, ...(added.length ? { added } : {}) }];
       // What it gives stays as long as the aura does: until they die.
       for (const ab of eff.abilities) if (!target.abilities.includes(ab)) target.abilities = [...target.abilities, ab];
       addLog(state, {

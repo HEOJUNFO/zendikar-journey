@@ -18,6 +18,7 @@ import { gainLife, lifeOf } from './life.ts';
 import { hasAbility, newState, npcDef, outOfTime, PLAYER_ID, present, ptOf, syncWorld, targetable } from './state.ts';
 import { foresightText } from './foresight.ts';
 import { withPositions } from './wander.ts';
+import { relicsHere } from './relics.ts';
 import { claimBlocked } from './items.ts';
 import { spendBlocked, storeBlocked } from './eons.ts';
 import { applyEnterDestroy, bondBlocked, enterDestroy, onEnter, bondLand, bondTargets, callForth, fetchTargets, fireTargets, firesOnBond, growBlocked, spawnWild, summonLibrary, useAbility } from './abilities.ts';
@@ -2960,4 +2961,53 @@ test('the real Ob Nixilis, the Fallen walks Bala Ged, a flightless Demon', () =>
   assert.equal(hasAbility(o, 'fly', state.minutes), false);
   assert.deepEqual(npcDef(state, world, o.id)?.landfallDrain, { life: 3, counters: 3 });
   assert.deepEqual(npcDef(state, world, o.id)?.types, ['demon']);
+});
+
+const crush: RawEntity = { id: 'spl-rc', kind: 'spell', name: '분쇄', status: 'canon', sim: { cost: '{1}', speed: 'instant', learn_at: 'loc-a', target: 'self', effects: [{ type: 'destroy_relics', count: 2 }] } };
+const bigAura: RawEntity = { id: 'spl-g', kind: 'spell', name: '거대', status: 'canon', sim: { cost: '{0}', learn_at: 'loc-a', target: 'any_here', effects: [{ type: 'aura', base_pt: [8, 8], abilities: ['trample'] }] } };
+
+test('relic crush: an NPC destroys an aura (and what it gave) and an item standing there, one pick at a time', async () => {
+  const world = fixture([crush, bigAura, vessel, npc('chr-c', { ...npcSim('loc-a'), mana: { G: 1 } }), npc('chr-x', npcSim('loc-a'))]);
+  const state = newState(world, { seed: 1, mode: 'observer' });
+  const [c, x] = [state.actors['chr-c'], state.actors['chr-x']];
+  castSpell(state, world, x, 'spl-g', 'chr-x', false, state.minutes);
+  assert.deepEqual(ptOf(x), [8, 8]);
+  assert.ok(x.abilities.includes('trample'));
+  assert.deepEqual(relicsHere(state, world, 'loc-a').map((r) => r.id), ['item:itm-v', 'aura:chr-x:0:spl-g']);
+  c.spells = ['spl-rc'];
+  readyCast(state, world, c, 'spl-rc', state.minutes);
+  const asked: [string[], boolean][] = [];
+  await advance(state, world, 1, { pick: async ({ options, optional }) => (asked.push([options.map((o) => o.id), !!optional]), options.at(-1)!.id) });
+  assert.deepEqual(asked, [[['item:itm-v', 'aura:chr-x:0:spl-g'], false], [['item:itm-v'], true]]);
+  assert.equal(x.auras?.length, 0);
+  assert.equal(x.abilities.includes('trample'), false);
+  assert.deepEqual(ptOf(x), [1, 1]);
+  assert.ok(state.items?.['itm-v']?.gone);
+  assert.match(castBlocked(state, world, c, 'spl-rc', c.id, false, state.minutes)!, /부술 마법물체도 부여마법도 없다/);
+});
+
+test('relic crush by the player: the first must go, the second they may let be', async () => {
+  const world = fixture([crush, bigAura, vessel, npc('chr-x', npcSim('loc-a'))]);
+  const state = character(world, 'loc-a');
+  const [p, x] = [state.actors[PLAYER_ID], state.actors['chr-x']];
+  castSpell(state, world, x, 'spl-g', 'chr-x', false, state.minutes);
+  p.spells = ['spl-rc'];
+  p.bonds = ['loc-a'];
+  await act(state, world, { type: 'cast', spell: 'spl-rc', to: p.id, kick: false });
+  await act(state, world, { type: 'wait', hours: 1 });
+  const first = state.asks![0];
+  assert.equal(first.effect.type, 'crush');
+  assert.equal(askOptions(state, world, first).some((o) => o.pick === null), false);
+  await act(state, world, { type: 'choose', pick: 'item:itm-v' });
+  assert.ok(state.items?.['itm-v']?.gone);
+  assert.ok(askOptions(state, world, state.asks![0]).some((o) => o.pick === null));
+  await act(state, world, { type: 'choose', pick: null });
+  assert.equal(x.auras?.length, 1); // let be
+});
+
+test('the real Relic Crush is taught in Bala Ged', () => {
+  const world = loadWorld();
+  const s = world.spells.find((x) => x.id === 'spl-relic-crush')!;
+  assert.equal(s.learnAt, 'loc-bala-ged');
+  assert.deepEqual(s.effects, [{ type: 'destroy_relics', count: 2 }]);
 });

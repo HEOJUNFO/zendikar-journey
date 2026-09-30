@@ -431,6 +431,12 @@ function spellEffectText(e: SpellEffect) {
       return '대상이 가장 최근에 유대를 맺은 땅이 부서짐';
     case 'discard':
       return '대상이 지닌 주문 하나를 잊음 (본인이 고름)';
+    case 'discard_per_land':
+      return `시전자가 쥔 ${e.land}마다 대상이 주문 하나를 잊음`;
+    case 'gain_life_per_land':
+      return `시전자가 쥔 ${e.land}마다 생명 ${e.amount}`;
+    case 'destroy_relics':
+      return `그 자리의 마법물체·부여마법 ${e.count}까지 파괴 (첫째는 반드시)`;
     case 'create_retainers':
       return `${e.pt.join('/')} 권속 ${e.count}${e.kicked_count ? ` (킥커 시 ${e.kicked_count})` : ''}`;
   }

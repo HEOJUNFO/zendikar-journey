@@ -76,7 +76,8 @@ export type Actor = {
   boost?: { until: number; pt: Pt; trample: boolean };
   // Auras on them (spells that stay until they die).
   // `base`: base power/toughness it sets (Gigantiform): the latest such aura wins.
-  auras?: { spell: string; name: string; by: string; pt: Pt; base?: Pt; doubleLifeOnHit: boolean }[];
+  // `added`: the abilities it gave that they didn't have (they go with it).
+  auras?: { spell: string; name: string; by: string; pt: Pt; base?: Pt; doubleLifeOnHit: boolean; added?: Ability[] }[];
   // Combat damage taken this turn; it wears off when the turn ends (00:00).
   wounds?: { day: number; amount: number };
   // Who they'll attack on sight this turn (they were attacked, or turned hostile).
@@ -152,7 +153,7 @@ export type Actor = {
 // What falls on the one picked: a land's bonding effect, a burst of damage (Valakut), or a
 // spell an NPC casts (sim/spells.ts).
 export type Choice = { by: string; land: string; effect: ChoiceEffect; candidates: string[]; optional?: boolean; t: number };
-export type ChoiceEffect = BondEffect | { type: 'damage'; amount: number } | { type: 'cast'; spell: string; free?: boolean } | { type: 'follow' } | { type: 'rally'; source: string } | { type: 'seize' } | { type: 'pledge'; from: string } | { type: 'evade'; from: string } | { type: 'discard'; cause: string; count?: number } | { type: 'sacrifice'; item: string } | { type: 'destroy'; kind: CreatureType } | { type: 'drain_grow'; life: number; counters: number };
+export type ChoiceEffect = BondEffect | { type: 'damage'; amount: number } | { type: 'cast'; spell: string; free?: boolean } | { type: 'follow' } | { type: 'rally'; source: string } | { type: 'seize' } | { type: 'pledge'; from: string } | { type: 'evade'; from: string } | { type: 'discard'; cause: string; count?: number } | { type: 'sacrifice'; item: string } | { type: 'destroy'; kind: CreatureType } | { type: 'drain_grow'; life: number; counters: number } | { type: 'crush'; spell: string; left: number; first: boolean };
 
 export type Condition = {
   label: string;

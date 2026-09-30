@@ -5,9 +5,10 @@ name: 발라 게드
 name_en: Bala Ged
 summary: 굴 드라즈 동쪽에 붙은 밀림 대륙. 짙은 나무 그늘이 늪 가장자리까지 내려오고, 두 대륙이 겹친 땅 밑에 푸른 지하묘지가 있다
 status: canon
-sources: [ZEN-229, ZEN-178, ZEN-184, ZEN-156, ZEN-107]
+sources: [ZEN-229, ZEN-178, ZEN-184, ZEN-156, ZEN-107, ZEN-179]
 tags: [대륙, 숲, 밀림, 녹색]
 links:
+  - { to: spl-relic-crush, rel: 배우는 주문 }
   - { to: chr-ob-nixilis, rel: 불꽃을 잃은 악마 }
   - { to: chr-rampaging-baloths, rel: 밀림을 휩쓰는 발로스 무리 }
   - { to: loc-guul-draz, rel: 붙은 서쪽의 대륙 }
@@ -37,4 +38,5 @@ map: { x: 237, y: 355, terrain: forest, size: continent }
 
 - 날뛰는 발로스 무리(`chr-rampaging-baloths`, ZEN-178)가 밀림을 휩쓴다 ([결정] 2026-09-30). 발로스 숲파괴자는 이때 무라사로 옮겼다.
 - 불꽃을 잃은 옛 플레인즈워커 악마 오브 닉실리스(`chr-ob-nixilis`, ZEN-107)가 밀림에 머문다. 땅과 이어질 때마다 곁의 하나에게서 생명을 빼앗아 커진다 ([결정] 2026-09-30).
+- 유물 분쇄(`spl-relic-crush`, ZEN-179)를 배울 수 있다 (4시간). 그 자리의 마법물체나 부여마법을 둘까지 부순다 ([결정] 2026-09-30).
 - 안의 구역은 아직 없다. 발라 게드의 카드가 나오면 더한다.

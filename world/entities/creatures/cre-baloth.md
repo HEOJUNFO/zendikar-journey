@@ -5,7 +5,7 @@ name: 발로스
 name_en: Baloth
 summary: 끝없는 먹성으로 한 땅의 사냥감을 금세 바닥내고, 먹이를 찾아 땅을 옮겨 다니는 거대한 녹색 짐승
 status: canon
-sources: [ZEN-157, ZEN-178, ZEN-156]
+sources: [ZEN-157, ZEN-178, ZEN-156, ZEN-179]
 tags: [짐승, 녹색]
 links:
   - { to: law-mana-colors, rel: 녹색의 존재 }
