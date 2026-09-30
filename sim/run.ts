@@ -18,7 +18,7 @@ import { opponentsOf, sealsDue, setSeal } from './seal.ts';
 import { COLORS } from './mana.ts';
 import type { Color } from './mana.ts';
 import { abilityBlocked, applyBondEffect, enteredToday, fetchBlocked, fetchTargets, growBlocked, growLand } from './abilities.ts';
-import { bindRetainer, courtTargets, swayBlocked } from './retainers.ts';
+import { bindRetainer, courtTargets, followsMaster, swayBlocked } from './retainers.ts';
 import { josa, shortName } from './text.ts';
 import type { ScheduleBlock } from './types.ts';
 import { ABILITY_LABELS, canStay, LAND_TYPE_LABELS, landTypes, placeName } from './world.ts';
@@ -391,7 +391,8 @@ const PLAN_TRIES = 2;
 async function prepare(state: State, world: World, llm: Llm): Promise<string | null> {
   const day = gameDay(state.minutes);
   // Those out of time today have no day to plan.
-  const unplanned = Object.values(state.actors).filter((a) => a.kind === 'npc' && !a.dead && a.schedule?.day !== day && !outOfTime(state, a));
+  // Tokens who serve someone live their master's day (sim/retainers.ts `followsMaster`).
+  const unplanned = Object.values(state.actors).filter((a) => a.kind === 'npc' && !a.dead && a.schedule?.day !== day && !outOfTime(state, a) && !followsMaster(state, a));
   if (unplanned.length && !llm.planDay) return 'LLM 설정이 없어 인물들의 하루를 짤 수 없다. 세계가 멈춰 있다.';
   const news = recentNews(state, world);
   const jobs: Promise<void>[] = unplanned.map(async (a) => {

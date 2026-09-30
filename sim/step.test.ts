@@ -352,15 +352,22 @@ test('a character of legend pays mana and taps to destroy someone, who rises as 
   assert.equal(token.master, 'chr-k');
   assert.equal(token.region, 'loc-c');
   assert.match(state.tokens![token.id].role, /fac-g/);
-  assert.equal(token.schedule?.day, 0); // planned the hour it rose
+  assert.equal(token.schedule, undefined); // a token who serves: no day of its own
+  assert.match(token.task?.activity ?? '', /곁/);
   assert.deepEqual(state.tokens![token.id].colors, ['B']); // a black Vampire
   const bs = state.actors['chr-k'];
   assert.equal(formatClock(bs.boundUntil!), '2일차 00:00');
   assert.deepEqual(manaAvailable(state, world, bs, state.minutes), { B: 4 });
   assert.deepEqual(usableAbilities(state, world, state.minutes), []); // tapped
-  // It lives a day like any NPC.
-  await advance(state, world, 24, { gmDay: async ({ day }) => ({ day, source: 'llm', fires: [] }) });
-  assert.equal(state.actors[token.id].schedule?.day, 1);
+  // It lives its master's day, not one planned for it; freed (its master dead), it plans its own.
+  const planned: string[] = [];
+  const llm: Llm = { planDay: async (input) => (planned.push(input.id), planDay!(input)), gmDay: async ({ day }) => ({ day, source: 'llm', fires: [] }) };
+  await advance(state, world, 24, llm);
+  assert.ok(!planned.includes(token.id));
+  assert.equal(state.actors[token.id].region, bs.region);
+  (await import('./combat.ts')).die(state, bs, state.minutes, '시험');
+  await advance(state, world, 24, llm);
+  assert.ok(planned.includes(token.id));
 });
 
 test('Lorthos taps only if he can pay his {8}', async () => {
@@ -1726,6 +1733,7 @@ test('a herd with landfall tokens: each land it bonds with, a new 4/4 of its kin
   assert.equal(young.length, 1);
   assert.deepEqual(ptOf(young[0]), [4, 4]);
   assert.equal(young[0].enteredAt !== undefined, true);
+  assert.equal(young[0].schedule, undefined); // it lives its herd's day
   assert.ok(texts(state).some((t) => t.includes('새로 났다')));
   // Trample without a landfall surge: 6 into a 1/1, 5 spills onto someone else there.
   addFoe(herd, 'chr-y', state.minutes);

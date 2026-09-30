@@ -18,6 +18,12 @@ export function masterOf(state: State, a: Actor) {
   return m && !m.dead ? m : undefined;
 }
 
+// One born in play (a token: a risen vampire, a young baloth) who serves someone lives their
+// master's day: no day of their own is planned ([결정] 2026-09-30). The master, or undefined.
+export function followsMaster(state: State, a: Actor) {
+  return a.kind === 'npc' && state.tokens?.[a.id] ? masterOf(state, a) : undefined;
+}
+
 export function retainersOf(state: State, masterId: string) {
   return Object.values(state.actors).filter((x) => !x.dead && x.master === masterId);
 }

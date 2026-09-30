@@ -27,7 +27,7 @@ import { CLAIM_HOURS, claimBlocked, claimItem, itemsAt } from './items.ts';
 import { EON_HOURS, eonLand, holdStill, spendBlocked, spendDay, storeBlocked, storeDay, timeNews } from './eons.ts';
 import { upkeepWins } from './win.ts';
 import { HIRE_HOURS, hireBlocked, hireMerc } from './allies.ts';
-import { COURT_HOURS, courtBlocked, masterOf, readyCourt } from './retainers.ts';
+import { COURT_HOURS, courtBlocked, followsMaster, masterOf, readyCourt } from './retainers.ts';
 import { learnBlocked, learnSpell, npcCastBlocked, readyCast, spellDef } from './spells.ts';
 import { payMana } from './mana.ts';
 import type { Actor, GmPlan, State, Task } from './state.ts';
@@ -390,8 +390,28 @@ function actorHour(state: State, world: World, a: Actor, t: number) {
   }
 }
 
+// A token who serves someone goes where their master goes, sleeps when they sleep, and
+// otherwise keeps at their side.
+function followTask(state: State, world: World, a: Actor, m: Actor, t: number): Task | undefined {
+  const where = m.travel?.to ?? m.region;
+  if (where !== a.region && !travelBlocked(state, world, a, where)) {
+    startTravel(state, world, a, where, t);
+    return a.task;
+  }
+  const master = shortName(m.name);
+  const task: Task =
+    (m.forced ?? m.task)?.kind === 'sleep'
+      ? { kind: 'sleep', activity: `${master} 곁에서 잠`, emoji: '💤' }
+      : { kind: 'leisure', activity: `${master} 곁을 따름`, emoji: '🐾' };
+  if (a.task?.activity !== task.activity) addLog(state, { kind: 'activity', text: `${shortName(a.name)}: ${task.emoji} ${task.activity}`, regions: [a.region], actors: [a.id] });
+  a.task = task;
+  return task;
+}
+
 // The NPC's schedule block for this hour. Starts travel when the block is elsewhere.
 function npcTask(state: State, world: World, a: Actor, t: number): Task | undefined {
+  const lead = followsMaster(state, a);
+  if (lead) return followTask(state, world, a, lead, t);
   const block = a.schedule && currentBlock(a.schedule.blocks, minuteOfDay(t));
   if (!block) return a.task;
   // A retainer lives its day at its master's side.
