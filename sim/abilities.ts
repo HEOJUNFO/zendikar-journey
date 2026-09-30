@@ -1,7 +1,8 @@
 // Landfall (bonding with a land) and activated abilities, used as the morning LLM plans.
 import { gameDay, untapTime } from './clock.ts';
 import { dealDamage, die, leavePlane } from './combat.ts';
-import { manaAvailable, payMana, planPayment } from './mana.ts';
+import { creatureColors, manaAvailable, payMana, planPayment } from './mana.ts';
+import { landTapBlocked, tapLand } from './landtap.ts';
 import type { Color } from './mana.ts';
 import { itemsOnLandfall } from './items.ts';
 import { gainLife, loseLife } from './life.ts';
@@ -118,7 +119,18 @@ export function upkeepRevive(state: State, world: World, t: number) {
     const back = [...(holder.fallen ?? [])].reverse().map((id) => state.actors[id]).find((x) => x?.dead && !x.left);
     if (!land || !back) continue;
     delete back.dead;
-    Object.assign(back, { region: holder.region, master: holder.id, travel: undefined, task: undefined, forced: undefined, wounds: undefined, schedule: undefined });
+    // Back from the graveyard: a new object, counters gone, and it entered this turn.
+    Object.assign(back, {
+      region: holder.region,
+      master: holder.id,
+      travel: undefined,
+      task: undefined,
+      forced: undefined,
+      wounds: undefined,
+      schedule: undefined,
+      plusCounters: undefined,
+      enteredAt: t,
+    });
     holder.fallen = holder.fallen!.filter((id) => id !== back.id);
     addLog(state, {
       kind: 'event',
@@ -225,13 +237,20 @@ function wheel(state: State, world: World, a: Actor, draw: number) {
   });
 }
 
+// A token id no one has yet (two tokens made with no log line between would share the base).
+function freeTokenId(state: State, base: string) {
+  let id = base;
+  for (let n = 2; state.actors[id]; n++) id = `${base}-${n}`;
+  return id;
+}
+
 // Someone risen in play (an MTG token) from `from`, with its power/toughness: a new character
 // who serves `master`.
 function raiseToken(state: State, world: World, from: Actor, creature: string, faction: string | undefined, colors: Color[], master: string) {
   const kind = world.lore.find((l) => l.id === creature);
   const masterName = shortName(npcDef(state, world, master)?.name ?? master);
   const factionName = faction ? world.lore.find((l) => l.id === faction)?.name : undefined;
-  const id = `tok-${state.nextLogId}`;
+  const id = freeTokenId(state, `tok-${state.nextLogId}`);
   const was = shortName(from.name);
   const name = `${kind?.name ?? creature}이 된 ${was}`;
   state.tokens ??= {};
@@ -261,6 +280,7 @@ function raiseToken(state: State, world: World, from: Actor, creature: string, f
     abilities: [],
     needs: ['energy'],
     master,
+    enteredAt: state.minutes,
   };
   addLog(state, {
     kind: 'event',
@@ -277,7 +297,7 @@ export function spawnWild(state: State, world: World, creature: string, pt: [num
   const kindName = kind?.name ?? creature;
   const out: Actor[] = [];
   for (let i = 0; i < count; i++) {
-    const id = `tok-${state.nextLogId}-${i}`;
+    const id = freeTokenId(state, `tok-${state.nextLogId}-${i}`);
     state.tokens ??= {};
     state.tokens[id] = {
       id,
@@ -304,8 +324,59 @@ export function spawnWild(state: State, world: World, creature: string, pt: [num
       pace: 'normal',
       abilities: [],
       needs: ['energy'],
+      enteredAt: state.minutes,
     };
     out.push(state.actors[id]);
   }
   return out;
+}
+
+// --- Oran-Rief: "{T}: Put a +1/+1 counter on each green creature that entered this turn" ---
+
+// The land they hold that does this, if any.
+export function growLand(world: World, a: Actor) {
+  return (a.bonds ?? []).map((id) => world.regions.find((r) => r.id === id)).find((r) => r?.growEntered);
+}
+
+// Creatures of `color` that came into play today (born, raised or brought back), whoever they
+// serve. Those out of time are out of reach.
+export function enteredToday(state: State, world: World, color: Color, t: number) {
+  return Object.values(state.actors).filter(
+    (x) =>
+      !x.dead &&
+      x.enteredAt !== undefined &&
+      gameDay(x.enteredAt) === gameDay(t) &&
+      creatureColors(npcDef(state, world, x.id)).includes(color) &&
+      !outOfTime(state, x, t),
+  );
+}
+
+export function growBlocked(state: State, world: World, a: Actor, landId: string, t: number): string | null {
+  const r = world.regions.find((x) => x.id === landId);
+  if (!r?.growEntered) return '그런 힘이 없는 땅이다.';
+  const why = landTapBlocked(state, world, a, landId, t);
+  if (why) return why;
+  if (!enteredToday(state, world, r.growEntered.color, t).length) return `오늘 새로 나온 ${COLOR_WORDS[r.growEntered.color]} 생물이 없다.`;
+  return null;
+}
+const COLOR_WORDS: Record<Color, string> = { W: '백색', U: '청색', B: '흑색', R: '적색', G: '녹색' };
+
+export function growEntered(state: State, world: World, a: Actor, landId: string, t: number) {
+  const why = growBlocked(state, world, a, landId, t);
+  const name = shortName(a.name);
+  if (why) {
+    addLog(state, { kind: 'status', text: `${josa(name, '은', '는')} 땅의 힘을 쓰지 못했다: ${why}`, regions: [a.region], actors: [a.id], t });
+    return;
+  }
+  const r = region(world, landId);
+  tapLand(a, r.id, t);
+  const grown = enteredToday(state, world, r.growEntered!.color, t);
+  for (const x of grown) x.plusCounters = (x.plusCounters ?? 0) + 1;
+  addLog(state, {
+    kind: 'event',
+    text: `${josa(name, '이', '가')} ${r.name}의 힘을 불러냈다. 오늘 새로 난 ${grown.map((x) => `${shortName(x.name)}(${ptOf(x).join('/')})`).join(', ')}에게 숲의 기운이 깃들었다.`,
+    regions: [a.region, ...new Set(grown.map((x) => x.region))],
+    actors: [a.id, ...grown.map((x) => x.id)],
+    t,
+  });
 }

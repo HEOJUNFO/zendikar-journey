@@ -6,7 +6,7 @@ import { BOND_HOURS, KIND_EFFECTS } from './rules.ts';
 import { addLog, isPerson, landUnusable, outOfTime, player } from './state.ts';
 import type { State, Task } from './state.ts';
 import { startTravel, travelBlocked } from './step.ts';
-import { bondBlocked, fetchBlocked } from './abilities.ts';
+import { bondBlocked, fetchBlocked, growBlocked } from './abilities.ts';
 import { CLAIM_HOURS, claimBlocked, itemDef } from './items.ts';
 import { EON_HOURS, spendBlocked, storeBlocked } from './eons.ts';
 import { castBlocked, learnBlocked, spellDef } from './spells.ts';
@@ -35,6 +35,8 @@ export const ActionSchema = z.discriminatedUnion('type', [
   // Leave a day in a land that keeps days (losing tomorrow), or take one back (an extra day).
   z.object({ type: z.literal('store_day'), land: z.string() }),
   z.object({ type: z.literal('spend_day'), land: z.string() }),
+  // Tap a land like Oran-Rief: every creature of its color that came into play today grows.
+  z.object({ type: z.literal('grow'), land: z.string() }),
 ]);
 export type Action = z.infer<typeof ActionSchema>;
 
@@ -146,6 +148,14 @@ export function startAction(state: State, world: World, action: Action): string 
       const r = region(world, action.land);
       task = { kind: 'spend_day', activity: `${r.name}에서 하루 되찾기`, emoji: '⌛', until: until(EON_HOURS), land: r.id };
       text = `${r.name}에 맡겨 둔 하루를 되찾는다. ${josa(r.name, '은', '는')} 떠나고, 내일은 나만의 하루가 된다.`;
+      break;
+    }
+    case 'grow': {
+      const why = growBlocked(state, world, p, action.land, t);
+      if (why) return why;
+      const r = region(world, action.land);
+      task = { kind: 'grow', activity: `${r.name}의 힘 불러내기`, emoji: '🌿', until: until(1), land: r.id };
+      text = `${r.name}의 힘을 불러내 오늘 새로 난 생물들을 북돋운다.`;
       break;
     }
     case 'talk': {

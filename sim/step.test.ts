@@ -13,7 +13,7 @@ import { eligibleGmEvents, travelBlocked } from './step.ts';
 import { gainLife } from './life.ts';
 import { newState, outOfTime, PLAYER_ID, present, ptOf, syncWorld } from './state.ts';
 import { spendBlocked, storeBlocked } from './eons.ts';
-import { bondBlocked, bondLand, fetchTargets, useAbility } from './abilities.ts';
+import { bondBlocked, bondLand, fetchTargets, growBlocked, spawnWild, useAbility } from './abilities.ts';
 import { DEPLETED_LABEL } from './rules.ts';
 import { swayBlocked } from './retainers.ts';
 import type { State } from './state.ts';
@@ -1107,4 +1107,32 @@ test('an NPC leaves a day in Magosi by a store_day block, and loses the next day
   await advance(state, world, 20); // into 2일차
   assert.ok(outOfTime(state, m));
   assert.equal(m.schedule?.day, 0); // not planned: the day isn't theirs
+});
+
+const oranRief: RawEntity = {
+  id: 'loc-rief',
+  kind: 'location',
+  name: '오란리프',
+  status: 'canon',
+  map: { in: 'loc-b', terrain: 'forest', color: 'G' },
+  sim: { nonbasic: true, enters_tapped: true, grow_entered: { color: 'G' } },
+};
+
+test('Oran-Rief: tapped, each green creature that came into play today gets a +1/+1 counter, whoever it serves', async () => {
+  const world = fixture([oranRief, npc('chr-g', { ...npcSim('loc-b'), mana: { G: 1 } })]);
+  const state = character(world, 'loc-rief');
+  const p = state.actors[PLAYER_ID];
+  p.bonds = ['loc-rief'];
+  assert.match(growBlocked(state, world, p, 'loc-rief', state.minutes)!, /새로 나온 녹색 생물이 없다/);
+  const [snake] = spawnWild(state, world, 'cre-snake', [1, 1], 1, 'loc-b', ['G']);
+  const [bat] = spawnWild(state, world, 'cre-bat', [1, 1], 1, 'loc-b', ['B']);
+  await act(state, world, { type: 'grow', land: 'loc-rief' });
+  assert.deepEqual(ptOf(snake), [2, 2]);
+  assert.deepEqual(ptOf(bat), [1, 1]); // not green
+  assert.deepEqual(ptOf(state.actors['chr-g']), [1, 1]); // green, but here since the start
+  assert.equal(formatMana(manaAvailable(state, world, p, state.minutes)), '없음'); // tapped for it, no {G} today
+  assert.match(growBlocked(state, world, p, 'loc-rief', state.minutes)!, /오늘 이미/);
+  await act(state, world, { type: 'wait', hours: 20 }); // the next day: the snake is no longer new
+  assert.match(growBlocked(state, world, p, 'loc-rief', state.minutes)!, /없다/);
+  assert.deepEqual(ptOf(snake), [2, 2]); // the counter stays
 });

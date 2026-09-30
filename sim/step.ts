@@ -21,7 +21,7 @@ import {
 import { gainedLifeToday, loseLife } from './life.ts';
 import { addLog, alive, landUnusable, needsOf, npcDef, outOfTime, present, ptOf, random } from './state.ts';
 import { addFoe, dealDamage, hostileNpcs } from './combat.ts';
-import { bondBlocked, bondLand, fetchLand, spawnWild, upkeepRevive, useAbility } from './abilities.ts';
+import { bondBlocked, bondLand, fetchLand, growBlocked, growEntered, growLand, spawnWild, upkeepRevive, useAbility } from './abilities.ts';
 import { CLAIM_HOURS, claimBlocked, claimItem, itemsAt } from './items.ts';
 import { EON_HOURS, eonLand, holdStill, spendBlocked, spendDay, storeBlocked, storeDay, timeNews } from './eons.ts';
 import { learnSpell } from './spells.ts';
@@ -49,7 +49,7 @@ export function step(state: State, world: World) {
     actorHour(state, world, a, t);
     // A timed task done: the player's action, or an NPC's bonding, taming or keeping days.
     const done = a.task?.until !== undefined && a.task.until <= t + STEP_MINUTES && !a.travel;
-    const timed = ['bond', 'claim', 'store_day', 'spend_day'];
+    const timed = ['bond', 'claim', 'store_day', 'spend_day', 'grow'];
     if (done && (a.kind === 'player' || timed.includes(a.task!.kind))) {
       const at = t + STEP_MINUTES;
       if (a.task!.kind === 'bond') bondLand(state, world, a, at);
@@ -58,6 +58,7 @@ export function step(state: State, world: World) {
       if (a.task!.kind === 'fetch' && a.task!.from && a.task!.land) fetchLand(state, world, a, a.task!.from, a.task!.land, at);
       if (a.task!.kind === 'store_day' && a.task!.land) storeDay(state, world, a, a.task!.land, at);
       if (a.task!.kind === 'spend_day' && a.task!.land) spendDay(state, world, a, a.task!.land, at);
+      if (a.task!.kind === 'grow' && a.task!.land) growEntered(state, world, a, a.task!.land, at);
       a.task = undefined;
     }
   }
@@ -379,15 +380,18 @@ function npcTask(state: State, world: World, a: Actor, t: number): Task | undefi
   // tapped land. Bonding takes BOND_HOURS, taming CLAIM_HOURS and keeping a day EON_HOURS; each
   // carries on until done (step).
   const item = block.kind === 'claim' ? itemsAt(world, a.region).find((x) => !claimBlocked(state, world, a, x.id, t)) : undefined;
-  const keeper = block.kind === 'store_day' || block.kind === 'spend_day' ? eonLand(world, a) : undefined;
+  // A land's power (Magosi's days, Oran-Rief's growth): the land they hold that has it.
+  const power = block.kind === 'store_day' || block.kind === 'spend_day' || block.kind === 'grow';
+  const land = block.kind === 'grow' ? growLand(world, a) : power ? eonLand(world, a) : undefined;
   const cannot =
     block.kind === 'bond' ? bondBlocked(state, world, a, t)
     : block.kind === 'claim' && !item ? (itemsAt(world, a.region).map((x) => claimBlocked(state, world, a, x.id, t))[0] ?? '길들일 것이 없다.')
-    : (block.kind === 'store_day' || block.kind === 'spend_day') && !keeper ? '날을 맡길 땅이 없다.'
-    : block.kind === 'store_day' ? storeBlocked(state, world, a, keeper!.id, t)
-    : block.kind === 'spend_day' ? spendBlocked(state, world, a, keeper!.id, t)
+    : power && !land ? '그런 힘을 가진 땅이 없다.'
+    : block.kind === 'store_day' ? storeBlocked(state, world, a, land!.id, t)
+    : block.kind === 'spend_day' ? spendBlocked(state, world, a, land!.id, t)
+    : block.kind === 'grow' ? growBlocked(state, world, a, land!.id, t)
     : null;
-  const timed = ['bond', 'claim', 'store_day', 'spend_day'];
+  const timed = ['bond', 'claim', 'store_day', 'spend_day', 'grow'];
   if (!cannot && timed.includes(block.kind) && a.task?.kind === block.kind) return a.task;
   const task: Task =
     block.kind === 'work' && landUnusable(state, a.region)
@@ -398,8 +402,8 @@ function npcTask(state: State, world: World, a: Actor, t: number): Task | undefi
           ? { kind: 'bond', activity: block.activity, emoji: block.emoji, until: t + BOND_HOURS * 60 }
           : item
             ? { kind: 'claim', activity: block.activity, emoji: block.emoji, until: t + CLAIM_HOURS * 60, item: item.id }
-            : keeper
-              ? { kind: block.kind, activity: block.activity, emoji: block.emoji, until: t + EON_HOURS * 60, land: keeper.id }
+            : land
+              ? { kind: block.kind, activity: block.activity, emoji: block.emoji, until: t + EON_HOURS * 60, land: land.id }
               : { kind: block.kind, activity: block.activity, emoji: block.emoji };
   if (a.task?.activity !== task.activity || a.task?.kind !== task.kind) {
     addLog(state, {

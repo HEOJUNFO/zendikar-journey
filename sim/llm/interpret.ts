@@ -8,7 +8,7 @@ import { travelBlocked } from '../step.ts';
 import { shortName } from '../text.ts';
 import { placeName, region, TERRAINS, travelHours } from '../world.ts';
 import { itemsAt, itemOwner } from '../items.ts';
-import { fetchTargets } from '../abilities.ts';
+import { enteredToday, fetchTargets, growBlocked, growLand } from '../abilities.ts';
 import { eonLand, spendBlocked, storeBlocked } from '../eons.ts';
 import { spellsTaughtAt } from '../spells.ts';
 import { chatCompletion, extractJson } from './chat.ts';
@@ -46,6 +46,11 @@ export async function interpret({ world, state, text }: InterpretInput): Promise
           `- {"type":"spend_day","land":"${keeper.id}"}  (take back a day left in ${keeper.name}, which leaves them: tomorrow the world stands still and only they move; 1 hour)`,
       ].filter(Boolean)
     : [];
+  const grower = growLand(world, p);
+  if (grower && !growBlocked(state, world, p, grower.id, state.minutes)) {
+    const who = enteredToday(state, world, grower.growEntered!.color, state.minutes).map((x) => shortName(x.name));
+    days.push(`- {"type":"grow","land":"${grower.id}"}  (call on ${grower.name}: a +1/+1 counter on each creature of its color that came into the world today, whoever they belong to: ${who.join(', ')}; 1 hour)`);
+  }
   const people = present(state, p.region)
     .filter(isPerson)
     .map((a) => `- ${a.id}: ${shortName(a.name)} (power/toughness ${ptOf(a).join('/')})`);

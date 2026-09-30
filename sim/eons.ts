@@ -10,7 +10,8 @@
 //
 // Either takes an hour, from wherever they are (as the land's mana does).
 import { gameDay } from './clock.ts';
-import { manaAvailable, manaCapacity, payMana, planPayment, formatMana } from './mana.ts';
+import { formatMana, manaAvailable, payMana, planPayment } from './mana.ts';
+import { landTapBlocked, tapLand, withTapped } from './landtap.ts';
 import { addLog } from './state.ts';
 import type { Actor, State } from './state.ts';
 import { josa, shortName } from './text.ts';
@@ -28,35 +29,10 @@ export function eonsIn(a: Actor, landId: string) {
   return a.eons?.[landId] ?? 0;
 }
 
-// `a` with `landId` tapped today, for checking what they would have left.
-function withTapped(a: Actor, landId: string, t: number): Actor {
-  const day = gameDay(t);
-  const ids = a.landsTapped?.day === day ? a.landsTapped.ids : [];
-  return { ...a, landsTapped: { day, ids: [...ids, landId] } };
-}
-
 // Why they can't tap the land for its ability now, or null.
 function tapBlocked(state: State, world: World, a: Actor, landId: string, t: number): string | null {
-  const r = world.regions.find((x) => x.id === landId);
-  if (!r?.eon) return '날을 맡길 수 있는 땅이 아니다.';
-  if (!a.bonds?.includes(r.id)) return `${r.name}과 유대를 맺지 않았다.`;
-  const rs = state.regions[r.id];
-  if (rs?.destroyed) return `${josa(r.name, '은', '는')} 부서졌다.`;
-  if (rs?.conditions.some((c) => c.tapped)) return `${josa(r.name, '은', '는')} 지금 쓸 수 없다.`;
-  const day = gameDay(t);
-  if (r.entersTapped && a.landfalls?.day === day && a.landfalls.regions.includes(r.id)) return `오늘 유대를 맺어 ${josa(r.name, '은', '는')} 아직 쓸 수 없다.`;
-  if (a.landsTapped?.day === day && a.landsTapped.ids.includes(r.id)) return `오늘 이미 ${josa(r.name, '을', '를')} 썼다.`;
-  // Its mana already spent today: it is tapped.
-  const cap = manaCapacity(state, world, withTapped(a, r.id, t), t);
-  const spent = a.manaSpent?.day === day ? a.manaSpent.spent : {};
-  if (Object.entries(spent).some(([c, n]) => (n ?? 0) > (cap[c as keyof typeof cap] ?? 0))) return `오늘 ${r.name}의 마나를 이미 썼다.`;
-  return null;
-}
-
-function tap(a: Actor, landId: string, t: number) {
-  const day = gameDay(t);
-  if (a.landsTapped?.day !== day) a.landsTapped = { day, ids: [] };
-  a.landsTapped.ids.push(landId);
+  if (!world.regions.find((x) => x.id === landId)?.eon) return '날을 맡길 수 있는 땅이 아니다.';
+  return landTapBlocked(state, world, a, landId, t);
 }
 
 // Out of time today, or with a day already set aside to lose.
@@ -97,7 +73,7 @@ export function storeDay(state: State, world: World, a: Actor, landId: string, t
     return;
   }
   const r = region(world, landId);
-  tap(a, r.id, t);
+  tapLand(a, r.id, t);
   payMana(state, world, a, r.eon!.cost, t);
   a.eons = { ...a.eons, [r.id]: eonsIn(a, r.id) + 1 };
   a.skipDay = nextTurn(state, a, gameDay(t) + 1);

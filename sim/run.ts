@@ -12,7 +12,7 @@ import { relationsText, remember } from './relations.ts';
 import { claimableItems } from './items.ts';
 import { eonLand, eonsIn, spendBlocked, storeBlocked } from './eons.ts';
 import { castSpell } from './spells.ts';
-import { abilityBlocked } from './abilities.ts';
+import { abilityBlocked, enteredToday, growBlocked, growLand } from './abilities.ts';
 import { bindRetainer, swayBlocked } from './retainers.ts';
 import { josa, shortName } from './text.ts';
 import type { ScheduleBlock } from './types.ts';
@@ -264,6 +264,7 @@ async function prepare(state: State, world: World, llm: Llm): Promise<string | n
           regions: world.regions.filter((r) => canStay(r, npc.abilities)).map((r) => ({ ...r, name: placeName(world, r) })),
           items: claimableItems(state, world, a, state.minutes).map((x) => `  - ${x.id} in ${x.at}: ${x.name} (${x.summary}), costs ${x.costText}`),
           days: daysInput(state, world, a),
+          grow: growInput(state, world, a),
           news,
         });
         if (blocks) a.schedule = { day, source: 'llm', blocks };
@@ -303,6 +304,13 @@ export function usableAbilities(state: State, world: World, t: number) {
   return world.npcs
     .filter((being) => state.actors[being.id] && !outOfTime(state, state.actors[being.id], t))
     .flatMap((being) => (being.activated ?? []).filter((x) => !abilityBlocked(state, world, being.id, x, t)).map((ability) => ({ being, ability })));
+}
+
+// A land like Oran-Rief they could tap today, and whom it would strengthen, for their plan.
+function growInput(state: State, world: World, a: Actor): PlanDayInput['grow'] {
+  const land = growLand(world, a);
+  if (!land || growBlocked(state, world, a, land.id, state.minutes)) return undefined;
+  return { land: land.name, creatures: enteredToday(state, world, land.growEntered!.color, state.minutes).map((x) => shortName(x.name)) };
 }
 
 // What they can do with a land that keeps days (Magosi) today, for their plan.

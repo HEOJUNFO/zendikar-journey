@@ -6,7 +6,7 @@ import { formatClock, formatTimeOfDay, gameDay, minuteOfDay } from '../sim/clock
 import { isPerson, needsOf, outOfTime, player, present, ptOf } from '../sim/state.ts';
 import { woundsOf } from '../sim/combat.ts';
 import { formatMana, manaAvailable, manaCapacity, manaLabel } from '../sim/mana.ts';
-import { bondBlocked, fetchTargets } from '../sim/abilities.ts';
+import { bondBlocked, enteredToday, fetchTargets, growBlocked, growLand } from '../sim/abilities.ts';
 import { BOND_HOURS } from '../sim/actions.ts';
 import { CLAIM_HOURS, claimBlocked, itemsAt, itemsOf } from '../sim/items.ts';
 import { eonLand, eonsIn, spendBlocked, storeBlocked } from '../sim/eons.ts';
@@ -138,13 +138,14 @@ export function RegionCard(props: {
       </h2>
       {parent && <p className="muted">{parent.name} 안의 구역</p>}
       <p>{r.summary}</p>
-      {(r.entersTapped || r.onBond.length > 0 || r.fetch || r.eon) && (
+      {(r.entersTapped || r.onBond.length > 0 || r.fetch || r.eon || r.growEntered) && (
         <p className="muted">
           {[
             r.entersTapped && '유대를 맺은 날은 마나를 내지 않음',
             ...r.onBond.map((x) => `유대를 맺으면 생명 ${x.amount}`),
             r.fetch && `내어 주면 ${r.fetch.types.map((x) => LAND_TYPE_LABELS[x]).join('·')} 땅 하나와 멀리서 유대 (생명 ${r.fetch.life})`,
             r.eon && `하루를 맡기면 (${r.eon.costText}) 내일을 잃고, 되찾으면 세상이 멈춘 하루를 얻음`,
+            r.growEntered && `탭하면 오늘 새로 난 ${manaLabel(r.growEntered.color)}색 생물 모두에게 +1/+1`,
           ].filter(Boolean).join(' · ')}
         </p>
       )}
@@ -354,6 +355,7 @@ export function CharacterControls(props: {
   const [line, setLine] = useState('');
   const people = present(state, p.region).filter((a) => isPerson(a) && a.boundUntil === undefined);
   const keeper = eonLand(world, p);
+  const grower = growLand(world, p);
   const stuck = p.travel || p.forced || p.boundUntil !== undefined;
   const target = people.find((a) => a.id === talkTo) ?? people[0];
   if (state.over) {
@@ -459,6 +461,21 @@ export function CharacterControls(props: {
             onClick={() => onAct({ type: 'spend_day', land: keeper.id })}
           >
             하루 되찾기
+          </button>
+        </div>
+      )}
+      {grower && (
+        <div className="row">
+          <span className="muted">🌿 {grower.name}:</span>
+          <button
+            disabled={busy || !!stuck || !!growBlocked(state, world, p, grower.id, state.minutes)}
+            title={
+              growBlocked(state, world, p, grower.id, state.minutes) ??
+              `오늘 새로 난 ${enteredToday(state, world, grower.growEntered!.color, state.minutes).map((x) => shortName(x.name)).join(', ')}에게 +1/+1`
+            }
+            onClick={() => onAct({ type: 'grow', land: grower.id })}
+          >
+            숲의 힘 불러내기
           </button>
         </div>
       )}

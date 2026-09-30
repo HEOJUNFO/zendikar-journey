@@ -3,7 +3,8 @@
 // bond: bonding with the land they stand on (landfall), one land a day.
 // claim: taming an item that stands where they are (sim/items.ts), when one is theirs to take.
 // store_day / spend_day: leaving a day in a land that keeps them, or taking one back (sim/eons.ts).
-export const LIFE_KINDS = ['sleep', 'eat', 'work', 'social', 'leisure', 'bond', 'claim', 'store_day', 'spend_day'] as const;
+// grow: tapping a land like Oran-Rief for the creatures that came into play today (abilities.ts).
+export const LIFE_KINDS = ['sleep', 'eat', 'work', 'social', 'leisure', 'bond', 'claim', 'store_day', 'spend_day', 'grow'] as const;
 export type LifeKind = (typeof LIFE_KINDS)[number];
 
 // start/end are minutes of the game day, 0..1440, end exclusive.

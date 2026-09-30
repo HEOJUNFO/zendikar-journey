@@ -67,6 +67,10 @@ export type Actor = {
   eons?: Record<string, number>;
   // The game day they skip ("skip your next turn"): out of time all that day.
   skipDay?: number;
+  // When they came into play (born, raised or brought back), for "entered this turn".
+  enteredAt?: number;
+  // +1/+1 counters on them: for good, until they die.
+  plusCounters?: number;
   // Spells they know (world/entities/spells): their hand.
   spells?: string[];
   // Spells they let go of (discarded): their graveyard.
@@ -349,9 +353,10 @@ export function present(state: State, regionId: string) {
   return alive(state).filter((a) => a.region === regionId && !a.travel && !outOfTime(state, a));
 }
 
-// Power / toughness now, with this turn's boost and their auras.
+// Power / toughness now, with their +1/+1 counters, this turn's boost and their auras.
 export function ptOf(a: Actor): Pt {
   let [p, t] = a.pt ?? PLAYER_PT;
+  if (a.plusCounters) [p, t] = [p + a.plusCounters, t + a.plusCounters];
   for (const x of [...(a.boost ? [a.boost] : []), ...(a.auras ?? [])]) [p, t] = [p + x.pt[0], t + x.pt[1]];
   return [p, t];
 }

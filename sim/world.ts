@@ -97,6 +97,10 @@ export const LandSimSchema = z.strictObject({
   // whoever holds it may leave a day in it (losing their next day) and later take it back
   // (the bond ends, and the next day the world stands still for them alone). sim/eons.ts.
   eon: z.strictObject({ cost: CostSchema }).optional(),
+  // "{T}: Put a +1/+1 counter on each green creature that entered this turn" (Oran-Rief):
+  // whoever holds it may tap it to give every creature of that color that came into play
+  // today a +1/+1 counter, whoever they serve.
+  grow_entered: z.strictObject({ color: z.enum(COLORS) }).optional(),
 });
 export type BondEffect = z.infer<typeof LandSimSchema>['on_bond'][number];
 
@@ -367,6 +371,8 @@ export type Region = {
   upkeepRevive?: { plains: number };
   // Keeps days (sim/eons.ts): what leaving one costs, besides tapping the land.
   eon?: { cost: ManaCost; costText: string };
+  // Tapped, gives a +1/+1 counter to each creature of this color that came into play today.
+  growEntered?: { color: Color };
   // An area inside this region (its x, y are the region's). Areas are lands of their own:
   // people meet, bond, and get hit by events there, but an event on the region reaches them.
   parent?: string;
@@ -508,6 +514,7 @@ export function buildWorld(entities: RawEntity[]): { world: World; errors: strin
           climbHours: land.data?.climb_hours,
           upkeepRevive: land.data?.upkeep_revive,
           eon: land.data?.eon && { cost: parseManaCost(land.data.eon.cost)!, costText: land.data.eon.cost },
+          growEntered: land.data?.grow_entered,
         });
       }
     }

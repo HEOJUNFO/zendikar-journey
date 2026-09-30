@@ -40,17 +40,20 @@ export type PlanDayInput = {
   // A land they hold that keeps days (Magosi, sim/eons.ts): days left in it, and whether they
   // can leave one or take one back today.
   days?: { land: string; cost: string; held: number; store: boolean; spend: boolean };
+  // A land they hold like Oran-Rief, and the creatures it would strengthen today (when any).
+  grow?: { land: string; creatures: string[] };
 };
 
 // Kinds of blocks they may plan: no meals without hunger, taming only if there is an item for
 // them to tame, keeping days only with a land that keeps them.
-function kindsFor(input: Pick<PlanDayInput, 'needs' | 'items' | 'days'>) {
+function kindsFor(input: Pick<PlanDayInput, 'needs' | 'items' | 'days' | 'grow'>) {
   return LIFE_KINDS.filter(
     (k) =>
       (k !== 'eat' || input.needs.includes('hunger')) &&
       (k !== 'claim' || !!input.items?.length) &&
       (k !== 'store_day' || !!input.days?.store) &&
-      (k !== 'spend_day' || !!input.days?.spend),
+      (k !== 'spend_day' || !!input.days?.spend) &&
+      (k !== 'grow' || !!input.grow),
   );
 }
 
@@ -77,7 +80,7 @@ role and goals, their needs, what they know happened, and the people they know.
 Answer with JSON only, no prose.`;
 
 function userPrompt(input: PlanDayInput) {
-  const { day, now, name, persona, goal, role, home, here, stats, needs, regions, news, relations = [], items = [], days } = input;
+  const { day, now, name, persona, goal, role, home, here, stats, needs, regions, news, relations = [], items = [], days, grow } = input;
   const kinds = kindsFor(input);
   const state = [
     needs.includes('energy') && `energy ${Math.round(stats.energy)}/100 (low = tired)`,
@@ -115,6 +118,10 @@ Rules:
   }${
     kinds.includes('spend_day')
       ? `\n- "spend_day" takes 1 hour, anywhere: they take back a day left in ${days!.land}; the land leaves them (their bond with it ends). Tomorrow the whole world stands still and only they move: a day no one else has.`
+      : ''
+  }${
+    kinds.includes('grow')
+      ? `\n- "grow" takes 1 hour, anywhere: they call on ${grow!.land} (no mana from it today) to make stronger, for good, every creature of its color that came into the world today, whoever they belong to: ${grow!.creatures.join(', ')}.`
       : ''
   }
 - Travel between regions takes hours; only change region when there is a reason.
