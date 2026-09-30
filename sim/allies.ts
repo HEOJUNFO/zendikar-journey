@@ -8,6 +8,8 @@
 import { addFoe, dealDamage } from './combat.ts';
 import { loseLife } from './life.ts';
 import { bindRetainer, masterOf, retainersOf, swayBlocked } from './retainers.ts';
+import { untapTime } from './clock.ts';
+import { grantAbility } from './abilities.ts';
 import { creatureColors } from './mana.ts';
 import { powersSealed } from './seal.ts';
 import { addLog, npcDef, present, targetable } from './state.ts';
@@ -39,6 +41,9 @@ export function allyJoined(state: State, world: World, a: Actor, master: Actor, 
     // "You may put a +1/+1 counter on each Ally creature you control": no one to pick, and it
     // only helps ("may": always, [가공]). Every Ally of the party, wherever they are.
     for (const eff of rally) if (eff.type === 'counters_allies') alliesCounter(state, world, x, master, t);
+    // "You may have Ally creatures you control gain <ability> until end of turn": the same, no one
+    // to pick, always.
+    for (const eff of rally) if (eff.type === 'grant_allies') for (const y of alliesOf(state, world, master)) grantAbility(state, y, eff.ability, untapTime(t), `${shortName(x.name)}의 부름`, t);
     if (!rally.some(targeted)) continue;
     const candidates = present(state, x.region).filter((y) => y.id !== x.id && targetable(y, t, creatureColors(npcDef(state, world, x.id)))).map((y) => y.id);
     if (candidates.length) (state.choices ??= []).push({ by: master.id, land: x.region, effect: { type: 'rally', source: x.id }, candidates, optional: true, t });
@@ -47,7 +52,7 @@ export function allyJoined(state: State, world: World, a: Actor, master: Actor, 
 
 // A rally that falls on someone picked (not the counters on the party's Allies).
 function targeted(eff: { type: string }) {
-  return eff.type !== 'counters_allies';
+  return eff.type !== 'counters_allies' && eff.type !== 'grant_allies';
 }
 
 // Kazuul Warlord's war cry: a +1/+1 counter (Actor.plusCounters, for good) on each Ally of the party.

@@ -271,7 +271,8 @@ export const CharacterSimSchema = z.strictObject({
   // party. damage_allies: damage to one there equal to the party's Allies (Murasa Pyromancer).
   // lose_life_allies: one there loses life equal to the party's Allies (Hagra Diabolist).
   // counters_allies: a +1/+1 counter on each Ally in the party, no one to pick (Kazuul Warlord).
-  rally: z.array(z.discriminatedUnion('type', [z.strictObject({ type: z.literal('damage_allies') }), z.strictObject({ type: z.literal('lose_life_allies') }), z.strictObject({ type: z.literal('counters_allies') })])).default([]),
+  // grant_allies: each Ally in the party gains <ability> until the turn ends (Seascape Aerialist: flying).
+  rally: z.array(z.discriminatedUnion('type', [z.strictObject({ type: z.literal('damage_allies') }), z.strictObject({ type: z.literal('lose_life_allies') }), z.strictObject({ type: z.literal('counters_allies') }), z.strictObject({ type: z.literal('grant_allies'), ability: z.enum(ABILITIES) })])).default([]),
   // "You may look at the top card of your library any time" (Sphinx of Jwar Isle): they see
   // what is coming. The rest of today's events and powers the morning LLM picked are in their
   // plan (made after it) and their talk (sim/foresight.ts).
@@ -602,7 +603,7 @@ export type NpcDef = {
   winsAtLife?: number;
   extraCombat?: { cost: ManaCost; costText: string };
   ally?: boolean;
-  rally?: { type: 'damage_allies' | 'lose_life_allies' | 'counters_allies' }[];
+  rally?: ({ type: 'damage_allies' | 'lose_life_allies' | 'counters_allies' } | { type: 'grant_allies'; ability: Ability })[];
   hireable?: boolean;
   foresight?: boolean;
   landfall?: { pt: [number, number]; trample: boolean };
@@ -759,13 +760,15 @@ export function buildWorld(entities: RawEntity[]): { world: World; errors: strin
     if (!c) err(r.id, `map.of ${r.of} 가 맵에 없음`);
     else if (c.parent || c.id === r.id) err(r.id, `map.of ${r.of} 는 다른 지역이어야 함 (구역이나 자기 자신은 안 됨)`);
   }
-  // Areas sit where their region is. One level only, and never at sea.
+  // Areas sit where their region is. One level only, and no area is sea itself; a sea region
+  // may hold a land area, its coast (Silundi Coast: the two count as one region, user decision
+  // 2026-09-30).
   for (const r of world.regions) {
     if (!r.parent) continue;
     const p = world.regions.find((x) => x.id === r.parent);
     if (!p) err(r.id, `map.in ${r.parent} 가 맵에 없음`);
     else if (p.parent) err(r.id, `map.in ${r.parent} 도 구역임 (구역 안에 구역은 둘 수 없음)`);
-    else if (TERRAINS[p.terrain].sea || TERRAINS[r.terrain].sea) err(r.id, '바다에는 구역을 둘 수 없음');
+    else if (TERRAINS[r.terrain].sea) err(r.id, '바다는 구역이 될 수 없음 (바다 지역 안의 뭍 구역은 됨)');
     else Object.assign(r, { x: p.x, y: p.y });
   }
 

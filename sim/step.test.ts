@@ -494,21 +494,23 @@ test('areas: a land inside a region, an hour from it, reached by events on the r
   assert.deepEqual(affectedRegions(world, { region: 'loc-in', range: 0 } as never).map((r) => r.id), ['loc-in']);
 });
 
-test('buildWorld rejects areas in nowhere, in areas, or at sea', () => {
-  const area = (id: string, parent: string): RawEntity => ({ id, kind: 'location', name: id, status: 'canon', map: { in: parent, terrain: 'swamp' } });
+test('buildWorld rejects areas in nowhere, in areas, or of sea; a sea may hold a land area (its coast)', () => {
+  const area = (id: string, parent: string, terrain = 'swamp'): RawEntity => ({ id, kind: 'location', name: id, status: 'canon', map: { in: parent, terrain } });
   const { errors } = buildWorld([
     loc('loc-a', 10, 10, 'grassland'),
     loc('loc-sea', 10, 30, 'deepsea'),
     area('loc-in', 'loc-a'),
     area('loc-nowhere', 'loc-moon'),
     area('loc-nested', 'loc-in'),
-    area('loc-wet', 'loc-sea'),
+    area('loc-wet', 'loc-sea', 'deepsea'),
+    area('loc-coast', 'loc-sea', 'beach'),
   ]);
   const has = (id: string) => errors.some((e) => e.startsWith(`${id}:`));
   assert.ok(!has('loc-in'));
   assert.ok(has('loc-nowhere'));
   assert.ok(has('loc-nested'));
   assert.ok(has('loc-wet'));
+  assert.ok(!has('loc-coast'));
 });
 
 const needle: RawEntity = {
@@ -3084,4 +3086,35 @@ test('both seas count as islands', () => {
   assert.deepEqual(landTypes(region(world, 'loc-deepwater-realm')), ['island']);
   assert.deepEqual(landTypes(region(world, 'loc-malakir')), ['swamp']);
   assert.deepEqual(landTypes(region(world, 'loc-turntimber-grove')), ['forest']);
+});
+
+test('an Ally\'s gift of the sky: each Ally joining gives every Ally of the party flying until midnight, not other retainers', async () => {
+  const aerialist = { ...npcSim('loc-a', 'work', [2, 3]), mana: { U: 5 }, ally: true, hireable: true, rally: [{ type: 'grant_allies', ability: 'fly' }] };
+  const ogre = { ...npcSim('loc-a', 'work', [3, 2]), mana: { B: 5 }, ally: true, hireable: true };
+  const world = fixture([npc('chr-s', aerialist), npc('chr-o', ogre), npc('chr-x', npcSim('loc-a'))]);
+  const state = character(world, 'loc-a');
+  const [p, s, o, x] = [state.actors[PLAYER_ID], state.actors['chr-s'], state.actors['chr-o'], state.actors['chr-x']];
+  x.master = PLAYER_ID;
+  p.stats.coin = 200;
+  await act(state, world, { type: 'hire', to: 'chr-s' });
+  await act(state, world, { type: 'hire', to: 'chr-o' });
+  assert.ok(hasAbility(s, 'fly', state.minutes));
+  assert.ok(hasAbility(o, 'fly', state.minutes));
+  assert.equal(hasAbility(x, 'fly', state.minutes), false);
+  assert.equal(hasAbility(p, 'fly', state.minutes), false);
+  assert.equal(state.asks?.length ?? 0, 0); // nothing to pick
+  const midnight = (Math.floor(state.minutes / 1440) + 1) * 1440;
+  await act(state, world, { type: 'wait', hours: Math.ceil((midnight - state.minutes) / 60) + 1 });
+  assert.equal(hasAbility(o, 'fly', state.minutes), false);
+});
+
+test('the real Seascape Aerialist lives on the Silundi Coast, a land in the Silundi Sea one can walk to', () => {
+  const world = loadWorld();
+  const state = newState(world, { seed: 1, mode: 'observer' });
+  const a = state.actors['chr-seascape-aerialist'];
+  assert.equal(a?.region, 'loc-silundi-coast');
+  assert.equal(region(world, 'loc-silundi-coast').parent, 'loc-silundi-sea');
+  assert.deepEqual(landTypes(region(world, 'loc-silundi-coast')), ['island']);
+  assert.equal(travelBlocked(state, world, a, 'loc-tazeem'), null);
+  assert.deepEqual(world.npcs.find((x) => x.id === 'chr-seascape-aerialist')?.rally, [{ type: 'grant_allies', ability: 'fly' }]);
 });

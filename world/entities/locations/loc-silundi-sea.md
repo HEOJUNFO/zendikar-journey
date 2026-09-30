@@ -5,11 +5,12 @@ name: 실룬디 바다
 name_en: Silundi Sea
 summary: 타짐 동쪽으로 펼쳐진 바다. 물밑에 얕은 여울이 숨어 있어, 암초처럼 떠오르는 바다뱀이 배를 좌초시킨다
 status: canon
-sources: [ZEN-65]
+sources: [ZEN-65, ZEN-64]
 tags: [바다, 여울]
 links:
   - { to: cre-shoal-serpent, rel: 여울에 숨은 뱀 }
   - { to: loc-tazeem, rel: 서쪽 해안 }
+  - { to: loc-silundi-coast, rel: 안의 구역 (연안) }
 map: { x: 405, y: 172, terrain: deepsea }
 sim:
   land_type: island                       # 기본 섬으로 친다 [결정] 2026-09-30
@@ -25,6 +26,7 @@ sim:
 - 바다라서 물에 사는 이만 머물거나 지나갈 수 있다. 여울 뱀(`cre-shoal-serpent`, ZEN-65)이 산다.
 - **기본 섬**으로 친다 ([결정] 2026-09-30, `sim.land_type`). 섬을 찾는 페치(뜨거운 호수, 안개 낀 우림)로 뭍에서도 이 바다와 멀리서 유대를 맺을 수 있다.
 - 바다도 유대를 맺을 수 있다 (청 마나). 여울 뱀은 이 바다를 사냥터로 삼는다.
+- 안에 뭍의 구역 실룬디 연안(`loc-silundi-coast`, 기본 섬)이 있다. 바다와 연안은 한 지역으로 친다 ([결정] 2026-09-30). 인어 비행술사(`chr-seascape-aerialist`, ZEN-64)가 연안에 산다.
 - 배와 항로가 생기면 뱃길 위의 위험이 된다.
 
 ## 미정/질문
