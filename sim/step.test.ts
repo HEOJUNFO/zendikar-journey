@@ -18,7 +18,7 @@ import { gainLife, lifeOf } from './life.ts';
 import { hasAbility, newState, npcDef, outOfTime, PLAYER_ID, present, ptOf, syncWorld, targetable } from './state.ts';
 import { foresightText } from './foresight.ts';
 import { withPositions } from './wander.ts';
-import { relicsHere } from './relics.ts';
+import { crushRelic, relicsHere } from './relics.ts';
 import { claimBlocked } from './items.ts';
 import { spendBlocked, storeBlocked } from './eons.ts';
 import { applyEnterDestroy, bondBlocked, enterDestroy, onEnter, bondLand, bondTargets, callForth, fetchTargets, fireTargets, firesOnBond, growBlocked, spawnWild, summonLibrary, useAbility } from './abilities.ts';
@@ -3010,4 +3010,14 @@ test('the real Relic Crush is taught in Bala Ged', () => {
   const s = world.spells.find((x) => x.id === 'spl-relic-crush')!;
   assert.equal(s.learnAt, 'loc-bala-ged');
   assert.deepEqual(s.effects, [{ type: 'destroy_relics', count: 2 }]);
+});
+
+test('relic crush reaches an enchantment that is no aura, standing in a place', () => {
+  const ench: RawEntity = { id: 'itm-e', kind: 'item', name: '결계', status: 'canon', sim: { card_type: 'enchantment', cost: '{1}', at: 'loc-a', effects: [{ type: 'charge_life' }] } };
+  const world = fixture([ench, npc('chr-c', npcSim('loc-a'))]);
+  const state = newState(world, { seed: 1, mode: 'observer' });
+  assert.equal(world.items[0].cardType, 'enchantment');
+  assert.deepEqual(relicsHere(state, world, 'loc-a'), [{ id: 'item:itm-e', label: '결계 (부여마법)' }]);
+  assert.ok(crushRelic(state, world, 'item:itm-e', state.actors['chr-c'], state.minutes));
+  assert.ok(state.items?.['itm-e']?.gone);
 });

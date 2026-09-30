@@ -1,5 +1,6 @@
 // Artifacts and enchantments to destroy (Relic Crush): the items standing in a place (MTG
-// artifacts) and the auras on those there (enchantments). The caster picks, one at a time: an
+// artifacts, and enchantments that are no aura: `card_type`), and the auras on those there
+// (enchantments on someone). The caster picks, one at a time: an
 // NPC by the LLM (`llm.pick`), the player as a pick they owe (sim/asks.ts); the first must be
 // picked, the rest may be let be ("up to one other").
 import { addLog, present } from './state.ts';
@@ -16,7 +17,8 @@ export function relicsHere(state: State, world: World, regionId: string): Relic[
     .filter((x) => x.at === regionId && !state.items?.[x.id]?.gone)
     .map((x) => {
       const owner = state.items?.[x.id]?.owner;
-      return { id: `item:${x.id}`, label: `${x.name}${owner ? ` (${shortName(state.actors[owner]?.name ?? owner)}의 것)` : ''}` };
+      const kind = x.cardType === 'enchantment' ? '부여마법' : '마법물체';
+      return { id: `item:${x.id}`, label: `${x.name} (${kind}${owner ? `, ${shortName(state.actors[owner]?.name ?? owner)}의 것` : ''})` };
     });
   const auras = present(state, regionId).flatMap((a) => (a.auras ?? []).map((au, i) => ({ id: `aura:${a.id}:${i}:${au.spell}`, label: `${shortName(a.name)}에게 걸린 ${au.name}` })));
   return [...items, ...auras];

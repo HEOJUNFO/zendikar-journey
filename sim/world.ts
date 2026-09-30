@@ -477,8 +477,11 @@ export const SpellSimSchema = z.strictObject({
 export type SpellEffect = z.infer<typeof SpellSimSchema>['effects'][number];
 
 // An item (an MTG artifact, world/entities/items): it stands in one place and becomes the
-// possession of whoever pays its cost there (tames it).
+// possession of whoever pays its cost there (tames it). An enchantment that is no aura (one
+// that isn't on someone) stands in a place the same way, as `card_type: enchantment` (user
+// decision 2026-09-30): what destroys artifacts or enchantments reaches both (sim/relics.ts).
 export const ItemSimSchema = z.strictObject({
+  card_type: z.enum(['artifact', 'enchantment']).default('artifact'),
   cost: CostSchema,
   at: z.string(),
   effects: z
@@ -636,6 +639,8 @@ export type ItemDef = {
   id: string;
   name: string;
   summary: string;
+  // A card type: artifact (most), or an enchantment that is no aura.
+  cardType: 'artifact' | 'enchantment';
   cost: ManaCost;
   costText: string;
   at: string;
@@ -834,7 +839,7 @@ export function buildWorld(entities: RawEntity[]): { world: World; errors: strin
         continue;
       }
       const d = sim.data;
-      world.items.push({ id: e.id, name: e.name, summary: e.summary ?? '', cost: parseManaCost(d.cost)!, costText: d.cost, at: d.at, effects: d.effects });
+      world.items.push({ id: e.id, name: e.name, summary: e.summary ?? '', cardType: d.card_type, cost: parseManaCost(d.cost)!, costText: d.cost, at: d.at, effects: d.effects });
     } else {
       err(e.id, `sim 은 location, character, creature, event, spell, item 에만 쓸 수 있음 (${e.kind})`);
     }
