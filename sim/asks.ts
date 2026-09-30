@@ -7,6 +7,7 @@ import { applyRally, rallyText } from './allies.ts';
 import { bindRetainer, refuse } from './retainers.ts';
 import { letGo } from './discard.ts';
 import { sacrifice } from './monument.ts';
+import { castSpell } from './spells.ts';
 import { addLog, player } from './state.ts';
 import type { Actor, Choice, State } from './state.ts';
 import { josa, shortName } from './text.ts';
@@ -19,6 +20,7 @@ export function askText(state: State, world: World, c: Choice) {
   if (c.effect.type === 'pledge') return `${josa(shortName(from?.name ?? ''), '이', '가')} 자신을 따르고 섬기라 한다`;
   if (c.effect.type === 'evade') return `날지 못하는 ${josa(shortName(from?.name ?? ''), '이', '가')} 덤벼든다. 날아올라 피하면 자정까지 닿지 않는다`;
   if (c.effect.type === 'discard') return `${c.effect.cause}: 지닌 주문 하나를 잊어야 한다. 무엇을?`;
+  if (c.effect.type === 'cast') return `${world.spells.find((s) => s.id === (c.effect as { spell: string }).spell)?.name ?? ''}을(를) 하나 더, 값 없이 걸 수 있다. 누구에게?`;
   if (c.effect.type === 'sacrifice') return `${state.items?.[c.effect.item]?.name ?? c.effect.item}이(가) 오늘의 제물을 요구한다. 부리는 이 가운데 누구를 바칠까? (바친 이는 죽는다)`;
   return '';
 }
@@ -58,6 +60,9 @@ export function answerAsk(state: State, world: World, pick: string | null, t: nu
     const living = c.candidates.map((id) => state.actors[id]).filter((x) => x && !x.dead);
     const x = living.find((y) => y.id === pick) ?? living[0];
     if (x) sacrifice(state, world, x, c.effect.item, t);
+  } else if (c.effect.type === 'cast' && c.effect.free) {
+    const target = pick && c.candidates.includes(pick) ? state.actors[pick] : undefined;
+    if (target && !target.dead && target.region === p.region) castSpell(state, world, p, c.effect.spell, target.id, false, t, true);
   } else if (c.effect.type === 'discard') {
     // One they must give up: an answer that isn't one of theirs gives up the first.
     letGo(state, world, p, pick && c.candidates.includes(pick) ? pick : c.candidates[0], t);

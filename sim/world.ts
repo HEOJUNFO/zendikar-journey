@@ -408,11 +408,19 @@ export const SpellSimSchema = z.strictObject({
         // An aura: stays on the target until they die. +P/+T; with double_life_on_hit, whenever
         // they deal combat damage to someone, whoever controls them (their master, or they
         // themselves) doubles their life.
+        // base_pt: "enchanted creature has base power and toughness P/T" (Gigantiform), before
+        // any other bonus; abilities: what it has while it wears it (trample).
         z.strictObject({
           type: z.literal('aura'),
           pt: z.tuple([z.number().int(), z.number().int()]).default([0, 0]),
+          base_pt: z.tuple([z.number().int().min(0), z.number().int().min(1)]).optional(),
+          abilities: z.array(z.enum(ABILITIES)).default([]),
           double_life_on_hit: z.boolean().default(false),
         }),
+        // "If it was kicked, you may search your library for another <this> and put it onto the
+        // battlefield": the caster may cast it once more, free, on someone else there (their pick
+        // after the hour: the LLM, or the player's pick they owe).
+        z.strictObject({ type: z.literal('copy_if_kicked') }),
         // "Destroy target land" (Desecrated Earth): the land the target most lately bonded with
         // (not already destroyed) is destroyed for everyone for a while (law-permanents).
         z.strictObject({ type: z.literal('destroy_land') }),

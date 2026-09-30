@@ -157,6 +157,10 @@ export function castSpell(state: State, world: World, a: Actor, spellId: string,
       loseLife(state, target, lost, t, s.name, a);
     } else if (eff.type === 'gain_life_lost' && (!eff.if_kicked || kicked) && lost > 0) {
       gainLife(state, a, lost, t, s.name);
+    } else if (eff.type === 'copy_if_kicked' && kicked && !free) {
+      // One more, free, on someone else here: the caster's pick after the hour.
+      const others = castTargets(state, a, s).filter((x) => x.id !== target.id).map((x) => x.id);
+      if (others.length) (state.choices ??= []).push({ by: a.id, land: a.region, effect: { type: 'cast', spell: s.id, free: true }, candidates: others, optional: true, t });
     } else if (eff.type === 'destroy_land') {
       const land = landToDestroy(state, target);
       if (land) destroyLand(state, world, land, [a.id], t, s.id);
@@ -169,7 +173,9 @@ export function castSpell(state: State, world: World, a: Actor, spellId: string,
       const kind = world.lore.find((l) => l.id === eff.creature)?.name ?? eff.creature;
       addLog(state, { kind: 'event', text: `${kind} ${n}명이 나타나 ${shortName(a.name)}에게 서약했다 (${eff.pt.join('/')}, 권속).`, regions: [a.region], actors: [a.id, ...born.map((b) => b.id)] });
     } else if (eff.type === 'aura') {
-      target.auras = [...(target.auras ?? []), { spell: s.id, name: s.name, by: a.id, pt: [...eff.pt], doubleLifeOnHit: eff.double_life_on_hit }];
+      target.auras = [...(target.auras ?? []), { spell: s.id, name: s.name, by: a.id, pt: [...eff.pt], ...(eff.base_pt ? { base: [...eff.base_pt] as [number, number] } : {}), doubleLifeOnHit: eff.double_life_on_hit }];
+      // What it gives stays as long as the aura does: until they die.
+      for (const ab of eff.abilities) if (!target.abilities.includes(ab)) target.abilities = [...target.abilities, ab];
       addLog(state, {
         kind: 'status',
         text: `${josa(shortName(target.name), '이', '가')} ${josa(s.name, '을', '를')} 둘렀다 (${ptOf(target).join('/')}).`,

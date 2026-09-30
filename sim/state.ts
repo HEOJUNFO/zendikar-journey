@@ -74,7 +74,8 @@ export type Actor = {
   // "+N/+N and trample until end of turn": gone at `until` (00:00).
   boost?: { until: number; pt: Pt; trample: boolean };
   // Auras on them (spells that stay until they die).
-  auras?: { spell: string; name: string; by: string; pt: Pt; doubleLifeOnHit: boolean }[];
+  // `base`: base power/toughness it sets (Gigantiform): the latest such aura wins.
+  auras?: { spell: string; name: string; by: string; pt: Pt; base?: Pt; doubleLifeOnHit: boolean }[];
   // Combat damage taken this turn; it wears off when the turn ends (00:00).
   wounds?: { day: number; amount: number };
   // Who they'll attack on sight this turn (they were attacked, or turned hostile).
@@ -143,7 +144,7 @@ export type Actor = {
 // What falls on the one picked: a land's bonding effect, a burst of damage (Valakut), or a
 // spell an NPC casts (sim/spells.ts).
 export type Choice = { by: string; land: string; effect: ChoiceEffect; candidates: string[]; optional?: boolean; t: number };
-export type ChoiceEffect = BondEffect | { type: 'damage'; amount: number } | { type: 'cast'; spell: string } | { type: 'follow' } | { type: 'rally'; source: string } | { type: 'seize' } | { type: 'pledge'; from: string } | { type: 'evade'; from: string } | { type: 'discard'; cause: string } | { type: 'sacrifice'; item: string };
+export type ChoiceEffect = BondEffect | { type: 'damage'; amount: number } | { type: 'cast'; spell: string; free?: boolean } | { type: 'follow' } | { type: 'rally'; source: string } | { type: 'seize' } | { type: 'pledge'; from: string } | { type: 'evade'; from: string } | { type: 'discard'; cause: string } | { type: 'sacrifice'; item: string };
 
 export type Condition = {
   label: string;
@@ -441,7 +442,7 @@ export function targetable(a: Actor, t: number) {
 }
 
 export function ptOf(a: Actor): Pt {
-  let [p, t] = a.pt ?? PLAYER_PT;
+  let [p, t] = [...(a.auras ?? [])].reverse().find((x) => x.base)?.base ?? a.pt ?? PLAYER_PT;
   if (a.plusCounters) [p, t] = [p + a.plusCounters, t + a.plusCounters];
   for (const x of [...(a.boost ? [a.boost] : []), ...(a.pumps ?? []), ...(a.auras ?? [])]) [p, t] = [p + x.pt[0], t + x.pt[1]];
   if (a.anthem) [p, t] = [p + a.anthem.pt[0], t + a.anthem.pt[1]];

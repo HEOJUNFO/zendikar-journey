@@ -399,7 +399,7 @@ async function choices(state: State, world: World, llm: Llm) {
     if (!by || by.dead || !npc || !land || !candidates.length) continue;
     if (c.effect.type === 'pledge' || c.effect.type === 'evade') continue; // the player's alone
     if (c.effect.type === 'cast') {
-      await castChoice(state, world, llm, by, npc, c.effect.spell, candidates);
+      await castChoice(state, world, llm, by, npc, c.effect.spell, candidates, !!c.effect.free);
       continue;
     }
     if (c.effect.type === 'follow') {
@@ -476,17 +476,25 @@ async function choices(state: State, world: World, llm: Llm) {
 // An NPC casts a spell they readied (sim/spells.ts `readyCast`): the LLM picks whom, in
 // character, or no one (they hold it back and keep their mana). The kicker is paid when they
 // can ([가공]: it only ever helps them).
-async function castChoice(state: State, world: World, llm: Llm, by: Actor, npc: Speaker, spellId: string, candidates: Actor[]) {
+// `free`: a copy it gives (a kicked Gigantiform's second), paid for already.
+async function castChoice(state: State, world: World, llm: Llm, by: Actor, npc: Speaker, spellId: string, candidates: Actor[], free = false) {
   const s = spellDef(world, spellId);
   if (!s || !llm.choose) return;
   let pick: string | null = null;
   try {
-    const what = `당신은 주문 ${s.name}(${s.costText})을 걸 준비를 마쳤다: ${s.summary}.${harmful(s) ? ' 해로운 주문이라, 맞은 이는 당신을 적으로 삼는다.' : ''} 누구에게 걸지, 아니면 거두어들일지 고른다`;
+    const what = free
+      ? `${s.name}을(를) 하나 더, 값 없이 걸 수 있다: ${s.summary}. 누구에게 걸지, 아니면 걸지 않을지 고른다`
+      : `당신은 주문 ${s.name}(${s.costText})을 걸 준비를 마쳤다: ${s.summary}.${harmful(s) ? ' 해로운 주문이라, 맞은 이는 당신을 적으로 삼는다.' : ''} 누구에게 걸지, 아니면 거두어들일지 고른다`;
     pick = await llm.choose({ world, state, npc, candidates, optional: true, what });
   } catch (e) {
     console.warn(`choose (cast) for ${by.id} failed:`, e);
   }
   if (!pick || !candidates.some((x) => x.id === pick)) return;
+  if (free) {
+    const target = state.actors[pick];
+    if (target && !target.dead && target.region === by.region) castSpell(state, world, by, s.id, pick, false, state.minutes, true);
+    return;
+  }
   const kick = !!s.kicker && !castBlocked(state, world, by, s.id, pick, true, state.minutes);
   const why = castBlocked(state, world, by, s.id, pick, kick, state.minutes);
   if (why) {

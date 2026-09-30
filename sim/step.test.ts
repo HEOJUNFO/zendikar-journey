@@ -25,7 +25,7 @@ import { DEPLETED_LABEL, DESTROYED_DAYS } from './rules.ts';
 import { swayBlocked } from './retainers.ts';
 import { upkeepWins } from './win.ts';
 import { hirePrice } from './allies.ts';
-import { askText } from './asks.ts';
+import { askOptions, askText } from './asks.ts';
 import type { State } from './state.ts';
 import { affectedRegions, buildWorld, landTypes, region, travelHours } from './world.ts';
 import type { RawEntity } from './world.ts';
@@ -2597,4 +2597,46 @@ test('the real Geyser Glider hunts in the Makindi Trenches, Ondu\'s canyons: no 
   assert.equal(mk.parent, 'loc-ondu');
   assert.ok(mk.notLand);
   assert.deepEqual(landTypes(mk), []);
+});
+
+const giant: RawEntity = {
+  id: 'spl-g',
+  kind: 'spell',
+  name: '거대화',
+  status: 'canon',
+  sim: { cost: '{1}', learn_at: 'loc-a', target: 'any_here', kicker: { mana: '{1}' }, effects: [{ type: 'aura', base_pt: [8, 8], abilities: ['trample'] }, { type: 'copy_if_kicked' }] },
+};
+
+test('gigantiform: base 8/8 and trample, other bonuses on top; kicked, one more free on someone else, the caster\'s pick', async () => {
+  const world = fixture([giant, npc('chr-x', npcSim('loc-a')), npc('chr-y', npcSim('loc-a'))]);
+  const state = character(world, 'loc-a');
+  const [p, x] = [state.actors[PLAYER_ID], state.actors['chr-x']];
+  p.spells = ['spl-g'];
+  p.bonds = ['loc-a', 'loc-b'];
+  p.plusCounters = 1;
+  await act(state, world, { type: 'cast', spell: 'spl-g', to: p.id, kick: true });
+  assert.deepEqual(ptOf(p), [9, 9]); // base 8/8, +1/+1 counter on top
+  assert.ok(p.abilities.includes('trample'));
+  await act(state, world, { type: 'wait', hours: 1 });
+  assert.equal(state.asks?.[0]?.effect.type, 'cast');
+  assert.deepEqual(askOptions(state, world, state.asks![0]).map((o) => o.pick), [...state.asks![0].candidates, null]);
+  assert.ok(!state.asks![0].candidates.includes(PLAYER_ID)); // someone else
+  await act(state, world, { type: 'choose', pick: 'chr-x' });
+  assert.deepEqual(ptOf(x), [8, 8]);
+  // Unkicked: no second.
+  const s2 = character(world, 'loc-a');
+  const p2 = s2.actors[PLAYER_ID];
+  p2.spells = ['spl-g'];
+  p2.bonds = ['loc-a'];
+  await act(s2, world, { type: 'cast', spell: 'spl-g', to: 'chr-y', kick: false });
+  await act(s2, world, { type: 'wait', hours: 1 });
+  assert.equal(s2.asks?.length ?? 0, 0);
+  assert.deepEqual(ptOf(s2.actors['chr-y']), [8, 8]);
+});
+
+test('the real Gigantiform is taught in Oran-Rief', () => {
+  const world = loadWorld();
+  const s = world.spells.find((x) => x.id === 'spl-gigantiform')!;
+  assert.equal(s.learnAt, 'loc-oran-rief');
+  assert.equal(s.kicker?.manaText, '{4}');
 });
