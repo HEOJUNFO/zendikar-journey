@@ -5,9 +5,10 @@ name: 발로스
 name_en: Baloth
 summary: 끝없는 먹성으로 한 땅의 사냥감을 금세 바닥내고, 먹이를 찾아 땅을 옮겨 다니는 거대한 녹색 짐승
 status: canon
-sources: [ZEN-157, ZEN-178, ZEN-156, ZEN-179]
+sources: [ZEN-157, ZEN-178, ZEN-156, ZEN-179, ZEN-188]
 tags: [짐승, 녹색]
 links:
+  - { to: chr-territorial-baloth, rel: 안개 낀 우림의 다른 한 마리 }
   - { to: law-mana-colors, rel: 녹색의 존재 }
   - { to: loc-murasa, rel: 처음 사는 곳 }
   - { to: chr-rampaging-baloths, rel: 발라 게드의 다른 무리 }
@@ -36,7 +37,7 @@ sim:
 ## 게임에서의 역할
 
 - 처음 사는 곳: 북서쪽 밀림 대륙 무라사(`loc-murasa`) ([결정] 2026-09-30). 다시 놓기에서 발라 게드에 두었다가, 발라 게드에 날뛰는 발로스 무리(ZEN-178)가 들어서며 무라사로 옮겼다. 그 전의 자리는 따로 만든 우거진 밀림(`loc-overgrown-jungle`)이었다. 사냥감이 바닥나면 LLM이 짜는 하루대로 무라사 안의 구역(카잔두 피난처, 안개 낀 우림)이나 타짐으로 옮겨 간다.
-- 발로스는 여러 무리가 있다. 발라 게드에는 날뛰는 발로스 무리(`chr-rampaging-baloths`, ZEN-178)가 산다.
+- 발로스는 여러 무리가 있다. 발라 게드에는 날뛰는 발로스 무리(`chr-rampaging-baloths`, ZEN-178)가, 무라사 안의 안개 낀 우림에는 영역 발로스(`chr-territorial-baloth`, ZEN-188)가 산다.
 - 생물종이면서, `sim` 으로 게임 속에 한 마리가 산다 (발로스 숲파괴자).
 
 - 4/4, 마나 녹 6 (카드의 마나 값과 색). 기력과 배고픔을 쓴다. 짐승이라 말을 하지 않는다 (`beast: true`).

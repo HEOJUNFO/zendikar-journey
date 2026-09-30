@@ -3009,6 +3009,18 @@ test('the real Mind Sludge is taught at the Ghet estate: a discard per swamp', (
   assert.deepEqual(s.effects, [{ type: 'discard_per_land', land: 'swamp' }]);
 });
 
+test('the real Territorial Baloth lurks in the Misty Rainforest: a 4/4 baloth, +2/+2 on landfall', () => {
+  const world = loadWorld();
+  const state = newState(world, { seed: 1, mode: 'observer' });
+  const b = state.actors['chr-territorial-baloth'];
+  assert.equal(b.region, 'loc-misty-rainforest');
+  const def = npcDef(state, world, b.id)!;
+  assert.equal(def.creature, 'cre-baloth');
+  assert.ok(def.beast);
+  assert.deepEqual(def.landfall, { pt: [2, 2], trample: false });
+  assert.deepEqual(ptOf(b), [4, 4]);
+});
+
 test('spire barrage: damage to one there for each mountain the caster holds; none, nothing', () => {
   const barrage: RawEntity = { id: 'spl-b', kind: 'spell', name: '폭격', status: 'canon', sim: { cost: '{1}', learn_at: 'loc-a', effects: [{ type: 'damage_per_land', land: 'mountain' }] } };
   const world = fixture([barrage, loc('loc-m1', 12, 10, 'rocky'), loc('loc-m2', 14, 10, 'rocky'), loc('loc-m3', 16, 10, 'volcanic'), npc('chr-x', npcSim('loc-a', 'work', [2, 9])), npc('chr-c', { ...npcSim('loc-a'), mana: { R: 5 } })]);

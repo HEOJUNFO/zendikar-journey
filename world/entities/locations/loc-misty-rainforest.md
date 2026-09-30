@@ -5,9 +5,10 @@ name: 안개 낀 우림
 name_en: Misty Rainforest
 summary: 무라사의 물가에 우거진 청록빛 우림. 이끼 낀 거목과 늘어진 덩굴 사이로 안개가 흐르고, 빛줄기가 고사리 덤불 위로 떨어진다
 status: canon
-sources: [ZEN-220, ZEN-229]
+sources: [ZEN-220, ZEN-229, ZEN-188]
 tags: [우림, 길, 페치]
 links:
+  - { to: chr-territorial-baloth, rel: 안개 속에 도사린 발로스 }
   - { to: loc-murasa, rel: 바깥 지역 }
   - { to: loc-tazeem, rel: 길이 닿는 물가 }
   - { to: law-life, rel: 길을 여는 값 }
