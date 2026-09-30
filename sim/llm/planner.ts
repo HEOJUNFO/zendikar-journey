@@ -31,6 +31,8 @@ export type PlanDayInput = {
   // Where they are now.
   here: string;
   stats: Stats;
+  // Their life total (sim/life.ts), for those who have one.
+  life?: number;
   needs: readonly Need[];
   // Regions this character can be in today (reachable and not sea).
   regions: { id: string; name: string; summary: string }[];
@@ -106,10 +108,11 @@ role and goals, their needs, what they know happened, and the people they know.
 Answer with JSON only, no prose.`;
 
 function userPrompt(input: PlanDayInput) {
-  const { day, now, name, persona, goal, role, home, here, stats, needs, regions, news, relations = [], items = [], days, grow, fetch = [], learn = [], cast = [], court = [] } = input;
+  const { day, now, name, persona, goal, role, home, here, stats, life, needs, regions, news, relations = [], items = [], days, grow, fetch = [], learn = [], cast = [], court = [] } = input;
   const kinds = kindsFor(input);
   const state = [
-    needs.includes('energy') && `energy ${Math.round(stats.energy)}/100 (low = tired)`,
+    needs.includes('energy') && `energy ${Math.round(stats.energy)}/100 (low = tired; sleep restores it)`,
+    life !== undefined && `life ${life} (starts at 20; it never comes back by itself, only effects that gain life raise it; at 0 they die)`,
     needs.includes('hunger') && `hunger ${Math.round(stats.hunger)}/100 (high = hungry)`,
     needs.includes('coin') && `coin ${Math.round(stats.coin)}`,
   ].filter(Boolean);

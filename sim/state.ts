@@ -45,6 +45,8 @@ export type Actor = {
   manaSpent?: { day: number; spent: Mana };
   // When they last arrived somewhere (an enter event may answer it at that hour).
   arrivedAt?: number;
+  // Life total (sim/life.ts), apart from energy; START_LIFE until something changes it.
+  life?: number;
   // Game day they last gained life (sim/life.ts).
   lifeGained?: number;
   stats: Stats;

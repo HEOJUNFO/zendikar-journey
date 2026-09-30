@@ -138,7 +138,7 @@ export function castSpell(state: State, world: World, a: Actor, spellId: string,
         return;
       }
       lost = Math.ceil(life / 2);
-      loseLife(state, target, lost, s.name);
+      loseLife(state, target, lost, t, s.name, a);
     } else if (eff.type === 'gain_life_lost' && (!eff.if_kicked || kicked) && lost > 0) {
       gainLife(state, a, lost, t, s.name);
     } else if (eff.type === 'aura') {

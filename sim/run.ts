@@ -10,6 +10,7 @@ import { eligibleGmEvents, ruinsUntil, step } from './step.ts';
 import { addFoe, clash } from './combat.ts';
 import { relationsText, remember } from './relations.ts';
 import { claimableItems } from './items.ts';
+import { lifeOf } from './life.ts';
 import { eonLand, eonsIn, spendBlocked, storeBlocked } from './eons.ts';
 import { castableSpells, castBlocked, castSpell, harmful, learnableSpells, spellDef } from './spells.ts';
 import { opponentsOf, sealsDue, setSeal } from './seal.ts';
@@ -381,6 +382,7 @@ async function prepare(state: State, world: World, llm: Llm): Promise<string | n
           home: npc.home,
           here: a.region,
           stats: a.stats,
+          ...(lifeOf(a) !== null ? { life: lifeOf(a)! } : {}),
           needs: npc.needs,
           relations: relationsText(a),
           regions: world.regions.filter((r) => canStay(r, npc.abilities)).map((r) => ({ ...r, name: placeName(world, r) })),

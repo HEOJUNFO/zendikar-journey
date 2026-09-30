@@ -268,6 +268,7 @@ export function PeopleList({ world, state, all }: { world: World; state: State; 
           {!p && (
             <>
               {needsOf(a).includes('energy') && <Bar label="기력" value={a.stats.energy} />}
+              {lifeOf(a) !== null && <p className="muted">생명 {lifeOf(a)}</p>}
               {needsOf(a).includes('hunger') && <Bar label="배고픔" value={a.stats.hunger} bad />}
             </>
           )}
@@ -296,7 +297,10 @@ export function PlayerCard({ world, state }: { world: World; state: State }) {
       <p>{status(world, p)}</p>
       {isWinner(state, p.id) && <p>🏆 세계의 승자 ({formatClock(state.winners!.find((w) => w.id === p.id)!.at)})</p>}
       <Bar label="기력" value={p.stats.energy} />
-      <p className="muted">생명 {Math.floor(lifeOf(p)! * 10) / 10}</p>
+      <div className="bar">
+        <span>생명</span>
+        <b>{lifeOf(p)}</b>
+      </div>
       <Bar label="배고픔" value={p.stats.hunger} bad />
       <div className="bar">
         <span>돈</span>

@@ -1,6 +1,7 @@
 // World context shared by the prompts.
 import { formatClock } from '../clock.ts';
 import { player, ptOf } from '../state.ts';
+import { lifeOf } from '../life.ts';
 import { manaLabel } from '../mana.ts';
 import type { State } from '../state.ts';
 import { shortName } from '../text.ts';
@@ -32,7 +33,7 @@ export function playerText(state: State) {
   if (!p) return '';
   const s = p.stats;
   const items = Object.values(state.items ?? {}).filter((x) => x.owner === p.id).map((x) => x.name);
-  return `${p.name}. ${p.background ?? ''} (공격력/방어력 ${ptOf(p).join('/')}, 기력 ${Math.round(s.energy)}/100, 배고픔 ${Math.round(s.hunger)}/100, 돈 ${Math.round(s.coin)}${items.length ? `, 길들인 것: ${items.join(', ')}` : ''})`;
+  return `${p.name}. ${p.background ?? ''} (공격력/방어력 ${ptOf(p).join('/')}, 기력 ${Math.round(s.energy)}/100, 생명 ${lifeOf(p)}, 배고픔 ${Math.round(s.hunger)}/100, 돈 ${Math.round(s.coin)}${items.length ? `, 길들인 것: ${items.join(', ')}` : ''})`;
 }
 
 export function clockText(state: State) {

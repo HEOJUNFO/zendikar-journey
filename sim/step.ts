@@ -247,7 +247,7 @@ function fire(state: State, world: World, ev: EventDef, t: number, omened: boole
     } else if (eff.type === 'lose_life') {
       for (const id of cause.by ?? []) {
         const a = state.actors[id];
-        if (a && regions.includes(a.region) && !a.travel) loseLife(state, a, eff.amount, ev.name);
+        if (a && regions.includes(a.region) && !a.travel) loseLife(state, a, eff.amount, t, ev.name);
       }
     } else if (eff.type === 'destroy_lands') {
       for (const id of (cause.lands ?? []).slice(0, eff.count)) {

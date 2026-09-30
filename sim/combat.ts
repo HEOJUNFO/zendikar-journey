@@ -81,9 +81,10 @@ export function leavePlane(state: State, a: Actor, t: number, cause: string) {
   addLog(state, { kind: 'death', text: `${josa(shortName(a.name), '이', '가')} 이 차원을 떠났다 (${cause}).`, regions: [a.region], actors: [a.id] });
 }
 
-// Down but alive: out cold for KO_HOURS, one short of their toughness in wounds.
-function knockOut(state: State, a: Actor, t: number, cause: string) {
-  a.wounds = { day: gameDay(t), amount: ptOf(a)[1] - 1 };
+// Down but alive: out cold for KO_HOURS, one short of their toughness in wounds (when it was
+// wounds that felled them; life run out leaves none).
+export function knockOut(state: State, a: Actor, t: number, cause: string, wounded = true) {
+  if (wounded) a.wounds = { day: gameDay(t), amount: ptOf(a)[1] - 1 };
   a.task = undefined;
   a.forced = { kind: 'sleep', activity: KO_ACTIVITY, emoji: '😵', until: t + KO_HOURS * 60 };
   addLog(state, {

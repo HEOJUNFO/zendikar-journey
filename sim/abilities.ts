@@ -5,7 +5,7 @@ import { creatureColors, manaAvailable, payMana, planPayment } from './mana.ts';
 import { landTapBlocked, tapLand } from './landtap.ts';
 import type { Color } from './mana.ts';
 import { itemsOnLandfall } from './items.ts';
-import { gainLife, loseLife } from './life.ts';
+import { gainLife, lifeOf, loseLife } from './life.ts';
 import { DEPLETED_LABEL } from './rules.ts';
 import { castSpell, spellDef } from './spells.ts';
 import { addLog, npcDef, outOfTime, present, ptOf, random } from './state.ts';
@@ -53,7 +53,7 @@ export function applyBondEffect(state: State, world: World, a: Actor, regionId: 
   }
   if (eff.type === 'lose_life') {
     addLog(state, { kind: 'event', text: `${josa(shortName(a.name), '이', '가')} ${josa(shortName(target.name), '을', '를')} ${r.name}에 내주었다.`, regions: [r.id], actors: [a.id, target.id], t });
-    loseLife(state, target, eff.amount, r.name);
+    loseLife(state, target, eff.amount, t, r.name, a);
   } else if (eff.type === 'grant') grantAbility(state, target, eff.ability, untapTime(t), r.name, t);
   else if (eff.type === 'pump') {
     target.pumps = [...(target.pumps ?? []), { pt: [...eff.pt], until: untapTime(t) }];
@@ -199,6 +199,9 @@ export function fetchBlocked(state: State, world: World, a: Actor, fromId: strin
   if (!a.bonds?.includes(from.id)) return `${josa(from.name, '과', '와')} 유대를 맺고 있어야 한다.`;
   const rs = state.regions[from.id];
   if (rs?.destroyed || rs?.conditions.some((c) => c.tapped)) return `${josa(from.name, '은', '는')} 지금 쓸 수 없다.`;
+  // No one pays the last of their life ([가공]).
+  const life = lifeOf(a);
+  if (from.fetch.life && life !== null && life <= from.fetch.life) return `생명이 모자라다 (생명 ${life}).`;
   if (!fetchTargets(state, world, a, from.id).some((r) => r.id === toId))
     return `${from.fetch.types.map((x) => LAND_TYPE_LABELS[x]).join('이나 ')} 가운데 아직 유대가 없는 땅이어야 한다.`;
   return null;
@@ -223,7 +226,7 @@ export function fetchLand(state: State, world: World, a: Actor, fromId: string, 
     return;
   }
   const from = region(world, fromId);
-  if (from.fetch!.life) loseLife(state, a, from.fetch!.life, from.name);
+  if (from.fetch!.life) loseLife(state, a, from.fetch!.life, t, from.name, a);
   a.bonds = a.bonds!.filter((id) => id !== from.id);
   addLog(state, {
     kind: 'status',
