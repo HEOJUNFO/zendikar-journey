@@ -64,8 +64,8 @@
     <text x="2215.2" y="1172.1599999999999" text-anchor="middle" class="area">바다 관문</text></g>
   <g><path d="M3660 396.00000000000006A19.200000000000003 19.200000000000003 0 0 0 3660 434.40000000000003Z" fill="#efe4c2"  /><path d="M3660 396.00000000000006A19.200000000000003 19.200000000000003 0 0 1 3660 434.40000000000003Z" fill="#3f7fcf"  /><circle cx="3660" cy="415.20000000000005" r="19.200000000000003" fill="none" stroke="#f4ecd8" stroke-width="2"/>
     <text x="3660" y="447.6" text-anchor="middle" class="area">세지리 피난처</text></g>
-  <g><circle cx="2411.304" cy="2398.416" r="19.200000000000003" fill="#3f7fcf" stroke="#f4ecd8" stroke-width="2"/>
-    <text x="2411.304" y="2430.816" text-anchor="middle" class="area">실룬디 연안</text></g>
+  <g><circle cx="2356.08" cy="2347.44" r="19.200000000000003" fill="#3f7fcf" stroke="#f4ecd8" stroke-width="2"/>
+    <text x="2356.08" y="2379.84" text-anchor="middle" class="area">실룬디 연안</text></g>
   <g><circle cx="2326.08" cy="1059.1200000000001" r="19.200000000000003" fill="#3f7fcf" stroke="#f4ecd8" stroke-width="2"/>
     <text x="2326.08" y="1091.52" text-anchor="middle" class="area">솟아오른 바다절벽</text></g>
   <g><circle cx="2579.1000000000004" cy="2283.7200000000003" r="19.200000000000003" fill="#cc4f34" stroke="#f4ecd8" stroke-width="2"/>
@@ -106,9 +106,9 @@
   <g>
     <text x="3660" y="190.20000000000002" text-anchor="middle" class="name">세지리</text>
     <text x="3660" y="208.20000000000002" text-anchor="middle" class="terrain">설원</text></g>
-  <g><circle cx="1996.8000000000002" cy="2530.8" r="70" fill="#1d3b66" opacity="0.75"/><circle cx="1996.8000000000002" cy="2530.8" r="30" fill="none" stroke="#9fc4ff" stroke-width="2" stroke-dasharray="6 6"/>
-    <text x="1996.8000000000002" y="2622.8" text-anchor="middle" class="name">실룬디 바다</text>
-    <text x="1996.8000000000002" y="2640.8" text-anchor="middle" class="terrain">심해</text></g>
+  <g><circle cx="2250" cy="2388" r="70" fill="#1d3b66" opacity="0.75"/><circle cx="2250" cy="2388" r="30" fill="none" stroke="#9fc4ff" stroke-width="2" stroke-dasharray="6 6"/>
+    <text x="2250" y="2480" text-anchor="middle" class="name">실룬디 바다</text>
+    <text x="2250" y="2498" text-anchor="middle" class="terrain">심해</text></g>
   <g><circle cx="840" cy="894" r="70" fill="#1d3b66" opacity="0.75"/><circle cx="840" cy="894" r="30" fill="none" stroke="#9fc4ff" stroke-width="2" stroke-dasharray="6 6"/>
     <text x="840" y="986" text-anchor="middle" class="name">선더만 앞바다</text>
     <text x="840" y="1004" text-anchor="middle" class="terrain">심해</text></g>
