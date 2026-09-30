@@ -11,7 +11,7 @@ links:
   - { to: loc-ondu, rel: 바깥 지역 }
   - { to: loc-silundi-sea, rel: 마주한 바다 }
   - { to: chr-seascape-aerialist, rel: 연안의 비행술사 }
-map: { in: loc-ondu, terrain: beach, pos: [-0.8, 0.6] }   # 기본 섬: 청 마나, 온두의 남서쪽 해안에 반쯤 걸침 (실룬디 바다 쪽) [결정] 2026-09-30
+map: { in: loc-ondu, terrain: beach, pos: [-0.8, 0.6], tiles: 2 }   # 기본 섬: 청 마나, 온두의 남서쪽 해안에 반쯤 걸침 (실룬디 바다 쪽) [결정] 2026-09-30
 sim:
   one_land_with: loc-silundi-sea           # 실룬디 바다와 한 땅(섬 하나) [결정] 2026-09-30
 ---

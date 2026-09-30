@@ -1,13 +1,14 @@
 // Items (MTG artifacts, world/entities/items): permanents that stand in one place. Whoever
 // pays an item's cost there tames it and holds it until they die or leave the plane.
 import { gameDay } from './clock.ts';
+import { fixedTile, sameTile, tileLabel } from './tiles.ts';
 import { gainLife, lifeOf } from './life.ts';
 import { formatMana, manaAvailable, payMana, planPayment } from './mana.ts';
 import { addLog, npcDef } from './state.ts';
 import type { Actor, State } from './state.ts';
 import { josa, shortName } from './text.ts';
 import { canStay, placeName, region } from './world.ts';
-import type { World } from './world.ts';
+import type { ItemDef, World } from './world.ts';
 
 // Taming an item takes an hour, as casting a spell does.
 export const CLAIM_HOURS = 1;
@@ -18,6 +19,11 @@ export function itemDef(world: World, id: string) {
 
 export function itemsAt(world: World, regionId: string) {
   return world.items.filter((x) => x.at === regionId);
+}
+
+// The tile of its land an item stands on: always the same one (sim/tiles.ts).
+export function itemTile(world: World, x: ItemDef) {
+  return fixedTile(world, x.at, x.id);
 }
 
 export function itemOwner(state: State, itemId: string) {
@@ -35,6 +41,8 @@ export function claimBlocked(state: State, world: World, a: Actor, itemId: strin
   if (owner === a.id) return `이미 ${josa(x.name, '을', '를')} 길들였다.`;
   if (owner) return `${josa(x.name, '은', '는')} 이미 ${shortName(state.actors[owner]?.name ?? owner)}의 것이다.`;
   if (a.region !== x.at) return `${josa(x.name, '은', '는')} ${placeName(world, region(world, x.at))}에 있다.`;
+  const at = itemTile(world, x);
+  if (at && !sameTile(a.tile, at)) return `${josa(x.name, '은', '는')} ${tileLabel(world, x.at, at)}에 서 있다.`;
   if (!planPayment(manaAvailable(state, world, a, t), x.cost))
     return `마나가 모자라다 (${x.costText}, 지금 ${formatMana(manaAvailable(state, world, a, t))}).`;
   return null;

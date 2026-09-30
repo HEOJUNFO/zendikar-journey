@@ -5,7 +5,7 @@
 // (`tamable`, the Felidar Sovereign) chooses whom to trust: the player who talks to it, or an
 // NPC who courts it (a "court" block); the LLM decides, as the beast.
 import { formatClock, gameDay } from './clock.ts';
-import { addLog } from './state.ts';
+import { addLog, awayText } from './state.ts';
 import type { Actor, State } from './state.ts';
 import { remember } from './relations.ts';
 import { josa, shortName } from './text.ts';
@@ -68,7 +68,7 @@ export function courtTargets(state: State, world: World, a: Actor) {
 export function courtBlocked(state: State, world: World, a: Actor, whoId: string | undefined): string | null {
   const x = whoId ? state.actors[whoId] : undefined;
   if (!x || !courtTargets(state, world, a).some((y) => y.id === x.id)) return x ? (swayBlocked(state, world, x) ?? `${josa(shortName(x.name), '은', '는')} 곁을 내주지 않는다.`) : '그런 짐승은 없다.';
-  if (x.region !== a.region || x.travel) return `${josa(shortName(x.name), '이', '가')} 여기 없다.`;
+  if (awayText(world, a, x)) return awayText(world, a, x);
   return null;
 }
 

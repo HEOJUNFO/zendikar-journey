@@ -11,7 +11,7 @@ links:
   - { to: loc-tazeem, rel: 바깥 지역 }
   - { to: loc-emeria, rel: 바람을 타고 닿는 하늘 }
   - { to: cre-sky-ruin-drake, rel: 바람을 타고 사냥하는 드레이크 }
-map: { in: loc-tazeem, terrain: beach, color: U, pos: [0.55, 0.2] }
+map: { in: loc-tazeem, terrain: beach, color: U, pos: [0.55, 0.2], tiles: 2 }
 sim:
   nonbasic: true                          # 이름 있는 대지: 섬이 아니다
   enters_tapped: true                     # [카드] 탭된 채 들어온다

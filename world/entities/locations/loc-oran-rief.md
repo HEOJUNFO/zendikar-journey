@@ -11,7 +11,7 @@ links:
   - { to: spl-gigantiform, rel: 배우는 주문 }
   - { to: loc-tazeem, rel: 바깥 지역 }
   - { to: cre-vastwood-gorger, rel: 땅 밑에서 솟구치는 웜 }
-map: { in: loc-tazeem, terrain: forest, color: G, pos: [-0.35, -0.05] }
+map: { in: loc-tazeem, terrain: forest, color: G, pos: [-0.35, -0.05], tiles: 5 }
 sim:
   nonbasic: true                          # 이름 있는 대지: 숲이 아니다
   enters_tapped: true                     # [카드] 탭된 채 들어온다

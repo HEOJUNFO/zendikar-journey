@@ -3,7 +3,7 @@
 import { z } from 'zod';
 import { STEP_MINUTES } from './clock.ts';
 import { BOND_HOURS, KIND_EFFECTS } from './rules.ts';
-import { addLog, isPerson, landUnusable, npcDef, outOfTime, player } from './state.ts';
+import { addLog, awayText, isPerson, landUnusable, npcDef, outOfTime, player, together } from './state.ts';
 import { HIRE_HOURS, hireBlocked, hirePrice } from './allies.ts';
 import { masterOf } from './retainers.ts';
 import type { State, Task } from './state.ts';
@@ -16,10 +16,16 @@ import { castBlocked, learnBlocked, spellDef } from './spells.ts';
 import { josa, shortName, toward } from './text.ts';
 import { PACES } from './types.ts';
 import { bondEffectText, region } from './world.ts';
+import { ownsTile, sameTile } from './tiles.ts';
+import type { Tile } from './tiles.ts';
 import type { World } from './world.ts';
 
 export const ActionSchema = z.discriminatedUnion('type', [
-  z.object({ type: z.literal('move'), to: z.string() }),
+  // Go to a land (`to`), to a tile of it if asked (`tile`; the nearest one otherwise). A tile
+  // of the land they are in: a walk within it.
+  z.object({ type: z.literal('move'), to: z.string(), tile: z.tuple([z.number().int(), z.number().int()]).optional() }),
+  // Go to where someone stands: their land and tile.
+  z.object({ type: z.literal('seek'), to: z.string() }),
   z.object({ type: z.literal('rest'), hours: z.number().int().min(1).max(12) }),
   z.object({ type: z.literal('explore'), hours: z.number().int().min(1).max(8), pace: z.enum(PACES) }),
   z.object({ type: z.literal('eat') }),
@@ -73,10 +79,29 @@ export function startAction(state: State, world: World, action: Action): string 
   let text: string;
   switch (action.type) {
     case 'move': {
-      const why = travelBlocked(state, world, p, action.to);
-      if (why) return why;
+      const tile = action.tile as Tile | undefined;
+      if (tile && !ownsTile(world, action.to, tile)) return '그 땅에 그런 곳은 없다.';
+      if (action.to === p.region) {
+        if (!tile || sameTile(tile, p.tile)) return '이미 그곳에 있다.';
+      } else {
+        const why = travelBlocked(state, world, p, action.to);
+        if (why) return why;
+      }
       p.pace = 'normal';
-      startTravel(state, world, p, action.to, t);
+      startTravel(state, world, p, action.to, t, tile);
+      return null;
+    }
+    case 'seek': {
+      const b = state.actors[action.to];
+      if (!b || b.dead || b.id === p.id) return '그런 이는 없다.';
+      if (together(p, b)) return `${josa(shortName(b.name), '은', '는')} 이미 곁에 있다.`;
+      const where = b.travel?.to ?? b.region;
+      if (where !== p.region) {
+        const why = travelBlocked(state, world, p, where);
+        if (why) return why;
+      }
+      p.pace = 'normal';
+      startTravel(state, world, p, where, t, b.travel ? b.travel.tile : b.tile);
       return null;
     }
     case 'rest':
@@ -122,7 +147,7 @@ export function startAction(state: State, world: World, action: Action): string 
       const npc = state.actors[action.to];
       if (!npc || !isPerson(npc) || npc.dead) return '그런 인물은 없다.';
       const name = shortName(npc.name);
-      if (npc.travel || npc.region !== p.region) return `${josa(name, '은', '는')} 여기 없다.`;
+      if (awayText(world, p, npc)) return awayText(world, p, npc);
       if (outOfTime(state, npc)) return `${josa(name, '은', '는')} 시간 밖에 있다. 닿지 않는다.`;
       task = { kind: 'fight', activity: `${josa(name, '과', '와')} 싸움`, emoji: '⚔️', until: until(1) };
       text = `${name}에게 덤벼든다.`;
@@ -205,7 +230,7 @@ export function startAction(state: State, world: World, action: Action): string 
       const npc = state.actors[action.to];
       if (!npc || !isPerson(npc) || npc.dead) return '그런 인물은 없다.';
       const name = shortName(npc.name);
-      if (npc.travel || npc.region !== p.region) return `${josa(name, '은', '는')} 여기 없다.`;
+      if (awayText(world, p, npc)) return awayText(world, p, npc);
       if (npc.boundUntil !== undefined) return `${josa(name, '은', '는')} 묶여 있다.`;
       if (outOfTime(state, npc)) return `${josa(name, '은', '는')} 시간 밖에 있다. 대답이 없다.`;
       task = { kind: 'social', activity: `${josa(name, '과', '와')} 대화`, emoji: '💬', until: until(1) };

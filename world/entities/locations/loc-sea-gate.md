@@ -11,7 +11,7 @@ links:
   - { to: cre-sky-ruin-drake, rel: 용병들이 경계하는 하늘의 드레이크 }
   - { to: loc-tazeem, rel: 바깥 지역 }
   - { to: chr-sea-gate-loremaster, rel: 도시의 전승술사 }
-map: { in: loc-tazeem, terrain: beach, pos: [0, 0.6] }   # 기본 섬: 청 마나 [결정] 2026-09-30
+map: { in: loc-tazeem, terrain: beach, pos: [0, 0.6], tiles: 2 }   # 기본 섬: 청 마나 [결정] 2026-09-30
 ---
 
 ## 설정

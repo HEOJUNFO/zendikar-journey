@@ -10,7 +10,7 @@ tags: [화산, 봉우리, 불, 적색]
 links:
   - { to: loc-beyeen, rel: 바깥 지역 (온두의 섬) }
   - { to: evt-lavaball-trap, rel: 숨은 함정 }
-map: { in: loc-beyeen, terrain: volcanic, color: R, pos: [0, 0.2] }   # 베이엔의 탈리브 왕관 최고봉 [결정] 2026-09-30 (예전엔 아쿰)
+map: { in: loc-beyeen, terrain: volcanic, color: R, pos: [0, 0.2], tiles: 3 }   # 베이엔의 탈리브 왕관 최고봉 [결정] 2026-09-30 (예전엔 아쿰)
 sim:
   nonbasic: true                          # 이름 있는 대지: 산이 아니다
   enters_tapped: true                     # [카드] 탭된 채 들어온다

@@ -11,7 +11,7 @@ links:
   - { to: loc-agadeem, rel: 바깥 지역 }
   - { to: loc-agadeem-crypt, rel: 길이 이어지는 묘역 }
   - { to: law-life, rel: 들어서면 생명 }
-map: { in: loc-agadeem, terrain: settlement, color: W, pos: [0.2, -0.4] }
+map: { in: loc-agadeem, terrain: settlement, color: W, pos: [0.2, -0.4], tiles: 2 }
 sim:
   nonbasic: true                          # 이름 있는 대지: 평원이 아니다
   enters_tapped: true                     # [카드] 탭된 채 들어온다

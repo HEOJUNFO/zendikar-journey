@@ -11,7 +11,7 @@ import { discardOwed, letGo } from './discard.ts';
 import { sacrifice } from './monument.ts';
 import { applyQuell, permanentsOf, QUELL_KINDS, QUELL_LABELS, quellGive } from './quell.ts';
 import { castSpell } from './spells.ts';
-import { addLog, player } from './state.ts';
+import { addLog, player, together } from './state.ts';
 import type { Actor, Choice, State } from './state.ts';
 import { josa, shortName } from './text.ts';
 import { CREATURE_TYPE_LABELS } from './world.ts';
@@ -41,7 +41,7 @@ export function askText(state: State, world: World, c: Choice) {
 export function askOptions(state: State, world: World, c: Choice): { pick: string | null; label: string }[] {
   if (c.effect.type === 'discard') return c.candidates.map((id) => ({ pick: id, label: world.spells.find((s) => s.id === id)?.name ?? id }));
   if (c.effect.type === 'crush') {
-    const relics = relicsHere(state, world, c.land);
+    const relics = relicsHere(state, world, c.land, state.actors[c.by]?.tile);
     const opts = c.candidates.map((id) => ({ pick: id as string | null, label: relics.find((r) => r.id === id)?.label ?? id }));
     return c.effect.first ? opts : [...opts, { pick: null, label: '그만둔다' }];
   }
@@ -85,7 +85,7 @@ export function answerAsk(state: State, world: World, pick: string | null, t: nu
     if (x) sacrifice(state, world, x, c.effect.item, t);
   } else if (c.effect.type === 'cast' && c.effect.free) {
     const target = pick && c.candidates.includes(pick) ? state.actors[pick] : undefined;
-    if (target && !target.dead && target.region === p.region) castSpell(state, world, p, c.effect.spell, target.id, false, t, true);
+    if (target && !target.dead && together(target, p)) castSpell(state, world, p, c.effect.spell, target.id, false, t, true);
   } else if (c.effect.type === 'discard') {
     // One they must give up: an answer that isn't one of theirs gives up the first.
     letGo(state, world, p, pick && c.candidates.includes(pick) ? pick : c.candidates[0], t);
@@ -94,7 +94,7 @@ export function answerAsk(state: State, world: World, pick: string | null, t: nu
     if (next) (state.asks ??= []).unshift(next);
   } else if (c.effect.type === 'crush') {
     // The first must go: an answer that isn't one goes to the first there.
-    const relics = relicsHere(state, world, p.region);
+    const relics = relicsHere(state, world, p.region, p.tile);
     const id = pick && relics.some((r) => r.id === pick) ? pick : c.effect.first ? relics[0]?.id : undefined;
     if (!id) return;
     crushRelic(state, world, id, p, t);

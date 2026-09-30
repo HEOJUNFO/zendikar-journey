@@ -647,6 +647,44 @@ header h1 {
   }
 }
 
+/* --- tiles: each land's squares, an area's inside its region's --- */
+
+.map-tile {
+  fill-opacity: 0.78;
+  stroke: rgba(26, 20, 8, 0.35);
+  stroke-width: 0.4;
+}
+.map-tile-area {
+  fill-opacity: 0.95;
+  stroke: #f4ecd8;
+  stroke-width: 0.7;
+}
+.map-region:hover .map-tile {
+  stroke: var(--accent);
+}
+.map-selected-tile {
+  stroke-width: 1.2;
+  stroke-dasharray: 2 1.5;
+}
+.map-region-name {
+  cursor: pointer;
+}
+.map-region-name:focus {
+  outline: none;
+}
+.map-label.map-area-label {
+  pointer-events: none;
+}
+.who {
+  display: inline-block;
+  margin-right: 0.4em;
+}
+button.small {
+  padding: 0 0.4em;
+  font-size: 0.8em;
+  margin-left: 0.2em;
+}
+
 /* --- areas inside a region: a large circle holding small ones --- */
 
 .map-container {

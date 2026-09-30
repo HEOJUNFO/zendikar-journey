@@ -2,6 +2,8 @@
 // Game data lives in each entity's frontmatter: `map` on locations, `sim` on characters and
 // events. This module is pure so the web UI can share the types; sim/load.ts reads the files.
 import { z } from 'zod';
+import { layTiles } from './tiles.ts';
+import type { Tile } from './tiles.ts';
 import { TRAVEL_UNITS_PER_HOUR } from './rules.ts';
 import { COLORS, parseManaCost } from './mana.ts';
 import type { Color, Hybrid, Mana, ManaCost } from './mana.ts';
@@ -177,9 +179,11 @@ export const MapSchema = z.union([
     // Where it lies inside its region, as the lore has it: [east(+)/west(-), south(+)/north(-)],
     // in parts of the region circle's radius (0,0 the middle; 1 on the rim: a coast or a bay,
     // half over the sea). Without it, areas sit in a row
-    // across the lower part by `order`. Only how the map is drawn: the engine keeps areas at
-    // their region's place.
+    // across the lower part by `order`. It picks the tiles the area holds (sim/tiles.ts).
     pos: z.tuple([z.number().min(-1).max(1), z.number().min(-1).max(1)]).optional(),
+    // How many tiles of its region it holds (sim/tiles.ts; default 1), as large as the lore has
+    // it (user decision 2026-10-01).
+    tiles: z.number().int().min(1).optional(),
   }),
 ]);
 
@@ -624,6 +628,9 @@ export type Region = {
   order?: number;
   // Where it lies inside its region on the map (`map.pos`), in parts of its radius.
   pos?: [number, number];
+  // Tiles it holds of its region (an area, `map.tiles`), and how large it is drawn (sim/tiles.ts).
+  tileCount?: number;
+  radius?: number;
 };
 
 export type NpcDef = {
@@ -735,6 +742,9 @@ export type World = {
   spells: SpellDef[];
   items: ItemDef[];
   lore: Lore[];
+  // The grid (sim/tiles.ts): each land's tiles, and which land each tile ("c,r") is.
+  tiles?: Record<string, Tile[]>;
+  tileOwner?: Record<string, string>;
 };
 
 export type RawEntity = {
@@ -775,7 +785,7 @@ export function buildWorld(entities: RawEntity[]): { world: World; errors: strin
           name: e.name,
           nameEn: e.name_en ?? '',
           summary: e.summary ?? '',
-          ...('in' in map.data ? { x: 0, y: 0, parent: map.data.in, order: map.data.order, ...(map.data.pos ? { pos: map.data.pos } : {}) } : { x: map.data.x, y: map.data.y, size: map.data.size, of: map.data.of }),
+          ...('in' in map.data ? { x: 0, y: 0, parent: map.data.in, order: map.data.order, ...(map.data.pos ? { pos: map.data.pos } : {}), ...(map.data.tiles ? { tileCount: map.data.tiles } : {}) } : { x: map.data.x, y: map.data.y, size: map.data.size, of: map.data.of }),
           terrain: map.data.terrain,
           color: c === 'C' ? null : Array.isArray(c) ? (`${c[0]}/${c[1]}` as Hybrid) : (c ?? TERRAINS[map.data.terrain].mana),
           entersTapped: land.data?.enters_tapped ?? false,
@@ -821,6 +831,7 @@ export function buildWorld(entities: RawEntity[]): { world: World; errors: strin
     else if (TERRAINS[p.terrain].sea) err(r.id, '바다 지역 안에는 구역을 둘 수 없음 (바다 구역은 뭍 지역 안에 둔다)');
     else Object.assign(r, { x: p.x, y: p.y });
   }
+  layTiles(world);
 
   for (const e of entities) {
     if (e.sim === undefined) continue;

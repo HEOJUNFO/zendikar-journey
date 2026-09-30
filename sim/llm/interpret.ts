@@ -1,5 +1,6 @@
 // Free text from the player -> one Action the engine can run.
 import { z } from 'zod';
+import { sameTile, tileLabel } from '../tiles.ts';
 import { ActionSchema } from '../actions.ts';
 import type { Action } from '../actions.ts';
 import { isPerson, npcDef, player, present, ptOf } from '../state.ts';
@@ -66,11 +67,15 @@ export async function interpret({ world, state, text }: InterpretInput): Promise
       `- (${valakut.name}: if they bond with or seek out a mountain while holding ${valakut.mountainFire!.others} others, they may add "target":"<id>" to that bond or fetch action to send ${valakut.mountainFire!.damage} damage of fire at someone in ${valakut.name}'s land${burnable.length ? `: ${burnable.join(', ')}` : ' (no one there now)'})`,
     );
   }
-  const people = present(state, p.region)
+  const people = present(state, p.region, p.tile)
     .filter(isPerson)
     .map((a) => `- ${a.id}: ${shortName(a.name)} (power/toughness ${ptOf(a).join('/')})`);
+  // Those elsewhere in this land (on other tiles): reached by seeking them out.
+  const away = present(state, p.region, null)
+    .filter((a) => isPerson(a) && a.id !== p.id && !sameTile(a.tile, p.tile))
+    .map((a) => `- ${a.id}: ${shortName(a.name)}, at ${a.tile ? tileLabel(world, a.region, a.tile) : here.name}`);
   // Mercenaries here they could hire.
-  for (const x of present(state, p.region)) {
+  for (const x of present(state, p.region, p.tile)) {
     const def = npcDef(state, world, x.id);
     if (def?.hireable && !hireBlocked(state, world, p, x.id)) days.push(`- {"type":"hire","to":"${x.id}"}  (hire ${shortName(x.name)} for ${hirePrice(def)} coin: they serve the player for good; 1 hour)`);
   }
@@ -99,11 +104,15 @@ Now in: ${here.id} ${here.name} (${here.summary})
 Other regions:
 ${places.join('\n') || '(none)'}
 
-People here:
+People here (on the same tile: only they can be talked to, attacked, cast on, hired):
 ${people.join('\n') || '(nobody)'}
+
+Elsewhere in this land (other tiles, an hour's walk a tile):
+${away.join('\n') || '(nobody)'}
 
 Actions:
 - {"type":"move","to":"<region id>"}
+- {"type":"seek","to":"<person id>"}  (go to where that one stands, to meet them)
 - {"type":"rest","hours":1-12}
 - {"type":"explore","hours":1-8,"pace":"careful"|"normal"|"hasty"}
 - {"type":"eat"}

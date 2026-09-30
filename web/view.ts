@@ -3,7 +3,8 @@
 import { formatClock } from '../sim/clock.ts';
 import { player } from '../sim/state.ts';
 import type { Actor, State } from '../sim/state.ts';
-import { areasOf, MAP_HEIGHT, MAP_WIDTH, TERRAINS } from '../sim/world.ts';
+import { MAP_HEIGHT, MAP_WIDTH, TERRAINS } from '../sim/world.ts';
+import { centroid, TILE, tilesOf } from '../sim/tiles.ts';
 import type { EventDef, Region, World } from '../sim/world.ts';
 import type { Color } from '../sim/mana.ts';
 
@@ -50,76 +51,59 @@ export function halfCircle(x: number, y: number, r: number, side: 0 | 1) {
   return `M${x} ${y - r}A${r} ${r} 0 0 ${side} ${x} ${y + r}Z`;
 }
 
-// Where a land's node is drawn. A region holding areas, or one with a size (a continent, a
-// small island), is itself a circle of that size, with its areas as small circles across the
-// lower part; the upper part is where its own people and marks go. (The engine puts areas at
-// their region's place; this is only how they are drawn.)
-const SIZE_RADIUS = { continent: 60, island: 20 } as const;
-// The small circle of an area inside a region, and the circle of a plain land (one with no
-// size or areas, e.g. Verdant Catacombs).
-export const AREA_NODE = 6.4;
+// The map is drawn in tiles (sim/tiles.ts): each land's tiles filled in the colors of its mana,
+// an area's inside its region's. A wandering place (Goma Fada) holds no tiles of the grid: it is
+// drawn as a round mark where it walks.
 export const PLAIN_NODE = 12;
-function areaAngle(world: World, r: Region) {
-  const sibs = areasOf(world, r.parent!);
-  const n = sibs.length;
-  const spread = Math.min(2.4, (n - 1) * 1.4);
-  return Math.PI / 2 + (n > 1 ? -spread / 2 + (spread * sibs.indexOf(r)) / (n - 1) : 0);
+
+// Every tile to draw: its land, and its square.
+export function tileRects(world: World) {
+  return world.regions
+    .filter((r) => !r.wanders)
+    .flatMap((r) => tilesOf(world, r.id).map((t) => ({ region: r, tile: t, x: t[0] * TILE, y: t[1] * TILE, size: TILE })));
 }
 
-// The circle's radius for a region drawn as one, 0 for a plain node.
-export function containerRadius(world: World, r: Region) {
-  if (r.parent) return 0;
-  const n = world.regions.filter((x) => x.parent === r.id).length;
-  const base = r.size ? SIZE_RADIUS[r.size] : n ? 28 : 0;
-  // A small island has room for one area; each more widens it so their circles don't touch.
-  return base && base + (r.size === 'island' ? Math.max(0, n - 1) * 8 : Math.max(0, n - 3) * 3.6);
-}
-
+// Where a land sits on the map: the middle of its own tiles (a wandering place: where it is).
 export function nodeAt(world: World, r: Region) {
-  if (r.parent) {
-    const R = containerRadius(world, world.regions.find((x) => x.id === r.parent)!);
-    // Where the lore puts it (`map.pos`).
-    if (r.pos) return { x: r.x + r.pos[0] * R, y: r.y + r.pos[1] * R };
-    const angle = areaAngle(world, r);
-    return { x: r.x + Math.cos(angle) * R * 0.5, y: r.y + Math.sin(angle) * R * 0.5 };
-  }
-  return { x: r.x, y: r.y - containerRadius(world, r) * 0.45 };
+  if (r.wanders) return { x: r.x, y: r.y };
+  return centroid(world, r.id) ?? { x: r.x, y: r.y };
 }
 
-// A region circle's name: above it, except for an island of a continent, whose name goes on
-// the side away from the continent (it would lie over the continent's edge otherwise).
-// `side` says where it went.
+// The tiles of a region with its areas.
+function blobTiles(world: World, r: Region) {
+  return [r, ...world.regions.filter((x) => x.parent === r.id)].flatMap((x) => tilesOf(world, x.id));
+}
+
+// The box around a region's tiles (its areas' too).
+export function landBox(world: World, r: Region) {
+  const ts = r.wanders ? [] : blobTiles(world, r);
+  if (!ts.length) return { x0: r.x - PLAIN_NODE, y0: r.y - PLAIN_NODE, x1: r.x + PLAIN_NODE, y1: r.y + PLAIN_NODE };
+  return {
+    x0: Math.min(...ts.map((t) => t[0])) * TILE,
+    y0: Math.min(...ts.map((t) => t[1])) * TILE,
+    x1: (Math.max(...ts.map((t) => t[0])) + 1) * TILE,
+    y1: (Math.max(...ts.map((t) => t[1])) + 1) * TILE,
+  };
+}
+
+// How large a region is drawn (its tiles as a circle), for the shallow water under it.
+export function containerRadius(world: World, r: Region) {
+  return r.parent ? 0 : (r.radius ?? 0);
+}
+
+// A region's name: above its tiles, except for an island of a continent that lies below it,
+// whose name goes under its own tiles (it would lie over the continent otherwise).
 export function regionLabelAt(world: World, r: Region) {
-  const R = containerRadius(world, r);
+  const b = landBox(world, r);
   const c = r.of ? world.regions.find((x) => x.id === r.of) : undefined;
-  const d = c ? Math.hypot(r.x - c.x, r.y - c.y) : 0;
-  const [ux, uy] = c && d ? [(r.x - c.x) / d, (r.y - c.y) / d] : [0, -1];
-  if (uy > 0.7) return { x: r.x, y: r.y + R + 4.3, anchor: 'middle', side: 'below' } as const;
-  if (uy > -0.7) return { x: r.x + Math.sign(ux) * (R + 1.5), y: r.y + 1, anchor: ux < 0 ? 'end' : 'start', side: 'beside' } as const;
-  return { x: r.x, y: r.y - R - 1.5, anchor: 'middle', side: 'above' } as const;
+  const below = !!c && r.y > c.y + TILE;
+  return { x: (b.x0 + b.x1) / 2, y: below ? b.y1 + 6.5 : b.y0 - 2.5, anchor: 'middle', side: below ? 'below' : 'above' } as const;
 }
 
-// An area's name: just outside its region's circle, in the area's direction. On a small island
-// the names would reach across to the continent beside it, so there they stack below the
-// island instead (under its own name, if that went below), left to right as the areas sit.
-const AREA_LINE = 3;
-const BELOW_NAME = 7.5;
+// An area's name: in the middle of its tiles.
 export function areaLabelAt(world: World, r: Region) {
-  const parent = world.regions.find((x) => x.id === r.parent)!;
-  const d = containerRadius(world, parent) + 1.8;
-  if (parent.size === 'island') {
-    const sibs = world.regions.filter((x) => x.parent === r.parent).sort((a, b) => nodeAt(world, a).x - nodeAt(world, b).x);
-    const under = regionLabelAt(world, parent).side === 'below' ? BELOW_NAME : 0;
-    return { x: r.x, y: r.y + d + 1.5 + under + sibs.indexOf(r) * AREA_LINE, anchor: 'middle' } as const;
-  }
-  // One placed where the lore puts it: its name just under it.
-  if (r.pos) {
-    const n = nodeAt(world, r);
-    return { x: n.x, y: n.y + AREA_NODE + 2.2, anchor: 'middle' } as const;
-  }
-  const angle = areaAngle(world, r);
-  const [dx, dy] = [Math.cos(angle), Math.sin(angle)];
-  return { x: r.x + dx * d, y: r.y + dy * d + 1.5, anchor: dx > 0.3 ? 'start' : dx < -0.3 ? 'end' : 'middle' } as const;
+  const n = nodeAt(world, r);
+  return { x: n.x, y: n.y + 1.5, anchor: 'middle' } as const;
 }
 
 // Shallow water around a continent and the islands that belong to it (`map.of`), joining them
@@ -150,11 +134,11 @@ const FIT_MIN_W = 384;
 export function fitView(world: World): MapBox {
   const tops = world.regions.filter((r) => !r.parent);
   if (!tops.length) return { x: 0, y: 0, w: MAP_WIDTH, h: MAP_HEIGHT };
-  const extent = (r: Region) => containerRadius(world, r) || (TERRAINS[r.terrain].sea ? 10.5 : PLAIN_NODE);
-  const x0 = Math.min(...tops.map((r) => r.x - extent(r))) - FIT_PAD.x;
-  const x1 = Math.max(...tops.map((r) => r.x + extent(r))) + FIT_PAD.x;
-  const y0 = Math.min(...tops.map((r) => r.y - extent(r))) - FIT_PAD.top;
-  const y1 = Math.max(...tops.map((r) => r.y + extent(r))) + FIT_PAD.bottom;
+  const boxes = tops.map((r) => landBox(world, r));
+  const x0 = Math.min(...boxes.map((b) => b.x0)) - FIT_PAD.x;
+  const x1 = Math.max(...boxes.map((b) => b.x1)) + FIT_PAD.x;
+  const y0 = Math.min(...boxes.map((b) => b.y0)) - FIT_PAD.top;
+  const y1 = Math.max(...boxes.map((b) => b.y1)) + FIT_PAD.bottom;
   const aspect = MAP_WIDTH / MAP_HEIGHT;
   const w = Math.min(MAP_WIDTH, Math.max(FIT_MIN_W, x1 - x0, (y1 - y0) * aspect));
   const h = w / aspect;

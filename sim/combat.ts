@@ -11,7 +11,7 @@ import { doubleLife, gainLife, lifeOf } from './life.ts';
 import { actorColors, COLOR_LABELS, manaAvailable, payMana, planPayment } from './mana.ts';
 import { HUNT_HUNGER, KILL_FEED, KO_ACTIVITY, KO_HOURS } from './rules.ts';
 import { powersSealed } from './seal.ts';
-import { addLog, hasAbility, needsOf, npcDef, outOfTime, present, protectedFrom, ptOf, random } from './state.ts';
+import { addLog, awayText, hasAbility, needsOf, npcDef, outOfTime, present, protectedFrom, ptOf, random, together } from './state.ts';
 import type { Actor, State } from './state.ts';
 import { hasPowers, landTypes } from './world.ts';
 import type { World } from './world.ts';
@@ -217,7 +217,7 @@ export function clash(state: State, world: World, attacker: Actor, defender: Act
   const spill = (from: Actor, to: Actor, power: number) => {
     const excess = power - (ptOf(to)[1] - woundsOf(to, t));
     if (!(from.boost?.trample || hasAbility(from, 'trample', t)) || excess <= 0) return null;
-    const others = present(state, from.region).filter((x) => x.id !== from.id && x.id !== to.id && !down(x));
+    const others = present(state, from.region, from.tile).filter((x) => x.id !== from.id && x.id !== to.id && !down(x));
     return others.length ? { who: others[Math.floor(random(state) * others.length)], excess } : null;
   };
   const spills = [spill(attacker, defender, ap), tapped ? null : spill(defender, attacker, dp)];
@@ -290,7 +290,7 @@ function prey(state: State, world: World, a: Actor, t: number) {
   // A token that serves someone (a herd's young) keeps to its master's side; only one with no
   // master hunts (user decision 2026-09-30).
   if (a.master && state.tokens?.[a.id]) return undefined;
-  return present(state, a.region)
+  return present(state, a.region, a.tile)
     .filter((b) => b.id !== a.id && !hasPowers(npcDef(state, world, b.id)) && b.boundUntil === undefined && !down(b) && !foesOf(a, t).includes(b.id) && evasion(a, b, t) !== 'evade')
     .sort((x, y) => ptOf(x)[1] - ptOf(y)[1] || x.id.localeCompare(y.id))[0];
 }
@@ -310,7 +310,7 @@ function extraCombat(state: State, world: World, a: Actor, foe: Actor, t: number
     regions: [a.region],
     actors: [a.id, foe.id],
   });
-  const band = [a, ...retainersOf(state, a.id).filter((r) => r.region === a.region && !r.travel && r.lastClash === t)];
+  const band = [a, ...retainersOf(state, a.id).filter((r) => together(r, a) && r.lastClash === t)];
   for (const x of band) if (!down(x) && !down(foe)) clash(state, world, x, foe, t, unblockable(state, world, x, foe, t));
 }
 
@@ -326,13 +326,14 @@ function evasion(a: Actor, b: Actor, t: number): 'evade' | 'ask' | null {
 
 // Why an NPC can't go after `whoId` (an NPC or the player) now (a planned attack, sim/step.ts),
 // or null. The player may attack anyone standing with them; an NPC too, but for these.
-export function attackBlocked(state: State, a: Actor, whoId: string | undefined, t: number): string | null {
+export function attackBlocked(state: State, world: World, a: Actor, whoId: string | undefined, t: number): string | null {
   const b = whoId ? state.actors[whoId] : undefined;
   if (!b || b.dead) return '그런 이는 없다.';
   if (b.id === a.id) return '자신에게 덤빌 수는 없다.';
   if (hasAbility(a, 'defender', t)) return '먼저 덤비지 않는다.';
   if (a.seized && a.master === b.id) return `붙들린 몸이라 ${shortName(b.name)}에게 덤빌 수 없다.`;
-  if (b.region !== a.region || b.travel || outOfTime(state, b, t)) return `${josa(shortName(b.name), '은', '는')} 여기 없다.`;
+  if (outOfTime(state, b, t)) return `${josa(shortName(b.name), '은', '는')} 여기 없다.`;
+  if (awayText(world, a, b)) return awayText(world, a, b);
   return null;
 }
 
@@ -347,8 +348,8 @@ export function hostileNpcs(state: State, world: World, t: number) {
     if (hasAbility(a, 'defender', t)) continue;
     // Their own foes, and (a retainer) whoever their master is fighting right here.
     const m = masterOf(state, a);
-    const theirs = [...foesOf(a, t), ...(m && m.region === a.region && !m.travel ? foesOf(m, t) : [])];
-    let foe = present(state, a.region).find((b) => theirs.includes(b.id) && b.id !== a.master && !down(b) && (evasion(a, b, t) !== 'evade' || !!unblockable(state, world, a, b, t)));
+    const theirs = [...foesOf(a, t), ...(m && together(m, a) ? foesOf(m, t) : [])];
+    let foe = present(state, a.region, a.tile).find((b) => theirs.includes(b.id) && b.id !== a.master && !down(b) && (evasion(a, b, t) !== 'evade' || !!unblockable(state, world, a, b, t)));
     const hunted = !foe && prey(state, world, a, t);
     if (hunted) {
       foe = hunted;

@@ -13,7 +13,7 @@ import { grantAbility, spawnWild } from './abilities.ts';
 import { creatureColors } from './mana.ts';
 import type { Color } from './mana.ts';
 import { powersSealed } from './seal.ts';
-import { addLog, npcDef, present, targetable } from './state.ts';
+import { addLog, awayText, npcDef, present, targetable, together } from './state.ts';
 import type { Actor, State } from './state.ts';
 import { josa, shortName } from './text.ts';
 import type { NpcDef, World } from './world.ts';
@@ -51,7 +51,7 @@ export function allyJoined(state: State, world: World, a: Actor, master: Actor, 
     // to pick, always.
     for (const eff of rally) if (eff.type === 'grant_allies') for (const y of alliesOf(state, world, master)) grantAbility(state, y, eff.ability, untapTime(t), `${shortName(x.name)}의 부름`, t);
     if (!rally.some(targeted)) continue;
-    const candidates = present(state, x.region).filter((y) => y.id !== x.id && targetable(y, t, creatureColors(npcDef(state, world, x.id)))).map((y) => y.id);
+    const candidates = present(state, x.region, x.tile).filter((y) => y.id !== x.id && targetable(y, t, creatureColors(npcDef(state, world, x.id)))).map((y) => y.id);
     if (candidates.length) (state.choices ??= []).push({ by: master.id, land: x.region, effect: { type: 'rally', source: x.id }, candidates, optional: true, t });
   }
 }
@@ -82,7 +82,7 @@ function selfCounter(state: State, x: Actor, t: number) {
 
 // Turntimber Ranger: a Wolf comes to their side and serves their controller; they grow.
 function tokenCounter(state: State, world: World, x: Actor, master: Actor, eff: { creature: string; pt: [number, number]; colors: Color[] }, t: number) {
-  const [b] = spawnWild(state, world, eff.creature, eff.pt, 1, x.region, eff.colors);
+  const [b] = spawnWild(state, world, eff.creature, eff.pt, 1, x.region, eff.colors, x.tile);
   b.master = master.id;
   x.plusCounters = (x.plusCounters ?? 0) + 1;
   addLog(state, {
@@ -115,7 +115,7 @@ export function rallyText(state: State, world: World, sourceId: string) {
 export function applyRally(state: State, world: World, sourceId: string, targetId: string, t: number) {
   const x = state.actors[sourceId];
   const target = state.actors[targetId];
-  if (!x || x.dead || !target || target.dead || target.region !== x.region || target.travel || !targetable(target, t, creatureColors(npcDef(state, world, sourceId)))) return;
+  if (!x || x.dead || !target || target.dead || !together(target, x) || !targetable(target, t, creatureColors(npcDef(state, world, sourceId)))) return;
   const controller = masterOf(state, x) ?? x;
   for (const eff of (npcDef(state, world, x.id)?.rally ?? []).filter(targeted)) {
     const n = alliesOf(state, world, controller).length;
@@ -153,7 +153,7 @@ export function hireBlocked(state: State, world: World, a: Actor, mercId: string
   if (merc.id === a.id) return '자신을 고용할 수는 없다.';
   if (a.master) return '누군가를 섬기는 몸이라 고용할 수 없다.';
   if (npcDef(state, world, a.id)?.beast) return '짐승은 고용하지 않는다.';
-  if (merc.region !== a.region || merc.travel) return `${josa(shortName(merc.name), '은', '는')} 여기 없다.`;
+  if (awayText(world, a, merc)) return awayText(world, a, merc);
   const why = swayBlocked(state, world, merc);
   if (why) return why;
   const price = hirePrice(def);

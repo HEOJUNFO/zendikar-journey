@@ -3,9 +3,12 @@ import type { PointerEvent as ReactPointerEvent } from 'react';
 import { npcDef } from '../sim/state.ts';
 import type { Actor, State } from '../sim/state.ts';
 import { shortName } from '../sim/text.ts';
-import { hasPowers, MAP_HEIGHT, MAP_WIDTH, region, spellColors, TERRAINS, travelHours } from '../sim/world.ts';
-import type { Region, World } from '../sim/world.ts';
-import { AREA_NODE, areaLabelAt, containerRadius, fitView, halfCircle, isTrap, landColors, nodeAt, PLAIN_NODE, regionLabelAt, shelves, trapStatus, visibleActors } from './view.ts';
+import { hasPowers, MAP_HEIGHT, MAP_WIDTH, region, spellColors, TERRAINS } from '../sim/world.ts';
+import type { World } from '../sim/world.ts';
+import { moveHours } from '../sim/step.ts';
+import { fixedTile, nearestTile, sameTile, TILE, tileCenter, tileKey } from '../sim/tiles.ts';
+import type { Tile } from '../sim/tiles.ts';
+import { areaLabelAt, fitView, halfCircle, isTrap, landColors, nodeAt, PLAIN_NODE, regionLabelAt, shelves, tileRects, trapStatus, visibleActors } from './view.ts';
 import type { MapBox } from './view.ts';
 
 type Props = {
@@ -13,7 +16,10 @@ type Props = {
   // null: no game yet, so only the land itself is drawn.
   state: State | null;
   selected: string | null;
-  onSelect: (id: string) => void;
+  // A land picked, and the tile of it clicked (none from the keyboard).
+  onSelect: (id: string, tile?: Tile) => void;
+  // The tile picked (drawn marked).
+  selectedTile?: Tile | null;
   // Show everyone, even in character mode (the world page).
   all?: boolean;
   // The admin map: people, traps and spells are drawn named and can be picked (`picked` = their id).
@@ -25,11 +31,15 @@ type Props = {
 
 const TRAP_GAP = 3.6;
 
-// A land's circle in its mana colors: split down the middle for a two-color land.
-// Drawing order: region circles first, then plain nodes (a land between two continents sits
-// on both), then areas.
-function layer(world: World, r: Region) {
-  return r.parent ? 2 : containerRadius(world, r) ? 0 : 1;
+// A tile in its land's mana colors: split corner to corner for a two-color land.
+function LandTile({ x, y, colors, className }: { x: number; y: number; colors: string[]; className: string }) {
+  if (colors.length < 2) return <rect x={x} y={y} width={TILE} height={TILE} fill={colors[0]} className={className} />;
+  return (
+    <g>
+      <rect x={x} y={y} width={TILE} height={TILE} fill={colors[0]} className={className} />
+      <path d={`M${x + TILE} ${y}L${x + TILE} ${y + TILE}L${x} ${y + TILE}Z`} fill={colors[1]} className={`${className} map-half`} />
+    </g>
+  );
 }
 
 function LandCircle({ x, y, r, colors, className }: { x: number; y: number; r: number; colors: string[]; className: string }) {
@@ -138,23 +148,28 @@ function pickable(onPick: () => void) {
   };
 }
 
-// Where an actor is drawn: at their region, or partway along the road.
-function position(world: World, state: State, a: Actor) {
-  const fromR = region(world, a.region);
-  const from = nodeAt(world, fromR);
-  if (!a.travel) return { ...from, travelling: false };
-  const toR = region(world, a.travel.to);
-  const to = nodeAt(world, toR);
-  const total = travelHours(fromR, toR, a.abilities) * 60;
-  const done = Math.min(1, Math.max(0, 1 - (a.travel.arrive - state.minutes) / total));
-  return { x: from.x + (to.x - from.x) * done, y: from.y + (to.y - from.y) * done, travelling: true };
+// Where someone stands: the middle of their tile (a wandering place: where it is).
+function spot(world: World, regionId: string, tile: Tile | undefined) {
+  const r = region(world, regionId);
+  return r.wanders || !tile ? nodeAt(world, r) : tileCenter(tile);
 }
 
-export function MapView({ world, state, selected, onSelect, all, picked, onPickActor, onPickTrap, onPickSpell }: Props) {
+// Where an actor is drawn: on their tile, or partway along the way.
+function position(world: World, state: State, a: Actor) {
+  const from = spot(world, a.region, a.tile);
+  if (!a.travel) return { ...from, travelling: false };
+  const tile = a.travel.tile ?? nearestTile(world, a.travel.to, a.tile && tileCenter(a.tile));
+  const to = spot(world, a.travel.to, tile);
+  const total = moveHours(world, a, a.travel.to, tile) * 60;
+  const done = Math.min(1, Math.max(0, 1 - (a.travel.arrive - state.minutes) / total));
+  return { x: from.x + (to.x - from.x) * done, y: from.y + (to.y - from.y) * done, travelling: true, from, to };
+}
+
+export function MapView({ world, state, selected, selectedTile, onSelect, all, picked, onPickActor, onPickTrap, onPickSpell }: Props) {
   const actors = state ? visibleActors(state, all) : [];
   const traps = onPickTrap ? world.events.filter(isTrap) : [];
   const spells = onPickSpell ? world.spells : [];
-  // Spread actors standing in the same region around its node.
+  // Spread actors standing on the same tile around its middle.
   const slots = new Map<string, number>();
   const { box, svgProps, zoomIn, zoomOut, fit } = useMapView(world);
   return (
@@ -170,75 +185,61 @@ export function MapView({ world, state, selected, onSelect, all, picked, onPickA
         {actors
           .filter((a) => a.travel)
           .map((a) => {
-            const from = nodeAt(world, region(world, a.region));
-            const to = nodeAt(world, region(world, a.travel!.to));
-            return <line key={`road-${a.id}`} x1={from.x} y1={from.y} x2={to.x} y2={to.y} className="map-road" />;
+            const p = position(world, state!, a);
+            return p.travelling && <line key={`road-${a.id}`} x1={p.from!.x} y1={p.from!.y} x2={p.to!.x} y2={p.to!.y} className="map-road" />;
           })}
-        {[...world.regions].sort((a, b) => layer(world, a) - layer(world, b)).map((r) => {
+        {tileRects(world).map(({ region: r, tile, x, y }) => {
+          const t = TERRAINS[r.terrain];
+          const top = !r.parent;
+          return (
+            <g key={`tile-${tileKey(tile)}`} className={`map-region${top ? '' : ' map-area'}`} onClick={() => onSelect(r.id, tile)}>
+              <title>{`${r.parent ? `${region(world, r.parent).name} › ` : ''}${r.name} (${t.label}) (${tile.join(',')})`}</title>
+              {t.sea && !r.parent ? (
+                <rect x={x} y={y} width={TILE} height={TILE} fill={t.color} opacity={0.85} className="map-tile map-tile-sea" />
+              ) : (
+                <LandTile x={x} y={y} colors={landColors(r)} className={`map-tile${top ? '' : ' map-tile-area'}`} />
+              )}
+              {selected === r.id && <rect x={x + 0.6} y={y + 0.6} width={TILE - 1.2} height={TILE - 1.2} className="map-selected" />}
+              {selectedTile && sameTile(selectedTile, tile) && <rect x={x + 2} y={y + 2} width={TILE - 4} height={TILE - 4} className="map-selected map-selected-tile" />}
+            </g>
+          );
+        })}
+        {world.regions.map((r) => {
           const t = TERRAINS[r.terrain];
           const conds = state?.regions[r.id]?.conditions ?? [];
           const destroyed = !!state?.regions[r.id]?.destroyed;
-          const isSel = selected === r.id;
-          if (r.parent) {
-            const { x, y } = nodeAt(world, r);
-            const parent = region(world, r.parent);
-            const label = areaLabelAt(world, r);
-            return (
-              <g key={r.id} className="map-region map-area" onClick={() => onSelect(r.id)} tabIndex={0}
-                onKeyDown={(e) => (e.key === 'Enter' || e.key === ' ') && onSelect(r.id)}>
-                <title>{`${parent.name} › ${r.name} (${t.label})`}</title>
-                <LandCircle x={x} y={y} r={AREA_NODE} colors={landColors(r)} className="map-node" />
-                {isSel && <circle cx={x} cy={y} r={AREA_NODE + 1.3} className="map-selected" />}
-                {destroyed && <text x={x} y={y + 1} className="map-destroyed map-area-mark">✕</text>}
-                {conds.length > 0 && <text x={x + AREA_NODE + 0.3} y={y - AREA_NODE + 0.3} className="map-alert map-area-mark">⚠</text>}
-                <text x={label.x} y={label.y} style={{ textAnchor: label.anchor }} className="map-label map-area-label">{r.name}</text>
-              </g>
-            );
-          }
-          const R = containerRadius(world, r);
-          if (R) {
-            const own = nodeAt(world, r);
-            const label = regionLabelAt(world, r);
+          const own = nodeAt(world, r);
+          // A wandering place: a round mark where it walks.
+          if (r.wanders) {
             return (
               <g key={r.id} className="map-region" onClick={() => onSelect(r.id)} tabIndex={0}
                 onKeyDown={(e) => (e.key === 'Enter' || e.key === ' ') && onSelect(r.id)}>
                 <title>{`${r.name} (${t.label})`}</title>
-                <LandCircle x={r.x} y={r.y} r={R} colors={landColors(r)} className="map-container" />
-                {isSel && <circle cx={r.x} cy={r.y} r={R + 1.2} className="map-selected" />}
-                {destroyed && <text x={own.x} y={own.y + 1.4} className="map-destroyed">✕</text>}
-                {conds.length > 0 && <text x={own.x + 3.6} y={own.y - 2.7} className="map-alert">⚠</text>}
-                <text x={label.x} y={label.y} style={{ textAnchor: label.anchor }} className="map-label">{r.name}</text>
+                <LandCircle x={r.x} y={r.y} r={PLAIN_NODE} colors={landColors(r)} className="map-node" />
+                {selected === r.id && <circle cx={r.x} cy={r.y} r={PLAIN_NODE + 2.1} className="map-selected" />}
+                {destroyed && <text x={r.x} y={r.y + 1.6} className="map-destroyed">✕</text>}
+                {conds.length > 0 && <text x={r.x + PLAIN_NODE + 0.3} y={r.y - PLAIN_NODE + 0.9} className="map-alert">⚠</text>}
+                <text x={r.x} y={r.y + PLAIN_NODE + 4.8} className="map-label">{r.name}</text>
               </g>
             );
           }
+          const label = r.parent ? areaLabelAt(world, r) : regionLabelAt(world, r);
           return (
-            <g key={r.id} className="map-region" onClick={() => onSelect(r.id)} tabIndex={0}
+            <g key={r.id} className={`map-region-name${r.parent ? ' map-area' : ''}`} onClick={() => onSelect(r.id)} tabIndex={0}
               onKeyDown={(e) => (e.key === 'Enter' || e.key === ' ') && onSelect(r.id)}>
-              <title>{`${r.name} (${t.label})`}</title>
-              {t.sea ? (
-                <>
-                  <circle cx={r.x} cy={r.y} r={21} fill={t.color} opacity={0.8} />
-                  <circle cx={r.x} cy={r.y} r={9} className="map-whirl" />
-                </>
-              ) : (
-                <LandCircle x={r.x} y={r.y} r={PLAIN_NODE} colors={landColors(r)} className="map-node" />
-              )}
-              {isSel && <circle cx={r.x} cy={r.y} r={t.sea ? 24.6 : PLAIN_NODE + 2.1} className="map-selected" />}
-              {destroyed && <text x={r.x} y={r.y + 1.6} className="map-destroyed">✕</text>}
-              {conds.length > 0 && (
-                <text x={r.x + PLAIN_NODE + 0.3} y={r.y - PLAIN_NODE + 0.9} className="map-alert">⚠</text>
-              )}
-              <text x={r.x} y={r.y + (t.sea ? 25.2 : PLAIN_NODE + 4.8)} className="map-label">{r.name}</text>
+              {destroyed && <text x={own.x} y={own.y + 1.4} className="map-destroyed">✕</text>}
+              {conds.length > 0 && <text x={own.x + 5} y={own.y - 4} className="map-alert">⚠</text>}
+              <text x={label.x} y={label.y} style={{ textAnchor: label.anchor }} className={r.parent ? 'map-label map-area-label' : 'map-label'}>{r.name}</text>
             </g>
           );
         })}
         {actors.map((a) => {
           const p = position(world, state!, a);
-          const slot = p.travelling ? 0 : (slots.get(a.region) ?? 0);
-          if (!p.travelling) slots.set(a.region, slot + 1);
+          const key = `${a.region}|${a.tile ? tileKey(a.tile) : ''}`;
+          const slot = p.travelling ? 0 : (slots.get(key) ?? 0);
+          if (!p.travelling) slots.set(key, slot + 1);
           const angle = -Math.PI / 2 + slot * 0.9;
-          const here = region(world, a.region);
-          const ring = here.parent ? AREA_NODE + 0.6 : containerRadius(world, here) ? 3.9 : PLAIN_NODE;
+          const ring = TILE * 0.3;
           const [x, y] = p.travelling ? [p.x, p.y] : [p.x + Math.cos(angle) * ring, p.y + Math.sin(angle) * ring];
           const legend = a.kind === 'npc' && hasPowers(npcDef(state!, world, a.id));
           const r = legend ? 2.2 : a.kind === 'npc' ? 1.5 : 2;
@@ -254,13 +255,11 @@ export function MapView({ world, state, selected, onSelect, all, picked, onPickA
           );
         })}
         {traps.map((ev, i) => {
-          const r = region(world, ev.region);
-          const node = nodeAt(world, r);
+          // One that springs underfoot: on its tile; others in their land's middle.
+          const tile = ev.trigger === 'enter' ? fixedTile(world, ev.region, ev.id) : undefined;
+          const node = tile ? tileCenter(tile) : nodeAt(world, region(world, ev.region));
           const n = traps.slice(0, i).filter((x) => x.region === ev.region).length;
-          // Below-left of a region's node; right below an area's (its name is to the right).
-          const [x, y] = r.parent
-            ? [node.x + TRAP_GAP * n, node.y + TRAP_GAP * 1.4]
-            : [node.x - TRAP_GAP * (n + 1.4), node.y + TRAP_GAP * 1.2];
+          const [x, y] = [node.x - TILE * 0.3 + TRAP_GAP * n, node.y + TILE * 0.3];
           const s = 2;
           return (
             <g key={ev.id} className={`map-trap map-trap-${trapStatus(state, ev).kind} map-pick`} {...pickable(() => onPickTrap!(ev.id))}>
@@ -273,13 +272,10 @@ export function MapView({ world, state, selected, onSelect, all, picked, onPickA
           );
         })}
         {spells.map((sp, i) => {
-          const r = region(world, sp.learnAt);
-          const node = nodeAt(world, r);
+          const node = nodeAt(world, region(world, sp.learnAt));
           const n = spells.slice(0, i).filter((x) => x.learnAt === sp.learnAt).length;
-          // Where it is learned: above-left of a region's node; below an area's, after its traps.
-          const [x, y] = r.parent
-            ? [node.x + TRAP_GAP * (traps.filter((ev) => ev.region === r.id).length + n), node.y + TRAP_GAP * 1.4]
-            : [node.x - TRAP_GAP * (n + 1.4), node.y - TRAP_GAP * 1.2];
+          // Where it is learned: in its land's middle, up to the left.
+          const [x, y] = [node.x - TILE * 0.3 + TRAP_GAP * n, node.y - TILE * 0.3];
           const colors = spellColors(sp);
           const s = 1.8;
           return (

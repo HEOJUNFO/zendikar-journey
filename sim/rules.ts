@@ -35,7 +35,7 @@ export const STARVING_ENERGY = -3;
 
 export const INITIAL_STATS: Stats = { energy: 80, hunger: 20, coin: 20 };
 
-// Map units covered per game hour of travel (the map is 480×360 units).
+// Map units covered per game hour of travel (the map is 1920×1440 units): a tile's side (sim/tiles.ts).
 export const TRAVEL_UNITS_PER_HOUR = 24;
 
 // Bonding with a land (landfall) takes this long.

@@ -3,6 +3,8 @@ import { gameDay, START_MINUTES } from './clock.ts';
 import { INITIAL_STATS } from './rules.ts';
 import { NEEDS } from './types.ts';
 import type { LifeKind, Need, Pace, Schedule, Stats } from './types.ts';
+import { nearestTile, ownsTile, sameTile, tileCenter, tileLabel } from './tiles.ts';
+import type { Tile } from './tiles.ts';
 import type { QuellKind } from './quell.ts';
 import { josa, shortName } from './text.ts';
 import { canStay, spellColors } from './world.ts';
@@ -37,7 +39,12 @@ export type Actor = {
   kind: 'npc' | 'player';
   // Where they are, or where they set out from while travelling.
   region: string;
-  travel?: { to: string; arrive: number };
+  // The tile of it they stand on (sim/tiles.ts): only those on the same tile meet.
+  tile?: Tile;
+  // `tile`: the tile they are bound for.
+  travel?: { to: string; arrive: number; tile?: Tile };
+  // When they last stepped onto a tile (a trap hidden there may answer it at that hour).
+  steppedAt?: number;
   // Lands (regions) they have bonded with: each gives a mana of its color every turn.
   bonds?: string[];
   // Lands they bonded with this turn = game day, in order: their landfalls.
@@ -267,7 +274,7 @@ export type State = {
   // the LLM's pick, as the trap, after the hour (sim/run.ts `summons`).
   summons?: { event: string; creatures: string[]; by: string[]; region: string; t: number }[];
   // Whiplash traps sprung this hour: whom (up to `count`, of those there) the LLM, as the trap, flings.
-  bounces?: { event: string; count: number; by: string[]; region: string; t: number }[];
+  bounces?: { event: string; count: number; by: string[]; region: string; tile?: Tile; t: number }[];
   // A flyer NPC attacked by one who can't fly: whether they take to the air is asked of the LLM
   // after the hour (sim/run.ts); the blow waits until then.
   evades?: { by: string; from: string; t: number }[];
@@ -330,6 +337,7 @@ export function newState(world: World, opts: NewGame): State {
       background: opts.player.background,
     };
   }
+  for (const a of Object.values(state.actors)) settleTile(world, a);
   return state;
 }
 
@@ -401,6 +409,17 @@ export function syncWorld(state: State, world: World) {
     a.travel = undefined;
     a.schedule = undefined;
   }
+  // Saves from before tiles, and tiles the map took away: the nearest tile of their land.
+  for (const a of Object.values(state.actors)) {
+    settleTile(world, a);
+    if (a.travel?.tile && !ownsTile(world, a.travel.to, a.travel.tile)) delete a.travel.tile;
+  }
+}
+
+// `a` on a tile of their land: the one they are on, or the nearest to it.
+export function settleTile(world: World, a: Actor) {
+  if (ownsTile(world, a.region, a.tile)) return;
+  a.tile = nearestTile(world, a.region, a.tile && tileCenter(a.tile));
 }
 
 // A planeswalker's loyalty (first time) and their hand: every spell of their colors they
@@ -472,8 +491,28 @@ export function outOfTime(state: State, a: Actor, t = state.minutes) {
 }
 
 // Living actors standing in a region (not on the road, not out of time).
-export function present(state: State, regionId: string) {
-  return alive(state).filter((a) => a.region === regionId && !a.travel && !outOfTime(state, a));
+// Those standing on `tile` of `regionId` (null: anywhere in it), not on the way, not out of time.
+export function present(state: State, regionId: string, tile: Tile | undefined | null) {
+  return alive(state).filter((a) => a.region === regionId && (tile === null || sameTile(a.tile, tile)) && !a.travel && !outOfTime(state, a));
+}
+
+// Those standing with `a`: on their tile.
+export function here(state: State, a: Actor) {
+  return present(state, a.region, a.tile);
+}
+
+// Why `b` isn't there for `a` to reach, or null if they stand together: elsewhere on the same
+// land (on another tile), or not here at all.
+export function awayText(world: World, a: Actor, b: Actor) {
+  if (together(a, b)) return null;
+  const name = josa(shortName(b.name), '은', '는');
+  if (!b.travel && b.region === a.region && b.tile) return `${name} 이 땅의 다른 곳(${tileLabel(world, b.region, b.tile)})에 있다.`;
+  return `${name} 여기 없다.`;
+}
+
+// Whether `b` stands with `a` (the same tile of the same land, not on the way).
+export function together(a: Actor, b: Actor) {
+  return a.region === b.region && sameTile(a.tile, b.tile) && !a.travel && !b.travel;
 }
 
 // Power / toughness now, with their +1/+1 counters, this turn's boosts and their auras.

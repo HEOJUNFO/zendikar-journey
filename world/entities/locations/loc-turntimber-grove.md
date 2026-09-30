@@ -11,7 +11,7 @@ links:
   - { to: chr-turntimber-ranger, rel: 늑대를 타고 누비는 엘프 정찰병 }
   - { to: loc-ondu, rel: 바깥 지역 }
   - { to: cre-terra-stomper, rel: 숲을 짓밟는 짐승 }
-map: { in: loc-ondu, terrain: forest, color: G, pos: [0.25, -0.1] }
+map: { in: loc-ondu, terrain: forest, color: G, pos: [0.25, -0.1], tiles: 4 }
 sim:
   enters_tapped: true                     # [카드] 탭된 채 들어온다
   on_bond:

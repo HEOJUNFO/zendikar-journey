@@ -13,7 +13,9 @@ import { castSpell, spellDef } from './spells.ts';
 import { drawKnowledge } from './knowledge.ts';
 import { owesDiscard } from './discard.ts';
 import { landSealed, powersSealed, sealText } from './seal.ts';
-import { addLog, hasAbility, npcDef, outOfTime, present, ptOf, random, targetable, untargetableText } from './state.ts';
+import { addLog, hasAbility, npcDef, outOfTime, present, ptOf, random, targetable, together, untargetableText } from './state.ts';
+import { nearestTile } from './tiles.ts';
+import type { Tile } from './tiles.ts';
 import type { Actor, ChoiceEffect, State } from './state.ts';
 import { josa, shortName, toward } from './text.ts';
 import { ABILITY_LABELS, LAND_TYPE_LABELS, landIdOf, landTypes, realmOf, region, spellColors } from './world.ts';
@@ -47,12 +49,13 @@ export function landColorsOf(r: Region): string[] {
   return r.color ? r.color.split('/') : [];
 }
 
-// Whom it may fall on as `a` bonds with it: anyone standing there, beasts too (user decision
-// 2026-09-30); `a` too when it is a gift ("target creature" may be one's own), not when it
-// takes life ("target player", as one's opponent).
+// Whom it may fall on as `a` bonds with it: anyone standing with them (on their tile; a land
+// fetched from afar: anyone on it), beasts too (user decision 2026-09-30); `a` too when it is
+// a gift ("target creature" may be one's own), not when it takes life ("target player", as
+// one's opponent).
 export function bondTargets(state: State, world: World, a: Actor, regionId: string, eff: BondEffect) {
   const colors = landColorsOf(region(world, regionId));
-  return present(state, regionId).filter((x) => (x.id !== a.id || eff.type !== 'lose_life') && targetable(x, state.minutes, colors));
+  return present(state, regionId, regionId === a.region ? a.tile : null).filter((x) => (x.id !== a.id || eff.type !== 'lose_life') && targetable(x, state.minutes, colors));
 }
 
 // The effect falls on `target`, if they are still there.
@@ -181,19 +184,19 @@ export function bondLand(state: State, world: World, a: Actor, t: number, region
   for (const ability of lf?.landfallGrant ?? []) grantAbility(state, a, ability, untapTime(t), '땅에서 솟구친 열기', t);
   // "Landfall — gain control of target creature": whom (if anyone) is theirs to pick, after the hour.
   if (lf?.landfallSeize) {
-    const candidates = present(state, a.region).filter((x) => x.id !== a.id && x.master !== a.id && targetable(x, t, creatureColors(def))).map((x) => x.id);
+    const candidates = present(state, a.region, a.tile).filter((x) => x.id !== a.id && x.master !== a.id && targetable(x, t, creatureColors(def))).map((x) => x.id);
     if (candidates.length) (state.choices ??= []).push({ by: a.id, land: a.region, effect: { type: 'seize' }, candidates, optional: true, t });
   }
   // "Landfall — you may have target player lose N life; if you do, N +1/+1 counters on this."
   if (lf?.landfallDrain) {
     const colors = creatureColors(def);
-    const candidates = present(state, a.region).filter((x) => x.id !== a.id && targetable(x, t, colors)).map((x) => x.id);
+    const candidates = present(state, a.region, a.tile).filter((x) => x.id !== a.id && targetable(x, t, colors)).map((x) => x.id);
     if (candidates.length) (state.choices ??= []).push({ by: a.id, land: a.region, effect: { type: 'drain_grow', ...lf.landfallDrain }, candidates, optional: true, t });
   }
   // "Landfall — create a token": one more of their kind, born at their side and theirs.
   if (lf?.landfallToken) {
     const tok = lf.landfallToken;
-    const [born] = spawnWild(state, world, tok.creature, tok.pt, 1, a.region, tok.colors);
+    const [born] = spawnWild(state, world, tok.creature, tok.pt, 1, a.region, tok.colors, a.tile);
     born.master = a.id;
     addLog(state, {
       kind: 'event',
@@ -304,6 +307,7 @@ export function upkeepRevive(state: State, world: World, t: number) {
     // Back from the graveyard: a new object, counters gone, and it entered this turn.
     Object.assign(back, {
       region: holder.region,
+      tile: holder.tile,
       master: holder.id,
       travel: undefined,
       task: undefined,
@@ -381,7 +385,7 @@ export function useAbility(state: State, world: World, beingId: string, abilityI
       const gone = discardSpell(state, world, bs, t);
       if (gone && spellColors(gone).includes(eff.if_color) && target) dealDamage(state, target, eff.damage, t, cause);
     } else if (eff.type === 'wheel') {
-      for (const x of present(state, bs.region)) wheel(state, world, x, eff.draw, t, cause);
+      for (const x of present(state, bs.region, bs.tile)) wheel(state, world, x, eff.draw, t, cause);
     } else if (eff.type === 'damage' && target) {
       if (dealDamage(state, target, eff.amount, t, cause)) died = true;
     } else if (eff.type === 'gain_life') {
@@ -466,6 +470,7 @@ function raiseToken(state: State, world: World, from: Actor, creature: string, f
     name,
     kind: 'npc',
     region: from.region,
+    tile: from.tile,
     stats: { energy: 80, hunger: 0, coin: 0 },
     pt: [...def.pt],
     pace: 'normal',
@@ -484,7 +489,7 @@ function raiseToken(state: State, world: World, from: Actor, creature: string, f
 
 // New creatures of a kind (MTG tokens) come into being in `regionId` with no master: beasts
 // that don't talk and keep to that land. Returns them.
-export function spawnWild(state: State, world: World, creature: string, pt: [number, number], count: number, regionId: string, colors: Color[]) {
+export function spawnWild(state: State, world: World, creature: string, pt: [number, number], count: number, regionId: string, colors: Color[], tile?: Tile) {
   const kind = world.lore.find((l) => l.id === creature);
   const kindName = kind?.name ?? creature;
   // A kind that lives in the world as its own card lives by its needs (a baloth hunts when
@@ -514,6 +519,7 @@ export function spawnWild(state: State, world: World, creature: string, pt: [num
       name: kindName,
       kind: 'npc',
       region: regionId,
+      tile: tile ?? nearestTile(world, regionId),
       stats: { energy: 80, hunger: 0, coin: 0 },
       pt: [...pt],
       pace: 'normal',
@@ -547,7 +553,7 @@ export function summonLibrary(state: State, world: World, regionId: string, but:
 // `id` is drawn to `regionId` from wherever they were (not a new one: the one that is), and
 // turns on those in `foes` for the rest of the day. One of the sea stands on land until they
 // make their way back.
-export function callForth(state: State, world: World, id: string, regionId: string, foes: string[], t: number) {
+export function callForth(state: State, world: World, id: string, regionId: string, foes: string[], t: number, tile?: Tile) {
   const x = state.actors[id];
   if (!x || x.dead) return undefined;
   const from = x.travel ? '길 위' : region(world, x.region).name;
@@ -555,6 +561,7 @@ export function callForth(state: State, world: World, id: string, regionId: stri
   x.task = undefined;
   x.forced = undefined;
   x.region = regionId;
+  x.tile = tile ?? nearestTile(world, regionId);
   addLog(state, {
     kind: 'event',
     text: `${josa(shortName(x.name), '이', '가')} ${from}에서 끌려와 문간의 어둠에서 걸어 나왔다 (${ptOf(x).join('/')}).`,
@@ -569,7 +576,7 @@ export function callForth(state: State, world: World, id: string, regionId: stri
 
 // Ob Nixilis's pick lands: the one picked, still there, loses the life; he grows for good.
 export function applyDrainGrow(state: State, world: World, a: Actor, target: Actor, eff: { life: number; counters: number }, t: number) {
-  if (a.dead || target.dead || target.region !== a.region || target.travel || !targetable(target, t, creatureColors(npcDef(state, world, a.id)))) return;
+  if (a.dead || target.dead || !together(target, a) || !targetable(target, t, creatureColors(npcDef(state, world, a.id)))) return;
   addLog(state, {
     kind: 'event',
     text: `땅의 타락한 마나가 ${shortName(a.name)}에게 흘러든다. ${josa(shortName(target.name), '이', '가')} 생명 ${eff.life}을 빼앗겼다.`,
@@ -623,7 +630,7 @@ export function enterDrain(state: State, world: World, a: Actor, t: number) {
   const controller = masterOf(state, a) ?? a;
   const side = [controller, ...retainersOf(state, controller.id)];
   const n = side.filter((x) => !x.dead && npcDef(state, world, x.id)?.creature === drain.per).length;
-  const victims = present(state, a.region).filter((x) => !side.some((y) => y.id === x.id));
+  const victims = present(state, a.region, a.tile).filter((x) => !side.some((y) => y.id === x.id));
   if (!n || !victims.length) return;
   const cause = `${shortName(a.name)}의 흡혈`;
   addLog(state, {
@@ -646,7 +653,7 @@ export function enterDrain(state: State, world: World, a: Actor, t: number) {
 export function enterDestroy(state: State, world: World, a: Actor, t: number) {
   const kind = npcDef(state, world, a.id)?.enterDestroy;
   if (!kind || a.dead || powersSealed(state, world, a, t)) return;
-  const candidates = present(state, a.region)
+  const candidates = present(state, a.region, a.tile)
     .filter((x) => x.id !== a.id && (npcDef(state, world, x.id)?.types ?? []).includes(kind) && targetable(x, t, creatureColors(npcDef(state, world, a.id))))
     .map((x) => x.id);
   if (candidates.length) (state.choices ??= []).push({ by: a.id, land: a.region, effect: { type: 'destroy', kind }, candidates, optional: true, t });
@@ -654,7 +661,7 @@ export function enterDestroy(state: State, world: World, a: Actor, t: number) {
 
 // Their pick lands: the one picked, still there, is destroyed.
 export function applyEnterDestroy(state: State, world: World, a: Actor, target: Actor, t: number) {
-  if (a.dead || target.dead || target.region !== a.region || target.travel || !targetable(target, t, creatureColors(npcDef(state, world, a.id)))) return;
+  if (a.dead || target.dead || !together(target, a) || !targetable(target, t, creatureColors(npcDef(state, world, a.id)))) return;
   const sealer = powersSealed(state, world, a, t);
   if (sealer) {
     addLog(state, { kind: 'effect', text: `${sealText(sealer, t)} ${josa(shortName(a.name), '은', '는')} 그 힘을 쓰지 못한다.`, regions: [a.region], actors: [a.id, sealer.id], t });

@@ -11,7 +11,7 @@ links:
   - { to: loc-akoum, rel: 바깥 지역 }
   - { to: loc-tazeem, rel: 길이 닿는 물가 }
   - { to: law-life, rel: 길을 여는 값 }
-map: { in: loc-akoum, terrain: volcanic, pos: [-0.45, 0.25] }
+map: { in: loc-akoum, terrain: volcanic, pos: [-0.45, 0.25], tiles: 2 }
 sim:
   nonbasic: true                          # 이름 있는 대지: 산이 아니다
   no_mana: true                           # [카드] 마나 능력이 없다

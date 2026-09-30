@@ -13,9 +13,9 @@ import { landSealed, powersSealed, sealedBy, sealToday, setSeal } from './seal.t
 import { castBlocked, castSpell, castTargets, readyCast } from './spells.ts';
 import { actorColors, COLORS, formatMana, manaAvailable, manaCapacity, parseManaCost, planPayment } from './mana.ts';
 import { MAX_TALKS_PER_DAY, usableAbilities, volleyShares } from './run.ts';
-import { eligibleGmEvents, travelBlocked } from './step.ts';
+import { eligibleGmEvents, moveHours, startTravel, travelBlocked } from './step.ts';
 import { gainLife, lifeOf } from './life.ts';
-import { hasAbility, needsOf, newState, npcDef, outOfTime, PLAYER_ID, present, ptOf, syncWorld, targetable } from './state.ts';
+import { awayText, hasAbility, here, needsOf, newState, npcDef, outOfTime, PLAYER_ID, present, ptOf, syncWorld, targetable, together } from './state.ts';
 import { foresightText } from './foresight.ts';
 import { withPositions } from './wander.ts';
 import { nodeAt } from '../web/view.ts';
@@ -28,14 +28,20 @@ import { applyEnterDestroy, bondBlocked, enterDestroy, onEnter, bondLand, bondTa
 import { DEPLETED_LABEL, DESTROYED_DAYS, TRAVEL_UNITS_PER_HOUR } from './rules.ts';
 import { bindRetainer, retainersOf, swayBlocked } from './retainers.ts';
 import { joinedToday } from './bounce.ts';
+import { fixedTile, nearestTile, ownsTile, sameTile, tilesOf, tileSteps } from './tiles.ts';
 import { applyQuell, upkeepQuell } from './quell.ts';
 import { upkeepWins } from './win.ts';
 import { hirePrice } from './allies.ts';
 import { askOptions, askText } from './asks.ts';
-import type { State } from './state.ts';
+import type { Actor, State } from './state.ts';
 import { affectedRegions, buildWorld, distance, landTypes, realmOf, region, travelHours } from './world.ts';
 import type { RawEntity } from './world.ts';
 
+// Puts `a` in a land, on its middle tile (as arriving there would).
+const put = (world: World, a: Actor, regionId: string) => {
+  a.region = regionId;
+  a.tile = nearestTile(world, regionId);
+};
 const loc = (id: string, x: number, y: number, terrain: string): RawEntity => ({
   id,
   kind: 'location',
@@ -1090,7 +1096,7 @@ test('a sky ruin that can be climbed: those who cannot fly get there by rope, si
   assert.match(travelBlocked(state, world, state.actors[PLAYER_ID], 'loc-sky')!, /비행/); // a sky island with no ropes
   await act(state, world, { type: 'move', to: 'loc-ruin' });
   assert.equal(state.actors[PLAYER_ID].region, 'loc-ruin');
-  assert.equal(formatClock(state.minutes), '1일차 13:00');
+  assert.equal(formatClock(state.minutes), '1일차 14:00'); // two tiles on foot, and six hours of rope
 });
 
 test('at dawn, one holding the ruin and enough plains gets back the last retainer who died serving them', async () => {
@@ -1138,7 +1144,7 @@ test('a day left in Magosi (its tap and {U}): the next day is lost, out of time 
   assert.match(storeBlocked(state, world, p, 'loc-magosi', state.minutes)!, /오늘 이미 마고시를 썼다/);
   await advance(state, world, 17); // to 2일차 00:00
   assert.ok(outOfTime(state, p));
-  assert.ok(!present(state, 'loc-magosi').includes(p));
+  assert.ok(!present(state, 'loc-magosi', null).includes(p));
   const energy = p.stats.energy;
   await advance(state, world, 24);
   assert.equal(formatClock(state.minutes), '3일차 00:00');
@@ -1417,7 +1423,8 @@ test('the real Malakir: one who gained life today walks in and the needlebite tr
   assert.ok(!texts(state).some((x) => x.includes('가시가 튀어나와')));
   await act(state, world, { type: 'move', to: 'loc-guul-draz' });
   gainLife(state, p, 1, state.minutes, '피난처');
-  await act(state, world, { type: 'move', to: 'loc-malakir' });
+  // The trap lies on one tile of Malakir: they step onto it.
+  await act(state, world, { type: 'move', to: 'loc-malakir', tile: fixedTile(world, 'loc-malakir', 'evt-needlebite-trap')! });
   assert.ok(texts(state).some((x) => x.includes('가시가 튀어나와')));
   assert.equal(p.life, 16); // 20 + 1 - 5
 });
@@ -2051,7 +2058,7 @@ test('an NPC may go after another and fall on them; a defender may not', async (
   assert.equal(state.actors['chr-x'].region, 'loc-b');
   assert.ok(texts(state).some((t) => t.includes('에게 덤벼들었다')));
   assert.ok(woundsOf(state.actors['chr-y'], state.minutes) > 0 || knockedOut(state.actors['chr-y']));
-  assert.equal(attackBlocked(state, { ...state.actors['chr-x'], abilities: ['defender'] }, 'chr-y', state.minutes), '먼저 덤비지 않는다.');
+  assert.equal(attackBlocked(state, world, { ...state.actors['chr-x'], abilities: ['defender'] }, 'chr-y', state.minutes), '먼저 덤비지 않는다.');
 });
 
 test('a flyer NPC set on by an NPC who can\'t fly may take to the air until midnight, as from the player', async () => {
@@ -2142,6 +2149,71 @@ const whiplash: RawEntity = {
   sim: { region: 'loc-b', trigger: 'enter', joined: 2, text: '줄기가 휘몰아쳤다.', effects: [{ type: 'bounce', count: 2 }] },
 };
 
+test('tiles: every land holds its tiles, areas as many as they say, a continent open ground besides', () => {
+  const world = loadWorld();
+  const owners = Object.values(world.tileOwner!);
+  for (const r of world.regions.filter((x) => !x.wanders)) {
+    const n = tilesOf(world, r.id).length;
+    assert.ok(n >= 1, r.id);
+    if (r.parent) assert.equal(n, r.tileCount ?? 1, r.id);
+    if (r.size === 'continent') assert.ok(n >= 12, r.id);
+    assert.equal(owners.filter((o) => o === r.id).length, n, r.id); // one land to a tile
+  }
+  assert.equal(tilesOf(world, 'loc-makindi').length, 4);
+  assert.equal(tilesOf(world, 'loc-oran-rief').length, 5);
+  assert.equal(tilesOf(world, 'loc-hagra').length, 5);
+});
+
+test('tiles: only those on the same tile meet; one seeking another walks to their tile, an hour a step', async () => {
+  const wide: RawEntity = { id: 'loc-w', kind: 'location', name: '넓은 땅', status: 'canon', map: { x: 200, y: 200, terrain: 'grassland', size: 'continent' } };
+  const seeker = { ...npcSim('loc-w', 'social'), plan: [['00:00', '24:00', 'loc-w', 'social', '그를 찾아감', '💬', null, null, 'chr-b']] };
+  const world = fixture([wide, npc('chr-a', seeker), npc('chr-b', npcSim('loc-w', 'social'))]);
+  const state = newState(world, { seed: 1, mode: 'observer' });
+  const [a, b] = [state.actors['chr-a'], state.actors['chr-b']];
+  // The two tiles of the land farthest apart.
+  const ts = tilesOf(world, 'loc-w');
+  const [near, far] = ts.flatMap((x) => ts.map((y) => [x, y] as const)).sort((p, q) => tileSteps(q[0], q[1]) - tileSteps(p[0], p[1]))[0];
+  assert.ok(tileSteps(near, far) >= 3);
+  Object.assign(a, { tile: near });
+  Object.assign(b, { tile: far });
+  assert.equal(together(a, b), false);
+  assert.deepEqual(here(state, a).map((x) => x.id), ['chr-a']);
+  assert.match(awayText(world, a, b)!, /이 땅의 다른 곳/);
+  await advance(state, world, 1, {});
+  assert.ok(a.travel && sameTile(a.travel.tile, far)); // walking to b's tile
+  assert.equal(moveHours(world, { ...a, travel: undefined, tile: near }, 'loc-w', far), tileSteps(near, far));
+  await advance(state, world, tileSteps(near, far) + 1, {});
+  assert.ok(together(a, b));
+  assert.ok(texts(state).some((l) => l.includes('찾아가 마주했다')));
+});
+
+test('tiles: the player walks to a tile of their land, and seeks someone out; exploring drifts a tile', async () => {
+  const wide: RawEntity = { id: 'loc-w', kind: 'location', name: '넓은 땅', status: 'canon', map: { x: 200, y: 200, terrain: 'grassland', size: 'continent' } };
+  const world = fixture([wide, npc('chr-b', npcSim('loc-w', 'work'))]);
+  const state = character(world, 'loc-w');
+  const p = state.actors[PLAYER_ID];
+  const b = state.actors['chr-b'];
+  const ts = tilesOf(world, 'loc-w');
+  const other = ts.find((t) => tileSteps(t, p.tile!) === 2)!;
+  await act(state, world, { type: 'move', to: 'loc-w', tile: other });
+  assert.ok(sameTile(p.tile, other));
+  assert.match((await act(state, world, { type: 'move', to: 'loc-w', tile: other })).error ?? '', /이미 그곳에/);
+  b.tile = ts.find((t) => tileSteps(t, other) === 3)!;
+  await act(state, world, { type: 'seek', to: 'chr-b' });
+  assert.ok(together(p, b));
+  const before = p.tile!;
+  await act(state, world, { type: 'explore', hours: 1, pace: 'normal' });
+  assert.equal(tileSteps(before, p.tile!), 1);
+});
+
+test('tiles: an old save gets everyone a tile of their land', () => {
+  const world = loadWorld();
+  const state = newState(world, { seed: 1, mode: 'observer' });
+  for (const a of Object.values(state.actors)) delete a.tile;
+  syncWorld(state, world);
+  for (const a of Object.values(state.actors)) assert.ok(ownsTile(world, a.region, a.tile), a.id);
+});
+
 test('a whiplash trap: one with two joined today who enters sets it off; two there are flung: stripped, freed, landed nearby, stunned; a token is gone', async () => {
   const world = fixture([
     whiplash,
@@ -2153,12 +2225,16 @@ test('a whiplash trap: one with two joined today who enters sets it off; two the
   ]);
   const state = newState(world, { seed: 1, mode: 'observer' });
   const [x, m, y] = [state.actors['chr-x'], state.actors['chr-m'], state.actors['chr-y']];
-  x.region = m.region = 'loc-a';
+  // The trap lies on one tile of loc-b: they stand on another and walk onto it.
+  const trap = fixedTile(world, 'loc-b', 'evt-whip')!;
+  const start = tilesOf(world, 'loc-b').find((t) => !sameTile(t, trap))!;
+  for (const a of [x, m]) Object.assign(a, { region: 'loc-b', tile: start });
   bindRetainer(state, world, m, x, state.minutes, '고용');
   m.plusCounters = 2;
-  const [wolf] = spawnWild(state, world, 'cre-w', [2, 2], 1, 'loc-a', ['G']);
+  const [wolf] = spawnWild(state, world, 'cre-w', [2, 2], 1, 'loc-b', ['G'], start);
   wolf.master = x.id;
   assert.equal(joinedToday(state, x, state.minutes), 2);
+  for (const a of [x, m, wolf]) startTravel(state, world, a, 'loc-b', state.minutes, trap);
   const asked: string[][] = [];
   const bounce: Llm['bounce'] = async ({ creatures, count }) => (asked.push(creatures.map((c) => c.id).sort()), assert.equal(count, 2), [m.id, wolf.id]);
   await advance(state, world, 2, { bounce });
@@ -2172,8 +2248,9 @@ test('a whiplash trap: one with two joined today who enters sets it off; two the
   // One with only one joined today: nothing.
   const s2 = newState(world, { seed: 1, mode: 'observer' });
   const [x2, m2] = [s2.actors['chr-x'], s2.actors['chr-m']];
-  x2.region = m2.region = 'loc-a';
+  for (const a of [x2, m2]) Object.assign(a, { region: 'loc-b', tile: start });
   bindRetainer(s2, world, m2, x2, s2.minutes, '고용');
+  for (const a of [x2, m2]) startTravel(s2, world, a, 'loc-b', s2.minutes, trap);
   let sprung = false;
   await advance(s2, world, 3, { bounce: async () => ((sprung = true), []) });
   assert.equal(sprung, false);
@@ -2888,7 +2965,7 @@ test('enter_destroy: arriving where an Angel is, the hunter may destroy it; shro
   // Once a day: the first arrival only (it already came today).
   state.choices = [];
   g.abilities = [];
-  g.region = 'loc-b';
+  put(world, g, 'loc-b');
   callForth(state, world, 'chr-h', 'loc-b', [], t);
   assert.equal(state.choices.length, 0);
   // Brought there by a trap on another day, it answers.
@@ -3235,7 +3312,7 @@ test('relic crush: an NPC destroys an aura (and what it gave) and an item standi
   castSpell(state, world, x, 'spl-g', 'chr-x', false, state.minutes);
   assert.deepEqual(ptOf(x), [8, 8]);
   assert.ok(x.abilities.includes('trample'));
-  assert.deepEqual(relicsHere(state, world, 'loc-a').map((r) => r.id), ['item:itm-v', 'aura:chr-x:0:spl-g']);
+  assert.deepEqual(relicsHere(state, world, 'loc-a', state.actors['chr-c']?.tile ?? state.actors['chr-x'].tile).map((r) => r.id), ['item:itm-v', 'aura:chr-x:0:spl-g']);
   c.spells = ['spl-rc'];
   readyCast(state, world, c, 'spl-rc', state.minutes);
   const asked: [string[], boolean][] = [];
@@ -3279,7 +3356,7 @@ test('relic crush reaches an enchantment that is no aura, standing in a place', 
   const world = fixture([ench, npc('chr-c', npcSim('loc-a'))]);
   const state = newState(world, { seed: 1, mode: 'observer' });
   assert.equal(world.items[0].cardType, 'enchantment');
-  assert.deepEqual(relicsHere(state, world, 'loc-a'), [{ id: 'item:itm-e', label: '결계 (부여마법)' }]);
+  assert.deepEqual(relicsHere(state, world, 'loc-a', nearestTile(world, 'loc-a')), [{ id: 'item:itm-e', label: '결계 (부여마법)' }]);
   assert.ok(crushRelic(state, world, 'item:itm-e', state.actors['chr-c'], state.minutes));
   assert.ok(state.items?.['itm-e']?.gone);
 });

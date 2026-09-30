@@ -4,7 +4,7 @@
 import { formatClock, gameDay, untapTime } from './clock.ts';
 import { startAction } from './actions.ts';
 import type { Action } from './actions.ts';
-import { addLog, hasAbility, npcDef, outOfTime, player, ptOf, random, speakerDef } from './state.ts';
+import { addLog, hasAbility, npcDef, outOfTime, player, ptOf, random, speakerDef, together } from './state.ts';
 import type { Actor, Choice, GmPlan, LogEntry, State } from './state.ts';
 import { eligibleGmEvents, ruinsUntil, step } from './step.ts';
 import { addFoe, clash, dealDamage, unblockable } from './combat.ts';
@@ -20,6 +20,7 @@ import { loremastersOf, recallBlocked, recallCount } from './loremaster.ts';
 import { sacrifice } from './monument.ts';
 import { strandedText } from './stranded.ts';
 import { bounce, bounceCandidates } from './bounce.ts';
+import { fixedTile } from './tiles.ts';
 import { applyQuell, permanentsOf, QUELL_KINDS, QUELL_LABELS, quellGive } from './quell.ts';
 import { applyRally, hireableFor, hireMerc, hirePrice, rallyText } from './allies.ts';
 import { answerAsk, askText, canServe } from './asks.ts';
@@ -276,7 +277,7 @@ async function discardChoice(state: State, world: World, llm: Llm, a: Actor, npc
 async function crushChoice(state: State, world: World, llm: Llm, a: Actor, npc: Speaker, eff: { spell: string; left: number; first: boolean }) {
   let { left, first } = eff;
   while (left > 0) {
-    const relics = relicsHere(state, world, a.region);
+    const relics = relicsHere(state, world, a.region, a.tile);
     if (!relics.length) return;
     let pick: string | null = null;
     if (llm.pick) {
@@ -369,7 +370,7 @@ async function summons(state: State, world: World, llm: Llm) {
         console.warn(`summon for ${trap.id} failed:`, e);
       }
     }
-    if (pick && creatures.some((c) => c.id === pick)) callForth(state, world, pick, s.region, intruders.map((a) => a.id), state.minutes);
+    if (pick && creatures.some((c) => c.id === pick)) callForth(state, world, pick, s.region, intruders.map((a) => a.id), state.minutes, fixedTile(world, s.region, s.event));
     else addLog(state, { kind: 'event', text: `${trap.name}: 문간의 어둠은 끝내 잠잠했다.`, regions: [s.region] });
   }
 }
@@ -382,7 +383,7 @@ async function bounces(state: State, world: World, llm: Llm) {
   state.bounces = [];
   for (const b of due) {
     const trap = world.events.find((e) => e.id === b.event);
-    const creatures = bounceCandidates(state, world, b.region, state.minutes);
+    const creatures = bounceCandidates(state, world, b.region, b.tile, state.minutes);
     const intruders = b.by.map((id) => state.actors[id]).filter((a) => a && !a.dead);
     if (!trap || !creatures.length) continue;
     let picks: string[] | null = null;
@@ -574,7 +575,7 @@ async function choices(state: State, world: World, llm: Llm) {
         console.warn(`choose (seize) for ${c.by} failed:`, e);
       }
       const target = candidates.find((x) => x.id === pick);
-      if (target && target.region === by.region && !target.travel) seize(state, target, by, state.minutes);
+      if (target && together(target, by)) seize(state, target, by, state.minutes);
       continue;
     }
     if (c.effect.type === 'rally') {
@@ -635,7 +636,7 @@ async function castChoice(state: State, world: World, llm: Llm, by: Actor, npc: 
   if (!pick || !candidates.some((x) => x.id === pick)) return;
   if (free) {
     const target = state.actors[pick];
-    if (target && !target.dead && target.region === by.region) castSpell(state, world, by, s.id, pick, false, state.minutes, true);
+    if (target && !target.dead && together(target, by)) castSpell(state, world, by, s.id, pick, false, state.minutes, true);
     return;
   }
   const kick = !!s.kicker && !castBlocked(state, world, by, s.id, pick, true, state.minutes);
@@ -658,7 +659,7 @@ async function followChoice(state: State, world: World, llm: Llm, by: Actor, npc
   } catch (e) {
     console.warn(`choose (follow) for ${by.id} failed:`, e);
   }
-  if (pick !== suitor.id || suitor.dead || suitor.master || suitor.region !== by.region || swayBlocked(state, world, by)) {
+  if (pick !== suitor.id || suitor.dead || suitor.master || !together(suitor, by) || swayBlocked(state, world, by)) {
     addLog(state, { kind: 'status', text: `${josa(shortName(by.name), '은', '는')} ${shortName(suitor.name)}에게 곁을 내주지 않았다.`, regions: [by.region], actors: [by.id, suitor.id] });
     refuse(state, suitor, state.minutes);
     return;

@@ -10,7 +10,7 @@ tags: [늪, 폐허, 오우거, 저수조, 흑색]
 links:
   - { to: loc-guul-draz, rel: 바깥 지역 }
   - { to: chr-hagra-diabolist, rel: 폐허에 사는 오우거 주술사 }
-map: { in: loc-guul-draz, terrain: swamp, pos: [0.05, 0.2] }   # 기본 늪: 흑 마나 [결정] 2026-09-30
+map: { in: loc-guul-draz, terrain: swamp, pos: [0.05, 0.2], tiles: 5 }   # 기본 늪: 흑 마나 [결정] 2026-09-30
 ---
 
 ## 설정

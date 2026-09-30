@@ -48,7 +48,7 @@ export function upkeepQuell(state: State, world: World, t: number) {
 // with several picks (after the hour); one with none gives nothing.
 export function applyQuell(state: State, world: World, source: Actor, kind: QuellKind, t: number) {
   if (source.dead) return;
-  const here = present(state, source.region);
+  const here = present(state, source.region, source.tile);
   addLog(state, {
     kind: 'event',
     text: `${josa(shortName(source.name), '이', '가')} 땅을 울리며 몸을 일으키자, 곁의 모두가 저마다 ${QUELL_LABELS[kind]} 하나를 내놓아야 한다.`,

@@ -3,7 +3,7 @@ import type { ReactNode } from 'react';
 import type { Action } from '../sim/actions.ts';
 import { PACE_LABELS } from '../sim/actions.ts';
 import { formatClock, formatTimeOfDay, gameDay, minuteOfDay } from '../sim/clock.ts';
-import { isPerson, needsOf, npcDef, outOfTime, player, present, ptOf } from '../sim/state.ts';
+import { isPerson, needsOf, npcDef, outOfTime, player, present, ptOf, together } from '../sim/state.ts';
 import { hireBlocked, hirePrice } from '../sim/allies.ts';
 import { askOptions, askText } from '../sim/asks.ts';
 import { woundsOf } from '../sim/combat.ts';
@@ -19,7 +19,9 @@ import { sealToday } from '../sim/seal.ts';
 import { isWinner } from '../sim/win.ts';
 import { lifeOf } from '../sim/life.ts';
 import type { Actor, LogEntry, State } from '../sim/state.ts';
-import { ruinsUntil, travelBlocked } from '../sim/step.ts';
+import { moveHours, ruinsUntil, travelBlocked } from '../sim/step.ts';
+import { nearestTile, ownsTile, sameTile, tileCenter, tileLabel, tilesOf } from '../sim/tiles.ts';
+import type { Tile } from '../sim/tiles.ts';
 import { josa, shortName } from '../sim/text.ts';
 import { PACES } from '../sim/types.ts';
 import type { Pace } from '../sim/types.ts';
@@ -75,11 +77,14 @@ export function RegionCard(props: {
   world: World;
   state: State | null;
   regionId: string;
+  // The tile of it picked on the map, if any.
+  tile?: Tile | null;
   busy?: boolean;
   onAct?: (a: Action) => void;
   all?: boolean;
 }) {
   const { world, state, regionId, busy, onAct, all } = props;
+  const tile = props.tile && ownsTile(world, regionId, props.tile) ? props.tile : undefined;
   const r = region(world, regionId);
   const t = TERRAINS[r.terrain];
   const conds = state?.regions[r.id]?.conditions ?? [];
@@ -99,9 +104,17 @@ export function RegionCard(props: {
       const fire = eff ? undefined : firesOnBond(state, world, { ...p, bonds: [...(p.bonds ?? []), r.id] }, r.id)[0];
       const burnable = fire ? fireTargets(state, world, p, fire) : [];
       const held = busy || !!p.forced || p.boundUntil !== undefined;
+      const walk = tile && !sameTile(tile, p.tile) ? tile : undefined;
       travel = (
         <>
-          <p className="muted">지금 여기 있다.</p>
+          <p className="muted">지금 여기 있다{p.tile ? ` (${tileLabel(world, r.id, p.tile)})` : ''}.</p>
+          {walk && (
+            <p>
+              <button disabled={busy || !!p.forced || p.boundUntil !== undefined} onClick={() => onAct({ type: 'move', to: r.id, tile: walk })}>
+                {tileLabel(world, r.id, walk)}(으)로 걸어가기 ({moveHours(world, p, r.id, walk)}시간)
+              </button>
+            </p>
+          )}
           {why ? (
             <p className="muted">{why}</p>
           ) : burnable.length ? (
@@ -163,8 +176,8 @@ export function RegionCard(props: {
       travel = why ? (
         <p className="muted">갈 수 없다: {why}</p>
       ) : (
-        <button disabled={busy} onClick={() => onAct({ type: 'move', to: r.id })}>
-          이곳으로 이동 ({travelHours(region(world, p.region), r, p.abilities)}시간)
+        <button disabled={busy} onClick={() => onAct({ type: 'move', to: r.id, ...(tile ? { tile } : {}) })}>
+          {tile ? `${tileLabel(world, r.id, tile)}(으)로` : '이곳으로'} 이동 ({moveHours(world, p, r.id, tile ?? nearestTile(world, r.id, p.tile && tileCenter(p.tile)))}시간)
         </button>
       );
     }
@@ -216,9 +229,25 @@ export function RegionCard(props: {
         );
       })}
       {here.length > 0 && (
-        <p className="muted">
-          여기 있는 이: {here.map((a) => (a.kind === 'player' ? `${shortName(a.name)}(나)` : shortName(a.name))).join(', ')}
-        </p>
+        <div className="muted">
+          이 땅에 있는 이:{' '}
+          {here.map((a) => {
+            const where = a.tile && tilesOf(world, r.id).length > 1 ? ` · ${tileLabel(world, r.id, a.tile)}` : '';
+            const mine = p && a.id === p.id;
+            const seek = p && onAct && !mine && !p.travel && !together(p, a);
+            return (
+              <span key={a.id} className="who">
+                {mine ? `${shortName(a.name)}(나)` : shortName(a.name)}
+                <small>{where}</small>
+                {seek && (
+                  <button className="ghost small" disabled={busy || !!p.forced || p.boundUntil !== undefined} onClick={() => onAct({ type: 'seek', to: a.id })}>
+                    찾아가기
+                  </button>
+                )}{' '}
+              </span>
+            );
+          })}
+        </div>
       )}
       {travel}
     </section>
@@ -250,7 +279,8 @@ export function status(world: World, a: Actor) {
   if (a.dead) return a.left ? a.dead.cause : `죽음 (${a.dead.cause})`;
   if (a.boundUntil !== undefined) return `묶임 (${formatClock(a.boundUntil)}까지)`;
   const task = a.forced ?? a.task;
-  const where = a.travel ? `${region(world, a.region).name} → ${region(world, a.travel.to).name}` : region(world, a.region).name;
+  const at = (id: string, tile?: Tile) => (tile && tilesOf(world, id).length > 1 ? tileLabel(world, id, tile) : region(world, id).name);
+  const where = a.travel ? `${at(a.region, a.tile)} → ${at(a.travel.to, a.travel.tile)}` : at(a.region, a.tile);
   return `${where} · ${task ? `${task.emoji} ${task.activity}` : '쉬는 중'}`;
 }
 
@@ -409,7 +439,7 @@ export function CharacterControls(props: {
   const [pace, setPace] = useState<Pace>('careful');
   const [talkTo, setTalkTo] = useState('');
   const [line, setLine] = useState('');
-  const people = present(state, p.region).filter((a) => isPerson(a) && a.boundUntil === undefined);
+  const people = present(state, p.region, p.tile).filter((a) => isPerson(a) && a.boundUntil === undefined);
   const keeper = eonLand(world, p);
   const grower = growLand(world, p);
   const stuck = p.travel || p.forced || p.boundUntil !== undefined;

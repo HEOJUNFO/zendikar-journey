@@ -14,6 +14,7 @@ import {
   DEPLETED_HOURS,
   DESTROYED_DAYS,
   DEPLETED_LABEL,
+  HUNT_HUNGER,
   KIND_EFFECTS,
   STARVING,
   STARVING_ENERGY,
@@ -24,10 +25,10 @@ import { forget, forgetAbout } from './relations.ts';
 import { markSealed } from './seal.ts';
 import { handSize } from './knowledge.ts';
 import { recall, RECALL_HOURS, recallBlocked } from './loremaster.ts';
-import { addLog, alive, landUnusable, needsOf, npcDef, outOfTime, present, ptOf, random } from './state.ts';
+import { addLog, alive, here, landUnusable, needsOf, npcDef, outOfTime, present, ptOf, random, together } from './state.ts';
 import { addFoe, attackBlocked, dealDamage, foesOf, hostileNpcs } from './combat.ts';
 import { bondBlocked, bondLand, expireGranted, onEnter, FETCH_HOURS, fetchLand, fetchSource, growBlocked, growEntered, growLand, spawnWild, summonLibrary, upkeepRevive, useAbility } from './abilities.ts';
-import { CLAIM_HOURS, claimBlocked, claimItem, itemsAt } from './items.ts';
+import { CLAIM_HOURS, claimBlocked, claimItem, itemsAt, itemTile } from './items.ts';
 import { EON_HOURS, eonLand, holdStill, spendBlocked, spendDay, storeBlocked, storeDay, timeNews } from './eons.ts';
 import { upkeepWins } from './win.ts';
 import { CRAWL_FACTOR, dryOut, stranded } from './stranded.ts';
@@ -36,6 +37,8 @@ import { anthemHour, upkeepSacrifice } from './monument.ts';
 import { upkeepQuell } from './quell.ts';
 import { HIRE_HOURS, hireBlocked, hireMerc } from './allies.ts';
 import { bounceCandidates, joinedToday } from './bounce.ts';
+import { fixedTile, nearestTile, sameTile, tileCenter, tileLabel, tilesOf, tileSteps } from './tiles.ts';
+import type { Tile } from './tiles.ts';
 import { COURT_HOURS, courtBlocked, followsMaster, masterOf, readyCourt, refusedToday, upkeepPossessions } from './retainers.ts';
 import { learnBlocked, learnSpell, npcCastBlocked, readyCast, spellDef } from './spells.ts';
 import { payMana } from './mana.ts';
@@ -43,7 +46,7 @@ import type { Actor, GmPlan, State, Task } from './state.ts';
 import { josa, shortName, toward } from './text.ts';
 import { currentBlock } from './types.ts';
 import { ABILITY_LABELS, affectedRegions, hasPowers, region, TERRAINS, travelHours } from './world.ts';
-import type { EventDef, World } from './world.ts';
+import type { EventDef, Region, World } from './world.ts';
 
 export function step(state: State, placed: World) {
   const t = state.minutes;
@@ -178,7 +181,7 @@ function gmLayer(state: State, world: World, t: number) {
   }
 }
 
-// Enter: someone arrived in the region at `at` (the end of this hour). Checked right after
+// Enter: someone stepped onto the tile of the land where the trap lies at `at` (the end of this hour). Checked right after
 // the characters move, so a traveller is met at the gate, not an hour later.
 function enterEvents(state: State, world: World, at: number) {
   for (const ev of world.events) {
@@ -196,7 +199,8 @@ function enterEvents(state: State, world: World, at: number) {
     }
     if (ev.trigger !== 'enter' || onCooldown(state, ev, at)) continue;
     if (state.pending.some((p) => p.eventId === ev.id)) continue;
-    const by = present(state, ev.region).filter((a) => a.arrivedAt === at && (!ev.gained_life || gainedLifeToday(a, at)) && (!ev.refused || refusedToday(a, at)) && (!ev.searched || a.searched === gameDay(at)) && (!ev.claimed || a.claimed === gameDay(at)) && (!ev.joined || joinedToday(state, a, at) >= ev.joined));
+    // A trap lies on one tile of its land: those who stepped onto it this hour.
+    const by = present(state, ev.region, fixedTile(world, ev.region, ev.id)).filter((a) => a.steppedAt === at && (!ev.gained_life || gainedLifeToday(a, at)) && (!ev.refused || refusedToday(a, at)) && (!ev.searched || a.searched === gameDay(at)) && (!ev.claimed || a.claimed === gameDay(at)) && (!ev.joined || joinedToday(state, a, at) >= ev.joined));
     if (by.length) trigger(state, world, ev, at, { by: by.map((a) => a.id), lands: [] });
   }
 }
@@ -363,7 +367,8 @@ function fire(state: State, world: World, ev: EventDef, t: number, omened: boole
       }
     } else if (eff.type === 'bounce') {
       // Whom it flings is the trap's, asked after the hour.
-      if (bounceCandidates(state, world, ev.region, t).length) (state.bounces ??= []).push({ event: ev.id, count: eff.count, by: cause.by ?? [], region: ev.region, t });
+      const tile = fixedTile(world, ev.region, ev.id);
+      if (bounceCandidates(state, world, ev.region, tile, t).length) (state.bounces ??= []).push({ event: ev.id, count: eff.count, by: cause.by ?? [], region: ev.region, tile, t });
     } else if (eff.type === 'summon') {
       // Which of the creatures looked at is drawn here (if any) is the trap's, asked after the hour.
       const creatures = summonLibrary(state, world, ev.region, cause.by ?? []).slice(0, eff.look);
@@ -429,20 +434,54 @@ export function travelBlocked(state: State, world: World, a: Actor, to: string):
   return null;
 }
 
-export function startTravel(state: State, world: World, a: Actor, to: string, t: number) {
+// Sets out for `to` (a land), to stand on `tile` of it: the tile of it nearest where they stand
+// when none is asked. Within one region (its open ground and its areas) they walk tile by tile,
+// an hour a step (sim/tiles.ts); between regions it is the road between them (`travelHours`).
+// `to` may be their own land: a walk to another tile of it.
+export function startTravel(state: State, world: World, a: Actor, to: string, t: number, tile?: Tile) {
   const from = region(world, a.region);
   const dest = region(world, to);
+  const at = tile ?? nearestTile(world, to, a.tile && tileCenter(a.tile));
   // One of the sea on land crawls toward the water (sim/stranded.ts).
   const crawl = stranded(world, a);
-  const hours = travelHours(from, dest, a.abilities) * (crawl ? CRAWL_FACTOR : 1);
-  a.travel = { to, arrive: t + hours * 60 };
-  a.task = { kind: 'travel', activity: `${toward(dest.name)} 이동`, emoji: '🧭', until: a.travel.arrive };
+  const hours = moveHours(world, a, to, at) * (crawl ? CRAWL_FACTOR : 1);
+  a.travel = { to, arrive: t + hours * 60, ...(at ? { tile: at } : {}) };
+  const where = to === a.region && at ? tileLabel(world, to, at) : dest.name;
+  a.task = { kind: 'travel', activity: `${toward(where)} 이동`, emoji: '🧭', until: a.travel.arrive };
   addLog(state, {
     kind: 'move',
-    text: `${josa(shortName(a.name), '이', '가')} ${josa(from.name, '을', '를')} 떠나 ${toward(dest.name)} ${crawl ? '기어 ' : ''}향했다 (${hours}시간 거리).`,
+    text:
+      to === a.region
+        ? `${josa(shortName(a.name), '이', '가')} ${toward(where)} 걸어갔다 (${hours}시간 거리).`
+        : `${josa(shortName(a.name), '이', '가')} ${josa(from.name, '을', '를')} 떠나 ${toward(dest.name)} ${crawl ? '기어 ' : ''}향했다 (${hours}시간 거리).`,
     regions: [from.id],
     actors: [a.id],
   });
+}
+
+// Hours from where `a` stands to `tile` of `to`. Within one region: the steps between the tiles
+// (at least one), and the climb into or out of a sky land for one who can't fly. Between
+// regions: the road (`travelHours`). Haste halves it.
+export function moveHours(world: World, a: Actor, to: string, tile: Tile | undefined) {
+  const from = region(world, a.region);
+  const dest = region(world, to);
+  if ((from.parent ?? from.id) !== (dest.parent ?? dest.id) || !a.tile || !tile) return travelHours(from, dest, a.abilities);
+  const climb = (r: Region) => {
+    const need = TERRAINS[r.terrain].requires;
+    return need && !a.abilities.includes(need) ? (r.climbHours ?? 0) : 0;
+  };
+  const hours = Math.max(1, tileSteps(a.tile, tile)) + (from.id === dest.id ? 0 : climb(from) + climb(dest));
+  return a.abilities.includes('haste') ? Math.max(1, Math.ceil(hours / 2)) : hours;
+}
+
+// Sets out for where `b` stands (or is bound): their land and tile. Whether they went.
+function goTo(state: State, world: World, a: Actor, b: Actor, t: number) {
+  const where = b.travel?.to ?? b.region;
+  const tile = b.travel ? b.travel.tile : b.tile;
+  if (where === a.region && sameTile(tile, a.tile)) return false;
+  if (where !== a.region && travelBlocked(state, world, a, where)) return false;
+  startTravel(state, world, a, where, t, tile);
+  return true;
 }
 
 // --- characters --------------------------------------------------------------------------
@@ -469,14 +508,18 @@ function actorHour(state: State, world: World, a: Actor, t: number) {
 
   // The player seized (Roil Elemental) is dragged wherever what holds them goes.
   const holder = a.kind === 'player' && a.seized ? masterOf(state, a) : undefined;
-  const dragged = holder && (holder.travel?.to ?? holder.region);
-  if (dragged && dragged !== a.region && !travelBlocked(state, world, a, dragged)) startTravel(state, world, a, dragged, t);
+  if (holder) goTo(state, world, a, holder, t);
   const task = a.forced ?? (a.kind === 'npc' ? npcTask(state, world, a, t) : a.task);
   if (a.travel) return travelHour(state, world, a, t);
   if (!task) {
     applyEffect(a.stats, KIND_EFFECTS.leisure, 60, needsOf(a));
     return;
   }
+  // Searching the land (exploring), or a hungry beast with nothing to hunt beside it: a step to
+  // a tile next to theirs, of the same land.
+  const def = a.kind === 'npc' ? npcDef(state, world, a.id) : undefined;
+  const hunting = def?.beast && needsOf(a).includes('hunger') && a.stats.hunger >= HUNT_HUNGER && task.kind !== 'sleep' && here(state, a).length <= 1;
+  if (task.kind === 'explore' || hunting) drift(state, world, a, t);
   const needs = needsOf(a);
   const effect =
     task.kind === 'explore' ? EXPLORE_EFFECT
@@ -494,14 +537,19 @@ function actorHour(state: State, world: World, a: Actor, t: number) {
   }
 }
 
+// A step to a tile next to theirs, of the same land, at random (none: they stay).
+function drift(state: State, world: World, a: Actor, t: number) {
+  if (!a.tile) return;
+  const next = tilesOf(world, a.region).filter((x) => tileSteps(x, a.tile!) === 1);
+  if (!next.length) return;
+  a.tile = next[Math.floor(random(state) * next.length)];
+  a.steppedAt = t + STEP_MINUTES;
+}
+
 // A token who serves someone goes where their master goes, sleeps when they sleep, and
 // otherwise keeps at their side.
 function followTask(state: State, world: World, a: Actor, m: Actor, t: number): Task | undefined {
-  const where = m.travel?.to ?? m.region;
-  if (where !== a.region && !travelBlocked(state, world, a, where)) {
-    startTravel(state, world, a, where, t);
-    return a.task;
-  }
+  if (goTo(state, world, a, m, t)) return a.task;
   const master = shortName(m.name);
   const task: Task =
     (m.forced ?? m.task)?.kind === 'sleep'
@@ -520,12 +568,23 @@ function npcTask(state: State, world: World, a: Actor, t: number): Task | undefi
   if (!block) return a.task;
   // A retainer lives its day at its master's side.
   const m = masterOf(state, a);
-  // One they seek out (to talk) or go after (to attack): wherever that one is now.
-  const sought = (block.kind === 'social' || block.kind === 'attack') && block.who ? state.actors[block.who] : undefined;
-  const where = m ? (m.travel?.to ?? m.region) : sought && !sought.dead && !outOfTime(state, sought, t) ? (sought.travel?.to ?? sought.region) : block.regionId;
-  if (where !== a.region && !travelBlocked(state, world, a, where)) {
-    startTravel(state, world, a, where, t);
+  // One they seek out (to talk, to win over, to hire) or go after (to attack): wherever that
+  // one is now, to their very tile.
+  const sought = (block.kind === 'social' || block.kind === 'attack' || block.kind === 'court' || block.kind === 'hire') && block.who ? state.actors[block.who] : undefined;
+  const target = m ?? (sought && !sought.dead && !outOfTime(state, sought, t) ? sought : undefined);
+  if (target) {
+    if (goTo(state, world, a, target, t)) return a.task;
+  } else if (block.regionId !== a.region && !travelBlocked(state, world, a, block.regionId)) {
+    startTravel(state, world, a, block.regionId, t);
     return a.task;
+  } else if (block.kind === 'claim') {
+    // An item to tame stands on one tile of its land: they walk to it.
+    const x = itemsAt(world, a.region).find((y) => !state.items?.[y.id]?.owner && !state.items?.[y.id]?.gone);
+    const at = x && itemTile(world, x);
+    if (at && !sameTile(at, a.tile)) {
+      startTravel(state, world, a, a.region, t, at);
+      return a.task;
+    }
   }
   // Can't get there (or already there): do it here. Nothing can be worked on a destroyed or
   // tapped land. Bonding takes BOND_HOURS, taming CLAIM_HOURS and keeping a day EON_HOURS; each
@@ -546,7 +605,7 @@ function npcTask(state: State, world: World, a: Actor, t: number): Task | undefi
     : block.kind === 'cast' ? npcCastBlocked(state, world, a, spell!.id, t)
     : block.kind === 'court' ? courtBlocked(state, world, a, block.who)
     : block.kind === 'hire' ? hireBlocked(state, world, a, block.who)
-    : block.kind === 'attack' ? attackBlocked(state, a, block.who, t)
+    : block.kind === 'attack' ? attackBlocked(state, world, a, block.who, t)
     : block.kind === 'claim' && !item ? (itemsAt(world, a.region).map((x) => claimBlocked(state, world, a, x.id, t))[0] ?? '길들일 것이 없다.')
     : power && !land ? '그런 힘을 가진 땅이 없다.'
     : block.kind === 'store_day' ? storeBlocked(state, world, a, land!.id, t)
@@ -604,13 +663,17 @@ function npcTask(state: State, world: World, a: Actor, t: number): Task | undefi
 function travelHour(state: State, world: World, a: Actor, t: number) {
   applyEffect(a.stats, TRAVEL_EFFECT, 60, needsOf(a));
   if (!a.travel || t + STEP_MINUTES < a.travel.arrive) return;
+  const walk = a.travel.to === a.region;
   a.region = a.travel.to;
-  a.arrivedAt = t + STEP_MINUTES;
+  a.tile = a.travel.tile ?? nearestTile(world, a.region, a.tile && tileCenter(a.tile));
+  a.steppedAt = t + STEP_MINUTES;
+  // Arriving in a land (not a walk within it): "when this enters" (sim/abilities.ts onEnter).
+  if (!walk) a.arrivedAt = t + STEP_MINUTES;
   delete a.travel;
   a.task = undefined;
   addLog(state, {
     kind: 'arrive',
-    text: `${josa(shortName(a.name), '이', '가')} ${region(world, a.region).name}에 도착했다.`,
+    text: `${josa(shortName(a.name), '이', '가')} ${walk && a.tile ? tileLabel(world, a.region, a.tile) : region(world, a.region).name}에 ${walk ? '닿았다' : '도착했다'}.`,
     regions: [a.region],
     actors: [a.id],
   });
@@ -626,10 +689,10 @@ function meetings(state: State, world: World) {
   const pairs: { x: Actor; y: Actor; seeker?: Actor }[] = [];
   for (const a of alive(state)) {
     const b = a.task?.kind === 'social' && a.task.who ? state.actors[a.task.who] : undefined;
-    if (b && free(a) && findable(b) && a.region === b.region) pairs.push({ x: a, y: b, seeker: a });
+    if (b && free(a) && findable(b) && together(a, b)) pairs.push({ x: a, y: b, seeker: a });
   }
   const open = alive(state).filter((a) => free(a) && (a.task?.kind === 'social' || a.task?.kind === 'eat'));
-  for (let i = 0; i < open.length; i++) for (let j = i + 1; j < open.length; j++) if (open[i].region === open[j].region) pairs.push({ x: open[i], y: open[j] });
+  for (let i = 0; i < open.length; i++) for (let j = i + 1; j < open.length; j++) if (together(open[i], open[j])) pairs.push({ x: open[i], y: open[j] });
   for (const { x: p, y: q, seeker } of pairs) {
     const [x, y] = [p, q].sort((a, b) => a.id.localeCompare(b.id));
     const key = `${x.id}|${y.id}`;

@@ -58,11 +58,11 @@ export function castBlocked(state: State, world: World, a: Actor, spellId: strin
   if (by) return sealText(by, t);
   const target = state.actors[targetId];
   if (!target || target.dead || (target.id === a.id && s.target === 'other_here') || (s.target === 'self' && target.id !== a.id)) return '그런 대상은 없다.';
-  if (target.id !== a.id && !present(state, a.region).some((x) => x.id === target.id))
+  if (target.id !== a.id && !present(state, a.region, a.tile).some((x) => x.id === target.id))
     return `${josa(shortName(target.name), '은', '는')} 여기 없다.`;
   if (s.effects.some((e) => e.type === 'destroy_land') && !landToDestroy(state, target))
     return `${josa(shortName(target.name), '은', '는')} 부술 땅을 쥐고 있지 않다.`;
-  if (s.effects.some((e) => e.type === 'destroy_relics') && !relicsHere(state, world, a.region).length) return '여기엔 부술 마법물체도 부여마법도 없다.';
+  if (s.effects.some((e) => e.type === 'destroy_relics') && !relicsHere(state, world, a.region, a.tile).length) return '여기엔 부술 마법물체도 부여마법도 없다.';
   if (s.target !== 'self' && !targetable(target, t, spellColors(s))) return untargetableText(target, t, spellColors(s));
   if (!planPayment(manaAvailable(state, world, a, t), s.cost))
     return `마나가 모자라다 (${s.costText}, 지금 ${formatMana(manaAvailable(state, world, a, t))}).`;
@@ -77,7 +77,7 @@ export function castBlocked(state: State, world: World, a: Actor, spellId: strin
 export function castTargets(state: State, a: Actor, s: SpellDef) {
   if (s.target === 'self') return [a];
   const needsLand = s.effects.some((e) => e.type === 'destroy_land');
-  return present(state, a.region).filter((x) => (x.id !== a.id || s.target === 'any_here') && targetable(x, state.minutes, spellColors(s)) && (!needsLand || !!landToDestroy(state, x)));
+  return present(state, a.region, a.tile).filter((x) => (x.id !== a.id || s.target === 'any_here') && targetable(x, state.minutes, spellColors(s)) && (!needsLand || !!landToDestroy(state, x)));
 }
 
 // The land "target land" falls on for one: the one they most lately bonded with, standing.
@@ -194,7 +194,7 @@ export function castSpell(state: State, world: World, a: Actor, spellId: string,
       else addLog(state, { kind: 'status', text: `${josa(shortName(target.name), '은', '는')} ${josa(LAND_TYPE_LABELS[eff.land], '과', '와')} 이어져 있지 않아 얻은 것이 없다.`, regions: [target.region], actors: [target.id], t });
     } else if (eff.type === 'create_retainers') {
       const n = kicked && eff.kicked_count ? eff.kicked_count : eff.count;
-      const born = spawnWild(state, world, eff.creature, eff.pt, n, a.region, eff.colors);
+      const born = spawnWild(state, world, eff.creature, eff.pt, n, a.region, eff.colors, a.tile);
       for (const b of born) b.master = a.id;
       const kind = world.lore.find((l) => l.id === eff.creature)?.name ?? eff.creature;
       addLog(state, { kind: 'event', text: `${kind} ${n}명이 나타나 ${shortName(a.name)}에게 서약했다 (${eff.pt.join('/')}, 권속).`, regions: [a.region], actors: [a.id, ...born.map((b) => b.id)] });

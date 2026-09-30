@@ -11,7 +11,7 @@ links:
   - { to: cre-bog-tatters, rel: 떠도는 망령 }
   - { to: loc-guul-draz, rel: 바깥 지역 }
   - { to: law-life, rel: 생명을 앗는 땅 }
-map: { in: loc-guul-draz, terrain: swamp, color: B, pos: [0.3, 0.5] }
+map: { in: loc-guul-draz, terrain: swamp, color: B, pos: [0.3, 0.5], tiles: 2 }
 sim:
   nonbasic: true                          # 이름 있는 대지: 늪이 아니다
   enters_tapped: true                     # [카드] 탭된 채 들어온다

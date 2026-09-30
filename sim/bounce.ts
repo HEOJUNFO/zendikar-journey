@@ -12,6 +12,8 @@ import { travelBlocked } from './step.ts';
 import { josa, shortName } from './text.ts';
 import { region } from './world.ts';
 import type { World } from './world.ts';
+import { nearestTile, tileCenter } from './tiles.ts';
+import type { Tile } from './tiles.ts';
 
 // Hours one flung lies stunned.
 export const BOUNCE_KO_HOURS = 1;
@@ -26,8 +28,8 @@ export function joinedToday(state: State, a: Actor, t: number) {
 
 // Who a blue trap may fling there: creatures (not the player, not planeswalkers), those it can
 // pick (not shrouded, not protected from blue).
-export function bounceCandidates(state: State, world: World, regionId: string, t: number) {
-  return present(state, regionId).filter((x) => x.kind === 'npc' && npcDef(state, world, x.id)?.loyalty === undefined && targetable(x, t, ['U']));
+export function bounceCandidates(state: State, world: World, regionId: string, tile: Tile | undefined, t: number) {
+  return present(state, regionId, tile).filter((x) => x.kind === 'npc' && npcDef(state, world, x.id)?.loyalty === undefined && targetable(x, t, ['U']));
 }
 
 // Where one flung lands: another area of their region, or the region around the area they
@@ -64,7 +66,10 @@ export function bounce(state: State, world: World, a: Actor, t: number, cause: s
   releaseRetainer(state, a, cause);
   const to = landing(state, world, a);
   a.travel = undefined;
-  if (to) a.region = to.id;
+  if (to) {
+    a.region = to.id;
+    a.tile = nearestTile(world, to.id, a.tile && tileCenter(a.tile));
+  }
   a.task = undefined;
   a.forced = { kind: 'sleep', activity: KO_ACTIVITY, emoji: '😵', until: t + BOUNCE_KO_HOURS * 60 };
   addLog(state, {

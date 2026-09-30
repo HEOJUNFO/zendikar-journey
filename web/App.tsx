@@ -8,6 +8,7 @@ import { api } from './api.ts';
 import type { GameView } from './api.ts';
 import { FullMap } from './FullMap.tsx';
 import { MapView } from './MapView.tsx';
+import type { Tile } from '../sim/tiles.ts';
 import { LegendsList, CharacterControls, LogView, NewGame, ObserverControls, PeopleList, PlayerCard, RegionCard } from './panels.tsx';
 import { clock } from './view.ts';
 import { WorldPage } from './WorldPage.tsx';
@@ -35,6 +36,8 @@ export function App() {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [selected, setSelected] = useState<string | null>(null);
+  // The tile of it clicked on the map (to walk to).
+  const [selectedTile, setSelectedTile] = useState<Tile | null>(null);
   const [starting, setStarting] = useState(false);
 
   useEffect(() => {
@@ -142,8 +145,8 @@ export function App() {
       </header>
       <main className="layout">
         <section className="pane map-pane">
-          <MapView world={world} state={state} selected={regionId} onSelect={setSelected} />
-          {regionId && <RegionCard world={world} state={state} regionId={regionId} busy={busy} onAct={act} />}
+          <MapView world={world} state={state} selected={regionId} selectedTile={selectedTile} onSelect={(id, tile) => (setSelected(id), setSelectedTile(tile ?? null))} />
+          {regionId && <RegionCard world={world} state={state} regionId={regionId} tile={selectedTile} busy={busy} onAct={act} />}
         </section>
         <section className="pane story-pane">
           <LogView state={state} />

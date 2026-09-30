@@ -6,6 +6,8 @@
 // player sees it. The day's count of secrets learned is what "drew N cards this turn" asks
 // (the Runeflare Trap).
 import { gameDay } from './clock.ts';
+import { fixedTile, tileLabel } from './tiles.ts';
+import { itemTile } from './items.ts';
 import { foresightText } from './foresight.ts';
 import { addLog, random } from './state.ts';
 import type { Actor, State } from './state.ts';
@@ -28,7 +30,7 @@ function triggerText(ev: EventDef) {
         ev.claimed && '그날 아이템을 길들인 이',
         ev.joined && `그날 권속이 ${ev.joined} 이상 새로 든 이`,
       ].filter(Boolean);
-      return `${who.length ? who.join(', ') : '누군가'}가 들어설 때 터진다`;
+      return `${who.length ? who.join(', ') : '누군가'}가 그 자리에 발을 들일 때 터진다`;
     }
     case 'destroyed':
       return '이 땅이 누군가의 손에 부서질 때 터진다';
@@ -43,12 +45,18 @@ function triggerText(ev: EventDef) {
 
 // Everything there is to know now.
 export function secretsOf(state: State, world: World, t: number): Secret[] {
-  const traps = world.events.map((ev) => ({ id: `trap:${ev.id}`, text: `${placeName(world, region(world, ev.region))}의 ${ev.name}: ${ev.summary}. ${triggerText(ev)}.` }));
+  // A trap that springs underfoot lies on one tile of its land: where, too.
+  const spot = (ev: EventDef) => {
+    const tile = ev.trigger === 'enter' ? fixedTile(world, ev.region, ev.id) : undefined;
+    return tile ? `${placeName(world, region(world, ev.region))}(${tileLabel(world, ev.region, tile)})` : placeName(world, region(world, ev.region));
+  };
+  const traps = world.events.map((ev) => ({ id: `trap:${ev.id}`, text: `${spot(ev)}의 ${ev.name}: ${ev.summary}. ${triggerText(ev)}.` }));
   const items = world.items
     .filter((x) => !state.items?.[x.id]?.gone)
     .map((x) => {
       const owner = state.items?.[x.id]?.owner;
-      return { id: `item:${x.id}`, text: `${x.name}이(가) ${placeName(world, region(world, x.at))}에 서 있다: ${x.summary}. 길들이는 값 ${x.costText}${owner ? `, 지금은 ${shortName(state.actors[owner]?.name ?? owner)}의 것` : ', 아직 주인이 없다'}.` };
+      const tile = itemTile(world, x);
+      return { id: `item:${x.id}`, text: `${x.name}이(가) ${placeName(world, region(world, x.at))}${tile ? `(${tileLabel(world, x.at, tile)})` : ''}에 서 있다: ${x.summary}. 길들이는 값 ${x.costText}${owner ? `, 지금은 ${shortName(state.actors[owner]?.name ?? owner)}의 것` : ', 아직 주인이 없다'}.` };
     });
   const spells = world.spells.map((s) => ({ id: `spell:${s.id}`, text: `주문 ${s.name}(${s.costText})은(는) ${placeName(world, region(world, s.learnAt))}에서 배운다: ${s.summary}.` }));
   const day = gameDay(t);

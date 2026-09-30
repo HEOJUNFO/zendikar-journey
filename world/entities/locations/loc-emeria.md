@@ -15,7 +15,7 @@ links:
   - { to: law-retainers, rel: 죽은 권속을 되돌림 }
   - { to: chr-iona, rel: 지키는 천사 }
   - { to: spl-celestial-mantle, rel: 가르치는 주문 }
-map: { in: loc-tazeem, terrain: sky, pos: [0.4, -0.35] }
+map: { in: loc-tazeem, terrain: sky, pos: [0.4, -0.35], tiles: 3 }
 sim:
   nonbasic: true                          # 이름 있는 대지: 평원이 아니다
   enters_tapped: true                     # [카드] 탭된 채 들어온다
