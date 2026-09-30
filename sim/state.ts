@@ -82,6 +82,8 @@ export type Actor = {
   foes?: { day: number; ids: string[] };
   // The color they sealed today (Iona, sim/seal.ts): their opponents can't cast spells of it.
   seal?: { day: number; color: Color };
+  // The day a color of theirs is sealed against them (sim/seal.ts): none of their powers then.
+  sealedOut?: number;
   // Whom they serve: they are that one's retainer (sim/retainers.ts).
   master?: string;
   // Abilities they have lost for a while ("loses defender until end of turn").
@@ -432,6 +434,8 @@ export function present(state: State, regionId: string) {
 // Power / toughness now, with their +1/+1 counters, this turn's boosts and their auras.
 // Whether they have `ability` now (not lost for the while).
 export function hasAbility(a: Actor, ability: Ability, t: number) {
+  // A color of theirs sealed: no powers (living in the sea is what they are, not a power).
+  if (a.sealedOut === gameDay(t) && ability !== 'aquatic') return false;
   return a.abilities.includes(ability) && !a.lost?.some((x) => x.ability === ability && x.until > t);
 }
 

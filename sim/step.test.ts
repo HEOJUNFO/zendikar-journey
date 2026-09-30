@@ -9,7 +9,7 @@ import type { Action } from './actions.ts';
 import { startAction } from './actions.ts';
 import type { World } from './world.ts';
 import { addFoe, attackBlocked, die, intimidated, knockedOut, landwalked, unblockable, woundsOf } from './combat.ts';
-import { sealedBy, sealToday } from './seal.ts';
+import { landSealed, powersSealed, sealedBy, sealToday, setSeal } from './seal.ts';
 import { castBlocked, castSpell, readyCast } from './spells.ts';
 import { actorColors, COLORS, formatMana, manaAvailable, manaCapacity, parseManaCost, planPayment } from './mana.ts';
 import { MAX_TALKS_PER_DAY, usableAbilities, volleyShares } from './run.ts';
@@ -20,7 +20,7 @@ import { foresightText } from './foresight.ts';
 import { withPositions } from './wander.ts';
 import { claimBlocked } from './items.ts';
 import { spendBlocked, storeBlocked } from './eons.ts';
-import { applyEnterDestroy, bondBlocked, bondLand, bondTargets, callForth, fetchTargets, fireTargets, firesOnBond, growBlocked, spawnWild, summonLibrary, useAbility } from './abilities.ts';
+import { applyEnterDestroy, bondBlocked, enterDestroy, bondLand, bondTargets, callForth, fetchTargets, fireTargets, firesOnBond, growBlocked, spawnWild, summonLibrary, useAbility } from './abilities.ts';
 import { DEPLETED_LABEL, DESTROYED_DAYS } from './rules.ts';
 import { swayBlocked } from './retainers.ts';
 import { upkeepWins } from './win.ts';
@@ -2730,4 +2730,33 @@ test('the real Halo Hunter lairs in Akoum, intimidating, hunting Iona the Angel'
   assert.ok(hasAbility(h, 'intimidate', state.minutes));
   assert.equal(npcDef(state, world, h.id)?.enterDestroy, 'angel');
   assert.deepEqual(npcDef(state, world, 'chr-iona')?.types, ['angel']);
+});
+
+test('a sealed color is sealed itself: a being of it has no powers against the sealer, its lands only give mana', () => {
+  const iona = { ...npcSim('loc-a', 'work', [7, 7]), needs: [], mana: { W: 9 }, seal: true, types: ['angel'] };
+  const demon = { ...npcSim('loc-a', 'work', [6, 3]), needs: [], mana: { B: 5 }, abilities: ['intimidate', 'fly'], enter_destroy: 'angel' };
+  const world = fixture([loc('loc-swamp', 12, 10, 'swamp'), npc('chr-io', iona), npc('chr-d', demon), npc('chr-d2', demon)]);
+  const state = newState(world, { seed: 1, mode: 'observer' });
+  const [io, d, d2] = [state.actors['chr-io'], state.actors['chr-d'], state.actors['chr-d2']];
+  const t = state.minutes;
+  addFoe(io, 'chr-d', t);
+  setSeal(state, world, io, 'B', t);
+  assert.ok(texts(state).some((x) => x.includes('흑색의 주문도 힘도 쓸 수 없다')));
+  // Keywords gone, triggers off.
+  assert.ok(powersSealed(state, world, d, t));
+  assert.equal(hasAbility(d, 'fly', t), false);
+  assert.equal(hasAbility(d, 'intimidate', t), false);
+  assert.equal(unblockable(state, world, d, io, t), null);
+  state.choices = [];
+  enterDestroy(state, world, d, t);
+  assert.equal(state.choices.length, 0);
+  // One not fighting her keeps theirs.
+  assert.ok(hasAbility(d2, 'fly', t));
+  enterDestroy(state, world, d2, t);
+  assert.equal(state.choices.length, 1);
+  // A black land does nothing for him but give mana; a land of another color still does.
+  assert.ok(landSealed(state, d, region(world, 'loc-swamp'), t));
+  assert.equal(landSealed(state, d, region(world, 'loc-a'), t), undefined);
+  // Until midnight.
+  assert.ok(hasAbility(d, 'fly', t + 24 * 60));
 });

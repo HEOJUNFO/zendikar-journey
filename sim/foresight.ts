@@ -3,6 +3,7 @@
 // today's events and powers the morning LLM picked (state.gm): their plan is made after it
 // (sim/run.ts `prepare`), and they know it as they talk.
 import { gameDay, minuteOfDay } from './clock.ts';
+import { powersSealed } from './seal.ts';
 import { npcDef } from './state.ts';
 import type { State } from './state.ts';
 import { shortName } from './text.ts';
@@ -10,7 +11,8 @@ import { region } from './world.ts';
 import type { World } from './world.ts';
 
 export function foresees(state: State, world: World, id: string) {
-  return !!npcDef(state, world, id)?.foresight;
+  const a = state.actors[id];
+  return !!npcDef(state, world, id)?.foresight && !(a && powersSealed(state, world, a, state.minutes));
 }
 
 // What is still to come today, hour by hour (in Korean, for their prompts).

@@ -550,7 +550,7 @@ async function seals(state: State, world: World, llm: Llm) {
         console.warn(`chooseColor for ${a.id} failed:`, e);
       }
     }
-    setSeal(state, a, color ?? COLORS[Math.floor(random(state) * COLORS.length)], state.minutes);
+    setSeal(state, world, a, color ?? COLORS[Math.floor(random(state) * COLORS.length)], state.minutes);
   }
 }
 
@@ -620,7 +620,7 @@ async function approach(state: State, world: World, me: Actor, p: Actor, llm: Ll
 async function attack(state: State, world: World, p: Actor, npcId: string, llm: Llm) {
   const target = state.actors[npcId];
   const npc = speakerDef(state, world, npcId)!;
-  const flies = (a: Actor) => a.abilities.includes('fly');
+  const flies = (a: Actor) => hasAbility(a, 'fly', state.minutes);
   // One who can't block the player (landwalk, intimidate) can't fly from them either.
   const unblocked = unblockable(state, world, p, target, state.minutes);
   if (!unblocked && flies(target) && !flies(p) && target.boundUntil === undefined && llm.evade) {

@@ -3,6 +3,7 @@
 // today, or it was tapped for something already.
 import { gameDay } from './clock.ts';
 import { manaCapacity } from './mana.ts';
+import { landSealed, sealText } from './seal.ts';
 import type { Actor, State } from './state.ts';
 import { josa } from './text.ts';
 import type { World } from './world.ts';
@@ -19,6 +20,8 @@ export function landTapBlocked(state: State, world: World, a: Actor, landId: str
   const r = world.regions.find((x) => x.id === landId);
   if (!r) return '그런 땅은 없다.';
   if (!a.bonds?.includes(r.id)) return `${josa(r.name, '과', '와')} 유대를 맺지 않았다.`;
+  const sealer = landSealed(state, a, r, t);
+  if (sealer) return `${sealText(sealer, t)} ${josa(r.name, '은', '는')} 마나 말고는 아무것도 내주지 않는다.`;
   const rs = state.regions[r.id];
   if (rs?.destroyed) return `${josa(r.name, '은', '는')} 부서졌다.`;
   if (rs?.conditions.some((c) => c.tapped)) return `${josa(r.name, '은', '는')} 지금 쓸 수 없다.`;

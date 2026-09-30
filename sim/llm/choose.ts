@@ -1,8 +1,8 @@
 // An NPC picks whom an effect of theirs falls on (a land's "target player loses 1 life"), in
 // character: from the people there, by what they think of them.
 import { z } from 'zod';
-import { ptOf } from '../state.ts';
-import { COLOR_LABELS, COLORS, manaCapacity } from '../mana.ts';
+import { npcDef, ptOf } from '../state.ts';
+import { COLOR_LABELS, COLORS, creatureColors, manaCapacity } from '../mana.ts';
 import type { Color } from '../mana.ts';
 import { region, spellColors } from '../world.ts';
 import type { ChooseColorInput, ChooseInput, DiscardInput, SummonInput, VolleyInput, WanderInput } from '../run.ts';
@@ -49,13 +49,14 @@ Whom do you pick?`,
 }
 
 // One who seals a color (Iona, sim/seal.ts), entering a fight, names the color their
-// opponents can't cast today, from what they can tell of those opponents' magic.
+// opponents can't use today (spells, and their own powers if theirs), from what they can tell
+// of those opponents' magic.
 export async function chooseColor({ state, world, npc, opponents }: ChooseColorInput): Promise<Color | null> {
   const colors = (xs: Iterable<string>) => [...new Set(xs)].map((c) => `${c} (${COLOR_LABELS[c as Color]})`).join(', ') || 'none';
   const lines = opponents.map((a) => {
     const spells = (a.spells ?? []).map((id) => world.spells.find((s) => s.id === id)).filter((s) => !!s);
     const mana = Object.keys(manaCapacity(state, world, a, state.minutes)).flatMap((k) => k.split('/')).filter((c) => c !== 'C');
-    return `- ${shortName(a.name)}${a.kind === 'player' ? ' (the player)' : ''} (power/toughness ${ptOf(a).join('/')}): mana they draw ${colors(mana)}; spells they hold ${colors(spells.flatMap(spellColors))}`;
+    return `- ${shortName(a.name)}${a.kind === 'player' ? ' (the player)' : ''} (power/toughness ${ptOf(a).join('/')}): mana they draw ${colors(mana)}; spells they hold ${colors(spells.flatMap(spellColors))}; their own color ${colors(creatureColors(npcDef(state, world, a.id)))}`;
   });
   const content = await chatCompletion(
     [
@@ -64,7 +65,7 @@ export async function chooseColor({ state, world, npc, opponents }: ChooseColorI
         content: `You are ${npc.name}, a character in the plane of Zendikar.
 Who you are: ${npc.persona}
 Your goal: ${npc.goal}
-As you enter a fight you name one color of magic (W white, U blue, B black, R red, G green). Until midnight, those you fight cannot cast spells of that color.
+As you enter a fight you name one color of magic (W white, U blue, B black, R red, G green). Until midnight, that color itself is sealed for those you fight: they cannot cast spells of it; one of that color has none of their powers (flying, their abilities, what they do as they arrive); lands of that color give them only mana.
 Answer with JSON only: {"color": "W" | "U" | "B" | "R" | "G"}.`,
       },
       { role: 'user', content: `You are entering a fight with:\n${lines.join('\n')}\n\nWhich color do you seal?` },

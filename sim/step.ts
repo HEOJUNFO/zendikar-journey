@@ -21,6 +21,7 @@ import {
 } from './rules.ts';
 import { gainedLifeToday, loseLife } from './life.ts';
 import { forget, forgetAbout } from './relations.ts';
+import { markSealed } from './seal.ts';
 import { addLog, alive, landUnusable, needsOf, npcDef, outOfTime, present, ptOf, random } from './state.ts';
 import { addFoe, attackBlocked, dealDamage, foesOf, hostileNpcs } from './combat.ts';
 import { bondBlocked, bondLand, enterDestroy, expireGranted, FETCH_HOURS, fetchLand, fetchSource, growBlocked, growEntered, growLand, spawnWild, summonLibrary, upkeepRevive, useAbility } from './abilities.ts';
@@ -46,6 +47,7 @@ export function step(state: State, placed: World) {
   wanderHour(state, placed, t);
   const world = withPositions(state, placed);
   startDay(state, world, t);
+  markSealed(state, world, t);
   gmLayer(state, world, t);
   // Factions: none yet (world/entities/factions is empty).
   regionLayer(state, world, t);

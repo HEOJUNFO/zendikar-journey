@@ -10,6 +10,7 @@ import { releaseItems } from './items.ts';
 import { doubleLife, gainLife, lifeOf } from './life.ts';
 import { actorColors, COLOR_LABELS, manaAvailable, payMana, planPayment } from './mana.ts';
 import { HUNT_HUNGER, KILL_FEED, KO_ACTIVITY, KO_HOURS } from './rules.ts';
+import { powersSealed } from './seal.ts';
 import { addLog, hasAbility, needsOf, npcDef, outOfTime, present, ptOf, random } from './state.ts';
 import type { Actor, State } from './state.ts';
 import { hasPowers, landTypes } from './world.ts';
@@ -191,7 +192,7 @@ export function clash(state: State, attacker: Actor, defender: Actor, t: number,
   // Trample: what the blow has beyond what kills goes on to someone else standing there.
   const spill = (from: Actor, to: Actor, power: number) => {
     const excess = power - (ptOf(to)[1] - woundsOf(to, t));
-    if (!(from.boost?.trample || from.abilities.includes('trample')) || excess <= 0) return null;
+    if (!(from.boost?.trample || hasAbility(from, 'trample', t)) || excess <= 0) return null;
     const others = present(state, from.region).filter((x) => x.id !== from.id && x.id !== to.id && !down(x));
     return others.length ? { who: others[Math.floor(random(state) * others.length)], excess } : null;
   };
@@ -257,7 +258,7 @@ function prey(state: State, world: World, a: Actor, t: number) {
 // this hour too.
 function extraCombat(state: State, world: World, a: Actor, foe: Actor, t: number) {
   const extra = npcDef(state, world, a.id)?.extraCombat;
-  if (!extra || down(a) || down(foe)) return;
+  if (!extra || down(a) || down(foe) || powersSealed(state, world, a, t)) return;
   if (!planPayment(manaAvailable(state, world, a, t), extra.cost)) return;
   payMana(state, world, a, extra.cost, t);
   addLog(state, {

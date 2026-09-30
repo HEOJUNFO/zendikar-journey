@@ -9,6 +9,7 @@ import { gainLife, lifeOf, loseLife, setLife } from './life.ts';
 import { allyJoined } from './allies.ts';
 import { DEPLETED_LABEL } from './rules.ts';
 import { castSpell, spellDef } from './spells.ts';
+import { landSealed, powersSealed, sealText } from './seal.ts';
 import { addLog, hasAbility, npcDef, outOfTime, present, ptOf, random, targetable } from './state.ts';
 import type { Actor, ChoiceEffect, State } from './state.ts';
 import { josa, shortName, toward } from './text.ts';
@@ -147,33 +148,35 @@ export function bondLand(state: State, world: World, a: Actor, t: number, region
     actors: [a.id],
     t,
   });
+  // A color of theirs sealed against them (Iona): their landfall does nothing.
+  const lf = powersSealed(state, world, a, t) ? undefined : def;
   // "Landfall — … gets +N/+N (and trample) until end of turn."
-  if (def?.landfall) {
-    a.boost = { until: untapTime(t), pt: [...def.landfall.pt], trample: def.landfall.trample };
+  if (lf?.landfall) {
+    a.boost = { until: untapTime(t), pt: [...lf.landfall.pt], trample: lf.landfall.trample };
     addLog(state, {
       kind: 'status',
-      text: `${shortName(a.name)}의 힘이 치솟았다 (${ptOf(a).join('/')}${def.landfall.trample ? ', 돌진' : ''}, 자정까지).`,
+      text: `${shortName(a.name)}의 힘이 치솟았다 (${ptOf(a).join('/')}${lf.landfall.trample ? ', 돌진' : ''}, 자정까지).`,
       regions: [r.id],
       actors: [a.id],
       t,
     });
   }
   // "Landfall — this loses defender until end of turn".
-  for (const ability of def?.landfallLose ?? []) {
+  for (const ability of lf?.landfallLose ?? []) {
     if (!a.abilities.includes(ability)) continue;
     a.lost = [...(a.lost ?? []).filter((x) => x.until > t && x.ability !== ability), { ability, until: untapTime(t) }];
     addLog(state, { kind: 'status', text: `${josa(shortName(a.name), '이', '가')} ${josa(ABILITY_LABELS[ability], '을', '를')} 잃었다 (자정까지).`, regions: [a.region], actors: [a.id], t });
   }
   // "Landfall — this gains flying until end of turn".
-  for (const ability of def?.landfallGrant ?? []) grantAbility(state, a, ability, untapTime(t), '땅에서 솟구친 열기', t);
+  for (const ability of lf?.landfallGrant ?? []) grantAbility(state, a, ability, untapTime(t), '땅에서 솟구친 열기', t);
   // "Landfall — gain control of target creature": whom (if anyone) is theirs to pick, after the hour.
-  if (def?.landfallSeize) {
+  if (lf?.landfallSeize) {
     const candidates = present(state, a.region).filter((x) => x.id !== a.id && x.master !== a.id && targetable(x, t)).map((x) => x.id);
     if (candidates.length) (state.choices ??= []).push({ by: a.id, land: a.region, effect: { type: 'seize' }, candidates, optional: true, t });
   }
   // "Landfall — create a token": one more of their kind, born at their side and theirs.
-  if (def?.landfallToken) {
-    const tok = def.landfallToken;
+  if (lf?.landfallToken) {
+    const tok = lf.landfallToken;
     const [born] = spawnWild(state, world, tok.creature, tok.pt, 1, a.region, tok.colors);
     born.master = a.id;
     addLog(state, {
@@ -187,7 +190,8 @@ export function bondLand(state: State, world: World, a: Actor, t: number, region
   // The land's own: "enters tapped", "When this land enters, you gain N life".
   if (r.entersTapped)
     addLog(state, { kind: 'status', text: `${josa(r.name, '은', '는')} 탭된 채 들어왔다. 오늘은 마나를 내지 않는다.`, regions: [r.id], actors: [a.id], t });
-  for (const eff of r.onBond) {
+  // The land's color sealed against them: it gives them its mana, nothing else.
+  for (const eff of landSealed(state, a, r, t) ? [] : r.onBond) {
     if (eff.type === 'gain_life') {
       gainLife(state, a, eff.amount, t, r.name);
       continue;
@@ -197,7 +201,7 @@ export function bondLand(state: State, world: World, a: Actor, t: number, region
     else (state.choices ??= []).push({ by: a.id, land: r.id, effect: eff, candidates: targets.map((x) => x.id), t });
   }
   // A mountain in: a Valakut they hold may answer (the count is of the mountains held before).
-  for (const v of firesOnBond(state, world, a, r.id)) {
+  for (const v of firesOnBond(state, world, a, r.id).filter((x) => !landSealed(state, a, x, t))) {
     const targets = fireTargets(state, world, a, v);
     if (!targets.length) continue;
     addLog(state, { kind: 'status', text: `${shortName(a.name)}의 산들이 모여 ${josa(v.name, '이', '가')} 끓어오른다.`, regions: [v.id], actors: [a.id], t });
@@ -277,7 +281,7 @@ export function upkeepRevive(state: State, world: World, t: number) {
     if (holder.dead || outOfTime(state, holder, t)) continue;
     const held = (holder.bonds ?? []).map((id) => world.regions.find((r) => r.id === id)).filter((r) => r && !state.regions[r.id]?.destroyed);
     const plains = held.filter((r) => landTypes(r!).includes('plains')).length;
-    const land = held.find((r) => r!.upkeepRevive && plains >= r!.upkeepRevive.plains);
+    const land = held.find((r) => r!.upkeepRevive && plains >= r!.upkeepRevive.plains && !landSealed(state, holder, r!, t));
     const back = [...(holder.fallen ?? [])].reverse().map((id) => state.actors[id]).find((x) => x?.dead && !x.left);
     if (!land || !back) continue;
     delete back.dead;
@@ -317,6 +321,8 @@ export function abilityBlocked(state: State, world: World, beingId: string, abil
     if (bs.loyaltyDay === gameDay(t)) return '오늘은 이미 기세를 썼다.';
     if ((bs.loyalty ?? 0) + ability.loyalty < 0) return '기세가 모자라다.';
   }
+  const sealer = powersSealed(state, world, bs, t);
+  if (sealer) return `${sealText(sealer, t)} ${josa(name, '은', '는')} 그 힘을 쓸 수 없다.`;
   if (!planPayment(manaAvailable(state, world, bs, t), ability.cost)) return '마나가 모자라다.';
   return null;
 }
@@ -556,7 +562,7 @@ export function callForth(state: State, world: World, id: string, regionId: stri
 // pick, after the hour (state.choices).
 export function enterDestroy(state: State, world: World, a: Actor, t: number) {
   const kind = npcDef(state, world, a.id)?.enterDestroy;
-  if (!kind || a.dead) return;
+  if (!kind || a.dead || powersSealed(state, world, a, t)) return;
   const candidates = present(state, a.region)
     .filter((x) => x.id !== a.id && (npcDef(state, world, x.id)?.types ?? []).includes(kind) && targetable(x, t))
     .map((x) => x.id);
@@ -566,6 +572,11 @@ export function enterDestroy(state: State, world: World, a: Actor, t: number) {
 // Their pick lands: the one picked, still there, is destroyed.
 export function applyEnterDestroy(state: State, world: World, a: Actor, target: Actor, t: number) {
   if (a.dead || target.dead || target.region !== a.region || target.travel || !targetable(target, t)) return;
+  const sealer = powersSealed(state, world, a, t);
+  if (sealer) {
+    addLog(state, { kind: 'effect', text: `${sealText(sealer, t)} ${josa(shortName(a.name), '은', '는')} 그 힘을 쓰지 못한다.`, regions: [a.region], actors: [a.id, sealer.id], t });
+    return;
+  }
   addLog(state, {
     kind: 'event',
     text: `${josa(shortName(a.name), '이', '가')} 들어서자마자 ${josa(shortName(target.name), '을', '를')} 덮쳐 파괴하려 한다.`,

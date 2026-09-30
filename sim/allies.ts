@@ -8,6 +8,7 @@
 import { addFoe, dealDamage } from './combat.ts';
 import { loseLife } from './life.ts';
 import { bindRetainer, masterOf, retainersOf, swayBlocked } from './retainers.ts';
+import { powersSealed } from './seal.ts';
 import { addLog, npcDef, present, targetable } from './state.ts';
 import type { Actor, State } from './state.ts';
 import { josa, shortName } from './text.ts';
@@ -32,7 +33,7 @@ export function alliesOf(state: State, world: World, a: Actor) {
 export function allyJoined(state: State, world: World, a: Actor, master: Actor, t: number) {
   if (!isAlly(state, world, a.id)) return;
   for (const x of alliesOf(state, world, master)) {
-    if (!npcDef(state, world, x.id)?.rally?.length) continue;
+    if (!npcDef(state, world, x.id)?.rally?.length || powersSealed(state, world, x, t)) continue;
     const candidates = present(state, x.region).filter((y) => y.id !== x.id && targetable(y, t)).map((y) => y.id);
     if (candidates.length) (state.choices ??= []).push({ by: master.id, land: x.region, effect: { type: 'rally', source: x.id }, candidates, optional: true, t });
   }
