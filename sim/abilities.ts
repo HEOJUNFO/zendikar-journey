@@ -15,7 +15,7 @@ import { landSealed, powersSealed, sealText } from './seal.ts';
 import { addLog, hasAbility, npcDef, outOfTime, present, ptOf, random, targetable, untargetableText } from './state.ts';
 import type { Actor, ChoiceEffect, State } from './state.ts';
 import { josa, shortName, toward } from './text.ts';
-import { ABILITY_LABELS, LAND_TYPE_LABELS, landTypes, region, spellColors } from './world.ts';
+import { ABILITY_LABELS, LAND_TYPE_LABELS, landTypes, realmOf, region, spellColors } from './world.ts';
 import type { Ability, ActivatedAbility, BondEffect, Region, World } from './world.ts';
 
 // Why `a` can't bond with the land they stand on now, or null. One land per turn, as one
@@ -103,11 +103,11 @@ export function expireGranted(state: State, t: number) {
 // --- Valakut: "Whenever a Mountain enters under your control, if you control at least five
 // other Mountains, you may have this land deal 3 damage to any target" ---
 
-// Whom the fire may reach: anyone in the Valakut's region or its areas (user decision
+// Whom the fire may reach: anyone in the Valakut's realm (its continent, that continent's areas
+// and islands, and theirs: Valakut stands on Beyeen, an island of Ondu; user decision
 // 2026-09-30), not on the road, not out of time, not the one who calls it.
 export function fireTargets(state: State, world: World, a: Actor, land: Region) {
-  const home = land.parent ?? land.id;
-  const lands = [home, ...world.regions.filter((r) => r.parent === home).map((r) => r.id)];
+  const lands = realmOf(world, land.id);
   return Object.values(state.actors).filter((x) => !x.dead && !x.travel && x.id !== a.id && lands.includes(x.region) && !outOfTime(state, x) && targetable(x, state.minutes, landColorsOf(land)));
 }
 

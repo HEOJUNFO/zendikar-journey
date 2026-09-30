@@ -5,83 +5,89 @@
     .area { font: 600 14px sans-serif; fill: #f4ecd8; }
   </style>
   <rect x="227" y="84" width="3373" height="2530" fill="#16324f"/>
-  <line x1="2070" y1="1710" x2="1752" y2="1602" stroke="#1f4468" stroke-width="228" stroke-linecap="round"/>
+  <line x1="2070" y1="1710" x2="1908" y2="2370" stroke="#1f4468" stroke-width="228" stroke-linecap="round"/>
+  <line x1="2070" y1="1710" x2="2400" y2="1632" stroke="#1f4468" stroke-width="180" stroke-linecap="round"/>
   <line x1="2070" y1="1710" x2="2070" y2="2034" stroke="#1f4468" stroke-width="180" stroke-linecap="round"/>
-  <circle cx="2070" cy="1710" r="231.60000000000002" fill="#1f4468"/>
-  <circle cx="1752" cy="1602" r="114" fill="#1f4468"/>
+  <circle cx="2070" cy="1710" r="242.39999999999998" fill="#1f4468"/>
+  <circle cx="1908" cy="2370" r="114" fill="#1f4468"/>
+  <circle cx="2400" cy="1632" r="90" fill="#1f4468"/>
   <circle cx="2070" cy="2034" r="90" fill="#1f4468"/>
-  <circle cx="1752" cy="1602" r="84" fill="#3f7fcf" fill-opacity="0.72" stroke="#f4ecd8" stroke-opacity="0.7" stroke-width="3"/>
-  <circle cx="2928" cy="1440" r="190.8" fill="#cc4f34" fill-opacity="0.72" stroke="#f4ecd8" stroke-opacity="0.7" stroke-width="3"/>
+  <circle cx="1908" cy="2370" r="84" fill="#3f7fcf" fill-opacity="0.72" stroke="#f4ecd8" stroke-opacity="0.7" stroke-width="3"/>
+  <circle cx="2928" cy="1440" r="180" fill="#cc4f34" fill-opacity="0.72" stroke="#f4ecd8" stroke-opacity="0.7" stroke-width="3"/>
   <circle cx="1422" cy="2130" r="180" fill="#3f9447" fill-opacity="0.72" stroke="#f4ecd8" stroke-opacity="0.7" stroke-width="3"/>
+  <circle cx="2400" cy="1632" r="60" fill="#cc4f34" fill-opacity="0.72" stroke="#f4ecd8" stroke-opacity="0.7" stroke-width="3"/>
   <circle cx="1188" cy="2292" r="201.60000000000002" fill="#2b2233" fill-opacity="0.72" stroke="#f4ecd8" stroke-opacity="0.7" stroke-width="3"/>
   <circle cx="2070" cy="2034" r="60" fill="#3f7fcf" fill-opacity="0.72" stroke="#f4ecd8" stroke-opacity="0.7" stroke-width="3"/>
   <circle cx="1032" cy="990" r="190.8" fill="#3f9447" fill-opacity="0.72" stroke="#f4ecd8" stroke-opacity="0.7" stroke-width="3"/>
-  <circle cx="2070" cy="1710" r="201.60000000000002" fill="#efe4c2" fill-opacity="0.72" stroke="#f4ecd8" stroke-opacity="0.7" stroke-width="3"/>
+  <circle cx="2070" cy="1710" r="212.39999999999998" fill="#efe4c2" fill-opacity="0.72" stroke="#f4ecd8" stroke-opacity="0.7" stroke-width="3"/>
   <circle cx="2880" cy="408" r="180" fill="#efe4c2" fill-opacity="0.72" stroke="#f4ecd8" stroke-opacity="0.7" stroke-width="3"/>
   <circle cx="1848" cy="852" r="201.60000000000002" fill="#3f7fcf" fill-opacity="0.72" stroke="#f4ecd8" stroke-opacity="0.7" stroke-width="3"/>
-  <g><circle cx="1779.057142863983" cy="1634.1233718659487" r="19.200000000000003" fill="#2b2233" stroke="#f4ecd8" stroke-width="2"/>
-    <text x="1752" y="1723.8000000000002" text-anchor="middle" class="area">아게딤의 묘실</text></g>
-  <g><path d="M3016.9165288012737 1455.3689297770745A19.200000000000003 19.200000000000003 0 0 0 3016.9165288012737 1493.7689297770746Z" fill="#2b2233"  /><path d="M3016.9165288012737 1455.3689297770745A19.200000000000003 19.200000000000003 0 0 1 3016.9165288012737 1493.7689297770746Z" fill="#cc4f34"  /><circle cx="3016.9165288012737" cy="1474.5689297770746" r="19.200000000000003" fill="none" stroke="#f4ecd8" stroke-width="2"/>
-    <text x="3115.8990797309925" y="1522.0513233024974" text-anchor="start" class="area">아쿰 피난처</text></g>
-  <g><circle cx="2126.9159613182196" cy="1793.1938299828957" r="19.200000000000003" fill="#9a958b" stroke="#f4ecd8" stroke-width="2"/>
-    <text x="2189.9300613491055" y="1894.3012846068154" text-anchor="start" class="area">메마른 메사</text></g>
-  <g><circle cx="1941.9495398654963" cy="888.5256616512486" r="19.200000000000003" fill="#efe4c2" stroke="#f4ecd8" stroke-width="2"/>
-    <text x="2045.9651018594388" y="937.9647870508454" text-anchor="start" class="area">에메리아</text></g>
-  <g><circle cx="1281.9495398654965" cy="2328.525661651249" r="19.200000000000003" fill="#2b2233" stroke="#f4ecd8" stroke-width="2"/>
-    <text x="1385.9651018594388" y="2377.964787050845" text-anchor="start" class="area">게트 혈족의 영지</text></g>
-  <g><path d="M2013.0840386817806 1773.9938299828957A19.200000000000003 19.200000000000003 0 0 0 2013.0840386817806 1812.3938299828958Z" fill="#3f9447"  /><path d="M2013.0840386817806 1773.9938299828957A19.200000000000003 19.200000000000003 0 0 1 2013.0840386817806 1812.3938299828958Z" fill="#efe4c2"  /><circle cx="2013.0840386817806" cy="1793.1938299828957" r="19.200000000000003" fill="none" stroke="#f4ecd8" stroke-width="2"/>
-    <text x="1950.0699386508945" y="1894.301284606816" text-anchor="end" class="area">그레이펠트 피난처</text></g>
-  <g><circle cx="1244.9159613182196" cy="2375.1938299828957" r="19.200000000000003" fill="#2b2233" stroke="#f4ecd8" stroke-width="2"/>
-    <text x="1307.9300613491055" y="2476.3012846068154" text-anchor="start" class="area">하그라 늪</text></g>
-  <g><path d="M2070 2044.8A19.200000000000003 19.200000000000003 0 0 0 2070 2083.2Z" fill="#3f7fcf"  /><path d="M2070 2044.8A19.200000000000003 19.200000000000003 0 0 1 2070 2083.2Z" fill="#2b2233"  /><circle cx="2070" cy="2064" r="19.200000000000003" fill="none" stroke="#f4ecd8" stroke-width="2"/>
+  <g><circle cx="1891.1999999999998" cy="2395.2" r="19.200000000000003" fill="#2b2233" stroke="#f4ecd8" stroke-width="2"/>
+    <text x="1908" y="2518.8" text-anchor="middle" class="area">아게딤의 묘실</text></g>
+  <g><path d="M2883 1393.8A19.200000000000003 19.200000000000003 0 0 0 2883 1432.2Z" fill="#2b2233"  /><path d="M2883 1393.8A19.200000000000003 19.200000000000003 0 0 1 2883 1432.2Z" fill="#cc4f34"  /><circle cx="2883" cy="1413" r="19.200000000000003" fill="none" stroke="#f4ecd8" stroke-width="2"/>
+    <text x="2883" y="1445.3999999999999" text-anchor="middle" class="area">아쿰 피난처</text></g>
+  <g><circle cx="1974.42" cy="1688.7599999999998" r="19.200000000000003" fill="#9a958b" stroke="#f4ecd8" stroke-width="2"/>
+    <text x="1974.42" y="1721.1599999999999" text-anchor="middle" class="area">메마른 메사</text></g>
+  <g><circle cx="1928.6399999999999" cy="781.44" r="19.200000000000003" fill="#efe4c2" stroke="#f4ecd8" stroke-width="2"/>
+    <text x="1928.6399999999999" y="813.8399999999999" text-anchor="middle" class="area">에메리아</text></g>
+  <g><circle cx="1097.28" cy="2352.48" r="19.200000000000003" fill="#2b2233" stroke="#f4ecd8" stroke-width="2"/>
+    <text x="1097.28" y="2384.8799999999997" text-anchor="middle" class="area">게트 혈족의 영지</text></g>
+  <g><path d="M2165.58 1605.84A19.200000000000003 19.200000000000003 0 0 0 2165.58 1644.24Z" fill="#3f9447"  /><path d="M2165.58 1605.84A19.200000000000003 19.200000000000003 0 0 1 2165.58 1644.24Z" fill="#efe4c2"  /><circle cx="2165.58" cy="1625.04" r="19.200000000000003" fill="none" stroke="#f4ecd8" stroke-width="2"/>
+    <text x="2165.58" y="1657.4399999999996" text-anchor="middle" class="area">그레이펠트 피난처</text></g>
+  <g><circle cx="1198.08" cy="2332.32" r="19.200000000000003" fill="#2b2233" stroke="#f4ecd8" stroke-width="2"/>
+    <text x="1198.08" y="2364.7200000000003" text-anchor="middle" class="area">하그라 늪</text></g>
+  <g><path d="M2070 2026.8A19.200000000000003 19.200000000000003 0 0 0 2070 2065.2Z" fill="#3f7fcf"  /><path d="M2070 2026.8A19.200000000000003 19.200000000000003 0 0 1 2070 2065.2Z" fill="#2b2233"  /><circle cx="2070" cy="2046" r="19.200000000000003" fill="none" stroke="#f4ecd8" stroke-width="2"/>
     <text x="2070" y="2158.8" text-anchor="middle" class="area">즈와르 섬 피난처</text></g>
-  <g><circle cx="1724.942857136017" cy="1634.1233718659487" r="19.200000000000003" fill="#efe4c2" stroke="#f4ecd8" stroke-width="2"/>
-    <text x="1752" y="1705.8000000000002" text-anchor="middle" class="area">카비라 교차로</text></g>
-  <g><path d="M1120.9165288012734 1005.3689297770745A19.200000000000003 19.200000000000003 0 0 0 1120.9165288012734 1043.7689297770746Z" fill="#cc4f34"  /><path d="M1120.9165288012734 1005.3689297770745A19.200000000000003 19.200000000000003 0 0 1 1120.9165288012734 1043.7689297770746Z" fill="#3f9447"  /><circle cx="1120.9165288012734" cy="1024.5689297770746" r="19.200000000000003" fill="none" stroke="#f4ecd8" stroke-width="2"/>
-    <text x="1219.899079730993" y="1072.0513233024974" text-anchor="start" class="area">카잔두 피난처</text></g>
-  <g><circle cx="1069.1505098562452" cy="1077.8692188278753" r="19.200000000000003" fill="#cc4f34" stroke="#f4ecd8" stroke-width="2"/>
-    <text x="1110.506737809424" y="1184.6858963909817" text-anchor="start" class="area">카주울의 절벽</text></g>
-  <g><circle cx="1904.9159613182196" cy="935.1938299828955" r="19.200000000000003" fill="#3f7fcf" stroke="#f4ecd8" stroke-width="2"/>
-    <text x="1967.9300613491055" y="1036.3012846068157" text-anchor="start" class="area">마고시, 물의 장막</text></g>
-  <g><circle cx="1976.0504601345037" cy="1746.5256616512488" r="19.200000000000003" fill="#efe4c2" stroke="#f4ecd8" stroke-width="2"/>
-    <text x="1872.0348981405612" y="1795.9647870508454" text-anchor="end" class="area">마킨디 협곡</text></g>
-  <g><circle cx="1188" cy="2392.8" r="19.200000000000003" fill="#2b2233" stroke="#f4ecd8" stroke-width="2"/>
-    <text x="1188" y="2513.3999999999996" text-anchor="middle" class="area">말라키르</text></g>
-  <g><circle cx="1131.0840386817804" cy="2375.1938299828957" r="19.200000000000003" fill="#9a958b" stroke="#f4ecd8" stroke-width="2"/>
-    <text x="1068.0699386508945" y="2476.301284606816" text-anchor="end" class="area">습지 평원</text></g>
-  <g><circle cx="994.8494901437548" cy="1077.8692188278753" r="19.200000000000003" fill="#9a958b" stroke="#f4ecd8" stroke-width="2"/>
-    <text x="953.4932621905762" y="1184.6858963909817" text-anchor="end" class="area">안개 낀 우림</text></g>
-  <g><circle cx="1848" cy="952.8000000000001" r="19.200000000000003" fill="#3f9447" stroke="#f4ecd8" stroke-width="2"/>
-    <text x="1848" y="1073.4" text-anchor="middle" class="area">오란리프, 광대숲</text></g>
-  <g><circle cx="1094.0504601345035" cy="2328.525661651249" r="19.200000000000003" fill="#2b2233" stroke="#f4ecd8" stroke-width="2"/>
-    <text x="990.0348981405612" y="2377.964787050845" text-anchor="end" class="area">피라냐 습지</text></g>
-  <g><circle cx="2965.150509856245" cy="1527.8692188278753" r="19.200000000000003" fill="#9a958b" stroke="#f4ecd8" stroke-width="2"/>
-    <text x="3006.5067378094236" y="1634.6858963909817" text-anchor="start" class="area">뜨거운 호수</text></g>
-  <g><circle cx="1791.0840386817806" cy="935.1938299828955" r="19.200000000000003" fill="#3f7fcf" stroke="#f4ecd8" stroke-width="2"/>
-    <text x="1728.0699386508945" y="1036.3012846068157" text-anchor="end" class="area">바다 관문</text></g>
-  <g><path d="M2880 478.8A19.200000000000003 19.200000000000003 0 0 0 2880 517.2Z" fill="#efe4c2"  /><path d="M2880 478.8A19.200000000000003 19.200000000000003 0 0 1 2880 517.2Z" fill="#3f7fcf"  /><circle cx="2880" cy="498" r="19.200000000000003" fill="none" stroke="#f4ecd8" stroke-width="2"/>
-    <text x="2880" y="607.8" text-anchor="middle" class="area">세지리 피난처</text></g>
-  <g><circle cx="2163.9495398654963" cy="1746.5256616512488" r="19.200000000000003" fill="#3f7fcf" stroke="#f4ecd8" stroke-width="2"/>
-    <text x="2267.9651018594386" y="1795.9647870508454" text-anchor="start" class="area">실룬디 연안</text></g>
-  <g><circle cx="1754.0504601345037" cy="888.5256616512486" r="19.200000000000003" fill="#3f7fcf" stroke="#f4ecd8" stroke-width="2"/>
-    <text x="1650.0348981405612" y="937.9647870508454" text-anchor="end" class="area">솟아오른 바다절벽</text></g>
-  <g><circle cx="2890.849490143755" cy="1527.8692188278753" r="19.200000000000003" fill="#cc4f34" stroke="#f4ecd8" stroke-width="2"/>
-    <text x="2849.4932621905764" y="1634.6858963909817" text-anchor="end" class="area">흔들리는 봉우리</text></g>
-  <g><circle cx="943.0834711987266" cy="1024.5689297770746" r="19.200000000000003" fill="#1d3b66" stroke="#f4ecd8" stroke-width="2"/>
-    <text x="844.1009202690071" y="1072.0513233024974" text-anchor="end" class="area">선더만</text></g>
-  <g><circle cx="2070" cy="1810.8000000000002" r="19.200000000000003" fill="#3f9447" stroke="#f4ecd8" stroke-width="2"/>
-    <text x="2070" y="1931.3999999999999" text-anchor="middle" class="area">턴팀버 숲</text></g>
-  <g><circle cx="2839.0834711987263" cy="1474.5689297770746" r="19.200000000000003" fill="#cc4f34" stroke="#f4ecd8" stroke-width="2"/>
-    <text x="2740.100920269007" y="1522.0513233024974" text-anchor="end" class="area">발라쿠트, 녹아내리는 봉우리</text></g>
+  <g><circle cx="1924.8000000000002" cy="2336.3999999999996" r="19.200000000000003" fill="#efe4c2" stroke="#f4ecd8" stroke-width="2"/>
+    <text x="1908" y="2536.8" text-anchor="middle" class="area">카비라 교차로</text></g>
+  <g><path d="M1012.92 989.88A19.200000000000003 19.200000000000003 0 0 0 1012.92 1028.28Z" fill="#cc4f34"  /><path d="M1012.92 989.88A19.200000000000003 19.200000000000003 0 0 1 1012.92 1028.28Z" fill="#3f9447"  /><circle cx="1012.92" cy="1009.08" r="19.200000000000003" fill="none" stroke="#f4ecd8" stroke-width="2"/>
+    <text x="1012.92" y="1041.48" text-anchor="middle" class="area">카잔두 피난처</text></g>
+  <g><circle cx="1051.08" cy="1114.02" r="19.200000000000003" fill="#cc4f34" stroke="#f4ecd8" stroke-width="2"/>
+    <text x="1051.08" y="1146.42" text-anchor="middle" class="area">카주울의 절벽</text></g>
+  <g><circle cx="1858.08" cy="821.76" r="19.200000000000003" fill="#3f7fcf" stroke="#f4ecd8" stroke-width="2"/>
+    <text x="1858.08" y="854.1599999999999" text-anchor="middle" class="area">마고시, 물의 장막</text></g>
+  <g><circle cx="2059.38" cy="1720.62" r="19.200000000000003" fill="#efe4c2" stroke="#f4ecd8" stroke-width="2"/>
+    <text x="2059.38" y="1753.0199999999998" text-anchor="middle" class="area">마킨디 협곡</text></g>
+  <g><circle cx="1107.3600000000001" cy="2281.92" r="19.200000000000003" fill="#2b2233" stroke="#f4ecd8" stroke-width="2"/>
+    <text x="1107.3600000000001" y="2314.3199999999997" text-anchor="middle" class="area">말라키르</text></g>
+  <g><circle cx="1258.56" cy="2261.7599999999998" r="19.200000000000003" fill="#9a958b" stroke="#f4ecd8" stroke-width="2"/>
+    <text x="1258.56" y="2294.16" text-anchor="middle" class="area">습지 평원</text></g>
+  <g><circle cx="946.14" cy="970.92" r="19.200000000000003" fill="#9a958b" stroke="#f4ecd8" stroke-width="2"/>
+    <text x="946.14" y="1003.3199999999998" text-anchor="middle" class="area">안개 낀 우림</text></g>
+  <g><circle cx="1777.44" cy="841.92" r="19.200000000000003" fill="#3f9447" stroke="#f4ecd8" stroke-width="2"/>
+    <text x="1777.44" y="874.3199999999998" text-anchor="middle" class="area">오란리프, 광대숲</text></g>
+  <g><circle cx="1248.48" cy="2392.8" r="19.200000000000003" fill="#2b2233" stroke="#f4ecd8" stroke-width="2"/>
+    <text x="1248.48" y="2425.2" text-anchor="middle" class="area">피라냐 습지</text></g>
+  <g><circle cx="2847" cy="1485" r="19.200000000000003" fill="#9a958b" stroke="#f4ecd8" stroke-width="2"/>
+    <text x="2847" y="1517.3999999999999" text-anchor="middle" class="area">뜨거운 호수</text></g>
+  <g><circle cx="1848" cy="972.96" r="19.200000000000003" fill="#3f7fcf" stroke="#f4ecd8" stroke-width="2"/>
+    <text x="1848" y="1005.3599999999999" text-anchor="middle" class="area">바다 관문</text></g>
+  <g><path d="M2880 406.8A19.200000000000003 19.200000000000003 0 0 0 2880 445.2Z" fill="#efe4c2"  /><path d="M2880 406.8A19.200000000000003 19.200000000000003 0 0 1 2880 445.2Z" fill="#3f7fcf"  /><circle cx="2880" cy="426" r="19.200000000000003" fill="none" stroke="#f4ecd8" stroke-width="2"/>
+    <text x="2880" y="458.40000000000003" text-anchor="middle" class="area">세지리 피난처</text></g>
+  <g><circle cx="1995.66" cy="1826.8200000000002" r="19.200000000000003" fill="#3f7fcf" stroke="#f4ecd8" stroke-width="2"/>
+    <text x="1995.66" y="1859.22" text-anchor="middle" class="area">실룬디 연안</text></g>
+  <g><circle cx="1958.88" cy="892.3199999999999" r="19.200000000000003" fill="#3f7fcf" stroke="#f4ecd8" stroke-width="2"/>
+    <text x="1958.88" y="924.7199999999998" text-anchor="middle" class="area">솟아오른 바다절벽</text></g>
+  <g><circle cx="2123.1000000000004" cy="1773.72" r="19.200000000000003" fill="#cc4f34" stroke="#f4ecd8" stroke-width="2"/>
+    <text x="2123.1000000000004" y="1806.12" text-anchor="middle" class="area">흔들리는 봉우리</text></g>
+  <g><circle cx="955.6800000000001" cy="885.06" r="19.200000000000003" fill="#1d3b66" stroke="#f4ecd8" stroke-width="2"/>
+    <text x="955.6800000000001" y="917.4599999999998" text-anchor="middle" class="area">선더만</text></g>
+  <g><circle cx="2123.1000000000004" cy="1688.7599999999998" r="19.200000000000003" fill="#3f9447" stroke="#f4ecd8" stroke-width="2"/>
+    <text x="2123.1000000000004" y="1721.1599999999999" text-anchor="middle" class="area">턴팀버 숲</text></g>
+  <g><circle cx="2400" cy="1644" r="19.200000000000003" fill="#cc4f34" stroke="#f4ecd8" stroke-width="2"/>
+    <text x="2400" y="1711.8000000000002" text-anchor="middle" class="area">발라쿠트, 녹아내리는 봉우리</text></g>
   <g>
-    <text x="1659" y="1608" text-anchor="end" class="name">아게딤</text>
-    <text x="1659" y="1625" text-anchor="end" class="terrain">해변</text></g>
+    <text x="1908" y="2479.8" text-anchor="middle" class="name">아게딤</text>
+    <text x="1908" y="2496.8" text-anchor="middle" class="terrain">해변</text></g>
   <g>
-    <text x="2928" y="1222.1999999999998" text-anchor="middle" class="name">아쿰</text>
-    <text x="2928" y="1240.1999999999998" text-anchor="middle" class="terrain">화산 지대</text></g>
+    <text x="2928" y="1233" text-anchor="middle" class="name">아쿰</text>
+    <text x="2928" y="1251" text-anchor="middle" class="terrain">화산 지대</text></g>
   <g>
     <text x="1422" y="1923" text-anchor="middle" class="name">발라 게드</text>
     <text x="1422" y="1941" text-anchor="middle" class="terrain">숲</text></g>
+  <g>
+    <text x="2469" y="1638" text-anchor="start" class="name">베이엔</text>
+    <text x="2469" y="1655" text-anchor="start" class="terrain">화산 지대</text></g>
   <g><circle cx="2976" cy="1380" r="36" fill="#cc4f34" stroke="#f4ecd8" stroke-width="3"/>
     <text x="2976" y="1437" text-anchor="middle" class="name">고마 파다</text>
     <text x="2976" y="1455" text-anchor="middle" class="terrain">바위 지대</text></g>
@@ -95,14 +101,14 @@
     <text x="1032" y="772.1999999999999" text-anchor="middle" class="name">무라사</text>
     <text x="1032" y="790.1999999999999" text-anchor="middle" class="terrain">숲</text></g>
   <g>
-    <text x="2070" y="1481.4" text-anchor="middle" class="name">온두</text>
-    <text x="2070" y="1499.4" text-anchor="middle" class="terrain">초원</text></g>
+    <text x="2070" y="1470.6" text-anchor="middle" class="name">온두</text>
+    <text x="2070" y="1488.6" text-anchor="middle" class="terrain">초원</text></g>
   <g>
     <text x="2880" y="201" text-anchor="middle" class="name">세지리</text>
     <text x="2880" y="219" text-anchor="middle" class="terrain">설원</text></g>
-  <g><circle cx="2388" cy="1500" r="70" fill="#1d3b66" opacity="0.75"/><circle cx="2388" cy="1500" r="30" fill="none" stroke="#9fc4ff" stroke-width="2" stroke-dasharray="6 6"/>
-    <text x="2388" y="1592" text-anchor="middle" class="name">실룬디 바다</text>
-    <text x="2388" y="1610" text-anchor="middle" class="terrain">심해</text></g>
+  <g><circle cx="1692" cy="1932" r="70" fill="#1d3b66" opacity="0.75"/><circle cx="1692" cy="1932" r="30" fill="none" stroke="#9fc4ff" stroke-width="2" stroke-dasharray="6 6"/>
+    <text x="1692" y="2024" text-anchor="middle" class="name">실룬디 바다</text>
+    <text x="1692" y="2042" text-anchor="middle" class="terrain">심해</text></g>
   <g>
     <text x="1848" y="623.4000000000001" text-anchor="middle" class="name">타짐</text>
     <text x="1848" y="641.4000000000001" text-anchor="middle" class="terrain">해변</text></g>

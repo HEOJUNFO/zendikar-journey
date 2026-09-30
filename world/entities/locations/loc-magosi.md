@@ -10,7 +10,7 @@ tags: [폭포, 강, 나루터, 시간, 청색]
 links:
   - { to: loc-tazeem, rel: 바깥 지역 }
   - { to: loc-emeria, rel: 같은 대륙의 구역 }
-map: { in: loc-tazeem, terrain: river }
+map: { in: loc-tazeem, terrain: river, pos: [0.05, -0.15] }
 sim:
   nonbasic: true                          # 이름 있는 대지: 섬이 아니다
   enters_tapped: true                     # [카드] 탭된 채 들어온다

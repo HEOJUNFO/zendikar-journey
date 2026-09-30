@@ -170,6 +170,11 @@ export const MapSchema = z.union([
     color: LandColor,
     // Where it sits among its region's areas on the map, east (low) to west (high); default 0.
     order: z.number().optional(),
+    // Where it lies inside its region, as the lore has it: [east(+)/west(-), south(+)/north(-)],
+    // in parts of the region circle's radius (0,0 the middle). Without it, areas sit in a row
+    // across the lower part by `order`. Only how the map is drawn: the engine keeps areas at
+    // their region's place.
+    pos: z.tuple([z.number().min(-0.85).max(0.85), z.number().min(-0.85).max(0.85)]).optional(),
   }),
 ]);
 
@@ -584,6 +589,8 @@ export type Region = {
   of?: string;
   // An area's place among its region's areas on the map (`map.order`), east to west.
   order?: number;
+  // Where it lies inside its region on the map (`map.pos`), in parts of its radius.
+  pos?: [number, number];
 };
 
 export type NpcDef = {
@@ -732,7 +739,7 @@ export function buildWorld(entities: RawEntity[]): { world: World; errors: strin
           name: e.name,
           nameEn: e.name_en ?? '',
           summary: e.summary ?? '',
-          ...('in' in map.data ? { x: 0, y: 0, parent: map.data.in, order: map.data.order } : { x: map.data.x, y: map.data.y, size: map.data.size, of: map.data.of }),
+          ...('in' in map.data ? { x: 0, y: 0, parent: map.data.in, order: map.data.order, ...(map.data.pos ? { pos: map.data.pos } : {}) } : { x: map.data.x, y: map.data.y, size: map.data.size, of: map.data.of }),
           terrain: map.data.terrain,
           color: c === 'C' ? null : Array.isArray(c) ? (`${c[0]}/${c[1]}` as Hybrid) : (c ?? TERRAINS[map.data.terrain].mana),
           entersTapped: land.data?.enters_tapped ?? false,
@@ -966,6 +973,17 @@ export function affectedRegions(world: World, ev: EventDef) {
 // A region's areas, in their map order (east to west).
 export function areasOf(world: World, id: string) {
   return world.regions.filter((r) => r.parent === id).sort((a, b) => (a.order ?? 0) - (b.order ?? 0));
+}
+
+// A land's realm: its continent (the region it lies in, or the continent that island belongs
+// to), the continent's areas, its islands (`map.of`) and their areas.
+export function realmOf(world: World, id: string) {
+  const r = world.regions.find((x) => x.id === id);
+  if (!r) return [];
+  const home = world.regions.find((x) => x.id === (r.parent ?? r.id))!;
+  const top = home.of ?? home.id;
+  const regions = [top, ...world.regions.filter((x) => x.of === top).map((x) => x.id)];
+  return [...regions, ...world.regions.filter((x) => x.parent && regions.includes(x.parent)).map((x) => x.id)];
 }
 
 // "굴 드라즈 › 게트 혈족의 영지" for an area, the name for a region.

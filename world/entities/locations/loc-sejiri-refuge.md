@@ -10,7 +10,7 @@ tags: [피난처, 얼음, 백색, 청색]
 links:
   - { to: loc-sejiri, rel: 바깥 지역 }
   - { to: law-life, rel: 들어서면 생명 }
-map: { in: loc-sejiri, terrain: settlement, color: [W, U] }
+map: { in: loc-sejiri, terrain: settlement, color: [W, U], pos: [0, 0.1] }
 sim:
   nonbasic: true                          # 이름 있는 대지
   enters_tapped: true                     # [카드] 탭된 채 들어온다

@@ -10,7 +10,7 @@ tags: [도시, 항구, 해안, 인어, 원정대, 청색]
 links:
   - { to: loc-tazeem, rel: 바깥 지역 }
   - { to: chr-sea-gate-loremaster, rel: 도시의 전승술사 }
-map: { in: loc-tazeem, terrain: beach }   # 기본 섬: 청 마나 [결정] 2026-09-30
+map: { in: loc-tazeem, terrain: beach, pos: [0, 0.6] }   # 기본 섬: 청 마나 [결정] 2026-09-30
 ---
 
 ## 설정

@@ -12,7 +12,7 @@ links:
   - { to: chr-kalitas, rel: 거처 }
   - { to: fac-ghet, rel: 혈족의 거점 }
   - { to: spl-mind-sludge, rel: 가르치는 주문 }
-map: { in: loc-guul-draz, terrain: swamp }
+map: { in: loc-guul-draz, terrain: swamp, pos: [-0.45, 0.3] }
 ---
 
 ## 설정

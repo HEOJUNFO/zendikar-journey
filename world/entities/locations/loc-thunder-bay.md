@@ -2,7 +2,7 @@
 id: loc-thunder-bay
 kind: location
 name: 선더만
-name_en: Thunder Bay
+name_en: Sunder Bay
 summary: 무라사 해안에 깊게 파고든 바다 만. 짙은 물 한가운데에 소용돌이가 돌고, 거대한 문어 로르토스가 산다
 status: canon
 sources: [ZEN-53]
@@ -10,14 +10,14 @@ tags: [바다, 만, 심해, 청색]
 links:
   - { to: loc-murasa, rel: 바깥 지역 }
   - { to: chr-lorthos, rel: 주인 }
-map: { in: loc-murasa, terrain: deepsea }   # 바다 구역 [결정] 2026-09-30
+map: { in: loc-murasa, terrain: deepsea, pos: [-0.4, -0.55] }   # 바다 구역 [결정] 2026-09-30
 sim:
   land_type: island                        # 기본 섬으로 친다 [결정] 2026-09-30
 ---
 
 ## 설정
 
-무라사 해안에 깊게 파고든 바다 만. 물빛이 유난히 짙고, 한가운데에는 늘 소용돌이가 돈다. 이따금 수면 위로 거대한 촉수가 솟았다가 가라앉는다. 로르토스의 영역이다 ([카드] ZEN-53 "deepwater realm"). 뱃사람들은 이곳을 피해 돌아간다 ([가공]).
+무라사 해안에 깊게 파고든 바다 만. 물빛이 유난히 짙고, 한가운데에는 늘 소용돌이가 돈다. 이따금 수면 위로 거대한 촉수가 솟았다가 가라앉는다. 로르토스의 영역이다 ([카드] ZEN-53 "deepwater realm"). 로르토스는 무라사의 선더만(Sunder Bay) 일대에서 자주 보였다 ([배경]). 뱃사람들은 이곳을 피해 돌아간다 ([가공]).
 
 ## 게임에서의 역할
 
@@ -29,4 +29,3 @@ sim:
 ## 미정/질문
 
 - 만 아래에 무엇이 있는지 (가라앉은 폐허 등).
-- 이름의 영어 표기(Thunder Bay)는 [가공]이다.

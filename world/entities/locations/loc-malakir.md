@@ -13,7 +13,7 @@ links:
   - { to: cre-vampire, rel: 사는 이들 }
   - { to: spl-blood-tribute, rel: 가르치는 주문 }
   - { to: chr-malakir-bloodwitch, rel: 도시의 흡혈귀 주술사 }
-map: { in: loc-guul-draz, terrain: swamp }   # 기본 늪: 흑 마나 [결정] 2026-09-30
+map: { in: loc-guul-draz, terrain: swamp, pos: [-0.4, -0.05] }   # 기본 늪: 흑 마나 [결정] 2026-09-30
 ---
 
 ## 설정

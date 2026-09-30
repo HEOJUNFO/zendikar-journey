@@ -18,6 +18,7 @@ import { gainLife, lifeOf } from './life.ts';
 import { hasAbility, newState, npcDef, outOfTime, PLAYER_ID, present, ptOf, syncWorld, targetable } from './state.ts';
 import { foresightText } from './foresight.ts';
 import { withPositions } from './wander.ts';
+import { nodeAt } from '../web/view.ts';
 import { crushRelic, relicsHere } from './relics.ts';
 import { recallBlocked, recallCount } from './loremaster.ts';
 import { drawKnowledge, handSize, knownSecrets, secretsOf } from './knowledge.ts';
@@ -30,7 +31,7 @@ import { upkeepWins } from './win.ts';
 import { hirePrice } from './allies.ts';
 import { askOptions, askText } from './asks.ts';
 import type { State } from './state.ts';
-import { affectedRegions, buildWorld, landTypes, region, travelHours } from './world.ts';
+import { affectedRegions, buildWorld, landTypes, realmOf, region, travelHours } from './world.ts';
 import type { RawEntity } from './world.ts';
 
 const loc = (id: string, x: number, y: number, terrain: string): RawEntity => ({
@@ -3118,4 +3119,24 @@ test('the real Seascape Aerialist lives on the Silundi Coast, a shore of Ondu', 
   assert.deepEqual(landTypes(region(world, 'loc-silundi-coast')), ['island']);
   assert.equal(travelBlocked(state, world, a, 'loc-tazeem'), null);
   assert.deepEqual(world.npcs.find((x) => x.id === 'chr-seascape-aerialist')?.rally, [{ type: 'grant_allies', ability: 'fly' }]);
+});
+
+test('Valakut stands on Beyeen, an island of Ondu: its fire reaches Ondu, its areas and its islands, not Akoum', () => {
+  const world = loadWorld();
+  assert.equal(region(world, 'loc-valakut').parent, 'loc-beyeen');
+  assert.equal(region(world, 'loc-beyeen').of, 'loc-ondu');
+  assert.deepEqual(landTypes(region(world, 'loc-beyeen')), ['mountain']);
+  assert.equal(region(world, 'loc-teetering-peaks').parent, 'loc-ondu');
+  const realm = realmOf(world, 'loc-valakut');
+  for (const id of ['loc-ondu', 'loc-makindi', 'loc-beyeen', 'loc-valakut', 'loc-jwar-isle', 'loc-agadeem', 'loc-agadeem-crypt']) assert.ok(realm.includes(id), id);
+  assert.equal(realm.includes('loc-akoum'), false);
+});
+
+test('areas are drawn where the lore puts them (map.pos), inside their region', () => {
+  const world = loadWorld();
+  const akoum = region(world, 'loc-akoum');
+  const tarn = nodeAt(world, region(world, 'loc-scalding-tarn'));
+  assert.ok(tarn.x < akoum.x && tarn.y > akoum.y); // west-southwest
+  const sea = nodeAt(world, region(world, 'loc-sea-gate'));
+  assert.ok(sea.y > region(world, 'loc-tazeem').y); // south, on Halimar
 });

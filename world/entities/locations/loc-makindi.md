@@ -11,7 +11,7 @@ links:
   - { to: loc-ondu, rel: 바깥 지역 }
   - { to: cre-geyser-glider, rel: 뜨거운 바람을 타는 짐승 }
   - { to: cre-kor-soldier, rel: 벼랑에 사는 코르 }
-map: { in: loc-ondu, terrain: grassland, order: 3 }   # 기본 평원: 백 마나 [결정] 2026-09-30
+map: { in: loc-ondu, terrain: grassland, pos: [-0.05, 0.05] }   # 기본 평원: 백 마나 [결정] 2026-09-30
 ---
 
 ## 설정

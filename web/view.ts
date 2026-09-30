@@ -76,6 +76,8 @@ export function containerRadius(world: World, r: Region) {
 export function nodeAt(world: World, r: Region) {
   if (r.parent) {
     const R = containerRadius(world, world.regions.find((x) => x.id === r.parent)!);
+    // Where the lore puts it (`map.pos`).
+    if (r.pos) return { x: r.x + r.pos[0] * R, y: r.y + r.pos[1] * R };
     const angle = areaAngle(world, r);
     return { x: r.x + Math.cos(angle) * R * 0.5, y: r.y + Math.sin(angle) * R * 0.5 };
   }
@@ -107,6 +109,11 @@ export function areaLabelAt(world: World, r: Region) {
     const sibs = world.regions.filter((x) => x.parent === r.parent).sort((a, b) => nodeAt(world, a).x - nodeAt(world, b).x);
     const under = regionLabelAt(world, parent).side === 'below' ? BELOW_NAME : 0;
     return { x: r.x, y: r.y + d + 1.5 + under + sibs.indexOf(r) * AREA_LINE, anchor: 'middle' } as const;
+  }
+  // One placed where the lore puts it: its name just under it.
+  if (r.pos) {
+    const n = nodeAt(world, r);
+    return { x: n.x, y: n.y + AREA_NODE + 2.2, anchor: 'middle' } as const;
   }
   const angle = areaAngle(world, r);
   const [dx, dy] = [Math.cos(angle), Math.sin(angle)];
