@@ -10,11 +10,9 @@
   <circle cx="2070" cy="1710" r="210" fill="#1f4468"/>
   <circle cx="1752" cy="1602" r="114" fill="#1f4468"/>
   <circle cx="2070" cy="2034" r="90" fill="#1f4468"/>
-  <line x1="1363.8584790160526" y1="2235.2123661510664" x2="1476" y2="2199" stroke="#9a958b" stroke-opacity="0.72" stroke-width="54"/>
-  <line x1="1598.4189645628076" y1="2159.4688760265935" x2="1476" y2="2199" stroke="#9a958b" stroke-opacity="0.72" stroke-width="54"/>
   <circle cx="1752" cy="1602" r="84" fill="#3f7fcf" fill-opacity="0.72" stroke="#f4ecd8" stroke-opacity="0.7" stroke-width="3"/>
   <circle cx="2928" cy="1440" r="190.8" fill="#cc4f34" fill-opacity="0.72" stroke="#f4ecd8" stroke-opacity="0.7" stroke-width="3"/>
-  <circle cx="1764" cy="2106" r="180" fill="#3f9447" fill-opacity="0.72" stroke="#f4ecd8" stroke-opacity="0.7" stroke-width="3"/>
+  <circle cx="1422" cy="2130" r="180" fill="#3f9447" fill-opacity="0.72" stroke="#f4ecd8" stroke-opacity="0.7" stroke-width="3"/>
   <circle cx="1188" cy="2292" r="190.8" fill="#2b2233" fill-opacity="0.72" stroke="#f4ecd8" stroke-opacity="0.7" stroke-width="3"/>
   <circle cx="2070" cy="2034" r="60" fill="#3f7fcf" fill-opacity="0.72" stroke="#f4ecd8" stroke-opacity="0.7" stroke-width="3"/>
   <circle cx="1032" cy="990" r="180" fill="#3f9447" fill-opacity="0.72" stroke="#f4ecd8" stroke-opacity="0.7" stroke-width="3"/>
@@ -70,8 +68,8 @@
     <text x="2928" y="1222.1999999999998" text-anchor="middle" class="name">아쿰</text>
     <text x="2928" y="1240.1999999999998" text-anchor="middle" class="terrain">화산 지대</text></g>
   <g>
-    <text x="1764" y="1899" text-anchor="middle" class="name">발라 게드</text>
-    <text x="1764" y="1917" text-anchor="middle" class="terrain">숲</text></g>
+    <text x="1422" y="1923" text-anchor="middle" class="name">발라 게드</text>
+    <text x="1422" y="1941" text-anchor="middle" class="terrain">숲</text></g>
   <g><circle cx="1416" cy="750" r="70" fill="#1d3b66" opacity="0.75"/><circle cx="1416" cy="750" r="30" fill="none" stroke="#9fc4ff" stroke-width="2" stroke-dasharray="6 6"/>
     <text x="1416" y="842" text-anchor="middle" class="name">심해의 영역</text>
     <text x="1416" y="860" text-anchor="middle" class="terrain">심해</text></g>
@@ -93,7 +91,7 @@
   <g>
     <text x="1848" y="634.2" text-anchor="middle" class="name">타짐</text>
     <text x="1848" y="652.2" text-anchor="middle" class="terrain">해변</text></g>
-  <g><circle cx="1476" cy="2199" r="36" fill="#9a958b" stroke="#f4ecd8" stroke-width="3"/>
-    <text x="1476" y="2256" text-anchor="middle" class="name">푸른 지하묘지</text>
-    <text x="1476" y="2274" text-anchor="middle" class="terrain">폐허</text></g>
+  <g><circle cx="1305" cy="2211" r="36" fill="#9a958b" stroke="#f4ecd8" stroke-width="3"/>
+    <text x="1305" y="2268" text-anchor="middle" class="name">푸른 지하묘지</text>
+    <text x="1305" y="2286" text-anchor="middle" class="terrain">폐허</text></g>
 </svg>

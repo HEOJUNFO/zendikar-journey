@@ -129,27 +129,6 @@ export function shelves(world: World) {
     });
 }
 
-// A land lying between two regions (`map.joins`) is drawn on a strip of land joining them,
-// in its own color, under the regions' circles.
-const BRIDGE = 4.5;
-export function bridges(world: World) {
-  return world.regions
-    .filter((r) => r.joins)
-    .map((r) => ({
-      id: r.id,
-      color: landColors(r)[0],
-      bands: r
-        .joins!.map((id) => world.regions.find((x) => x.id === id))
-        .filter((c) => !!c)
-        .map((c) => {
-          // From the region's edge (its circle is see-through), to the land.
-          const d = Math.hypot(r.x - c.x, r.y - c.y) || 1;
-          const R = Math.max(0, containerRadius(world, c) - 1);
-          return { x1: c.x + ((r.x - c.x) / d) * R, y1: c.y + ((r.y - c.y) / d) * R, x2: r.x, y2: r.y, width: 2 * BRIDGE };
-        }),
-    }));
-}
-
 // The part of the map a view shows, in map units.
 export type MapBox = { x: number; y: number; w: number; h: number };
 

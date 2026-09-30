@@ -5,7 +5,7 @@ import type { Actor, State } from '../sim/state.ts';
 import { shortName } from '../sim/text.ts';
 import { hasPowers, MAP_HEIGHT, MAP_WIDTH, region, spellColors, TERRAINS, travelHours } from '../sim/world.ts';
 import type { Region, World } from '../sim/world.ts';
-import { AREA_NODE, areaLabelAt, bridges, containerRadius, fitView, halfCircle, isTrap, landColors, nodeAt, PLAIN_NODE, regionLabelAt, shelves, trapStatus, visibleActors } from './view.ts';
+import { AREA_NODE, areaLabelAt, containerRadius, fitView, halfCircle, isTrap, landColors, nodeAt, PLAIN_NODE, regionLabelAt, shelves, trapStatus, visibleActors } from './view.ts';
 import type { MapBox } from './view.ts';
 
 type Props = {
@@ -165,11 +165,6 @@ export function MapView({ world, state, selected, onSelect, all, picked, onPickA
           <g key={`shelf-${sh.id}`} className="map-shelf">
             {sh.bands.map((b, i) => <line key={i} x1={b.x1} y1={b.y1} x2={b.x2} y2={b.y2} strokeWidth={b.width} />)}
             {sh.circles.map((c, i) => <circle key={i} cx={c.x} cy={c.y} r={c.r} />)}
-          </g>
-        ))}
-        {bridges(world).map((b) => (
-          <g key={`bridge-${b.id}`} className="map-bridge" stroke={b.color}>
-            {b.bands.map((x, i) => <line key={i} x1={x.x1} y1={x.y1} x2={x.x2} y2={x.y2} strokeWidth={x.width} />)}
           </g>
         ))}
         {actors

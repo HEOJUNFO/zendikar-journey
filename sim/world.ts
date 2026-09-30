@@ -145,9 +145,6 @@ export const MapSchema = z.union([
     size: z.enum(['continent', 'island']).optional(),
     // The continent an island belongs to: drawn joined to it by shallow water.
     of: z.string().optional(),
-    // The two regions a land lies between (Verdant Catacombs, where Guul Draz meets Bala
-    // Ged): drawn as a strip of land joining them through it.
-    joins: z.tuple([z.string(), z.string()]).optional(),
   }),
   // An area inside a region: a land of its own at the region's place.
   z.strictObject({
@@ -418,8 +415,6 @@ export type Region = {
   parent?: string;
   // How large a region is drawn (web/view.ts).
   size?: 'continent' | 'island';
-  // The two regions this land joins (`map.joins`), for the map only.
-  joins?: [string, string];
   // The continent this island belongs to (`map.of`), for the map only.
   of?: string;
   // An area's place among its region's areas on the map (`map.order`), east to west.
@@ -548,7 +543,7 @@ export function buildWorld(entities: RawEntity[]): { world: World; errors: strin
           name: e.name,
           nameEn: e.name_en ?? '',
           summary: e.summary ?? '',
-          ...('in' in map.data ? { x: 0, y: 0, parent: map.data.in, order: map.data.order } : { x: map.data.x, y: map.data.y, size: map.data.size, of: map.data.of, joins: map.data.joins }),
+          ...('in' in map.data ? { x: 0, y: 0, parent: map.data.in, order: map.data.order } : { x: map.data.x, y: map.data.y, size: map.data.size, of: map.data.of }),
           terrain: map.data.terrain,
           color: c === 'C' ? null : Array.isArray(c) ? (`${c[0]}/${c[1]}` as Hybrid) : (c ?? TERRAINS[map.data.terrain].mana),
           entersTapped: land.data?.enters_tapped ?? false,
@@ -566,13 +561,8 @@ export function buildWorld(entities: RawEntity[]): { world: World; errors: strin
       }
     }
   }
-  // An island belongs to a region, and a land between two joins regions: not areas or itself.
+  // An island belongs to a region, not to an area or itself.
   for (const r of world.regions) {
-    for (const id of r.joins ?? []) {
-      const c = world.regions.find((x) => x.id === id);
-      if (!c) err(r.id, `map.joins ${id} 가 맵에 없음`);
-      else if (c.parent || c.id === r.id) err(r.id, `map.joins ${id} 는 다른 지역이어야 함 (구역이나 자기 자신은 안 됨)`);
-    }
     if (!r.of) continue;
     const c = world.regions.find((x) => x.id === r.of);
     if (!c) err(r.id, `map.of ${r.of} 가 맵에 없음`);

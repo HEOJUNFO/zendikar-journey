@@ -14,7 +14,7 @@ links:
   - { to: loc-malakir, rel: 안의 구역 }
   - { to: loc-ondu, rel: 북동쪽의 대륙 }
   - { to: loc-bala-ged, rel: 붙은 동쪽의 대륙 }
-  - { to: loc-verdant-catacombs, rel: 발라 게드로 잇는 땅 }
+  - { to: loc-verdant-catacombs, rel: 발라 게드와 겹친 땅 }
 map: { x: 198, y: 382, terrain: swamp, size: continent }
 ---
 
@@ -27,4 +27,4 @@ map: { x: 198, y: 382, terrain: swamp, size: continent }
 - 지도 남서쪽 (198, 382)의 지역이다 (지형 `swamp`, 흑색 땅, 늪) ([결정] 2026-09-30: 굴 드라즈를 더하고 습지 평원을 그 안에). 세계의 첫 기본 늪이다.
 - 위치는 [배경]의 "남서쪽"에서 정한 [가공]이다. 온두까지 약 15시간. 대륙이라 지도에 크게 그린다 (`size: continent`).
 - 안에 구역 습지 평원(`loc-marsh-flats`), 피라냐 습지(`loc-piranha-marsh`), 게트 혈족의 영지(`loc-ghet-estate`, 칼리타스의 거처, ZEN-99 다시 놓기), 흡혈귀 도시 말라키르(`loc-malakir`, 바늘이빨 함정, ZEN-105 다시 놓기)가 있다.
-- 동쪽으로 밀림 대륙 발라 게드(`loc-bala-ged`)와 붙어 있고, 둘을 잇는 땅에 푸른 지하묘지(`loc-verdant-catacombs`)가 있다 ([결정] ZEN-229). 지하묘지 때 좌표를 (140, 255)에서 (132, 255)로 조금 옮겼다 (지도에서 둘 사이를 띄우려고, [가공]).
+- 동북쪽으로 밀림 대륙 발라 게드(`loc-bala-ged`)와 겹쳐 붙어 있고, 두 대륙이 겹친 땅에 푸른 지하묘지(`loc-verdant-catacombs`)가 있다 ([결정] ZEN-229, 지도에서 두 원이 겹치게 [결정] 2026-09-30). 발라 게드까지 약 4시간. 지하묘지 때 좌표를 (140, 255)에서 (132, 255)로 조금 옮겼다 (지도에서 둘 사이를 띄우려고, [가공]).
