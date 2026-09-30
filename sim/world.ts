@@ -8,8 +8,8 @@ import type { Color, Hybrid, Mana, ManaCost } from './mana.ts';
 import { LIFE_KINDS, NEEDS } from './types.ts';
 import type { Need } from './types.ts';
 
-export const MAP_WIDTH = 480;
-export const MAP_HEIGHT = 360;
+export const MAP_WIDTH = 600;
+export const MAP_HEIGHT = 450;
 
 // fly: can reach sky islands. aquatic: lives in the sea, and only there.
 export const ABILITIES = ['fly', 'aquatic'] as const;

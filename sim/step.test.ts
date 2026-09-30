@@ -135,13 +135,13 @@ test('sky and sea regions cannot be reached without the means', async () => {
   assert.match((await act(state, world, { type: 'move', to: 'loc-sea' })).error!, /바다/);
 });
 
-test('travel takes distance / 8 hours and the player sees the arrival', async () => {
+test('travel takes distance / 12 hours and the player sees the arrival', async () => {
   const world = fixture();
   const state = character(world);
   const start = state.minutes;
   const { error, entries } = await act(state, world, { type: 'move', to: 'loc-b' });
   assert.equal(error, undefined);
-  assert.equal(state.minutes - start, 3 * 60); // 20 units / 8, rounded up
+  assert.equal(state.minutes - start, 2 * 60); // 20 units / 12, rounded up
   assert.equal(state.actors[PLAYER_ID].region, 'loc-b');
   assert.ok(entries.some((e) => e.kind === 'arrive' && e.seen));
 });

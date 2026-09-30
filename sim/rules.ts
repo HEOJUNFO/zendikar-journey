@@ -32,7 +32,7 @@ export const STARVING_ENERGY = -3;
 export const INITIAL_STATS: Stats = { energy: 80, hunger: 20, coin: 20 };
 
 // Map units covered per game hour of travel (the map is 480×360 units).
-export const TRAVEL_UNITS_PER_HOUR = 8;
+export const TRAVEL_UNITS_PER_HOUR = 12;
 
 // Bonding with a land (landfall) takes this long.
 export const BOND_HOURS = 4;

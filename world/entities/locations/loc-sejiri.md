@@ -10,7 +10,7 @@ tags: [대륙, 설원, 얼음, 백색]
 links:
   - { to: loc-sejiri-refuge, rel: 안의 구역 }
   - { to: loc-akoum, rel: 남쪽의 대륙 }
-map: { x: 320, y: 45, terrain: tundra, size: continent }
+map: { x: 480, y: 68, terrain: tundra, size: continent }
 ---
 
 ## 설정
@@ -19,7 +19,7 @@ map: { x: 320, y: 45, terrain: tundra, size: continent }
 
 ## 게임에서의 역할
 
-- 지도 북동쪽 (320, 45)의 지역이다 (새 지형 `tundra` 설원, 백색 땅, 평원) ([결정] 2026-09-30). 세계의 두 번째 평원이다 (온두 다음).
+- 지도 북동쪽 (480, 68)의 지역이다 (새 지형 `tundra` 설원, 백색 땅, 평원) ([결정] 2026-09-30). 세계의 두 번째 평원이다 (온두 다음).
 - 위치는 [배경]의 "북쪽 끝"에서 정한 [가공]이다. 아쿰까지 약 15시간. 대륙이라 지도에 크게 그린다 (`size: continent`).
 - 안에 구역 세지리 피난처(`loc-sejiri-refuge`)가 있다.
 

@@ -52,7 +52,11 @@ export function halfCircle(x: number, y: number, r: number, side: 0 | 1) {
 // small island), is itself a circle of that size, with its areas as small circles across the
 // lower part; the upper part is where its own people and marks go. (The engine puts areas at
 // their region's place; this is only how they are drawn.)
-const SIZE_RADIUS = { continent: 22, island: 7 } as const;
+const SIZE_RADIUS = { continent: 30, island: 10 } as const;
+// The small circle of an area inside a region, and the circle of a plain land (one with no
+// size or areas, e.g. Verdant Catacombs).
+export const AREA_NODE = 3.2;
+export const PLAIN_NODE = 6;
 function areaAngle(world: World, r: Region) {
   const sibs = areasOf(world, r.parent!);
   const n = sibs.length;
@@ -64,9 +68,9 @@ function areaAngle(world: World, r: Region) {
 export function containerRadius(world: World, r: Region) {
   if (r.parent) return 0;
   const n = world.regions.filter((x) => x.parent === r.id).length;
-  const base = r.size ? SIZE_RADIUS[r.size] : n ? 10 : 0;
+  const base = r.size ? SIZE_RADIUS[r.size] : n ? 14 : 0;
   // A small island has room for one area; each more widens it so their circles don't touch.
-  return base && base + (r.size === 'island' ? Math.max(0, n - 1) * 3 : Math.max(0, n - 3) * 1.3);
+  return base && base + (r.size === 'island' ? Math.max(0, n - 1) * 4 : Math.max(0, n - 3) * 1.8);
 }
 
 export function nodeAt(world: World, r: Region) {
@@ -111,7 +115,7 @@ export function areaLabelAt(world: World, r: Region) {
 
 // Shallow water around a continent and the islands that belong to it (`map.of`), joining them
 // so the islands read as the continent's: a wider circle under each, and a band to each island.
-const SHELF = 4;
+const SHELF = 5;
 export function shelves(world: World) {
   return world.regions
     .filter((c) => world.regions.some((i) => i.of === c.id))
@@ -127,7 +131,7 @@ export function shelves(world: World) {
 
 // A land lying between two regions (`map.joins`) is drawn on a strip of land joining them,
 // in its own color, under the regions' circles.
-const BRIDGE = 3.5;
+const BRIDGE = 4.5;
 export function bridges(world: World) {
   return world.regions
     .filter((r) => r.joins)
@@ -151,14 +155,14 @@ export type MapBox = { x: number; y: number; w: number; h: number };
 
 // Room for the names around the outermost lands (more on top, where the full-screen map's bar sits).
 const FIT_PAD = { x: 24, top: 24, bottom: 20 };
-const FIT_MIN_W = 120;
+const FIT_MIN_W = 160;
 
 // The box that holds every land (with their names), widened to the map's shape so the map
 // opens on the lands rather than on the empty sea around them.
 export function fitView(world: World): MapBox {
   const tops = world.regions.filter((r) => !r.parent);
   if (!tops.length) return { x: 0, y: 0, w: MAP_WIDTH, h: MAP_HEIGHT };
-  const extent = (r: Region) => containerRadius(world, r) || (TERRAINS[r.terrain].sea ? 10.5 : 4.8);
+  const extent = (r: Region) => containerRadius(world, r) || (TERRAINS[r.terrain].sea ? 10.5 : PLAIN_NODE);
   const x0 = Math.min(...tops.map((r) => r.x - extent(r))) - FIT_PAD.x;
   const x1 = Math.max(...tops.map((r) => r.x + extent(r))) + FIT_PAD.x;
   const y0 = Math.min(...tops.map((r) => r.y - extent(r))) - FIT_PAD.top;

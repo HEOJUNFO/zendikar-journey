@@ -14,7 +14,7 @@ links:
   - { to: loc-agadeem, rel: 붙어 있는 섬 }
   - { to: loc-jwar-isle, rel: 남쪽 앞바다의 섬 }
   - { to: loc-akoum, rel: 동쪽의 대륙 }
-map: { x: 230, y: 190, terrain: grassland, size: continent }
+map: { x: 345, y: 285, terrain: grassland, size: continent }
 ---
 
 ## 설정

@@ -4,7 +4,7 @@ import { writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { loadWorld, WORLD_DIR } from '../sim/load.ts';
 import { TERRAINS } from '../sim/world.ts';
-import { areaLabelAt, bridges, containerRadius, fitView, halfCircle, landColors, nodeAt, regionLabelAt, shelves } from '../web/view.ts';
+import { AREA_NODE, areaLabelAt, bridges, containerRadius, fitView, halfCircle, landColors, nodeAt, PLAIN_NODE, regionLabelAt, shelves } from '../web/view.ts';
 
 const S = 6; // px per map unit
 // A land's circle in its mana colors (web/view.ts landColors), split for a two-color land.
@@ -37,7 +37,7 @@ const areaNodes = world.regions
   .map((r) => {
     const { x, y } = nodeAt(world, r);
     const label = areaLabelAt(world, r);
-    return `  <g>${land(x * S, y * S, 16, landColors(r), 'stroke="#f4ecd8" stroke-width="2"')}
+    return `  <g>${land(x * S, y * S, AREA_NODE * S, landColors(r), 'stroke="#f4ecd8" stroke-width="2"')}
     <text x="${label.x * S}" y="${label.y * S}" text-anchor="${label.anchor}" class="area">${esc(r.name)}</text></g>`;
   });
 const nodes = world.regions.filter((r) => !r.parent).map((r) => {
@@ -49,13 +49,13 @@ const nodes = world.regions.filter((r) => !r.parent).map((r) => {
       `<circle cx="${x}" cy="${y}" r="30" fill="none" stroke="#9fc4ff" stroke-width="2" stroke-dasharray="6 6"/>`
     : R
       ? ''
-      : land(x, y, 26, landColors(r), 'stroke="#f4ecd8" stroke-width="3"');
+      : land(x, y, PLAIN_NODE * S, landColors(r), 'stroke="#f4ecd8" stroke-width="3"');
   // A region circle is named where the game names it (above, or beside/below for an island of
   // a continent), its terrain on the next line; other nodes are named below.
   const label = R ? regionLabelAt(world, r) : null;
   const [lx, anchor] = label ? [label.x * S, label.anchor] : [x, 'middle'];
   const [ny, ty] = !label
-    ? [y + (t.sea ? 92 : 48), y + (t.sea ? 110 : 66)]
+    ? [y + (t.sea ? 92 : (PLAIN_NODE + 3.5) * S), y + (t.sea ? 110 : (PLAIN_NODE + 6.5) * S)]
     : label.side === 'above'
       ? [label.y * S - 18, label.y * S]
       : [label.y * S, label.y * S + 17];

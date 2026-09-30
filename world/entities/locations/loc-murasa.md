@@ -13,7 +13,7 @@ links:
   - { to: loc-deepwater-realm, rel: 동쪽 바다 }
   - { to: loc-tazeem, rel: 동쪽의 대륙 }
   - { to: loc-ondu, rel: 남동쪽의 대륙 }
-map: { x: 115, y: 110, terrain: forest, size: continent }
+map: { x: 172, y: 165, terrain: forest, size: continent }
 ---
 
 ## 설정
@@ -26,7 +26,7 @@ map: { x: 115, y: 110, terrain: forest, size: continent }
 
 ## 게임에서의 역할
 
-- 지도 북서쪽 (115, 110)의 지역이다 (지형 `forest`, 녹색 땅, 숲) ([결정] 2026-09-30: 무라사도 유대를 맺는 땅). 세계의 첫 기본 숲이다.
+- 지도 북서쪽 (172, 165)의 지역이다 (지형 `forest`, 녹색 땅, 숲) ([결정] 2026-09-30: 무라사도 유대를 맺는 땅). 세계의 첫 기본 숲이다.
 - 위치는 [배경]의 "온두 북쪽, 타짐 서쪽"에서 정한 [가공]이다. 타짐까지 약 12시간, 온두까지 약 18시간. 대륙이라 지도에 크게 그린다 (`size: continent`).
 - 안에 구역 카잔두 피난처(`loc-kazandu-refuge`)와 안개 낀 우림(`loc-misty-rainforest`, 숲이나 섬을 찾아오는 페치랜드, [결정] 2026-09-30 타짐에서 옮김)이 있다.
 

@@ -5,7 +5,7 @@ import type { Actor, State } from '../sim/state.ts';
 import { shortName } from '../sim/text.ts';
 import { hasPowers, MAP_HEIGHT, MAP_WIDTH, region, spellColors, TERRAINS, travelHours } from '../sim/world.ts';
 import type { Region, World } from '../sim/world.ts';
-import { areaLabelAt, bridges, containerRadius, fitView, halfCircle, isTrap, landColors, nodeAt, regionLabelAt, shelves, trapStatus, visibleActors } from './view.ts';
+import { AREA_NODE, areaLabelAt, bridges, containerRadius, fitView, halfCircle, isTrap, landColors, nodeAt, PLAIN_NODE, regionLabelAt, shelves, trapStatus, visibleActors } from './view.ts';
 import type { MapBox } from './view.ts';
 
 type Props = {
@@ -45,7 +45,7 @@ function LandCircle({ x, y, r, colors, className }: { x: number; y: number; r: n
 
 // Zoom: the narrowest view (most zoomed in), each button step, and how far a drag must go
 // before it pans instead of clicking.
-const MIN_VIEW_W = 40;
+const MIN_VIEW_W = 50;
 const ZOOM_STEP = 1.4;
 const DRAG_PX = 4;
 
@@ -192,10 +192,10 @@ export function MapView({ world, state, selected, onSelect, all, picked, onPickA
               <g key={r.id} className="map-region map-area" onClick={() => onSelect(r.id)} tabIndex={0}
                 onKeyDown={(e) => (e.key === 'Enter' || e.key === ' ') && onSelect(r.id)}>
                 <title>{`${parent.name} › ${r.name} (${t.label})`}</title>
-                <LandCircle x={x} y={y} r={2.4} colors={landColors(r)} className="map-node" />
-                {isSel && <circle cx={x} cy={y} r={3.7} className="map-selected" />}
+                <LandCircle x={x} y={y} r={AREA_NODE} colors={landColors(r)} className="map-node" />
+                {isSel && <circle cx={x} cy={y} r={AREA_NODE + 1.3} className="map-selected" />}
                 {destroyed && <text x={x} y={y + 1} className="map-destroyed map-area-mark">✕</text>}
-                {conds.length > 0 && <text x={x + 2.7} y={y - 2.1} className="map-alert map-area-mark">⚠</text>}
+                {conds.length > 0 && <text x={x + AREA_NODE + 0.3} y={y - AREA_NODE + 0.3} className="map-alert map-area-mark">⚠</text>}
                 <text x={label.x} y={label.y} style={{ textAnchor: label.anchor }} className="map-label map-area-label">{r.name}</text>
               </g>
             );
@@ -226,14 +226,14 @@ export function MapView({ world, state, selected, onSelect, all, picked, onPickA
                   <circle cx={r.x} cy={r.y} r={4.5} className="map-whirl" />
                 </>
               ) : (
-                <LandCircle x={r.x} y={r.y} r={4.8} colors={landColors(r)} className="map-node" />
+                <LandCircle x={r.x} y={r.y} r={PLAIN_NODE} colors={landColors(r)} className="map-node" />
               )}
-              {isSel && <circle cx={r.x} cy={r.y} r={t.sea ? 12.3 : 6.9} className="map-selected" />}
+              {isSel && <circle cx={r.x} cy={r.y} r={t.sea ? 12.3 : PLAIN_NODE + 2.1} className="map-selected" />}
               {destroyed && <text x={r.x} y={r.y + 1.6} className="map-destroyed">✕</text>}
               {conds.length > 0 && (
-                <text x={r.x + 5.1} y={r.y - 3.9} className="map-alert">⚠</text>
+                <text x={r.x + PLAIN_NODE + 0.3} y={r.y - PLAIN_NODE + 0.9} className="map-alert">⚠</text>
               )}
-              <text x={r.x} y={r.y + (t.sea ? 14.7 : 9.6)} className="map-label">{r.name}</text>
+              <text x={r.x} y={r.y + (t.sea ? 14.7 : PLAIN_NODE + 4.8)} className="map-label">{r.name}</text>
             </g>
           );
         })}
@@ -243,7 +243,7 @@ export function MapView({ world, state, selected, onSelect, all, picked, onPickA
           if (!p.travelling) slots.set(a.region, slot + 1);
           const angle = -Math.PI / 2 + slot * 0.9;
           const here = region(world, a.region);
-          const ring = here.parent ? 3 : containerRadius(world, here) ? 3.9 : 4.8;
+          const ring = here.parent ? AREA_NODE + 0.6 : containerRadius(world, here) ? 3.9 : PLAIN_NODE;
           const [x, y] = p.travelling ? [p.x, p.y] : [p.x + Math.cos(angle) * ring, p.y + Math.sin(angle) * ring];
           const legend = a.kind === 'npc' && hasPowers(npcDef(state!, world, a.id));
           const r = legend ? 2.2 : a.kind === 'npc' ? 1.5 : 2;

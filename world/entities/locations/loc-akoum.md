@@ -12,7 +12,7 @@ links:
   - { to: loc-scalding-tarn, rel: 안의 구역 }
   - { to: loc-teetering-peaks, rel: 안의 구역 }
   - { to: loc-valakut, rel: 한가운데의 화산 }
-map: { x: 325, y: 160, terrain: volcanic, size: continent }
+map: { x: 488, y: 240, terrain: volcanic, size: continent }
 ---
 
 ## 설정
@@ -25,7 +25,7 @@ map: { x: 325, y: 160, terrain: volcanic, size: continent }
 
 - 지도 동쪽의 화산 지대 지역이다 (지형 `volcanic`, 적색 땅) ([결정] 2026-09-30: 아쿰도 유대를 맺는 땅).
 - 안에 구역 아쿰 피난처(`loc-akoum-refuge`)와 뜨거운 호수(`loc-scalding-tarn`, 섬이나 산을 찾아오는 페치랜드), 흔들리는 봉우리(`loc-teetering-peaks`, 유대를 맺을 때 곁의 하나에게 하루 +2/+0), 발라쿠트(`loc-valakut`, 산이 여섯 모이면 아쿰 어디로든 불길)가 있다. 아쿰의 다른 대지 카드가 나오면 구역으로 더한다.
-- 위치 (325, 160)는 [배경]의 동쪽 대륙에서 정한 [가공]이다. 대륙이라 지도에 크게 그린다 (`size: continent`).
+- 위치 (488, 240)는 [배경]의 동쪽 대륙에서 정한 [가공]이다. 대륙이라 지도에 크게 그린다 (`size: continent`).
 
 ## 미정/질문
 
