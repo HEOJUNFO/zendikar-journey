@@ -1914,10 +1914,10 @@ test('Sorin: +2 strikes and drinks, −3 sets a life to 10, −7 takes someone\'
   x.life = 4;
   assert.equal(useAbility(state, world, 'chr-so', 'ten', 'chr-x', state.minutes), null);
   assert.equal(x.life, 10);
-  // No life, no change.
+  // Those who never tire have life too (user decision 2026-09-30).
   state.minutes += 1440;
   assert.equal(useAbility(state, world, 'chr-so', 'ten', 'chr-k2', state.minutes), null);
-  assert.ok(texts(state).some((t) => t.includes('생명이 없어')));
+  assert.equal(state.actors['chr-k2'].life, 10);
   // −7: tomorrow is Sorin's; the day after, theirs again.
   state.minutes += 1440;
   so.loyalty = 8;
@@ -2140,4 +2140,34 @@ test('the real Summoning Trap lies in Bala Ged and may draw any creature card th
   // Creature cards anywhere, the sea's too; not planeswalkers, not those already there.
   assert.ok(lib.includes('cre-shoal-serpent') && lib.includes('chr-iona') && lib.includes('cre-sphinx'));
   assert.ok(!lib.includes('chr-sorin-markov') && !lib.includes('chr-chandra') && !lib.includes('chr-rampaging-baloths'));
+});
+
+test('one of the sea on land dries out, 1 toughness every 3 hours, unless it crawls back to the water', async () => {
+  const world = fixture([beastKind('cre-sea', ['aquatic'], 'loc-sea')]);
+  const state = newState(world, { seed: 1, mode: 'observer' });
+  const fish = state.actors['cre-sea'];
+  fish.region = 'loc-a'; // drawn onto land
+  PLANS.set('cre-sea', [['00:00', '24:00', 'loc-a', 'leisure', '버둥거림', '🐟']]); // stays and fights
+  await advance(state, world, 13);
+  assert.ok(fish.dead);
+  assert.ok(texts(state).some((t) => t.includes('말라 간다 (4/1)')));
+  // Crawling back instead: twice as long, and back in the water it recovers at midnight.
+  const s2 = newState(world, { seed: 1, mode: 'observer' });
+  const f2 = s2.actors['cre-sea'];
+  f2.region = 'loc-a';
+  PLANS.set('cre-sea', [['00:00', '24:00', 'loc-sea', 'leisure', '바다로', '🐟']]);
+  await advance(s2, world, 6);
+  assert.ok(texts(s2).some((t) => t.includes('기어 향했다 (4시간 거리)')));
+  assert.equal(f2.region, 'loc-sea');
+  assert.equal(ptOf(f2)[1], 3); // dried once on the way
+  await advance(s2, world, 18); // through 00:00
+  assert.equal(ptOf(f2)[1], 4);
+  PLANS.delete('cre-sea');
+});
+
+test('every being has life: those who never tire too', () => {
+  const world = loadWorld();
+  const state = newState(world, { seed: 1, mode: 'observer' });
+  assert.equal(lifeOf(state.actors['chr-lorthos']), 20);
+  assert.equal(lifeOf(state.actors['chr-kalitas']), 20);
 });

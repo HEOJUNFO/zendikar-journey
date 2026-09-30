@@ -59,7 +59,7 @@ export function claimItem(state: State, world: World, a: Actor, itemId: string, 
     return;
   }
   payMana(state, world, a, x.cost, t);
-  const counters = x.effects.some((e) => e.type === 'charge_life') ? (lifeOf(a) ?? 0) : 0;
+  const counters = x.effects.some((e) => e.type === 'charge_life') ? lifeOf(a) : 0;
   (state.items ??= {})[x.id] = { name: x.name, owner: a.id, counters };
   addLog(state, {
     kind: 'event',
@@ -77,7 +77,7 @@ export function itemsOnLandfall(state: State, world: World, a: Actor, t: number)
     if (!x.effects.some((e) => e.type === 'landfall_set_life')) continue;
     const life = lifeOf(a);
     const counters = state.items![x.id].counters;
-    if (life === null || counters <= life) continue;
+    if (counters <= life) continue;
     gainLife(state, a, counters - life, t, x.name);
   }
 }

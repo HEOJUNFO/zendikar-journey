@@ -50,6 +50,10 @@ export type Actor = {
   drawn?: { day: number; count: number; sprung?: string[] };
   // Life total (sim/life.ts), apart from energy; START_LIFE until something changes it.
   life?: number;
+  // A being of the sea on land (sim/stranded.ts): since when, and the toughness it has lost
+  // drying out (until it is back in the water at 00:00).
+  strandedSince?: number;
+  dried?: number;
   // Game day they last gained life (sim/life.ts).
   lifeGained?: number;
   // Game day they were last turned down seeking to make someone follow them (a beast they
@@ -424,6 +428,7 @@ export function ptOf(a: Actor): Pt {
   let [p, t] = a.pt ?? PLAYER_PT;
   if (a.plusCounters) [p, t] = [p + a.plusCounters, t + a.plusCounters];
   for (const x of [...(a.boost ? [a.boost] : []), ...(a.pumps ?? []), ...(a.auras ?? [])]) [p, t] = [p + x.pt[0], t + x.pt[1]];
+  if (a.dried) t -= a.dried;
   return [p, t];
 }
 

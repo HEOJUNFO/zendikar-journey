@@ -12,6 +12,7 @@ import { relationsText, remember } from './relations.ts';
 import { claimableItems } from './items.ts';
 import { lifeOf } from './life.ts';
 import { foresightText } from './foresight.ts';
+import { strandedText } from './stranded.ts';
 import { applyRally, hireableFor, hireMerc, hirePrice, rallyText } from './allies.ts';
 import { answerAsk, askText, canServe } from './asks.ts';
 import { eonLand, eonsIn, spendBlocked, storeBlocked } from './eons.ts';
@@ -552,10 +553,12 @@ async function prepare(state: State, world: World, llm: Llm): Promise<string | n
           home: npc.home,
           here: a.region,
           stats: a.stats,
-          ...(lifeOf(a) !== null ? { life: lifeOf(a)! } : {}),
+          life: lifeOf(a),
           needs: npc.needs,
           relations: relationsText(a),
-          regions: world.regions.filter((r) => canStay(r, npc.abilities)).map((r) => ({ ...r, name: placeName(world, r) })),
+          // Where they could be today, and where they are (one of the sea may lie stranded on land).
+          regions: world.regions.filter((r) => canStay(r, npc.abilities) || r.id === a.region).map((r) => ({ ...r, name: placeName(world, r) })),
+          stranded: strandedText(world, a),
           items: claimableItems(state, world, a, state.minutes).map((x) => `  - ${x.id} in ${x.at}: ${x.name} (${x.summary}), costs ${x.costText}`),
           days: daysInput(state, world, a),
           grow: growInput(state, world, a),

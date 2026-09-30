@@ -270,7 +270,7 @@ export function PeopleList({ world, state, all }: { world: World; state: State; 
           {!p && (
             <>
               {needsOf(a).includes('energy') && <Bar label="기력" value={a.stats.energy} />}
-              {lifeOf(a) !== null && <p className="muted">생명 {lifeOf(a)}</p>}
+              <p className="muted">생명 {lifeOf(a)}</p>
               {needsOf(a).includes('hunger') && <Bar label="배고픔" value={a.stats.hunger} bad />}
             </>
           )}

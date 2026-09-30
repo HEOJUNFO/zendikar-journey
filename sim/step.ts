@@ -26,6 +26,7 @@ import { bondBlocked, bondLand, expireGranted, FETCH_HOURS, fetchLand, fetchSour
 import { CLAIM_HOURS, claimBlocked, claimItem, itemsAt } from './items.ts';
 import { EON_HOURS, eonLand, holdStill, spendBlocked, spendDay, storeBlocked, storeDay, timeNews } from './eons.ts';
 import { upkeepWins } from './win.ts';
+import { CRAWL_FACTOR, dryOut, stranded } from './stranded.ts';
 import { HIRE_HOURS, hireBlocked, hireMerc } from './allies.ts';
 import { COURT_HOURS, courtBlocked, followsMaster, masterOf, readyCourt, refusedToday, upkeepPossessions } from './retainers.ts';
 import { learnBlocked, learnSpell, npcCastBlocked, readyCast, spellDef } from './spells.ts';
@@ -42,6 +43,7 @@ export function step(state: State, world: World) {
   gmLayer(state, world, t);
   // Factions: none yet (world/entities/factions is empty).
   regionLayer(state, world, t);
+  dryOut(state, world, t);
   hostileNpcs(state, world, t);
   for (const a of alive(state)) {
     // Out of time (a day left in Magosi, or someone else's extra day): nothing moves for them.
@@ -359,12 +361,14 @@ export function travelBlocked(state: State, world: World, a: Actor, to: string):
 export function startTravel(state: State, world: World, a: Actor, to: string, t: number) {
   const from = region(world, a.region);
   const dest = region(world, to);
-  const hours = travelHours(from, dest, a.abilities);
+  // One of the sea on land crawls toward the water (sim/stranded.ts).
+  const crawl = stranded(world, a);
+  const hours = travelHours(from, dest, a.abilities) * (crawl ? CRAWL_FACTOR : 1);
   a.travel = { to, arrive: t + hours * 60 };
   a.task = { kind: 'travel', activity: `${toward(dest.name)} 이동`, emoji: '🧭', until: a.travel.arrive };
   addLog(state, {
     kind: 'move',
-    text: `${josa(shortName(a.name), '이', '가')} ${josa(from.name, '을', '를')} 떠나 ${toward(dest.name)} 향했다 (${hours}시간 거리).`,
+    text: `${josa(shortName(a.name), '이', '가')} ${josa(from.name, '을', '를')} 떠나 ${toward(dest.name)} ${crawl ? '기어 ' : ''}향했다 (${hours}시간 거리).`,
     regions: [from.id],
     actors: [a.id],
   });

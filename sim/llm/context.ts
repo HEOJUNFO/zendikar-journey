@@ -40,7 +40,7 @@ export function bearingText(state: State, a: Actor) {
   const s = a.stats;
   const items = Object.values(state.items ?? {}).filter((x) => x.owner === a.id).map((x) => x.name);
   const life = lifeOf(a);
-  return `공격력/방어력 ${ptOf(a).join('/')}, 기력 ${Math.round(s.energy)}/100${life !== null ? `, 생명 ${life}` : ''}, 배고픔 ${Math.round(s.hunger)}/100, 돈 ${Math.round(s.coin)}${items.length ? `, 길들인 것: ${items.join(', ')}` : ''}`;
+  return `공격력/방어력 ${ptOf(a).join('/')}, 기력 ${Math.round(s.energy)}/100, 생명 ${life}, 배고픔 ${Math.round(s.hunger)}/100, 돈 ${Math.round(s.coin)}${items.length ? `, 길들인 것: ${items.join(', ')}` : ''}`;
 }
 
 export function clockText(state: State) {

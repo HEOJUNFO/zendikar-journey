@@ -226,7 +226,7 @@ export function fetchBlocked(state: State, world: World, a: Actor, fromId: strin
   if (rs?.destroyed || rs?.conditions.some((c) => c.tapped)) return `${josa(from.name, '은', '는')} 지금 쓸 수 없다.`;
   // No one pays the last of their life ([가공]).
   const life = lifeOf(a);
-  if (from.fetch.life && life !== null && life <= from.fetch.life) return `생명이 모자라다 (생명 ${life}).`;
+  if (from.fetch.life && life <= from.fetch.life) return `생명이 모자라다 (생명 ${life}).`;
   if (!fetchTargets(state, world, a, from.id).some((r) => r.id === toId))
     return `${from.fetch.types.map((x) => LAND_TYPE_LABELS[x]).join('이나 ')} 가운데 아직 유대가 없는 땅이어야 한다.`;
   return null;
@@ -361,8 +361,7 @@ export function useAbility(state: State, world: World, beingId: string, abilityI
     } else if (eff.type === 'gain_life') {
       gainLife(state, bs, eff.amount, t, cause);
     } else if (eff.type === 'set_life' && target) {
-      if (lifeOf(target) === null) addLog(state, { kind: 'effect', text: `${josa(shortName(target.name), '은', '는')} 생명이 없어 아무렇지 않다.`, regions: [target.region], actors: [target.id], t });
-      else setLife(state, target, eff.amount, t, cause, bs);
+      setLife(state, target, eff.amount, t, cause, bs);
     } else if (eff.type === 'possess_next_turn' && target) {
       const from = untapTime(t);
       (state.possessions ??= []).push({ target: target.id, by: bs.id, from, until: from + 1440 });

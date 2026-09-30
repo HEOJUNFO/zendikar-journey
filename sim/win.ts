@@ -18,7 +18,7 @@ export function upkeepWins(state: State, world: World, t: number) {
     // Out of time: no upkeep for them today.
     if (!who || outOfTime(state, who, t) || state.winners?.some((w) => w.id === who.id)) continue;
     const life = lifeOf(who);
-    if (life === null || life < need) continue;
+    if (life < need) continue;
     (state.winners ??= []).push({ id: who.id, name: who.name, at: t, by: x.name });
     addLog(state, {
       kind: 'event',

@@ -188,7 +188,7 @@ export function clash(state: State, attacker: Actor, defender: Actor, t: number)
 function lifelink(state: State, x: Actor, dealt: number, t: number) {
   if (!x.abilities.includes('lifelink') || dealt <= 0) return;
   const controller = masterOf(state, x) ?? x;
-  if (controller.dead || lifeOf(controller) === null) return;
+  if (controller.dead) return;
   gainLife(state, controller, dealt, t, `${shortName(x.name)}의 생명연결`);
 }
 
