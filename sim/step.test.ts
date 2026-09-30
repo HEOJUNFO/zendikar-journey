@@ -8,7 +8,7 @@ import type { PlanDayInput } from './llm/planner.ts';
 import type { Action } from './actions.ts';
 import { startAction } from './actions.ts';
 import type { World } from './world.ts';
-import { addFoe, die, knockedOut, woundsOf } from './combat.ts';
+import { addFoe, attackBlocked, die, knockedOut, woundsOf } from './combat.ts';
 import { sealedBy, sealToday } from './seal.ts';
 import { castBlocked, castSpell } from './spells.ts';
 import { COLORS, formatMana, manaAvailable, manaCapacity, parseManaCost, planPayment } from './mana.ts';
@@ -1998,4 +1998,56 @@ test('the real Sphinx of Jwar Isle lives on Jwar Isle, shrouded, seeing ahead', 
   assert.deepEqual(sx.abilities, ['fly', 'shroud']);
   assert.equal(world.npcs.find((x) => x.id === 'cre-sphinx')?.foresight, true);
   assert.ok(!world.npcs.find((x) => x.id === 'cre-sphinx')?.beast); // it talks, if rarely
+});
+
+// NPCs among themselves have what the player has with them (user decision 2026-09-30).
+test('an NPC may seek out another to talk, wherever they are and whatever they do', async () => {
+  const seeker = { ...npcSim('loc-a'), plan: [['00:00', '24:00', 'loc-a', 'social', '벗을 찾아감', '💬', null, null, 'chr-y']] };
+  const world = fixture([npc('chr-x', seeker), npc('chr-y', npcSim('loc-b', 'work'))]);
+  const state = newState(world, { seed: 1, mode: 'observer' });
+  const talks: string[][] = [];
+  await advance(state, world, 4, { converse: async ({ a, b }) => (talks.push([a.id, b.id]), null) });
+  assert.equal(state.actors['chr-x'].region, 'loc-b'); // went to them
+  assert.ok(texts(state).some((t) => t.includes('찾아가 마주했다')));
+  assert.equal(talks.length, 1);
+});
+
+test('an NPC may pledge to serve another in talk, as to the player; not if they serve someone', async () => {
+  const world = fixture([npc('chr-x', npcSim('loc-a')), npc('chr-y', npcSim('loc-a')), npc('chr-z', npcSim('loc-a'))]);
+  const state = newState(world, { seed: 1, mode: 'observer' });
+  state.actors['chr-z'].master = 'chr-y';
+  const pledge: Llm['converse'] = async ({ a, b }) => ({ lines: [{ by: a.id, say: '따르겠소' }], impressions: {}, attacker: null, follower: [a.id, b.id].includes('chr-x') ? 'chr-x' : 'chr-z' });
+  await advance(state, world, 1, { converse: pledge });
+  const x = state.actors['chr-x'];
+  assert.ok(x.master === 'chr-y' || x.master === 'chr-z');
+  assert.equal(state.actors['chr-z'].master, 'chr-y'); // already served: no pledge
+  assert.ok(texts(state).some((t) => t.includes('권속이 되었다 (설득)')));
+});
+
+test('an NPC may go after another and fall on them; a defender may not', async () => {
+  const hunter = { ...npcSim('loc-a', 'work', [3, 3]), plan: [['00:00', '24:00', 'loc-a', 'attack', '원수를 쫓음', '⚔️', null, null, 'chr-y']] };
+  const world = fixture([npc('chr-x', hunter), npc('chr-y', npcSim('loc-b', 'work', [1, 2]))]);
+  const state = newState(world, { seed: 1, mode: 'observer' });
+  await advance(state, world, 4);
+  assert.equal(state.actors['chr-x'].region, 'loc-b');
+  assert.ok(texts(state).some((t) => t.includes('에게 덤벼들었다')));
+  assert.ok(woundsOf(state.actors['chr-y'], state.minutes) > 0 || knockedOut(state.actors['chr-y']));
+  assert.equal(attackBlocked(state, { ...state.actors['chr-x'], abilities: ['defender'] }, 'chr-y', state.minutes), '먼저 덤비지 않는다.');
+});
+
+test('a flyer NPC set on by an NPC who can\'t fly may take to the air until midnight, as from the player', async () => {
+  const flyer = { ...npcSim('loc-a', 'work', [2, 7]), abilities: ['fly'] };
+  const world = fixture([npc('chr-x', npcSim('loc-a', 'work', [3, 3])), npc('chr-f', flyer)]);
+  const state = newState(world, { seed: 1, mode: 'observer' });
+  addFoe(state.actors['chr-x'], 'chr-f', state.minutes);
+  const asked: string[] = [];
+  await advance(state, world, 3, { evade: async ({ npc, attacker }) => (asked.push(`${npc.id}<${attacker.id}`), true) });
+  assert.deepEqual(asked, ['chr-f<chr-x']); // once for the day
+  assert.ok(texts(state).some((t) => t.includes('공격을 피했다 (자정까지')));
+  assert.equal(woundsOf(state.actors['chr-f'], state.minutes), 0);
+  // Standing to fight instead: the blow lands the hour after.
+  const s2 = newState(world, { seed: 1, mode: 'observer' });
+  addFoe(s2.actors['chr-x'], 'chr-f', s2.minutes);
+  await advance(s2, world, 2, { evade: async () => false });
+  assert.ok(woundsOf(s2.actors['chr-f'], s2.minutes) > 0);
 });

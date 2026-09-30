@@ -198,7 +198,7 @@ function prey(state: State, world: World, a: Actor, t: number) {
   if (!def?.beast || !needsOf(a).includes('hunger') || a.stats.hunger < HUNT_HUNGER) return undefined;
   if (a.task?.kind === 'sleep') return undefined;
   return present(state, a.region)
-    .filter((b) => b.id !== a.id && !hasPowers(npcDef(state, world, b.id)) && b.boundUntil === undefined && !down(b) && !foesOf(a, t).includes(b.id))
+    .filter((b) => b.id !== a.id && !hasPowers(npcDef(state, world, b.id)) && b.boundUntil === undefined && !down(b) && !foesOf(a, t).includes(b.id) && evasion(a, b, t) !== 'evade')
     .sort((x, y) => ptOf(x)[1] - ptOf(y)[1] || x.id.localeCompare(y.id))[0];
 }
 
@@ -221,6 +221,27 @@ function extraCombat(state: State, world: World, a: Actor, foe: Actor, t: number
   for (const x of band) if (!down(x) && !down(foe)) clash(state, x, foe, t);
 }
 
+// A flyer NPC set on by one who can't fly may take to the air, as when the player attacks them
+// (sim/run.ts `attack`): 'evade' if they are out of `a`'s reach until midnight, 'ask' if they
+// have yet to answer (the LLM, after the hour: sim/run.ts `evasions`), null if they stand.
+function evasion(a: Actor, b: Actor, t: number): 'evade' | 'ask' | null {
+  if (b.kind !== 'npc' || !hasAbility(b, 'fly', t) || hasAbility(a, 'fly', t) || b.boundUntil !== undefined || down(b)) return null;
+  const e = b.evasions?.find((x) => x.from === a.id && x.until > t);
+  return e ? (e.evade ? 'evade' : null) : 'ask';
+}
+
+// Why an NPC can't go after `whoId` now (a planned attack, sim/step.ts), or null. The player
+// may attack anyone standing with them; an NPC too, but for these.
+export function attackBlocked(state: State, a: Actor, whoId: string | undefined, t: number): string | null {
+  const b = whoId ? state.actors[whoId] : undefined;
+  if (!b || b.dead || b.kind !== 'npc') return '그런 이는 없다.';
+  if (b.id === a.id) return '자신에게 덤빌 수는 없다.';
+  if (hasAbility(a, 'defender', t)) return '먼저 덤비지 않는다.';
+  if (a.seized && a.master === b.id) return `붙들린 몸이라 ${shortName(b.name)}에게 덤빌 수 없다.`;
+  if (b.region !== a.region || b.travel || outOfTime(state, b, t)) return `${josa(shortName(b.name), '은', '는')} 여기 없다.`;
+  return null;
+}
+
 // NPCs attack a foe standing with them, one exchange per hour. Their hour goes
 // to fighting. A hungry beast makes a foe of its prey; if it kills, it feeds.
 export function hostileNpcs(state: State, world: World, t: number) {
@@ -233,7 +254,7 @@ export function hostileNpcs(state: State, world: World, t: number) {
     // Their own foes, and (a retainer) whoever their master is fighting right here.
     const m = masterOf(state, a);
     const theirs = [...foesOf(a, t), ...(m && m.region === a.region && !m.travel ? foesOf(m, t) : [])];
-    let foe = present(state, a.region).find((b) => theirs.includes(b.id) && b.id !== a.master && !down(b));
+    let foe = present(state, a.region).find((b) => theirs.includes(b.id) && b.id !== a.master && !down(b) && evasion(a, b, t) !== 'evade');
     const hunted = !foe && prey(state, world, a, t);
     if (hunted) {
       foe = hunted;
@@ -246,6 +267,11 @@ export function hostileNpcs(state: State, world: World, t: number) {
       });
     }
     if (!foe) continue;
+    // A flyer yet to answer: the blow waits for it (asked after the hour).
+    if (evasion(a, foe, t) === 'ask') {
+      if (!state.evades?.some((e) => e.by === foe!.id && e.from === a.id)) (state.evades ??= []).push({ by: foe.id, from: a.id, t });
+      continue;
+    }
     a.forced = { kind: 'fight', activity: `${josa(shortName(foe.name), '과', '와')} 싸움`, emoji: '⚔️', until: t + STEP_MINUTES };
     clash(state, a, foe, t);
     extraCombat(state, world, a, foe, t);

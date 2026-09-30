@@ -1,10 +1,10 @@
 // Turn driver. Time only moves here: the observer advances N hours, the player acts and the
 // world runs until the action is done. The game passes every LLM hook (sim/llm/index.ts);
 // tests pass fakes or none.
-import { formatClock, gameDay } from './clock.ts';
+import { formatClock, gameDay, untapTime } from './clock.ts';
 import { startAction } from './actions.ts';
 import type { Action } from './actions.ts';
-import { addLog, npcDef, outOfTime, player, random, speakerDef } from './state.ts';
+import { addLog, hasAbility, npcDef, outOfTime, player, ptOf, random, speakerDef } from './state.ts';
 import type { Actor, GmPlan, LogEntry, State } from './state.ts';
 import { eligibleGmEvents, ruinsUntil, step } from './step.ts';
 import { addFoe, clash } from './combat.ts';
@@ -53,7 +53,8 @@ export type ChooseInput = { world: World; state: State; npc: Speaker; what: stri
 export type ChooseColorInput = { world: World; state: State; npc: Speaker; opponents: Actor[] };
 // Two NPCs' exchange: the lines, what each now thinks of the other (by id), and who, if
 // anyone, now attacks the other.
-export type Conversation = { lines: { by: string; say: string }[]; impressions: Record<string, string>; attacker: string | null };
+// `follower`: one who, won over, now pledges to serve the other (as an NPC may to the player).
+export type Conversation = { lines: { by: string; say: string }[]; impressions: Record<string, string>; attacker: string | null; follower?: string | null };
 
 export type Llm = {
   planDay?: (input: PlanDayInput) => Promise<ScheduleBlock[] | null>;
@@ -184,6 +185,11 @@ async function conversations(state: State, world: World, since: number, llm: Llm
     }
     if (talk.impressions[x.id]) remember(x, y, talk.impressions[x.id], state.minutes);
     if (talk.impressions[y.id]) remember(y, x, talk.impressions[y.id], state.minutes);
+    // One won over pledges to serve the other, as an NPC may to the player (not both ways, not
+    // with a fight).
+    const follower = talk.follower === x.id ? x : talk.follower === y.id ? y : undefined;
+    if (follower && !talk.attacker && canPledge(state, world, follower, follower === x ? y : x))
+      bindRetainer(state, world, follower, follower === x ? y : x, state.minutes, '설득');
     if (talk.attacker === x.id || talk.attacker === y.id) {
       const [from, to] = talk.attacker === x.id ? [x, y] : [y, x];
       addFoe(from, to.id, state.minutes);
@@ -197,10 +203,39 @@ async function conversations(state: State, world: World, since: number, llm: Llm
   }
 }
 
+// Flyer NPCs set on this hour by one who can't fly (sim/combat.ts): do they take to the air?
+// Their answer holds until midnight: out of that one's reach, or standing to fight.
+async function evasions(state: State, world: World, llm: Llm) {
+  const asks = state.evades ?? [];
+  state.evades = [];
+  for (const e of asks) {
+    const [b, a, npc] = [state.actors[e.by], state.actors[e.from], speakerDef(state, world, e.by)];
+    if (!b || !a || !npc || b.dead || a.dead) continue;
+    let evade = false;
+    if (llm.evade) {
+      try {
+        evade = await llm.evade({ world, state, npc, attacker: a });
+      } catch (err) {
+        console.warn(`evade for ${b.id} failed:`, err);
+      }
+    }
+    const until = untapTime(e.t);
+    b.evasions = [...(b.evasions ?? []).filter((x) => x.until > state.minutes && x.from !== a.id), { from: a.id, evade, until }];
+    if (evade)
+      addLog(state, {
+        kind: 'combat',
+        text: `${josa(shortName(b.name), '은', '는')} 날아올라 ${shortName(a.name)}의 공격을 피했다 (자정까지 닿지 않는다).`,
+        regions: [b.region],
+        actors: [b.id, a.id],
+      });
+  }
+}
+
 // Still doing something, or out of time (their action waits until they are back).
 // Picks NPCs owe from this hour (state.choices), made by the LLM. When it can't answer, the
 // engine picks at random among the candidates, so the effect still lands.
 async function choices(state: State, world: World, llm: Llm) {
+  await evasions(state, world, llm);
   const due = state.choices ?? [];
   state.choices = [];
   for (const c of due) {
@@ -455,6 +490,7 @@ async function prepare(state: State, world: World, llm: Llm): Promise<string | n
           fetch: fetchInput(state, world, a),
           court: courtInput(state, world, a),
           hire: hireInput(state, world, a),
+          people: peopleInput(state, world, a),
           ...(npc.foresight ? { foresight: foresightText(state, world, state.minutes) } : {}),
           ...spellsInput(state, world, a, npc),
           news,
@@ -508,6 +544,32 @@ function hireInput(state: State, world: World, a: Actor): PlanDayInput['hire'] {
     .filter((x) => !x.travel)
     .map((x) => ({ id: x.id, at: x.region, text: `${x.name} (${npcDef(state, world, x.id)?.summary ?? ''}), costs ${hirePrice(npcDef(state, world, x.id)!)} coin (they have ${Math.floor(a.stats.coin)})` }));
   return out.length ? out : undefined;
+}
+
+// Everyone else in the world, and where each is now: whom they could seek out to talk with (not
+// beasts) or go after, for their plan. A defender strikes no one first; one seized, not the
+// one who holds them.
+function peopleInput(state: State, world: World, a: Actor): PlanDayInput['people'] {
+  const canAttack = !hasAbility(a, 'defender', state.minutes);
+  const out = Object.values(state.actors)
+    .filter((x) => x.kind === 'npc' && !x.dead && x.id !== a.id && !outOfTime(state, x))
+    .map((x) => {
+      const def = npcDef(state, world, x.id);
+      return {
+        id: x.id,
+        at: x.travel?.to ?? x.region,
+        text: `${x.name} (${def?.beast ? 'beast' : (def?.role ?? '')}, ${ptOf(x).join('/')})`,
+        talk: !def?.beast,
+        attack: canAttack && !(a.seized && a.master === x.id),
+      };
+    });
+  return out.length ? out : undefined;
+}
+
+// Whether `a` may pledge to serve `master` in a talk: free to (not bound to anyone, not one
+// with powers), and not to one who serves them.
+export function canPledge(state: State, world: World, a: Actor, master: Actor) {
+  return !swayBlocked(state, world, a) && !master.dead && master.master !== a.id;
 }
 
 // Lands they could seek out with the fetch lands they hold, for their plan.

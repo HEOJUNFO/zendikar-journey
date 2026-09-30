@@ -21,7 +21,7 @@ import {
 } from './rules.ts';
 import { gainedLifeToday, loseLife } from './life.ts';
 import { addLog, alive, landUnusable, needsOf, npcDef, outOfTime, present, ptOf, random } from './state.ts';
-import { addFoe, dealDamage, hostileNpcs } from './combat.ts';
+import { addFoe, attackBlocked, dealDamage, foesOf, hostileNpcs } from './combat.ts';
 import { bondBlocked, bondLand, expireGranted, FETCH_HOURS, fetchLand, fetchSource, growBlocked, growEntered, growLand, spawnWild, upkeepRevive, useAbility } from './abilities.ts';
 import { CLAIM_HOURS, claimBlocked, claimItem, itemsAt } from './items.ts';
 import { EON_HOURS, eonLand, holdStill, spendBlocked, spendDay, storeBlocked, storeDay, timeNews } from './eons.ts';
@@ -441,7 +441,9 @@ function npcTask(state: State, world: World, a: Actor, t: number): Task | undefi
   if (!block) return a.task;
   // A retainer lives its day at its master's side.
   const m = masterOf(state, a);
-  const where = m ? (m.travel?.to ?? m.region) : block.regionId;
+  // One they seek out (to talk) or go after (to attack): wherever that one is now.
+  const sought = (block.kind === 'social' || block.kind === 'attack') && block.who ? state.actors[block.who] : undefined;
+  const where = m ? (m.travel?.to ?? m.region) : sought && !sought.dead && !outOfTime(state, sought, t) ? (sought.travel?.to ?? sought.region) : block.regionId;
   if (where !== a.region && !travelBlocked(state, world, a, where)) {
     startTravel(state, world, a, where, t);
     return a.task;
@@ -465,6 +467,7 @@ function npcTask(state: State, world: World, a: Actor, t: number): Task | undefi
     : block.kind === 'cast' ? npcCastBlocked(state, world, a, spell!.id, t)
     : block.kind === 'court' ? courtBlocked(state, world, a, block.who)
     : block.kind === 'hire' ? hireBlocked(state, world, a, block.who)
+    : block.kind === 'attack' ? attackBlocked(state, a, block.who, t)
     : block.kind === 'claim' && !item ? (itemsAt(world, a.region).map((x) => claimBlocked(state, world, a, x.id, t))[0] ?? '길들일 것이 없다.')
     : power && !land ? '그런 힘을 가진 땅이 없다.'
     : block.kind === 'store_day' ? storeBlocked(state, world, a, land!.id, t)
@@ -484,6 +487,8 @@ function npcTask(state: State, world: World, a: Actor, t: number): Task | undefi
             ? { kind: block.kind, activity: block.activity, emoji: block.emoji, until: t + (block.kind === 'learn' ? spell.learnHours : 1) * 60, spell: spell.id }
           : block.kind === 'court' || block.kind === 'hire'
             ? { kind: block.kind, activity: block.activity, emoji: block.emoji, until: t + (block.kind === 'court' ? COURT_HOURS : HIRE_HOURS) * 60, who: block.who }
+          : block.kind === 'attack' || (block.kind === 'social' && block.who)
+            ? { kind: block.kind, activity: block.activity, emoji: block.emoji, who: block.who }
           : fetchFrom && 'from' in fetchFrom
             ? { kind: 'fetch', activity: block.activity, emoji: block.emoji, until: t + FETCH_HOURS * 60, from: fetchFrom.from.id, land: block.land }
           : item
@@ -500,6 +505,17 @@ function npcTask(state: State, world: World, a: Actor, t: number): Task | undefi
     });
   }
   a.task = task;
+  // Going after someone, and here: they fall on them, and fight from the next hour on.
+  const foe = task.kind === 'attack' && task.who ? state.actors[task.who] : undefined;
+  if (foe && !foesOf(a, t).includes(foe.id)) {
+    addFoe(a, foe.id, t);
+    addLog(state, {
+      kind: 'combat',
+      text: `${josa(shortName(a.name), '이', '가')} ${shortName(foe.name)}에게 덤벼들었다.`,
+      regions: [a.region],
+      actors: [a.id, foe.id],
+    });
+  }
   return task;
 }
 
@@ -518,24 +534,31 @@ function travelHour(state: State, world: World, a: Actor, t: number) {
   });
 }
 
-// NPCs who are both eating or socialising in the same region meet once a day.
+// NPCs meet once a day: one seeking another out (a social block's `who`) meets them where
+// they stand, whatever they are doing, as the player talks to anyone there; and those both
+// eating or socialising in the same region meet by chance. Sought meetings come first.
 function meetings(state: State, world: World) {
-  const open = alive(state).filter(
-    (a) =>
-      a.kind === 'npc' && !a.travel && a.boundUntil === undefined && !outOfTime(state, a) && (a.task?.kind === 'social' || a.task?.kind === 'eat'),
-  );
-  for (let i = 0; i < open.length; i++) {
-    for (let j = i + 1; j < open.length; j++) {
-      const [x, y] = [open[i], open[j]].sort((p, q) => p.id.localeCompare(q.id));
-      const key = `${x.id}|${y.id}`;
-      if (x.region !== y.region || state.met.pairs.includes(key)) continue;
-      state.met.pairs.push(key);
-      addLog(state, {
-        kind: 'meet',
-        text: `${josa(shortName(x.name), '과', '와')} ${josa(shortName(y.name), '이', '가')} ${region(world, x.region).name}에서 마주쳤다.`,
-        regions: [x.region],
-        actors: [x.id, y.id],
-      });
-    }
+  const free = (a: Actor) => a.kind === 'npc' && !a.dead && !a.travel && a.boundUntil === undefined && !outOfTime(state, a);
+  const pairs: { x: Actor; y: Actor; seeker?: Actor }[] = [];
+  for (const a of alive(state)) {
+    const b = a.task?.kind === 'social' && a.task.who ? state.actors[a.task.who] : undefined;
+    if (b && free(a) && free(b) && a.region === b.region) pairs.push({ x: a, y: b, seeker: a });
+  }
+  const open = alive(state).filter((a) => free(a) && (a.task?.kind === 'social' || a.task?.kind === 'eat'));
+  for (let i = 0; i < open.length; i++) for (let j = i + 1; j < open.length; j++) if (open[i].region === open[j].region) pairs.push({ x: open[i], y: open[j] });
+  for (const { x: p, y: q, seeker } of pairs) {
+    const [x, y] = [p, q].sort((a, b) => a.id.localeCompare(b.id));
+    const key = `${x.id}|${y.id}`;
+    if (state.met.pairs.includes(key)) continue;
+    state.met.pairs.push(key);
+    const other = seeker && (seeker === x ? y : x);
+    addLog(state, {
+      kind: 'meet',
+      text: seeker
+        ? `${josa(shortName(seeker.name), '이', '가')} ${region(world, x.region).name}에서 ${josa(shortName(other!.name), '을', '를')} 찾아가 마주했다.`
+        : `${josa(shortName(x.name), '과', '와')} ${josa(shortName(y.name), '이', '가')} ${region(world, x.region).name}에서 마주쳤다.`,
+      regions: [x.region],
+      actors: [x.id, y.id],
+    });
   }
 }

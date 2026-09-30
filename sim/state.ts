@@ -74,6 +74,9 @@ export type Actor = {
   // seized can only wait.
   seized?: boolean;
   seizedUntil?: number;
+  // A flyer's answer, for the day, to one who can't fly attacking them (sim/combat.ts): out
+  // of their reach until `until` (evade), or standing to fight.
+  evasions?: { from: string; evade: boolean; until: number }[];
   // Lands they sought out with a fetch land: gone from their "library". Kept for when
   // exploring can turn things up (fewer empty searches, as MTG's deck thinning).
   fetched?: string[];
@@ -219,6 +222,9 @@ export type State = {
   // after the hour (sim/run.ts), from these candidates.
   // `optional`: they may pick no one ("you may").
   choices?: Choice[];
+  // A flyer NPC attacked by one who can't fly: whether they take to the air is asked of the LLM
+  // after the hour (sim/run.ts); the blow waits until then.
+  evades?: { by: string; from: string; t: number }[];
   // "You control target player during that player's next turn" (Sorin): the target is seized by
   // `by` from `from` until `until` (their next day), at the upkeep (sim/retainers.ts).
   possessions?: { target: string; by: string; from: number; until: number }[];

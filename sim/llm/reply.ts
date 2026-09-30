@@ -8,7 +8,7 @@ import { recentNews } from '../run.ts';
 import { shortName } from '../text.ts';
 import { region } from '../world.ts';
 import { chatCompletion, extractJson } from './chat.ts';
-import { loreText, playerText } from './context.ts';
+import { bearingText, loreText, playerText } from './context.ts';
 import { relationsText, relationTo } from '../relations.ts';
 import { swayBlocked } from '../retainers.ts';
 
@@ -78,14 +78,14 @@ export async function evade({ world, state, npc, attacker }: EvadeInput): Promis
     [
       {
         role: 'system',
-        content: `You are ${npc.name}, a character in the plane of Zendikar. You can fly; the one attacking you cannot.
+        content: `You are ${npc.name}, a character in the plane of Zendikar. You can fly; the one attacking you cannot. If you fly off, they can't reach you until midnight.
 Who you are: ${npc.persona}
 Your goal: ${npc.goal}
 Answer with JSON only: {"evade": true} to fly out of reach, or {"evade": false} to stand and fight.`,
       },
       {
         role: 'user',
-        content: `World lore:\n${loreText(world)}\n\n${shortName(attacker.name)} (power/toughness ${ptOf(attacker).join('/')}) attacks you (${ptOf(state.actors[npc.id]).join('/')}) in ${region(world, attacker.region).name}. ${playerText(state)}`,
+        content: `World lore:\n${loreText(world)}\n\n${shortName(attacker.name)} (${bearingText(state, attacker)}) attacks you (${ptOf(state.actors[npc.id]).join('/')}) in ${region(world, attacker.region).name}.${attacker.kind === 'player' ? ` ${playerText(state)}` : ''}\nWhat you think of them: ${relationTo(state.actors[npc.id], attacker.id) ?? '(you have not met before)'}`,
       },
     ],
     400,
