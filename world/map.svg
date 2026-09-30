@@ -41,7 +41,7 @@
     <text x="1154.9167347249515" y="1144.9318893338805" text-anchor="start" class="area">카잔두 피난처</text></g>
   <g><circle cx="1885.1505098562452" cy="939.8692188278753" r="19.200000000000003" fill="#3f7fcf" stroke="#f4ecd8" stroke-width="2"/>
     <text x="1926.5067378094238" y="1046.6858963909817" text-anchor="start" class="area">마고시, 물의 장막</text></g>
-  <g><circle cx="1981.0834711987266" cy="1744.5689297770746" r="19.200000000000003" fill="#9a958b" stroke="#f4ecd8" stroke-width="2"/>
+  <g><circle cx="1981.0834711987266" cy="1744.5689297770746" r="19.200000000000003" fill="#efe4c2" stroke="#f4ecd8" stroke-width="2"/>
     <text x="1882.100920269007" y="1792.0513233024972" text-anchor="end" class="area">마킨디 협곡</text></g>
   <g><circle cx="1188" cy="2392.8" r="19.200000000000003" fill="#2b2233" stroke="#f4ecd8" stroke-width="2"/>
     <text x="1188" y="2513.3999999999996" text-anchor="middle" class="area">말라키르</text></g>
@@ -77,9 +77,9 @@
   <g><circle cx="1416" cy="750" r="70" fill="#1d3b66" opacity="0.75"/><circle cx="1416" cy="750" r="30" fill="none" stroke="#9fc4ff" stroke-width="2" stroke-dasharray="6 6"/>
     <text x="1416" y="842" text-anchor="middle" class="name">심해의 영역</text>
     <text x="1416" y="860" text-anchor="middle" class="terrain">심해</text></g>
-  <g><circle cx="2976" cy="1380" r="36" fill="#9a958b" stroke="#f4ecd8" stroke-width="3"/>
+  <g><circle cx="2976" cy="1380" r="36" fill="#cc4f34" stroke="#f4ecd8" stroke-width="3"/>
     <text x="2976" y="1437" text-anchor="middle" class="name">고마 파다</text>
-    <text x="2976" y="1455" text-anchor="middle" class="terrain">정착지</text></g>
+    <text x="2976" y="1455" text-anchor="middle" class="terrain">바위 지대</text></g>
   <g>
     <text x="1188" y="2063.3999999999996" text-anchor="middle" class="name">굴 드라즈</text>
     <text x="1188" y="2081.3999999999996" text-anchor="middle" class="terrain">늪</text></g>

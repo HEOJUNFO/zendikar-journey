@@ -2357,7 +2357,7 @@ test('the real Bog Tatters drifts in Piranha Marsh, swampwalking', () => {
   assert.ok(hasAbility(w, 'swampwalk', state.minutes));
 });
 
-test('the real Caravan Hurda hauls for Goma Fada, for 50 coin; the walking city is no land to bond with', () => {
+test('the real Caravan Hurda hauls for Goma Fada, for 50 coin; the walking city is a mountain', () => {
   const world = loadWorld();
   const state = newState(world, { seed: 1, mode: 'observer' });
   const h = state.actors['cre-hurda'];
@@ -2366,7 +2366,7 @@ test('the real Caravan Hurda hauls for Goma Fada, for 50 coin; the walking city 
   assert.deepEqual(ptOf(h), [1, 5]);
   assert.ok(hasAbility(h, 'lifelink', state.minutes));
   assert.equal(hirePrice(world.npcs.find((x) => x.id === 'cre-hurda')!), 50);
-  assert.match(bondBlocked(state, world, h, state.minutes)!, /땅이 아니라/);
+  assert.deepEqual(landTypes(region(world, 'loc-goma-fada')), ['mountain']); // a walking mountain
 });
 
 test('a wandering place walks toward the stop the LLM picks, carries those in it, and journeys to it are as long as it is far today', async () => {
@@ -2403,7 +2403,7 @@ test('the real Goma Fada walks Akoum\'s roads', () => {
   const r = region(world, 'loc-goma-fada');
   assert.equal(r.parent, undefined);
   assert.deepEqual(r.wanders?.stops.map((s) => s.name), ['로가 대로', '아쿰의 띠', '비탄의 고개']);
-  assert.ok(r.notLand);
+  assert.equal(r.notLand, undefined);
 });
 
 const pledge: RawEntity = {
@@ -2587,7 +2587,7 @@ test('landfall grant: bonding with a land, it flies until midnight', async () =>
   assert.equal(hasAbility(g, 'fly', state.minutes), false);
 });
 
-test('the real Geyser Glider hunts in the Makindi Trenches, Ondu\'s canyons: no land, no mountain', () => {
+test('the real Geyser Glider hunts in the Makindi Trenches, Ondu\'s canyons: plains', () => {
   const world = loadWorld();
   const state = newState(world, { seed: 1, mode: 'observer' });
   const g = state.actors['cre-geyser-glider'];
@@ -2595,8 +2595,7 @@ test('the real Geyser Glider hunts in the Makindi Trenches, Ondu\'s canyons: no 
   assert.deepEqual(world.npcs.find((x) => x.id === 'cre-geyser-glider')?.landfallGrant, ['fly']);
   const mk = region(world, 'loc-makindi');
   assert.equal(mk.parent, 'loc-ondu');
-  assert.ok(mk.notLand);
-  assert.deepEqual(landTypes(mk), []);
+  assert.deepEqual(landTypes(mk), ['plains']);
 });
 
 const giant: RawEntity = {
