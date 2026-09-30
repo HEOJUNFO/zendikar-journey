@@ -1,17 +1,17 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="406 132 1288 966" width="1288" height="966">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="346 132 1288 966" width="1288" height="966">
   <style>
     .name { font: 600 18px sans-serif; fill: #f4ecd8; }
     .terrain { font: 13px sans-serif; fill: #b9c3cf; }
     .area { font: 600 14px sans-serif; fill: #f4ecd8; }
   </style>
-  <rect x="406" y="132" width="1288" height="966" fill="#16324f"/>
-  <circle cx="744" cy="726" r="42" fill="#d9c38a" fill-opacity="0.35" stroke="#f4ecd8" stroke-opacity="0.7" stroke-width="3"/>
+  <rect x="346" y="132" width="1288" height="966" fill="#16324f"/>
+  <circle cx="624" cy="744" r="60" fill="#d9c38a" fill-opacity="0.35" stroke="#f4ecd8" stroke-opacity="0.7" stroke-width="3"/>
   <circle cx="1320" cy="648" r="96" fill="#b5462c" fill-opacity="0.35" stroke="#f4ecd8" stroke-opacity="0.7" stroke-width="3"/>
   <circle cx="900" cy="972" r="42" fill="#d9c38a" fill-opacity="0.35" stroke="#f4ecd8" stroke-opacity="0.7" stroke-width="3"/>
   <circle cx="900" cy="780" r="96" fill="#8fb35a" fill-opacity="0.35" stroke="#f4ecd8" stroke-opacity="0.7" stroke-width="3"/>
   <circle cx="780" cy="372" r="96" fill="#d9c38a" fill-opacity="0.35" stroke="#f4ecd8" stroke-opacity="0.7" stroke-width="3"/>
-  <g><circle cx="744" cy="747" r="16" fill="#6a5a82" stroke="#f4ecd8" stroke-width="2"/>
-    <text x="744" y="787.8000000000001" text-anchor="middle" class="area">아게딤의 묘실</text></g>
+  <g><circle cx="643.3265306171307" cy="766.9452656185347" r="16" fill="#6a5a82" stroke="#f4ecd8" stroke-width="2"/>
+    <text x="669.6106122564286" y="807.1508268597418" text-anchor="start" class="area">아게딤의 묘실</text></g>
   <g><circle cx="1320" cy="696" r="16" fill="#b08850" stroke="#f4ecd8" stroke-width="2"/>
     <text x="1320" y="763.8" text-anchor="middle" class="area">아쿰 피난처</text></g>
   <g><circle cx="930.9224489874092" cy="816.7124249896556" r="16" fill="#8a8173" stroke="#f4ecd8" stroke-width="2"/>
@@ -22,9 +22,11 @@
     <text x="831.1975510030145" y="870.6851456019834" text-anchor="end" class="area">그레이펠트 피난처</text></g>
   <g><circle cx="900" cy="993" r="16" fill="#b08850" stroke="#f4ecd8" stroke-width="2"/>
     <text x="900" y="1033.8000000000002" text-anchor="middle" class="area">즈와르 섬 피난처</text></g>
+  <g><circle cx="604.6734693828693" cy="766.9452656185347" r="16" fill="#b08850" stroke="#f4ecd8" stroke-width="2"/>
+    <text x="578.3893877435714" y="807.1508268597418" text-anchor="end" class="area">카비라 교차로</text></g>
   <g>
-    <text x="744" y="656" text-anchor="middle" class="name">아게딤</text>
-    <text x="744" y="674" text-anchor="middle" class="terrain">해변</text></g>
+    <text x="624" y="656" text-anchor="middle" class="name">아게딤</text>
+    <text x="624" y="674" text-anchor="middle" class="terrain">해변</text></g>
   <g>
     <text x="1320" y="524" text-anchor="middle" class="name">아쿰</text>
     <text x="1320" y="542" text-anchor="middle" class="terrain">화산 지대</text></g>

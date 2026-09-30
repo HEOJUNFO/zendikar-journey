@@ -5,10 +5,11 @@ name: 아게딤의 묘실
 name_en: Crypt of Agadeem
 summary: 아게딤 섬의 땅 밑에 잠든 고대 도시 아게딤의 묘역. 부서진 석조 기둥 사이로 보랏빛이 흘러넘치고, 섬기던 이를 잃은 자의 망자들이 이곳에서 힘이 된다
 status: canon
-sources: [ZEN-212]
+sources: [ZEN-212, ZEN-216]
 tags: [폐허, 묘역, 지하, 흑색]
 links:
   - { to: loc-agadeem, rel: 바깥 지역 }
+  - { to: loc-kabira-crossroads, rel: 길이 이어지는 도시 }
   - { to: law-retainers, rel: 죽은 권속의 힘 }
 map: { in: loc-agadeem, terrain: ruins, color: B }
 sim:

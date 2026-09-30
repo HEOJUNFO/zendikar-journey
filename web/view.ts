@@ -38,7 +38,8 @@ export function containerRadius(world: World, r: Region) {
   if (r.parent) return 0;
   const n = world.regions.filter((x) => x.parent === r.id).length;
   const base = r.size ? SIZE_RADIUS[r.size] : n ? 10 : 0;
-  return base && base + Math.max(0, n - 3) * 1.3;
+  // A small island has room for one area; each more widens it so their circles don't touch.
+  return base && base + (r.size === 'island' ? Math.max(0, n - 1) * 3 : Math.max(0, n - 3) * 1.3);
 }
 
 export function nodeAt(world: World, r: Region) {
