@@ -12,9 +12,9 @@ export const MAP_WIDTH = 600;
 export const MAP_HEIGHT = 450;
 
 // fly: can reach sky islands. aquatic: lives in the sea, and only there.
-export const ABILITIES = ['fly', 'aquatic', 'lifelink', 'vigilance', 'haste'] as const;
+export const ABILITIES = ['fly', 'aquatic', 'lifelink', 'vigilance', 'haste', 'trample'] as const;
 export type Ability = (typeof ABILITIES)[number];
-export const ABILITY_LABELS: Record<Ability, string> = { fly: '비행', aquatic: '물에 삶', lifelink: '생명연결', vigilance: '경계', haste: '속공' };
+export const ABILITY_LABELS: Record<Ability, string> = { fly: '비행', aquatic: '물에 삶', lifelink: '생명연결', vigilance: '경계', haste: '속공', trample: '돌진' };
 
 export const TERRAIN_IDS = [
   'grassland',
@@ -235,6 +235,9 @@ export const CharacterSimSchema = z.strictObject({
   hireable: z.boolean().default(false),
   // Landfall: when they bond with a land, they get +P/+T (and trample) until the turn ends.
   landfall: z.strictObject({ pt: z.tuple([z.number().int(), z.number().int()]), trample: z.boolean().default(false) }).optional(),
+  // "Landfall — … create a P/T <color> <kind> creature token": born at their side, theirs
+  // (their retainer), each time they bond with a land (Rampaging Baloths).
+  landfall_token: z.strictObject({ creature: z.string(), pt: PtSchema, colors: z.array(z.enum(COLORS)) }).optional(),
   // The creature kind a character is (e.g. cre-vampire). A creature entity's sim is its own kind.
   creature: z.string().optional(),
   // A planeswalker's loyalty (law-planeswalkers): their momentum. Loyalty abilities raise
@@ -460,6 +463,7 @@ export type NpcDef = {
   rally?: { type: 'damage_allies' }[];
   hireable?: boolean;
   landfall?: { pt: [number, number]; trample: boolean };
+  landfallToken?: { creature: string; pt: Pt; colors: Color[] };
   // The creature kind they are (e.g. cre-vampire), for "a Vampire you control".
   creature?: string;
   // Their colors when their mana doesn't say (e.g. a black Vampire risen in play).
@@ -615,7 +619,7 @@ export function buildWorld(entities: RawEntity[]): { world: World; errors: strin
         err(e.id, `sim 오류: ${issues(sim.error)}`);
         continue;
       }
-      const { knows_colors, activated, wins_at_life, extra_combat, name, ...rest } = sim.data;
+      const { knows_colors, activated, wins_at_life, extra_combat, landfall_token, name, ...rest } = sim.data;
 
       world.npcs.push({
         id: e.id,
@@ -625,6 +629,7 @@ export function buildWorld(entities: RawEntity[]): { world: World; errors: strin
         creature: e.kind === 'creature' ? e.id : rest.creature,
         knowsColors: knows_colors,
         ...(wins_at_life !== undefined ? { winsAtLife: wins_at_life } : {}),
+        ...(landfall_token ? { landfallToken: landfall_token } : {}),
         ...(extra_combat ? { extraCombat: { cost: parseManaCost(extra_combat.cost)!, costText: extra_combat.cost } } : {}),
         activated: activated.map((x) => ({ ...x, cost: parseManaCost(x.cost)!, costText: x.cost })),
       });

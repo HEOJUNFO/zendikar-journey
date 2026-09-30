@@ -144,7 +144,7 @@ export function clash(state: State, attacker: Actor, defender: Actor, t: number)
   // Trample: what the blow has beyond what kills goes on to someone else standing there.
   const spill = (from: Actor, to: Actor, power: number) => {
     const excess = power - (ptOf(to)[1] - woundsOf(to, t));
-    if (!from.boost?.trample || excess <= 0) return null;
+    if (!(from.boost?.trample || from.abilities.includes('trample')) || excess <= 0) return null;
     const others = present(state, from.region).filter((x) => x.id !== from.id && x.id !== to.id && !down(x));
     return others.length ? { who: others[Math.floor(random(state) * others.length)], excess } : null;
   };

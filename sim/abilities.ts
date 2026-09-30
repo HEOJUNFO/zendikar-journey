@@ -157,6 +157,19 @@ export function bondLand(state: State, world: World, a: Actor, t: number, region
       t,
     });
   }
+  // "Landfall — create a token": one more of their kind, born at their side and theirs.
+  if (def?.landfallToken) {
+    const tok = def.landfallToken;
+    const [born] = spawnWild(state, world, tok.creature, tok.pt, 1, a.region, tok.colors);
+    born.master = a.id;
+    addLog(state, {
+      kind: 'event',
+      text: `땅이 성나자 ${shortName(a.name)} 곁에 ${josa(shortName(born.name), '이', '가')} 새로 났다 (${tok.pt.join('/')}).`,
+      regions: [a.region],
+      actors: [a.id, born.id],
+      t,
+    });
+  }
   // The land's own: "enters tapped", "When this land enters, you gain N life".
   if (r.entersTapped)
     addLog(state, { kind: 'status', text: `${josa(r.name, '은', '는')} 탭된 채 들어왔다. 오늘은 마나를 내지 않는다.`, regions: [r.id], actors: [a.id], t });

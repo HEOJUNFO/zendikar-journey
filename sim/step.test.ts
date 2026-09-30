@@ -1390,10 +1390,10 @@ test('the real Malakir: one who gained life today walks in and the needlebite tr
   assert.equal(p.life, 16); // 20 + 1 - 5
 });
 
-test('the real baloth starts out in the jungle of Bala Ged', () => {
+test('the real baloth starts out in the jungle of Murasa', () => {
   const world = loadWorld();
   const state = newState(world, { seed: 1, mode: 'observer' });
-  assert.equal(state.actors['cre-baloth']?.region, 'loc-bala-ged');
+  assert.equal(state.actors['cre-baloth']?.region, 'loc-murasa');
 });
 
 test('an NPC learns a spell by a learn block where it is taught, then casts it by a cast block on the one the LLM picks', async () => {
@@ -1705,4 +1705,38 @@ test('the real Murasa Pyromancer roams Murasa, for 60 coin', () => {
   const def = world.npcs.find((x) => x.id === 'chr-murasa-pyromancer')!;
   assert.equal(def.ally, true);
   assert.equal(hirePrice(def), 60);
+});
+
+test('a herd with landfall tokens: each land it bonds with, a new 4/4 of its kind is born at its side and follows it; trample is its own', async () => {
+  const plan = [
+    ['00:00', '06:00', 'loc-b', 'sleep', '잠', '💤'],
+    ['06:00', '10:00', 'loc-b', 'bond', '사냥터 차지', '🐾'],
+    ['10:00', '24:00', 'loc-b', 'leisure', '어슬렁', '🌳'],
+  ];
+  const world = fixture([
+    lore('cre-bal', 'creature'),
+    npc('chr-herd', { ...npcSim('loc-b', 'social', [6, 6]), needs: ['energy'], beast: true, abilities: ['trample'], landfall_token: { creature: 'cre-bal', pt: [4, 4], colors: ['G'] }, plan }),
+    npc('chr-y', npcSim('loc-b', 'social', [1, 1])),
+    npc('chr-z', npcSim('loc-b', 'social', [1, 9])),
+  ]);
+  const state = newState(world, { seed: 1, mode: 'observer' });
+  const herd = state.actors['chr-herd'];
+  await advance(state, world, 4); // 06:00 → 10:00
+  const young = Object.values(state.actors).filter((x) => x.master === 'chr-herd');
+  assert.equal(young.length, 1);
+  assert.deepEqual(ptOf(young[0]), [4, 4]);
+  assert.equal(young[0].enteredAt !== undefined, true);
+  assert.ok(texts(state).some((t) => t.includes('새로 났다')));
+  // Trample without a landfall surge: 6 into a 1/1, 5 spills onto someone else there.
+  addFoe(herd, 'chr-y', state.minutes);
+  await advance(state, world, 1);
+  assert.ok(texts(state).some((t) => t.includes('돌진이')));
+});
+
+test('the real Rampaging Baloths roam Bala Ged; the Woodcrasher moved to Murasa', () => {
+  const world = loadWorld();
+  const state = newState(world, { seed: 1, mode: 'observer' });
+  assert.equal(state.actors['chr-rampaging-baloths']?.region, 'loc-bala-ged');
+  assert.ok(state.actors['chr-rampaging-baloths'].abilities.includes('trample'));
+  assert.equal(world.npcs.find((x) => x.id === 'chr-rampaging-baloths')?.landfallToken?.creature, 'cre-baloth');
 });
