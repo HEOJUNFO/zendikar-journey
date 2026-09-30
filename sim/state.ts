@@ -61,6 +61,8 @@ export type Actor = {
   claimed?: number;
   // Game day they last sought out a land with a fetch land: "searched their library" (Archive Trap).
   searched?: number;
+  // What an item's blessing gives them now (sim/monument.ts): +P/+T, and the abilities it added.
+  anthem?: { pt: [number, number]; added: Ability[] };
   // Game day they last gained life (sim/life.ts).
   lifeGained?: number;
   // Game day they were last turned down seeking to make someone follow them (a beast they
@@ -141,7 +143,7 @@ export type Actor = {
 // What falls on the one picked: a land's bonding effect, a burst of damage (Valakut), or a
 // spell an NPC casts (sim/spells.ts).
 export type Choice = { by: string; land: string; effect: ChoiceEffect; candidates: string[]; optional?: boolean; t: number };
-export type ChoiceEffect = BondEffect | { type: 'damage'; amount: number } | { type: 'cast'; spell: string } | { type: 'follow' } | { type: 'rally'; source: string } | { type: 'seize' } | { type: 'pledge'; from: string } | { type: 'evade'; from: string } | { type: 'discard'; cause: string };
+export type ChoiceEffect = BondEffect | { type: 'damage'; amount: number } | { type: 'cast'; spell: string } | { type: 'follow' } | { type: 'rally'; source: string } | { type: 'seize' } | { type: 'pledge'; from: string } | { type: 'evade'; from: string } | { type: 'discard'; cause: string } | { type: 'sacrifice'; item: string };
 
 export type Condition = {
   label: string;
@@ -229,7 +231,8 @@ export type State = {
   // NPC conversations held today (the LLM writes them; capped per day).
   talks?: { day: number; count: number };
   // Items (sim/items.ts): who holds each, and the charge counters on it.
-  items?: Record<string, { name: string; owner?: string; counters: number }>;
+  // `gone`: sacrificed (Eldrazi Monument), no longer in the world.
+  items?: Record<string, { name: string; owner?: string; counters: number; gone?: boolean }>;
   // Extra turns (sim/eons.ts): on that game day only `actor` moves; everyone else is out of time.
   extraDays?: { actor: string; day: number }[];
   // Picks an NPC owes (a land's targeted effect as they bonded with it): the LLM makes them
@@ -441,6 +444,7 @@ export function ptOf(a: Actor): Pt {
   let [p, t] = a.pt ?? PLAYER_PT;
   if (a.plusCounters) [p, t] = [p + a.plusCounters, t + a.plusCounters];
   for (const x of [...(a.boost ? [a.boost] : []), ...(a.pumps ?? []), ...(a.auras ?? [])]) [p, t] = [p + x.pt[0], t + x.pt[1]];
+  if (a.anthem) [p, t] = [p + a.anthem.pt[0], t + a.anthem.pt[1]];
   if (a.dried) t -= a.dried;
   return [p, t];
 }

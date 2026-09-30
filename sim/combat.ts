@@ -32,6 +32,12 @@ export function dealDamage(state: State, a: Actor, amount: number, t: number, ca
   }
   const toughness = ptOf(a)[1];
   const total = woundsOf(a, t) + amount;
+  // Indestructible: lethal damage leaves them standing (life loss and sacrifice still end them).
+  if (total >= toughness && hasAbility(a, 'indestructible', t)) {
+    a.wounds = { day: gameDay(t), amount: total };
+    addLog(state, { kind: 'combat', text: `${josa(shortName(a.name), '이', '가')} 피해 ${amount}를 입었지만 쓰러지지 않는다 (${total}/${toughness}, 파괴불가).`, regions: [a.region], actors: [a.id] });
+    return false;
+  }
   if (total >= toughness && nonlethal) {
     knockOut(state, a, t, cause);
     return false;

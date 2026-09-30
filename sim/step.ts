@@ -29,6 +29,7 @@ import { EON_HOURS, eonLand, holdStill, spendBlocked, spendDay, storeBlocked, st
 import { upkeepWins } from './win.ts';
 import { CRAWL_FACTOR, dryOut, stranded } from './stranded.ts';
 import { wanderHour, withPositions } from './wander.ts';
+import { anthemHour, upkeepSacrifice } from './monument.ts';
 import { HIRE_HOURS, hireBlocked, hireMerc } from './allies.ts';
 import { COURT_HOURS, courtBlocked, followsMaster, masterOf, readyCourt, refusedToday, upkeepPossessions } from './retainers.ts';
 import { learnBlocked, learnSpell, npcCastBlocked, readyCast, spellDef } from './spells.ts';
@@ -48,6 +49,7 @@ export function step(state: State, placed: World) {
   gmLayer(state, world, t);
   // Factions: none yet (world/entities/factions is empty).
   regionLayer(state, world, t);
+  anthemHour(state, world);
   dryOut(state, world, t);
   hostileNpcs(state, world, t);
   for (const a of alive(state)) {
@@ -93,6 +95,7 @@ function startDay(state: State, world: World, t: number) {
     expireGranted(state, t);
     upkeepRevive(state, world, t);
     upkeepWins(state, world, t);
+    upkeepSacrifice(state, world, t);
     upkeepPossessions(state, t);
   }
   if (state.gm.day !== day) state.gm = { day, source: 'none', fires: [] };

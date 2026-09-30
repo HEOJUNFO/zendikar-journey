@@ -5,9 +5,10 @@ name: 지속물
 name_en: Permanents
 summary: 세계에 남아 누군가에게 속한 것들. 땅, 걸어 둔 마법, 마법 물건, 그리고 인물
 status: canon
-sources: [ZEN-160, ZEN-200, ZEN-86]
+sources: [ZEN-160, ZEN-200, ZEN-86, ZEN-199]
 tags: [규칙]
 links:
+  - { to: itm-eldrazi-monument, rel: 마법물체 }
   - { to: spl-desecrated-earth, rel: 땅을 부수는 주문 }
   - { to: evt-cobra-trap, rel: 지속물이 부서질 때 }
   - { to: itm-eternity-vessel, rel: 마법물체 }

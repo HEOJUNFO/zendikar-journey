@@ -14,6 +14,7 @@ import { lifeOf } from './life.ts';
 import { foresightText } from './foresight.ts';
 import { setOff, wandersDue, withPositions } from './wander.ts';
 import { letGo } from './discard.ts';
+import { sacrifice } from './monument.ts';
 import { strandedText } from './stranded.ts';
 import { applyRally, hireableFor, hireMerc, hirePrice, rallyText } from './allies.ts';
 import { answerAsk, askText, canServe } from './asks.ts';
@@ -403,6 +404,22 @@ async function choices(state: State, world: World, llm: Llm) {
     }
     if (c.effect.type === 'follow') {
       await followChoice(state, world, llm, by, npc, candidates[0]);
+      continue;
+    }
+    // A creature owed to an item (Eldrazi Monument): one must be given. The LLM picks, as the
+    // owner; with no usable answer, the weakest.
+    if (c.effect.type === 'sacrifice') {
+      const item = c.effect.item;
+      let pick: string | null = null;
+      if (llm.choose) {
+        try {
+          pick = await llm.choose({ world, state, npc, candidates, what: `${state.items?.[item]?.name ?? item}이(가) 오늘의 제물을 요구한다. 당신이 부리는 생물(당신 자신도 든다) 가운데 하나를 바쳐야 한다. 바친 이는 죽는다` });
+        } catch (e) {
+          console.warn(`choose (sacrifice) for ${c.by} failed:`, e);
+        }
+      }
+      const x = candidates.find((y) => y.id === pick) ?? [...candidates].sort((p, q) => ptOf(p)[1] - ptOf(q)[1] || p.id.localeCompare(q.id))[0];
+      sacrifice(state, world, x, item, state.minutes);
       continue;
     }
     if (c.effect.type === 'seize') {

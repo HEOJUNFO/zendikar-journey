@@ -30,7 +30,7 @@ export function itemsOf(state: State, world: World, actorId: string) {
 
 export function claimBlocked(state: State, world: World, a: Actor, itemId: string, t: number): string | null {
   const x = itemDef(world, itemId);
-  if (!x) return '그런 것은 없다.';
+  if (!x || state.items?.[x.id]?.gone) return '그런 것은 없다.';
   const owner = itemOwner(state, x.id);
   if (owner === a.id) return `이미 ${josa(x.name, '을', '를')} 길들였다.`;
   if (owner) return `${josa(x.name, '은', '는')} 이미 ${shortName(state.actors[owner]?.name ?? owner)}의 것이다.`;
@@ -46,7 +46,7 @@ export function claimableItems(state: State, world: World, a: Actor, t: number) 
   const def = npcDef(state, world, a.id);
   if (!def || def.beast) return [];
   return world.items.filter(
-    (x) => !itemOwner(state, x.id) && canStay(region(world, x.at), def.abilities) && planPayment(manaAvailable(state, world, a, t), x.cost),
+    (x) => !itemOwner(state, x.id) && !state.items?.[x.id]?.gone && canStay(region(world, x.at), def.abilities) && planPayment(manaAvailable(state, world, a, t), x.cost),
   );
 }
 

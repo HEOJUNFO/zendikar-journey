@@ -18,6 +18,7 @@ import { gainLife, lifeOf } from './life.ts';
 import { hasAbility, newState, outOfTime, PLAYER_ID, present, ptOf, syncWorld, targetable } from './state.ts';
 import { foresightText } from './foresight.ts';
 import { withPositions } from './wander.ts';
+import { claimBlocked } from './items.ts';
 import { spendBlocked, storeBlocked } from './eons.ts';
 import { bondBlocked, bondLand, bondTargets, fetchTargets, fireTargets, firesOnBond, growBlocked, spawnWild, summonLibrary, useAbility } from './abilities.ts';
 import { DEPLETED_LABEL, DESTROYED_DAYS } from './rules.ts';
@@ -2508,4 +2509,68 @@ test('the real Desecrated Earth is taught in Agadeem\'s Crypt', () => {
   const s = world.spells.find((x) => x.id === 'spl-desecrated-earth')!;
   assert.equal(s.learnAt, 'loc-agadeem-crypt');
   assert.deepEqual(s.effects.map((e) => e.type), ['destroy_land', 'discard']);
+});
+
+const monument: RawEntity = {
+  id: 'itm-mon',
+  kind: 'item',
+  name: '기념비',
+  status: 'canon',
+  sim: { cost: '{0}', at: 'loc-a', effects: [{ type: 'anthem', pt: [1, 1], abilities: ['fly', 'indestructible'] }, { type: 'upkeep_sacrifice' }] },
+};
+
+test('an Eldrazi Monument: its owner\'s creatures (themselves too, a creature card) are blessed; each midnight one is given, their pick', async () => {
+  const world = fixture([monument, npc('chr-o', npcSim('loc-a', 'work', [2, 2])), npc('chr-r1', npcSim('loc-a', 'work', [1, 1])), npc('chr-r2', npcSim('loc-a', 'work', [1, 1])), npc('chr-x', npcSim('loc-a', 'work', [1, 1]))]);
+  const state = newState(world, { seed: 1, mode: 'observer' });
+  const [o, r1, r2, x] = ['chr-o', 'chr-r1', 'chr-r2', 'chr-x'].map((id) => state.actors[id]);
+  r1.master = r2.master = 'chr-o';
+  state.items = { 'itm-mon': { name: '기념비', owner: 'chr-o', counters: 0 } };
+  await advance(state, world, 1);
+  for (const a of [o, r1, r2]) {
+    assert.deepEqual(ptOf(a), a === o ? [3, 3] : [2, 2]);
+    assert.ok(hasAbility(a, 'fly', state.minutes) && hasAbility(a, 'indestructible', state.minutes));
+  }
+  assert.equal(ptOf(x)[1], 1);
+  // Lethal damage leaves them standing.
+  (await import('./combat.ts')).dealDamage(state, r1, 5, state.minutes, '시험');
+  assert.equal(r1.dead, undefined);
+  // Midnight: the owner gives one.
+  const asked: string[][] = [];
+  state.minutes = 1440 - 60;
+  await advance(state, world, 2, { choose: async ({ npc, candidates }) => (asked.push([npc.id, ...candidates.map((c) => c.id).sort()]), 'chr-r2') });
+  assert.deepEqual(asked, [['chr-o', 'chr-o', 'chr-r1', 'chr-r2']]);
+  assert.ok(r2.dead);
+  assert.ok(texts(state).some((t) => t.includes('기념비에 바쳐졌다')));
+  // Released from it (the owner lost it), the blessing leaves them.
+  state.items['itm-mon'].owner = undefined;
+  await advance(state, world, 1);
+  assert.equal(hasAbility(r1, 'fly', state.minutes), false);
+  assert.deepEqual(ptOf(o), [2, 2]);
+});
+
+test('an Eldrazi Monument whose owner has nothing to give crumbles away; the player picks from theirs', async () => {
+  const world = fixture([monument, npc('chr-r', npcSim('loc-a'))]);
+  const state = character(world, 'loc-a');
+  const p = state.actors[PLAYER_ID];
+  state.items = { 'itm-mon': { name: '기념비', owner: PLAYER_ID, counters: 0 } };
+  state.minutes = 1440 - 60;
+  await act(state, world, { type: 'wait', hours: 2 });
+  assert.equal(state.items['itm-mon'].gone, true); // the player is no creature, and has no retainer
+  assert.match(claimBlocked(state, world, p, 'itm-mon', state.minutes)!, /그런 것은 없다/);
+  // With a retainer: the player gives it.
+  const s2 = character(world, 'loc-a');
+  s2.actors['chr-r'].master = PLAYER_ID;
+  s2.items = { 'itm-mon': { name: '기념비', owner: PLAYER_ID, counters: 0 } };
+  s2.minutes = 1440 - 60;
+  await act(s2, world, { type: 'wait', hours: 2 });
+  assert.equal(s2.asks?.[0]?.effect.type, 'sacrifice');
+  await act(s2, world, { type: 'choose', pick: 'chr-r' });
+  assert.ok(s2.actors['chr-r'].dead);
+});
+
+test('the real Eldrazi Monument sits in Emeria', () => {
+  const world = loadWorld();
+  const m = world.items.find((x) => x.id === 'itm-eldrazi-monument')!;
+  assert.equal(m.at, 'loc-emeria');
+  assert.deepEqual(m.effects.map((e) => e.type), ['anthem', 'upkeep_sacrifice']);
 });

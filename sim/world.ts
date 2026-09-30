@@ -12,9 +12,9 @@ export const MAP_WIDTH = 600;
 export const MAP_HEIGHT = 450;
 
 // fly: can reach sky islands. aquatic: lives in the sea, and only there.
-export const ABILITIES = ['fly', 'aquatic', 'lifelink', 'vigilance', 'haste', 'trample', 'defender', 'shroud', 'swampwalk'] as const;
+export const ABILITIES = ['fly', 'aquatic', 'lifelink', 'vigilance', 'haste', 'trample', 'defender', 'shroud', 'swampwalk', 'indestructible'] as const;
 export type Ability = (typeof ABILITIES)[number];
-export const ABILITY_LABELS: Record<Ability, string> = { fly: '비행', aquatic: '물에 삶', lifelink: '생명연결', vigilance: '경계', haste: '속공', trample: '돌진', defender: '수비대', shroud: '방어막', swampwalk: '늪걷기' };
+export const ABILITY_LABELS: Record<Ability, string> = { fly: '비행', aquatic: '물에 삶', lifelink: '생명연결', vigilance: '경계', haste: '속공', trample: '돌진', defender: '수비대', shroud: '방어막', swampwalk: '늪걷기', indestructible: '파괴불가' };
 
 export const TERRAIN_IDS = [
   'grassland',
@@ -445,6 +445,10 @@ export const ItemSimSchema = z.strictObject({
         // "Landfall — you may have your life total become the number of charge counters": when
         // its owner bonds with a land, if that raises their life.
         z.strictObject({ type: z.literal('landfall_set_life') }),
+        // "Creatures you control get +P/+T and have <abilities>" (sim/monument.ts).
+        z.strictObject({ type: z.literal('anthem'), pt: z.tuple([z.number().int(), z.number().int()]), abilities: z.array(z.enum(ABILITIES)).default([]) }),
+        // "At the beginning of your upkeep, sacrifice a creature. If you can't, sacrifice this."
+        z.strictObject({ type: z.literal('upkeep_sacrifice') }),
       ]),
     )
     .min(1),

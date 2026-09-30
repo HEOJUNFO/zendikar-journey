@@ -9,7 +9,7 @@ import { gainLife, lifeOf, loseLife, setLife } from './life.ts';
 import { allyJoined } from './allies.ts';
 import { DEPLETED_LABEL } from './rules.ts';
 import { castSpell, spellDef } from './spells.ts';
-import { addLog, npcDef, outOfTime, present, ptOf, random, targetable } from './state.ts';
+import { addLog, hasAbility, npcDef, outOfTime, present, ptOf, random, targetable } from './state.ts';
 import type { Actor, ChoiceEffect, State } from './state.ts';
 import { josa, shortName, toward } from './text.ts';
 import { ABILITY_LABELS, LAND_TYPE_LABELS, landTypes, region, spellColors } from './world.ts';
@@ -45,7 +45,7 @@ export function bondTargets(state: State, world: World, a: Actor, regionId: stri
 }
 
 // The effect falls on `target`, if they are still there.
-export function applyBondEffect(state: State, world: World, a: Actor, regionId: string, eff: Exclude<ChoiceEffect, { type: 'cast' | 'follow' | 'rally' | 'seize' | 'pledge' | 'evade' | 'discard' }>, targetId: string | undefined, t: number) {
+export function applyBondEffect(state: State, world: World, a: Actor, regionId: string, eff: Exclude<ChoiceEffect, { type: 'cast' | 'follow' | 'rally' | 'seize' | 'pledge' | 'evade' | 'discard' | 'sacrifice' }>, targetId: string | undefined, t: number) {
   const r = region(world, regionId);
   if (eff.type === 'damage') return mountainFire(state, world, a, r, eff.amount, targetId, t);
   const target = targetId ? bondTargets(state, world, a, regionId, eff).find((x) => x.id === targetId) : undefined;
@@ -349,6 +349,10 @@ export function useAbility(state: State, world: World, beingId: string, abilityI
   let died = false;
   for (const eff of ability.effects) {
     if (eff.type === 'destroy' && target) {
+      if (hasAbility(target, 'indestructible', t)) {
+        addLog(state, { kind: 'effect', text: `${josa(shortName(target.name), '은', '는')} 파괴되지 않는다 (파괴불가).`, regions: [target.region], actors: [target.id], t });
+        continue;
+      }
       die(state, target, t, cause);
       died = true;
     } else if (eff.type === 'raise' && died && target) {
