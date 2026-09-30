@@ -12,6 +12,7 @@ import { relationsText, remember } from './relations.ts';
 import { claimableItems } from './items.ts';
 import { lifeOf } from './life.ts';
 import { foresightText } from './foresight.ts';
+import { setOff, wandersDue, withPositions } from './wander.ts';
 import { strandedText } from './stranded.ts';
 import { applyRally, hireableFor, hireMerc, hirePrice, rallyText } from './allies.ts';
 import { answerAsk, askText, canServe } from './asks.ts';
@@ -25,7 +26,7 @@ import { bindRetainer, courtTargets, followsMaster, refuse, seize, swayBlocked }
 import { josa, shortName } from './text.ts';
 import type { ScheduleBlock } from './types.ts';
 import { ABILITY_LABELS, canStay, LAND_TYPE_LABELS, landTypes, placeName } from './world.ts';
-import type { ActivatedAbility, EventDef, NpcDef, Speaker, SpellDef, World } from './world.ts';
+import type { ActivatedAbility, EventDef, NpcDef, Region, Speaker, SpellDef, World } from './world.ts';
 import type { PlanDayInput } from './llm/planner.ts';
 
 export type GmDayInput = {
@@ -58,6 +59,8 @@ export type ChooseInput = { world: World; state: State; npc: Speaker; what: stri
 export type ChooseColorInput = { world: World; state: State; npc: Speaker; opponents: Actor[] };
 // A trap (`trap`) sprung by `intruders` picks one of `creatures` (anywhere in the world) to draw there.
 export type SummonInput = { world: World; state: State; trap: EventDef; creatures: Actor[]; intruders: Actor[] };
+// A wandering place (`place`), at stop `at` (if any), picks the next of `stops`.
+export type WanderInput = { world: World; state: State; place: Region; at?: string; stops: string[] };
 // A trap (`trap`) divides `amount` damage among `targets`, the attackers who set it off.
 export type VolleyInput = { world: World; state: State; trap: EventDef; targets: Actor[]; amount: number };
 // Two NPCs' exchange: the lines, what each now thinks of the other (by id), and who, if
@@ -79,6 +82,8 @@ export type Llm = {
   chooseColor?: (input: ChooseColorInput) => Promise<Color | null>;
   // A summoning trap sprung (Summoning Trap): which of `creatures` it draws there, or none.
   summon?: (input: SummonInput) => Promise<string | null>;
+  // A wandering place (Goma Fada) at a stop: which of `stops` it heads for next.
+  wander?: (input: WanderInput) => Promise<string | null>;
   // An arrow volley (Arrow Volley Trap): how much of `amount` falls on each of `targets`, by id.
   volley?: (input: VolleyInput) => Promise<Record<string, number> | null>;
 };
@@ -112,7 +117,7 @@ export async function act(state: State, world: World, input: Action | string, ll
   let action: Action | null;
   if (typeof input === 'string') {
     if (!llm.interpret) throw new Error('free text needs llm.interpret');
-    action = await llm.interpret({ world, state, text: input });
+    action = await llm.interpret({ world: withPositions(state, world), state, text: input });
     if (!action) return { error: '무슨 행동인지 알아듣지 못했다. 다르게 말해 보자.', entries: [] };
   } else action = input;
 
@@ -142,7 +147,8 @@ export async function act(state: State, world: World, input: Action | string, ll
     await narrate(state, world, firstId, llm);
     return { entries: state.log.filter((e) => e.id >= firstId) };
   }
-  const error = startAction(state, world, action);
+  // Wandering places where they are now (a journey to Goma Fada is as long as it is today).
+  const error = startAction(state, withPositions(state, world), action);
   if (error) return { error, entries: [] };
   if (action.type === 'talk') await talk(state, world, p, action.to, action.say, llm);
   if (action.type === 'attack') await attack(state, world, p, action.to, llm);
@@ -226,6 +232,25 @@ async function conversations(state: State, world: World, since: number, llm: Llm
         actors: [from.id, to.id],
       });
     }
+  }
+}
+
+// Wandering places at a stop (sim/wander.ts): the LLM, for the place's folk, picks where it
+// goes next. With no answer, a stop at random (not the one it is at).
+async function wanderings(state: State, world: World, llm: Llm) {
+  for (const r of wandersDue(state, world)) {
+    const at = state.wanderers?.[r.id]?.at;
+    const stops = r.wanders!.stops.filter((s) => s.name !== at);
+    let pick: string | null = null;
+    if (llm.wander) {
+      try {
+        pick = await llm.wander({ world, state, place: r, at, stops: stops.map((s) => s.name) });
+      } catch (e) {
+        console.warn(`wander for ${r.id} failed:`, e);
+      }
+    }
+    if (!pick || !stops.some((s) => s.name === pick)) pick = stops[Math.floor(random(state) * stops.length)].name;
+    setOff(state, world, r, pick, state.minutes);
   }
 }
 
@@ -327,6 +352,7 @@ async function evasions(state: State, world: World, llm: Llm) {
 // Picks NPCs owe from this hour (state.choices), made by the LLM. When it can't answer, the
 // engine picks at random among the candidates, so the effect still lands.
 async function choices(state: State, world: World, llm: Llm) {
+  await wanderings(state, world, llm);
   await evasions(state, world, llm);
   await summons(state, world, llm);
   await volleys(state, world, llm);

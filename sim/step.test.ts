@@ -17,6 +17,7 @@ import { eligibleGmEvents, travelBlocked } from './step.ts';
 import { gainLife, lifeOf } from './life.ts';
 import { hasAbility, newState, outOfTime, PLAYER_ID, present, ptOf, syncWorld, targetable } from './state.ts';
 import { foresightText } from './foresight.ts';
+import { withPositions } from './wander.ts';
 import { spendBlocked, storeBlocked } from './eons.ts';
 import { bondBlocked, bondLand, bondTargets, fetchTargets, fireTargets, firesOnBond, growBlocked, spawnWild, summonLibrary, useAbility } from './abilities.ts';
 import { DEPLETED_LABEL, DESTROYED_DAYS } from './rules.ts';
@@ -2355,14 +2356,51 @@ test('the real Bog Tatters drifts in Piranha Marsh, swampwalking', () => {
   assert.ok(hasAbility(w, 'swampwalk', state.minutes));
 });
 
-test('the real Caravan Hurda hauls for Goma Fada in Akoum, for 50 coin; the walking city is no land to bond with', () => {
+test('the real Caravan Hurda hauls for Goma Fada, for 50 coin; the walking city is no land to bond with', () => {
   const world = loadWorld();
   const state = newState(world, { seed: 1, mode: 'observer' });
   const h = state.actors['cre-hurda'];
   assert.equal(h?.region, 'loc-goma-fada');
-  assert.equal(region(world, 'loc-goma-fada').parent, 'loc-akoum');
+  assert.ok(region(world, 'loc-goma-fada').wanders); // it walks Akoum
   assert.deepEqual(ptOf(h), [1, 5]);
   assert.ok(hasAbility(h, 'lifelink', state.minutes));
   assert.equal(hirePrice(world.npcs.find((x) => x.id === 'cre-hurda')!), 50);
   assert.match(bondBlocked(state, world, h, state.minutes)!, /땅이 아니라/);
+});
+
+test('a wandering place walks toward the stop the LLM picks, carries those in it, and journeys to it are as long as it is far today', async () => {
+  const caravan: RawEntity = {
+    id: 'loc-car',
+    kind: 'location',
+    name: '대상단',
+    status: 'canon',
+    map: { x: 10, y: 10, terrain: 'settlement', color: 'C' },
+    sim: { not_land: true, wanders: { per_day: 24, stops: [{ name: '동쪽 길', x: 34, y: 10 }, { name: '서쪽 길', x: 10, y: 10 }] } },
+  };
+  const world = fixture([caravan, npc('chr-h', npcSim('loc-car'))]);
+  const state = newState(world, { seed: 1, mode: 'observer' });
+  const asked: (string | undefined)[] = [];
+  const wander: Llm['wander'] = async ({ at, stops }) => (asked.push(at), stops.includes('동쪽 길') ? '동쪽 길' : stops[0]);
+  await advance(state, world, 1, { wander });
+  assert.deepEqual(asked, [undefined]);
+  assert.equal(state.wanderers?.['loc-car']?.to, '동쪽 길');
+  await advance(state, world, 12, { wander });
+  const w = state.wanderers!['loc-car'];
+  assert.ok(w.x > 20 && w.x < 24); // 1 a hour
+  assert.equal(state.actors['chr-h'].region, 'loc-car'); // carried along
+  // Travel to it is measured to where it is now.
+  const placed = withPositions(state, world);
+  assert.ok(travelHours(region(placed, 'loc-b'), region(placed, 'loc-car')) < travelHours(region(world, 'loc-b'), region(world, 'loc-car')));
+  await advance(state, world, 13, { wander });
+  assert.ok(texts(state).some((t) => t.includes('동쪽 길에 닿았다')));
+  assert.equal(asked[1], '동쪽 길'); // at a stop, it picks the next
+  assert.equal(state.wanderers!['loc-car'].to, '서쪽 길');
+});
+
+test('the real Goma Fada walks Akoum\'s roads', () => {
+  const world = loadWorld();
+  const r = region(world, 'loc-goma-fada');
+  assert.equal(r.parent, undefined);
+  assert.deepEqual(r.wanders?.stops.map((s) => s.name), ['로가 대로', '아쿰의 띠', '비탄의 고개']);
+  assert.ok(r.notLand);
 });

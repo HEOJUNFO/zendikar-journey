@@ -28,6 +28,7 @@ import { CLAIM_HOURS, claimBlocked, claimItem, itemsAt } from './items.ts';
 import { EON_HOURS, eonLand, holdStill, spendBlocked, spendDay, storeBlocked, storeDay, timeNews } from './eons.ts';
 import { upkeepWins } from './win.ts';
 import { CRAWL_FACTOR, dryOut, stranded } from './stranded.ts';
+import { wanderHour, withPositions } from './wander.ts';
 import { HIRE_HOURS, hireBlocked, hireMerc } from './allies.ts';
 import { COURT_HOURS, courtBlocked, followsMaster, masterOf, readyCourt, refusedToday, upkeepPossessions } from './retainers.ts';
 import { learnBlocked, learnSpell, npcCastBlocked, readyCast, spellDef } from './spells.ts';
@@ -38,8 +39,11 @@ import { currentBlock } from './types.ts';
 import { ABILITY_LABELS, affectedRegions, hasPowers, region, TERRAINS, travelHours } from './world.ts';
 import type { EventDef, World } from './world.ts';
 
-export function step(state: State, world: World) {
+export function step(state: State, placed: World) {
   const t = state.minutes;
+  // Wandering places (Goma Fada) walk first; the hour then measures the map as it is now.
+  wanderHour(state, placed, t);
+  const world = withPositions(state, placed);
   startDay(state, world, t);
   gmLayer(state, world, t);
   // Factions: none yet (world/entities/factions is empty).

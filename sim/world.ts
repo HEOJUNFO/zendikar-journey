@@ -79,6 +79,14 @@ export const LandSimSchema = z.strictObject({
   no_mana: z.boolean().default(false),
   // Not a land at all, a place (e.g. Goma Fada, a walking city): no one bonds with it.
   not_land: z.boolean().default(false),
+  // A place that moves (Goma Fada, "the city that walks"): `per_day` map units a day toward
+  // the stop the LLM picks next among `stops` (sim/wander.ts). Its map point is where it starts.
+  wanders: z
+    .strictObject({
+      per_day: z.number().positive(),
+      stops: z.array(z.strictObject({ name: z.string().min(1), x: z.number(), y: z.number() })).min(2),
+    })
+    .optional(),
   enters_tapped: z.boolean().default(false),
   // "{T}, Pay N life, Sacrifice this land: Search your library for a <type> or <type> card, put
   // it onto the battlefield": whoever holds it gives it up and N life, and bonds with a land of
@@ -480,6 +488,7 @@ export type Region = {
   nonbasic: boolean;
   noMana: boolean;
   notLand?: boolean;
+  wanders?: { perDay: number; stops: { name: string; x: number; y: number }[] };
   fetch?: { types: LandType[]; life: number };
   fallenMana?: { color: Color; cost: number };
   climbHours?: number;
@@ -646,6 +655,7 @@ export function buildWorld(entities: RawEntity[]): { world: World; errors: strin
           nonbasic: land.data?.nonbasic ?? false,
           noMana: land.data?.no_mana ?? false,
           ...(land.data?.not_land ? { notLand: true, noMana: true } : {}),
+          ...(land.data?.wanders ? { wanders: { perDay: land.data.wanders.per_day, stops: land.data.wanders.stops } } : {}),
           fetch: land.data?.fetch,
           fallenMana: land.data?.fallen_mana,
           climbHours: land.data?.climb_hours,

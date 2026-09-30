@@ -5,8 +5,9 @@ import { ptOf } from '../state.ts';
 import { COLOR_LABELS, COLORS, manaCapacity } from '../mana.ts';
 import type { Color } from '../mana.ts';
 import { region, spellColors } from '../world.ts';
-import type { ChooseColorInput, ChooseInput, SummonInput, VolleyInput } from '../run.ts';
+import type { ChooseColorInput, ChooseInput, SummonInput, VolleyInput, WanderInput } from '../run.ts';
 import { loreText } from './context.ts';
+import { recentNews } from '../run.ts';
 import { relationsText } from '../relations.ts';
 import { shortName } from '../text.ts';
 import { chatCompletion, extractJson } from './chat.ts';
@@ -144,4 +145,37 @@ How do you divide the ${amount} damage?`,
     return null;
   }
   return parsed.data.damage;
+}
+
+// A wandering place (Goma Fada, the city that walks) picks where it heads next, as its folk
+// would decide: the LLM, from the world as it is (news, the lore).
+export async function chooseStop({ world, state, place, at, stops }: WanderInput): Promise<string | null> {
+  const news = recentNews(state, world);
+  const content = await chatCompletion(
+    [
+      {
+        role: 'system',
+        content: `You decide, for the folk of ${place.name} of the plane of Zendikar, where it heads next. ${place.summary}
+Pick one of the stops listed. Answer with JSON only: {"stop": "<name>"}.`,
+      },
+      {
+        role: 'user',
+        content: `World lore:
+${loreText(world)}
+${news.length ? `\nLately:\n${news.map((n) => `- ${n}`).join('\n')}\n` : ''}
+${at ? `It has just reached ${at}.` : 'It is about to set off.'}
+Stops it could head for:
+${stops.map((s) => `- ${s}`).join('\n')}
+
+Where does it go next?`,
+      },
+    ],
+    200,
+  );
+  const parsed = z.object({ stop: z.string() }).safeParse(extractJson(content));
+  if (!parsed.success || !stops.includes(parsed.data.stop)) {
+    console.warn(`Unusable stop for ${place.id}:`, content);
+    return null;
+  }
+  return parsed.data.stop;
 }

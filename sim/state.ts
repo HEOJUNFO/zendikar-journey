@@ -236,6 +236,9 @@ export type State = {
   // after the hour (sim/run.ts), from these candidates.
   // `optional`: they may pick no one ("you may").
   choices?: Choice[];
+  // Where each wandering place (sim/wander.ts) is now, the stop it is heading for (or the one
+  // it last reached, waiting for the LLM to pick the next).
+  wanderers?: Record<string, { x: number; y: number; to?: string; at?: string }>;
   // Arrow volleys loosed (sim/step.ts): how the damage falls among the attackers is the LLM's
   // division, as the trap, after the hour (sim/run.ts `volleys`).
   volleys?: { event: string; amount: number; by: string[]; region: string; t: number }[];

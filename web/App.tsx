@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import type { Action } from '../sim/actions.ts';
 import { player } from '../sim/state.ts';
 import { TERRAINS } from '../sim/world.ts';
+import { withPositions } from '../sim/wander.ts';
 import { AdminPage } from './AdminPage.tsx';
 import { api } from './api.ts';
 import type { GameView } from './api.ts';
@@ -59,7 +60,9 @@ export function App() {
   }
 
   if (!game) return <div className="loading">{error ?? '젠디카르를 불러오는 중…'}</div>;
-  const { world, state } = game;
+  const { state } = game;
+  // Wandering places (Goma Fada) where they are now.
+  const world = state ? withPositions(state, game.world) : game.world;
 
   if (page === 'map') {
     return (

@@ -8,7 +8,7 @@ status: canon
 sources: [ZEN-210, ZEN-223, ZEN-226, ZEN-228, ZEN-120, ZEN-131, ZEN-146, ZEN-5]
 tags: [대륙, 화산, 협곡, 적색]
 links:
-  - { to: loc-goma-fada, rel: 떠도는 대상단 (안의 구역) }
+  - { to: loc-goma-fada, rel: 대륙 위를 걸어 다니는 대상단 }
   - { to: loc-akoum-refuge, rel: 안의 구역 }
   - { to: loc-scalding-tarn, rel: 안의 구역 }
   - { to: loc-teetering-peaks, rel: 안의 구역 }
@@ -35,7 +35,7 @@ map: { x: 488, y: 240, terrain: volcanic, size: continent }
 - 붉은 용 헬카이트 돌격대(`cre-hellkite`, ZEN-131)가 아쿰의 하늘을 날며 사냥한다 ([배경] 아쿰의 용, [결정] 2026-09-30).
 - 룬 새긴 헤드론 폐허에 룬불꽃 함정(`evt-runeflare-trap`, ZEN-146)이 깃들어 있다. 그날 주문을 셋 이상 뽑은 이가 아쿰(구역 포함)에 있으면 불길을 뿜는다 ([결정] 2026-09-30).
 
-- 안의 구역 고마 파다(`loc-goma-fada`, ZEN-5): 아쿰을 떠도는 "걸어 다니는 도시", 코르·인간 유목민의 대상단. 땅이 아니라 유대를 맺을 수 없다. 짐꾼 후르다를 고용할 수 있다.
+- 고마 파다(`loc-goma-fada`, ZEN-5): 아쿰 대륙 위를 걸어 다니는 "걸어 다니는 도시", 코르·인간 유목민의 대상단. 로가 대로, 아쿰의 띠, 비탄의 고개를 오간다. 땅이 아니라 유대를 맺을 수 없다. 짐꾼 후르다를 고용할 수 있다.
 
 ## 미정/질문
 
