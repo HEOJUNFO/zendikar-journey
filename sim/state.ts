@@ -64,6 +64,9 @@ export type Actor = {
   seal?: { day: number; color: Color };
   // Whom they serve: they are that one's retainer (sim/retainers.ts).
   master?: string;
+  // Seized (Roil Elemental): held by their master's power, not their will. Striking the master
+  // doesn't free them; only the master's end does. The player seized can only wait or strike it.
+  seized?: boolean;
   // Lands they sought out with a fetch land: gone from their "library". Kept for when
   // exploring can turn things up (fewer empty searches, as MTG's deck thinning).
   fetched?: string[];
@@ -114,7 +117,7 @@ export type Actor = {
 // What falls on the one picked: a land's bonding effect, a burst of damage (Valakut), or a
 // spell an NPC casts (sim/spells.ts).
 export type Choice = { by: string; land: string; effect: ChoiceEffect; candidates: string[]; optional?: boolean; t: number };
-export type ChoiceEffect = BondEffect | { type: 'damage'; amount: number } | { type: 'cast'; spell: string } | { type: 'follow' } | { type: 'rally'; source: string };
+export type ChoiceEffect = BondEffect | { type: 'damage'; amount: number } | { type: 'cast'; spell: string } | { type: 'follow' } | { type: 'rally'; source: string } | { type: 'seize' };
 
 export type Condition = {
   label: string;

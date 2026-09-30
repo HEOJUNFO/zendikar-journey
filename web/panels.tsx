@@ -431,6 +431,26 @@ export function CharacterControls(props: {
     );
   }
 
+  // Seized (Roil Elemental): dragged about; wait, or strike what holds them.
+  const holder = p.seized && p.master ? state.actors[p.master] : undefined;
+  if (holder && !holder.dead) {
+    return (
+      <div className="controls controls-player">
+        <p>🌀 {shortName(holder.name)}의 소용돌이에 휩쓸려 끌려다닌다. {shortName(holder.name)}이(가) 사라져야 풀려난다.</p>
+        <div className="row">
+          {[1, 4, 8].map((h) => (
+            <button key={h} disabled={busy} onClick={() => onAct({ type: 'wait', hours: h })}>
+              {h}시간 기다리기
+            </button>
+          ))}
+          <button disabled={busy || holder.region !== p.region || !!p.travel} onClick={() => onAct({ type: 'attack', to: holder.id })}>
+            {shortName(holder.name)}에게 덤비기
+          </button>
+        </div>
+      </div>
+    );
+  }
+
   // Out of time (a day left in Magosi, or someone else's extra day): nothing to do but let it pass.
   if (outOfTime(state, p)) {
     return (

@@ -238,6 +238,10 @@ export const CharacterSimSchema = z.strictObject({
   // "Landfall — … create a P/T <color> <kind> creature token": born at their side, theirs
   // (their retainer), each time they bond with a land (Rampaging Baloths).
   landfall_token: z.strictObject({ creature: z.string(), pt: PtSchema, colors: z.array(z.enum(COLORS)) }).optional(),
+  // "Landfall — you may gain control of target creature for as long as you control this" (Roil
+  // Elemental): as they bond, they may seize one there (anyone, the player too) as their
+  // retainer until they die (sim/retainers.ts `seize`).
+  landfall_seize: z.boolean().default(false),
   // The creature kind a character is (e.g. cre-vampire). A creature entity's sim is its own kind.
   creature: z.string().optional(),
   // A planeswalker's loyalty (law-planeswalkers): their momentum. Loyalty abilities raise
@@ -464,6 +468,7 @@ export type NpcDef = {
   hireable?: boolean;
   landfall?: { pt: [number, number]; trample: boolean };
   landfallToken?: { creature: string; pt: Pt; colors: Color[] };
+  landfallSeize?: boolean;
   // The creature kind they are (e.g. cre-vampire), for "a Vampire you control".
   creature?: string;
   // Their colors when their mana doesn't say (e.g. a black Vampire risen in play).
@@ -619,7 +624,7 @@ export function buildWorld(entities: RawEntity[]): { world: World; errors: strin
         err(e.id, `sim 오류: ${issues(sim.error)}`);
         continue;
       }
-      const { knows_colors, activated, wins_at_life, extra_combat, landfall_token, name, ...rest } = sim.data;
+      const { knows_colors, activated, wins_at_life, extra_combat, landfall_token, landfall_seize, name, ...rest } = sim.data;
 
       world.npcs.push({
         id: e.id,
@@ -630,6 +635,7 @@ export function buildWorld(entities: RawEntity[]): { world: World; errors: strin
         knowsColors: knows_colors,
         ...(wins_at_life !== undefined ? { winsAtLife: wins_at_life } : {}),
         ...(landfall_token ? { landfallToken: landfall_token } : {}),
+        ...(landfall_seize ? { landfallSeize: true } : {}),
         ...(extra_combat ? { extraCombat: { cost: parseManaCost(extra_combat.cost)!, costText: extra_combat.cost } } : {}),
         activated: activated.map((x) => ({ ...x, cost: parseManaCost(x.cost)!, costText: x.cost })),
       });

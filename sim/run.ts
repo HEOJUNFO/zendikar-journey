@@ -18,7 +18,7 @@ import { opponentsOf, sealsDue, setSeal } from './seal.ts';
 import { COLORS } from './mana.ts';
 import type { Color } from './mana.ts';
 import { abilityBlocked, applyBondEffect, enteredToday, fetchBlocked, fetchTargets, growBlocked, growLand } from './abilities.ts';
-import { bindRetainer, courtTargets, followsMaster, swayBlocked } from './retainers.ts';
+import { bindRetainer, courtTargets, followsMaster, seize, swayBlocked } from './retainers.ts';
 import { josa, shortName } from './text.ts';
 import type { ScheduleBlock } from './types.ts';
 import { ABILITY_LABELS, canStay, LAND_TYPE_LABELS, landTypes, placeName } from './world.ts';
@@ -219,6 +219,18 @@ async function choices(state: State, world: World, llm: Llm) {
     }
     if (c.effect.type === 'follow') {
       await followChoice(state, world, llm, by, npc, candidates[0]);
+      continue;
+    }
+    if (c.effect.type === 'seize') {
+      if (!llm.choose) continue;
+      let pick: string | null = null;
+      try {
+        pick = await llm.choose({ world, state, npc, candidates, optional: true, what: `${land.name}: 당신이 이 땅과 유대를 맺자 땅이 뒤틀리며 소용돌이가 인다. 고른 하나를 삼켜, 당신이 있는 한 당신을 따라 휩쓸려 다니게 한다 (그가 섬기던 이에게서도 빼앗는다). 아무도 삼키지 않을 수도 있다` });
+      } catch (e) {
+        console.warn(`choose (seize) for ${c.by} failed:`, e);
+      }
+      const target = candidates.find((x) => x.id === pick);
+      if (target && target.region === by.region && !target.travel) seize(state, target, by, state.minutes);
       continue;
     }
     if (c.effect.type === 'rally') {

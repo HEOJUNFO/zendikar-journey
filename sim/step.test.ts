@@ -6,6 +6,7 @@ import { act as runAct, advance as runAdvance } from './run.ts';
 import type { Llm } from './run.ts';
 import type { PlanDayInput } from './llm/planner.ts';
 import type { Action } from './actions.ts';
+import { startAction } from './actions.ts';
 import type { World } from './world.ts';
 import { addFoe, die, knockedOut, woundsOf } from './combat.ts';
 import { sealedBy, sealToday } from './seal.ts';
@@ -111,6 +112,11 @@ const tide: RawEntity = {
 const character = (world: ReturnType<typeof fixture>, region = 'loc-a', seed = 1) =>
   newState(world, { seed, mode: 'character', player: { name: '나', background: '떠돌이', region } });
 const texts = (s: State) => s.log.map((e) => e.text);
+// Whether the player could start `action` now (without running the world).
+const startActionOk = (state: State, world: World, action: Action) => {
+  const copy = structuredClone(state);
+  return startAction(copy, world, action) === null;
+};
 
 test('the real world loads and runs a day', async () => {
   const world = loadWorld();
@@ -1747,4 +1753,57 @@ test('the real Rampaging Baloths roam Bala Ged; the Woodcrasher moved to Murasa'
   assert.equal(state.actors['chr-rampaging-baloths']?.region, 'loc-bala-ged');
   assert.ok(state.actors['chr-rampaging-baloths'].abilities.includes('trample'));
   assert.equal(world.npcs.find((x) => x.id === 'chr-rampaging-baloths')?.landfallToken?.creature, 'cre-baloth');
+});
+
+const roil = (plan: unknown[][]): RawEntity => planned({
+  id: 'cre-r',
+  kind: 'creature',
+  name: '정령',
+  status: 'canon',
+  sim: { pt: [3, 2], mana: { U: 6 }, role: 'r', home: 'loc-a', persona: 'p', goal: 'g', needs: [], beast: true, abilities: ['fly'], landfall_seize: true, plan },
+});
+const roilDay = [
+  ['00:00', '06:00', 'loc-a', 'leisure', '맴돎', '🌀'],
+  ['06:00', '10:00', 'loc-a', 'bond', '땅을 삼킴', '🌀'],
+  ['10:00', '24:00', 'loc-b', 'leisure', '맴돎', '🌀'],
+];
+
+test('a Roil Elemental bonding may seize anyone there, from their master too; only its end frees them', async () => {
+  const world = fixture([roil(roilDay), npc('chr-m', npcSim('loc-a')), npc('chr-x', npcSim('loc-a'))]);
+  const state = newState(world, { seed: 1, mode: 'observer' });
+  const x = state.actors['chr-x'];
+  x.master = 'chr-m';
+  const asked: string[][] = [];
+  await advance(state, world, 4, { choose: async ({ npc, candidates }) => (asked.push([npc.id, ...candidates.map((c) => c.id).sort()]), 'chr-x') });
+  assert.deepEqual(asked, [['cre-r', 'chr-m', 'chr-x']]);
+  assert.equal(x.master, 'cre-r');
+  assert.equal(x.seized, true);
+  assert.ok(texts(state).some((t) => t.includes('소용돌이가') && t.includes('삼켰다')));
+  // Striking it doesn't free them; its end does.
+  (await import('./combat.ts')).clash(state, x, state.actors['cre-r'], state.minutes);
+  assert.equal(x.master, 'cre-r');
+  die(state, state.actors['cre-r'], state.minutes, '시험');
+  assert.equal(x.master, undefined);
+  assert.equal(x.seized, undefined);
+});
+
+test('the player seized is dragged along, and can only wait or strike what holds them', async () => {
+  const world = fixture([roil(roilDay)]);
+  const state = character(world, 'loc-a');
+  const p = state.actors[PLAYER_ID];
+  await act(state, world, { type: 'wait', hours: 4 }, { choose: async () => PLAYER_ID });
+  assert.equal(p.master, 'cre-r');
+  assert.match((await act(state, world, { type: 'move', to: 'loc-c' })).error!, /휩쓸려 있다/);
+  assert.match((await act(state, world, { type: 'eat' })).error!, /기다리거나/);
+  await act(state, world, { type: 'wait', hours: 4 });
+  assert.equal(p.region, 'loc-b'); // dragged where it went
+  assert.equal(startActionOk(state, world, { type: 'attack', to: 'cre-r' }), true);
+});
+
+test('the real Roil Elemental drifts over Tazeem', () => {
+  const world = loadWorld();
+  const state = newState(world, { seed: 1, mode: 'observer' });
+  const r = state.actors['cre-roil-elemental'];
+  assert.equal(r?.region, 'loc-tazeem');
+  assert.equal(world.npcs.find((x) => x.id === 'cre-roil-elemental')?.landfallSeize, true);
 });

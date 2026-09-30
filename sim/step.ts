@@ -367,6 +367,10 @@ function actorHour(state: State, world: World, a: Actor, t: number) {
     addLog(state, { kind: 'status', text: `${josa(name, '이', '가')} 지쳐 쓰러졌다.`, regions: [a.region], actors: [a.id] });
   }
 
+  // The player seized (Roil Elemental) is dragged wherever what holds them goes.
+  const holder = a.kind === 'player' && a.seized ? masterOf(state, a) : undefined;
+  const dragged = holder && (holder.travel?.to ?? holder.region);
+  if (dragged && dragged !== a.region && !travelBlocked(state, world, a, dragged)) startTravel(state, world, a, dragged, t);
   const task = a.forced ?? (a.kind === 'npc' ? npcTask(state, world, a, t) : a.task);
   if (a.travel) return travelHour(state, world, a, t);
   if (!task) {

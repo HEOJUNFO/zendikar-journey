@@ -5,9 +5,10 @@ name: 타짐
 name_en: Tazeem
 summary: 젠디카르 북쪽의 물가 대륙. 깎아지른 절벽과 해안이 이어지고, 하늘에는 에메리아의 폐허가 떠 있으며, 우마라 강에는 거대한 폭포 마고시가 쏟아지고, 오란리프의 숲이 끝없이 자란다
 status: canon
-sources: [ZEN-213, ZEN-218, ZEN-220, ZEN-221, ZEN-225]
+sources: [ZEN-213, ZEN-218, ZEN-220, ZEN-221, ZEN-225, ZEN-62]
 tags: [대륙, 해안, 절벽, 청색]
 links:
+  - { to: cre-roil-elemental, rel: 떠도는 뒤틀림 }
   - { to: loc-emeria, rel: 하늘의 구역 }
   - { to: loc-deepwater-realm, rel: 서쪽 바다 }
   - { to: loc-magosi, rel: 우마라 강의 폭포 }
@@ -28,6 +29,7 @@ map: { x: 308, y: 142, terrain: beach, size: continent }
 
 - 지도 북쪽 (308, 142)의 지역이다 (지형 `beach`, 청색 땅, 섬) ([결정] 2026-09-30). 온두까지 약 13시간, 아쿰까지 약 18시간. 대륙이라 지도에 크게 그린다 (`size: continent`).
 - 안에 구역 에메리아(`loc-emeria`, 비행하지 못하는 이도 밧줄로 오를 수 있다)와 마고시(`loc-magosi`, 하루를 맡기고 되찾는 폭포), 오란리프(`loc-oran-rief`, 새로 난 녹색 생물을 북돋우는 숲), 솟아오른 바다절벽(`loc-soaring-seacliff`, 유대를 맺을 때 곁의 하나에게 하루 날개)이 있다.
+- 뒤틀림이 모습을 얻은 뒤틀림 정령(`cre-roil-elemental`, ZEN-62)이 타짐을 떠돈다 ([결정] 2026-09-30).
 
 ## 미정/질문
 

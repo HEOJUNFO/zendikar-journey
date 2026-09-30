@@ -44,7 +44,7 @@ export function bondTargets(state: State, world: World, a: Actor, regionId: stri
 }
 
 // The effect falls on `target`, if they are still there.
-export function applyBondEffect(state: State, world: World, a: Actor, regionId: string, eff: Exclude<ChoiceEffect, { type: 'cast' | 'follow' | 'rally' }>, targetId: string | undefined, t: number) {
+export function applyBondEffect(state: State, world: World, a: Actor, regionId: string, eff: Exclude<ChoiceEffect, { type: 'cast' | 'follow' | 'rally' | 'seize' }>, targetId: string | undefined, t: number) {
   const r = region(world, regionId);
   if (eff.type === 'damage') return mountainFire(state, world, a, r, eff.amount, targetId, t);
   const target = targetId ? bondTargets(state, world, a, regionId, eff).find((x) => x.id === targetId) : undefined;
@@ -156,6 +156,11 @@ export function bondLand(state: State, world: World, a: Actor, t: number, region
       actors: [a.id],
       t,
     });
+  }
+  // "Landfall — gain control of target creature": whom (if anyone) is theirs to pick, after the hour.
+  if (def?.landfallSeize) {
+    const candidates = present(state, a.region).filter((x) => x.id !== a.id && x.master !== a.id).map((x) => x.id);
+    if (candidates.length) (state.choices ??= []).push({ by: a.id, land: a.region, effect: { type: 'seize' }, candidates, optional: true, t });
   }
   // "Landfall — create a token": one more of their kind, born at their side and theirs.
   if (def?.landfallToken) {

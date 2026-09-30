@@ -5,6 +5,7 @@ import { STEP_MINUTES } from './clock.ts';
 import { BOND_HOURS, KIND_EFFECTS } from './rules.ts';
 import { addLog, isPerson, landUnusable, npcDef, outOfTime, player } from './state.ts';
 import { HIRE_HOURS, hireBlocked, hirePrice } from './allies.ts';
+import { masterOf } from './retainers.ts';
 import type { State, Task } from './state.ts';
 import { startTravel, travelBlocked } from './step.ts';
 import { bondBlocked, bondTargets, FETCH_HOURS, fetchBlocked, firesOnBond, growBlocked, targetedBondEffect } from './abilities.ts';
@@ -58,6 +59,10 @@ export function startAction(state: State, world: World, action: Action): string 
   if (p.dead) return '당신의 인생은 끝났다.';
   const t = state.minutes;
   if (p.travel) return '이동 중이다.';
+  // Seized (Roil Elemental): dragged about, they can only wait, or strike what holds them.
+  const holder = p.seized ? masterOf(state, p) : undefined;
+  if (holder && action.type !== 'wait' && !(action.type === 'attack' && action.to === holder.id))
+    return `${shortName(holder.name)}에게 휩쓸려 있다. 기다리거나 ${shortName(holder.name)}에게 덤빌 수만 있다.`;
   if (action.type !== 'wait') {
     if (p.boundUntil !== undefined) return '묶여 있어 움직일 수 없다. 기다릴 수만 있다.';
     if (p.forced) return '지쳐 쓰러져 있다. 기다릴 수만 있다.';

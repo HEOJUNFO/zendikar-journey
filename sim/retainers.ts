@@ -4,6 +4,7 @@
 // player wins retainers by persuading someone in conversation. A beast that may follow
 // (`tamable`, the Felidar Sovereign) chooses whom to trust: the player who talks to it, or an
 // NPC who courts it (a "court" block); the LLM decides, as the beast.
+import { formatClock } from './clock.ts';
 import { addLog } from './state.ts';
 import type { Actor, State } from './state.ts';
 import { remember } from './relations.ts';
@@ -85,8 +86,26 @@ export function bindRetainer(state: State, world: World, a: Actor, master: Actor
   allyJoined(state, world, a, master, t);
 }
 
+// "Gain control of target creature for as long as you control this" (Roil Elemental): `a` is
+// torn from whoever they served (or from themselves, the player too) and serves `master` until
+// `master` is gone. Not an Ally joining a party: control changes, nothing enters.
+export function seize(state: State, a: Actor, master: Actor, t: number) {
+  a.master = master.id;
+  a.seized = true;
+  a.task = undefined;
+  remember(a, master, `나를 삼켜 끌고 다닌다 (${formatClock(t)})`, t);
+  addLog(state, {
+    kind: 'event',
+    text: `${josa(shortName(master.name), '이', '가')} 일으킨 소용돌이가 ${josa(shortName(a.name), '을', '를')} 삼켰다. ${josa(shortName(a.name), '은', '는')} 이제 ${shortName(master.name)}에게 휩쓸려 다닌다.`,
+    regions: [a.region],
+    actors: [a.id, master.id],
+    t,
+  });
+}
+
 export function releaseRetainer(state: State, a: Actor, why: string) {
   if (!a.master) return;
   delete a.master;
+  delete a.seized;
   addLog(state, { kind: 'status', text: `${josa(shortName(a.name), '이', '가')} 권속에서 풀려났다 (${why}).`, regions: [a.region], actors: [a.id] });
 }
