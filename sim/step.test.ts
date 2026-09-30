@@ -2309,3 +2309,15 @@ test('the real Baloth Cage Trap lies in Bala Ged, for those who tamed an item', 
   assert.equal(ev?.region, 'loc-bala-ged');
   assert.equal(ev?.claimed, true);
 });
+
+test('a hungry token hunts only with no master: a herd\'s young keeps to its master', async () => {
+  const world = fixture([planned({ id: 'cre-bal', kind: 'creature', name: '발로스', status: 'canon', sim: { pt: [4, 4], role: 'r', home: 'loc-c', persona: 'p', goal: 'g', needs: ['energy', 'hunger'], beast: true } }), npc('chr-m', npcSim('loc-a', 'work', [1, 9])), npc('chr-x', npcSim('loc-a', 'work', [1, 9]))]);
+  const state = newState(world, { seed: 1, mode: 'observer' });
+  const [young, wild] = spawnWild(state, world, 'cre-bal', [4, 4], 2, 'loc-a', ['G']);
+  young.master = 'chr-m';
+  young.stats.hunger = wild.stats.hunger = 90;
+  await advance(state, world, 1);
+  assert.ok(texts(state).some((t) => t.includes(`굶주린`) && t.includes('덮쳤다')));
+  assert.equal(state.log.filter((e) => e.kind === 'combat' && e.text.includes('굶주린') && e.actors[0] === young.id).length, 0);
+  assert.ok(state.log.some((e) => e.kind === 'combat' && e.text.includes('굶주린') && e.actors[0] === wild.id));
+});

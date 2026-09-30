@@ -198,6 +198,9 @@ function prey(state: State, world: World, a: Actor, t: number) {
   const def = npcDef(state, world, a.id);
   if (!def?.beast || !needsOf(a).includes('hunger') || a.stats.hunger < HUNT_HUNGER) return undefined;
   if (a.task?.kind === 'sleep') return undefined;
+  // A token that serves someone (a herd's young) keeps to its master's side; only one with no
+  // master hunts (user decision 2026-09-30).
+  if (a.master && state.tokens?.[a.id]) return undefined;
   return present(state, a.region)
     .filter((b) => b.id !== a.id && !hasPowers(npcDef(state, world, b.id)) && b.boundUntil === undefined && !down(b) && !foesOf(a, t).includes(b.id) && evasion(a, b, t) !== 'evade')
     .sort((x, y) => ptOf(x)[1] - ptOf(y)[1] || x.id.localeCompare(y.id))[0];
