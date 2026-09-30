@@ -3077,3 +3077,11 @@ test('drawing is coming to know secrets of the world: traps and what sets them o
   x.knowledge!.push({ id: 'today:0:0', text: '오늘 무엇', day: 0 });
   assert.equal(knownSecrets(x, state.minutes + 1440).some((k) => k.id === 'today:0:0'), false);
 });
+
+test('the Silundi Sea counts as an island, the Deepwater Realm as no land type', () => {
+  const world = loadWorld();
+  assert.deepEqual(landTypes(region(world, 'loc-silundi-sea')), ['island']);
+  assert.deepEqual(landTypes(region(world, 'loc-deepwater-realm')), []);
+  assert.deepEqual(landTypes(region(world, 'loc-malakir')), ['swamp']);
+  assert.deepEqual(landTypes(region(world, 'loc-turntimber-grove')), ['forest']);
+});

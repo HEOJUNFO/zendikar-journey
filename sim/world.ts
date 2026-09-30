@@ -80,6 +80,8 @@ const CostSchema = z.string().refine((s) => parseManaCost(s) !== null, '마나 �
 export const LandSimSchema = z.strictObject({
   // A named land card: no basic land type, whatever its terrain.
   nonbasic: z.boolean().default(false),
+  // Its basic land type when its terrain gives another or none (e.g. the Silundi Sea: an island).
+  land_type: z.enum(LAND_TYPES).optional(),
   // It gives no mana at all (e.g. a fetch land).
   no_mana: z.boolean().default(false),
   // Not a land at all, a place (e.g. Goma Fada, a walking city): no one bonds with it.
@@ -557,6 +559,8 @@ export type Region = {
   // What bonding with it brings.
   onBond: BondEffect[];
   nonbasic: boolean;
+  // The basic land type it has whatever its terrain (`sim.land_type`).
+  landType?: LandType;
   noMana: boolean;
   notLand?: boolean;
   wanders?: { perDay: number; stops: { name: string; x: number; y: number }[] };
@@ -733,6 +737,7 @@ export function buildWorld(entities: RawEntity[]): { world: World; errors: strin
           entersTapped: land.data?.enters_tapped ?? false,
           onBond: land.data?.on_bond ?? [],
           nonbasic: land.data?.nonbasic ?? false,
+          ...(land.data?.land_type ? { landType: land.data.land_type } : {}),
           noMana: land.data?.no_mana ?? false,
           ...(land.data?.not_land ? { notLand: true, noMana: true } : {}),
           ...(land.data?.wanders ? { wanders: { perDay: land.data.wanders.per_day, stops: land.data.wanders.stops } } : {}),
@@ -932,8 +937,9 @@ function baseTravelHours(a: Region, b: Region, abilities: readonly Ability[]) {
   return road + (a.parent ? 1 : 0) + (b.parent ? 1 : 0) + climb(a) + climb(b);
 }
 
-// A land's basic land types (none for a named land card, or a sea).
+// A land's basic land types (none for a named land card, or a sea), unless it says its own.
 export function landTypes(r: Region): LandType[] {
+  if (r.landType) return r.notLand ? [] : [r.landType];
   const type = TERRAINS[r.terrain].type;
   return r.nonbasic || r.notLand || !type ? [] : [type];
 }

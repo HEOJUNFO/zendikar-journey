@@ -42,7 +42,7 @@
 | "{T}: Add {B} or {R}" | 두 색 땅 `map.color: [B, R]`. 하루 마나 1을 쓸 때 둘 중 필요한 색으로 (`B/R`) |
 | 대지가 탭된 채 들어온다 | 유대를 맺은 그날은 그 땅의 마나가 나오지 않는다 (location `sim.enters_tapped`). 땅이 모두에게 묶이지는 않는다 |
 | "이 대지가 들어올 때" | 누군가 그 땅과 유대를 맺을 때 (location `sim.on_bond`) |
-| 기본 대지 종류 (산, 평원, 섬, 늪, 숲) | 지형으로: 바위·화산 산, 초원·설원 평원, 해변·강 섬, 늪 늪, 숲 숲. 이름 있는 대지 카드(`sim.nonbasic`)는 종류가 없다 |
+| 기본 대지 종류 (산, 평원, 섬, 늪, 숲) | 지형으로: 바위·화산 산, 초원·설원 평원, 해변·강 섬, 늪 늪, 숲 숲. 이름 있는 대지 카드(`sim.nonbasic`)는 종류가 없다. 지형과 다르게 정하려면 `sim.land_type` (실룬디 바다: 섬) |
 | 마나 능력이 없는 대지 | `sim.no_mana`. 유대는 맺지만 마나를 내지 않는다 |
 | "당신의 무덤에 있는 생물 카드" | 그 이를 섬기다 죽은 권속 (`Actor.fallen`). 생물의 색은 `colors`, 없으면 마나 색 |
 | "{2}, {T}: 무덤의 흑색 생물마다 {B}" | location `sim.fallen_mana: { color, cost }`. 그 땅은 하루 max(1, N − cost)를 낸다 (순이익으로 단순화) |
@@ -184,6 +184,7 @@ sim:
   on_bond:
     - { type: gain_life, amount: 1 }     # 유대를 맺으면 생명 1
   # nonbasic: true                      # 이름 있는 대지 카드: 산·평원 같은 기본 종류가 없다
+  # land_type: island                   # 지형과 상관없이 이 기본 대지 종류다 (실룬디 바다)
   # no_mana: true                       # 마나를 내지 않는다
   # fetch: { types: [mountain, plains], life: 1 }  # 내어 주고 생명 N: 그 종류 땅과 멀리서 유대
   # fallen_mana: { color: B, cost: 2 }  # 거느리다 죽은 그 색 권속 N마다: 하루 max(1, N − 2)
