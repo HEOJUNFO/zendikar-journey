@@ -7,7 +7,7 @@ import { relationsText } from '../relations.ts';
 import { shortName } from '../text.ts';
 import { chatCompletion, extractJson } from './chat.ts';
 
-export async function choose({ state, npc, what, candidates }: ChooseInput): Promise<string | null> {
+export async function choose({ state, npc, what, candidates, optional }: ChooseInput): Promise<string | null> {
   const me = state.actors[npc.id];
   const people = candidates.map(
     (a) => `- ${a.id}: ${shortName(a.name)}${a.id === npc.id ? ' (you)' : a.kind === 'player' ? ' (the player)' : ''} (power/toughness ${ptOf(a).join('/')})`,
@@ -19,7 +19,7 @@ export async function choose({ state, npc, what, candidates }: ChooseInput): Pro
         content: `You are ${npc.name}, a character in the plane of Zendikar.
 Who you are: ${npc.persona}
 Your goal: ${npc.goal}
-You must pick exactly one of the people listed. Answer with JSON only: {"pick": "<id>"}.`,
+${optional ? 'Pick one of the people listed, or no one. Answer with JSON only: {"pick": "<id>"} or {"pick": null}.' : 'You must pick exactly one of the people listed. Answer with JSON only: {"pick": "<id>"}.'}`,
       },
       {
         role: 'user',
@@ -34,7 +34,8 @@ Whom do you pick?`,
     ],
     300,
   );
-  const parsed = z.object({ pick: z.string() }).safeParse(extractJson(content));
+  const parsed = z.object({ pick: z.string().nullable() }).safeParse(extractJson(content));
+  if (optional && parsed.success && parsed.data.pick === null) return null;
   if (!parsed.success || !candidates.some((a) => a.id === parsed.data.pick)) {
     console.warn(`Unusable pick from ${npc.id}:`, content);
     return null;

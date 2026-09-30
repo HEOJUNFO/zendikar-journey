@@ -8,7 +8,7 @@ import { travelBlocked } from '../step.ts';
 import { shortName } from '../text.ts';
 import { bondEffectText, placeName, region, TERRAINS, travelHours } from '../world.ts';
 import { itemsAt, itemOwner } from '../items.ts';
-import { enteredToday, fetchTargets, growBlocked, growLand, targetedBondEffect } from '../abilities.ts';
+import { enteredToday, fetchTargets, fireTargets, growBlocked, growLand, targetedBondEffect } from '../abilities.ts';
 import { eonLand, spendBlocked, storeBlocked } from '../eons.ts';
 import { spellsTaughtAt } from '../spells.ts';
 import { chatCompletion, extractJson } from './chat.ts';
@@ -50,6 +50,14 @@ export async function interpret({ world, state, text }: InterpretInput): Promise
   if (grower && !growBlocked(state, world, p, grower.id, state.minutes)) {
     const who = enteredToday(state, world, grower.growEntered!.color, state.minutes).map((x) => shortName(x.name));
     days.push(`- {"type":"grow","land":"${grower.id}"}  (call on ${grower.name}: a +1/+1 counter on each creature of its color that came into the world today, whoever they belong to: ${who.join(', ')}; 1 hour)`);
+  }
+  // A Valakut they hold: bonding with (or seeking out) a mountain may wake it.
+  const valakut = world.regions.find((r) => r.mountainFire && p.bonds?.includes(r.id));
+  if (valakut) {
+    const burnable = fireTargets(state, world, p, valakut).map((x) => `${x.id} (${shortName(x.name)})`);
+    days.push(
+      `- (${valakut.name}: if they bond with or seek out a mountain while holding ${valakut.mountainFire!.others} others, they may add "target":"<id>" to that bond or fetch action to send ${valakut.mountainFire!.damage} damage of fire at someone in ${valakut.name}'s land${burnable.length ? `: ${burnable.join(', ')}` : ' (no one there now)'})`,
+    );
   }
   const people = present(state, p.region)
     .filter(isPerson)

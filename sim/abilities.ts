@@ -9,7 +9,7 @@ import { gainLife, loseLife } from './life.ts';
 import { DEPLETED_LABEL } from './rules.ts';
 import { castSpell, spellDef } from './spells.ts';
 import { addLog, npcDef, outOfTime, present, ptOf, random } from './state.ts';
-import type { Actor, State } from './state.ts';
+import type { Actor, ChoiceEffect, State } from './state.ts';
 import { josa, shortName, toward } from './text.ts';
 import { ABILITY_LABELS, LAND_TYPE_LABELS, landTypes, region, spellColors } from './world.ts';
 import type { Ability, ActivatedAbility, BondEffect, Region, World } from './world.ts';
@@ -42,8 +42,9 @@ export function bondTargets(state: State, world: World, a: Actor, regionId: stri
 }
 
 // The effect falls on `target`, if they are still there.
-export function applyBondEffect(state: State, world: World, a: Actor, regionId: string, eff: BondEffect, targetId: string | undefined, t: number) {
+export function applyBondEffect(state: State, world: World, a: Actor, regionId: string, eff: ChoiceEffect, targetId: string | undefined, t: number) {
   const r = region(world, regionId);
+  if (eff.type === 'damage') return mountainFire(state, world, a, r, eff.amount, targetId, t);
   const target = targetId ? bondTargets(state, world, a, regionId, eff).find((x) => x.id === targetId) : undefined;
   if (!target) {
     if (targetId) addLog(state, { kind: 'status', text: `${r.name}: 노린 이가 이미 곁에 없다.`, regions: [r.id], actors: [a.id], t });
@@ -87,8 +88,46 @@ export function expireGranted(state: State, t: number) {
   }
 }
 
-// `target`: whom the player picked for a land's targeted effect. An NPC's pick is asked of the
-// LLM after the hour (state.choices).
+// --- Valakut: "Whenever a Mountain enters under your control, if you control at least five
+// other Mountains, you may have this land deal 3 damage to any target" ---
+
+// Whom the fire may reach: anyone in the Valakut's region or its areas (user decision
+// 2026-09-30), not on the road, not out of time, not the one who calls it.
+export function fireTargets(state: State, world: World, a: Actor, land: Region) {
+  const home = land.parent ?? land.id;
+  const lands = [home, ...world.regions.filter((r) => r.parent === home).map((r) => r.id)];
+  return Object.values(state.actors).filter((x) => !x.dead && !x.travel && x.id !== a.id && lands.includes(x.region) && !outOfTime(state, x));
+}
+
+// The lands like Valakut that answer as `a` bonds with `mountainId`: held, standing, and with
+// enough other mountains held.
+export function firesOnBond(state: State, world: World, a: Actor, mountainId: string) {
+  const mountain = world.regions.find((r) => r.id === mountainId);
+  if (!mountain || !landTypes(mountain).includes('mountain')) return [];
+  const held = (a.bonds ?? []).map((id) => world.regions.find((r) => r.id === id)).filter((r) => r && !state.regions[r.id]?.destroyed) as Region[];
+  const others = held.filter((r) => r.id !== mountainId && landTypes(r).includes('mountain')).length;
+  return held.filter((r) => r.mountainFire && others >= r.mountainFire.others);
+}
+
+function mountainFire(state: State, world: World, a: Actor, land: Region, amount: number, targetId: string | undefined, t: number) {
+  if (!targetId) return; // "you may": they let it be
+  const target = fireTargets(state, world, a, land).find((x) => x.id === targetId);
+  if (!target) {
+    addLog(state, { kind: 'status', text: `${land.name}: 노린 이가 이미 닿지 않는 곳에 있다.`, regions: [land.id], actors: [a.id], t });
+    return;
+  }
+  addLog(state, {
+    kind: 'event',
+    text: `${land.name}에서 불길이 치솟아 ${shortName(target.name)}에게 떨어졌다 (${shortName(a.name)}의 부름).`,
+    regions: [land.id, target.region],
+    actors: [a.id, target.id],
+    t,
+  });
+  dealDamage(state, target, amount, t, land.name);
+}
+
+// `target`: whom the player picked for a land's targeted effect, or (a mountain, with Valakut
+// ready) for its fire. An NPC's pick is asked of the LLM after the hour (state.choices).
 export function bondLand(state: State, world: World, a: Actor, t: number, regionId = a.region, target?: string) {
   const r = region(world, regionId);
   const def = npcDef(state, world, a.id);
@@ -128,6 +167,15 @@ export function bondLand(state: State, world: World, a: Actor, t: number, region
     if (a.kind === 'player' || !targets.length) applyBondEffect(state, world, a, r.id, eff, target, t);
     else (state.choices ??= []).push({ by: a.id, land: r.id, effect: eff, candidates: targets.map((x) => x.id), t });
   }
+  // A mountain in: a Valakut they hold may answer (the count is of the mountains held before).
+  for (const v of firesOnBond(state, world, a, r.id)) {
+    const targets = fireTargets(state, world, a, v);
+    if (!targets.length) continue;
+    addLog(state, { kind: 'status', text: `${shortName(a.name)}의 산들이 모여 ${josa(v.name, '이', '가')} 끓어오른다.`, regions: [v.id], actors: [a.id], t });
+    const eff = { type: 'damage' as const, amount: v.mountainFire!.damage };
+    if (a.kind === 'player') applyBondEffect(state, world, a, v.id, eff, target, t);
+    else (state.choices ??= []).push({ by: a.id, land: v.id, effect: eff, candidates: targets.map((x) => x.id), optional: true, t });
+  }
   itemsOnLandfall(state, world, a, t);
 }
 
@@ -155,7 +203,7 @@ export function fetchBlocked(state: State, world: World, a: Actor, fromId: strin
 // "{T}, Pay N life, Sacrifice this land: Search your library for a <type> card, put it onto
 // the battlefield": they lose N life and their bond with the fetch land, and bond with the
 // land sought from wherever they are. Not their land for the day: a landfall of its own.
-export function fetchLand(state: State, world: World, a: Actor, fromId: string, toId: string, t: number) {
+export function fetchLand(state: State, world: World, a: Actor, fromId: string, toId: string, t: number, target?: string) {
   const why = fetchBlocked(state, world, a, fromId, toId);
   if (why) {
     addLog(state, { kind: 'status', text: `${josa(shortName(a.name), '은', '는')} 길을 찾지 못했다: ${why}`, regions: [a.region], actors: [a.id], t });
@@ -172,7 +220,7 @@ export function fetchLand(state: State, world: World, a: Actor, fromId: string, 
     t,
   });
   a.fetched = [...(a.fetched ?? []), toId];
-  bondLand(state, world, a, t, toId);
+  bondLand(state, world, a, t, toId, target);
 }
 
 // At a turn's start (00:00): whoever holds a land like Emeria and enough plains gets back the

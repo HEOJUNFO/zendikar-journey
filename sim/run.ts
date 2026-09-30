@@ -39,7 +39,8 @@ export type EvadeInput = { world: World; state: State; npc: Speaker; attacker: A
 export type ConverseInput = { world: World; state: State; a: Speaker; b: Speaker };
 // An NPC picks whom an effect falls on (e.g. a land's "target player loses 1 life"): one of
 // `candidates`, by id.
-export type ChooseInput = { world: World; state: State; npc: Speaker; what: string; candidates: Actor[] };
+// `optional`: they may pick no one (null).
+export type ChooseInput = { world: World; state: State; npc: Speaker; what: string; candidates: Actor[]; optional?: boolean };
 // Two NPCs' exchange: the lines, what each now thinks of the other (by id), and who, if
 // anyone, now attacks the other.
 export type Conversation = { lines: { by: string; say: string }[]; impressions: Record<string, string>; attacker: string | null };
@@ -197,13 +198,18 @@ async function choices(state: State, world: World, llm: Llm) {
               ? `고른 하나(당신 자신도 된다)가 오늘 자정까지 ${ABILITY_LABELS[c.effect.ability]} 능력을 얻는다`
               : c.effect.type === 'pump'
                 ? `고른 하나(당신 자신도 된다)가 오늘 자정까지 공격력/방어력 ${c.effect.pt.join('/')}만큼 강해진다`
-                : '';
-        pick = await llm.choose({ world, state, npc, candidates, what: `${land.name}: 당신이 이 땅과 유대를 맺자, ${what} (${land.summary})` });
+                : `당신이 산과 유대를 맺어 ${land.name}이(가) 끓어오른다. 고른 하나에게 불길이 떨어져 피해 ${c.effect.amount}을 입는다 (죽을 수도 있다)`;
+        const lead = c.effect.type === 'damage' ? `${land.name}: ${what}` : `${land.name}: 당신이 이 땅과 유대를 맺자, ${what}`;
+        pick = await llm.choose({ world, state, npc, candidates, optional: c.optional, what: `${lead} (${land.summary})` });
       } catch (e) {
         console.warn(`choose for ${c.by} failed:`, e);
       }
     }
-    if (!candidates.some((x) => x.id === pick)) pick = candidates[Math.floor(random(state) * candidates.length)].id;
+    // "You may": no answer, or no one, means they let it be. Otherwise the effect must land.
+    if (!candidates.some((x) => x.id === pick)) {
+      if (c.optional) continue;
+      pick = candidates[Math.floor(random(state) * candidates.length)].id;
+    }
     applyBondEffect(state, world, by, land.id, c.effect, pick!, state.minutes);
   }
 }

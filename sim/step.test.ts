@@ -13,7 +13,7 @@ import { eligibleGmEvents, travelBlocked } from './step.ts';
 import { gainLife } from './life.ts';
 import { newState, outOfTime, PLAYER_ID, present, ptOf, syncWorld } from './state.ts';
 import { spendBlocked, storeBlocked } from './eons.ts';
-import { bondBlocked, bondLand, bondTargets, fetchTargets, growBlocked, spawnWild, useAbility } from './abilities.ts';
+import { bondBlocked, bondLand, bondTargets, fetchTargets, fireTargets, firesOnBond, growBlocked, spawnWild, useAbility } from './abilities.ts';
 import { DEPLETED_LABEL } from './rules.ts';
 import { swayBlocked } from './retainers.ts';
 import type { State } from './state.ts';
@@ -1227,4 +1227,36 @@ test('teetering peaks: the one bonding picks someone there (themselves too) to h
   assert.deepEqual(ptOf(p), [3, 1]);
   await act(state, world, { type: 'wait', hours: 16 }); // past midnight
   assert.deepEqual(ptOf(p), [1, 1]);
+});
+
+const valakut: RawEntity = {
+  id: 'loc-valakut',
+  kind: 'location',
+  name: '발라쿠트',
+  status: 'canon',
+  map: { in: 'loc-c', terrain: 'volcanic', color: 'R' },
+  sim: { nonbasic: true, enters_tapped: true, mountain_fire: { others: 5, damage: 3 } },
+};
+const peaks = [1, 2, 3, 4, 5, 6].map((i) => loc(`loc-m${i}`, 60 + i * 2, 60, 'rocky'));
+
+test('Valakut: bonding with a sixth mountain, its holder may burn someone in its land for 3', async () => {
+  const world = fixture([valakut, ...peaks, npc('chr-x', { ...npcSim('loc-c', 'leisure'), pt: [1, 4] })]);
+  const state = character(world, 'loc-m6');
+  const p = state.actors[PLAYER_ID];
+  p.bonds = ['loc-valakut', 'loc-m1', 'loc-m2', 'loc-m3', 'loc-m4'];
+  assert.deepEqual(firesOnBond(state, world, { ...p, bonds: [...p.bonds, 'loc-m6'] }, 'loc-m6'), []); // four others: asleep
+  p.bonds.push('loc-m5');
+  assert.deepEqual(fireTargets(state, world, p, region(world, 'loc-valakut')).map((x) => x.id), ['chr-x']);
+  await act(state, world, { type: 'bond', target: 'chr-x' });
+  assert.equal(woundsOf(state.actors['chr-x'], state.minutes), 3);
+});
+
+test('Valakut: an NPC waking it may send the fire at no one', async () => {
+  const world = fixture([valakut, ...peaks, npc('chr-v', { ...npcSim('loc-m6'), plan: [['00:00', '24:00', 'loc-m6', 'bond', '산과 유대', '🌋']] })]);
+  const state = character(world, 'loc-c');
+  state.actors['chr-v'].bonds = ['loc-valakut', 'loc-m1', 'loc-m2', 'loc-m3', 'loc-m4', 'loc-m5'];
+  let asked = 0;
+  await advance(state, world, 5, { choose: async ({ optional }) => (asked++, assert.ok(optional), null) });
+  assert.equal(asked, 1);
+  assert.equal(woundsOf(state.actors[PLAYER_ID], state.minutes), 0);
 });

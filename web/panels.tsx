@@ -6,7 +6,7 @@ import { formatClock, formatTimeOfDay, gameDay, minuteOfDay } from '../sim/clock
 import { isPerson, needsOf, outOfTime, player, present, ptOf } from '../sim/state.ts';
 import { woundsOf } from '../sim/combat.ts';
 import { formatMana, manaAvailable, manaCapacity, manaLabel } from '../sim/mana.ts';
-import { bondBlocked, bondTargets, enteredToday, fetchTargets, growBlocked, growLand, targetedBondEffect } from '../sim/abilities.ts';
+import { bondBlocked, bondTargets, enteredToday, fetchTargets, fireTargets, firesOnBond, growBlocked, growLand, targetedBondEffect } from '../sim/abilities.ts';
 import { BOND_HOURS } from '../sim/actions.ts';
 import { CLAIM_HOURS, claimBlocked, itemsAt, itemsOf } from '../sim/items.ts';
 import { eonLand, eonsIn, spendBlocked, storeBlocked } from '../sim/eons.ts';
@@ -88,12 +88,27 @@ export function RegionCard(props: {
       // A land whose bonding falls on someone (a life taken, flight given): you pick whom.
       const eff = targetedBondEffect(r);
       const targets = eff ? bondTargets(state, world, p, r.id, eff) : [];
+      // A mountain that would wake a Valakut they hold: whom its fire falls on, if anyone.
+      const fire = eff ? undefined : firesOnBond(state, world, { ...p, bonds: [...(p.bonds ?? []), r.id] }, r.id)[0];
+      const burnable = fire ? fireTargets(state, world, p, fire) : [];
       const held = busy || !!p.forced || p.boundUntil !== undefined;
       travel = (
         <>
           <p className="muted">지금 여기 있다.</p>
           {why ? (
             <p className="muted">{why}</p>
+          ) : burnable.length ? (
+            <div className="row">
+              <span className="muted">유대 맺기 ({BOND_HOURS}시간), {fire!.name}의 불길을 보낼 이:</span>
+              {burnable.map((x) => (
+                <button key={x.id} disabled={held} onClick={() => onAct({ type: 'bond', target: x.id })}>
+                  {shortName(x.name)}
+                </button>
+              ))}
+              <button disabled={held} onClick={() => onAct({ type: 'bond' })}>
+                보내지 않음
+              </button>
+            </div>
           ) : targets.length ? (
             <div className="row">
               <span className="muted">

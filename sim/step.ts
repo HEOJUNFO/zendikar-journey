@@ -55,7 +55,7 @@ export function step(state: State, world: World) {
       if (a.task!.kind === 'bond') bondLand(state, world, a, at, a.region, a.task!.target);
       if (a.task!.kind === 'learn' && a.task!.spell) learnSpell(state, world, a, a.task!.spell, at);
       if (a.task!.kind === 'claim' && a.task!.item) claimItem(state, world, a, a.task!.item, at);
-      if (a.task!.kind === 'fetch' && a.task!.from && a.task!.land) fetchLand(state, world, a, a.task!.from, a.task!.land, at);
+      if (a.task!.kind === 'fetch' && a.task!.from && a.task!.land) fetchLand(state, world, a, a.task!.from, a.task!.land, at, a.task!.target);
       if (a.task!.kind === 'store_day' && a.task!.land) storeDay(state, world, a, a.task!.land, at);
       if (a.task!.kind === 'spend_day' && a.task!.land) spendDay(state, world, a, a.task!.land, at);
       if (a.task!.kind === 'grow' && a.task!.land) growEntered(state, world, a, a.task!.land, at);

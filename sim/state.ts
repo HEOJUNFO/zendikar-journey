@@ -105,6 +105,9 @@ export type Actor = {
   background?: string; // player
 };
 
+// What falls on the one picked: a land's bonding effect, or a burst of damage (Valakut).
+export type ChoiceEffect = BondEffect | { type: 'damage'; amount: number };
+
 export type Condition = {
   label: string;
   until: number;
@@ -192,7 +195,8 @@ export type State = {
   extraDays?: { actor: string; day: number }[];
   // Picks an NPC owes (a land's targeted effect as they bonded with it): the LLM makes them
   // after the hour (sim/run.ts), from these candidates.
-  choices?: { by: string; land: string; effect: BondEffect; candidates: string[]; t: number }[];
+  // `optional`: they may pick no one ("you may").
+  choices?: { by: string; land: string; effect: ChoiceEffect; candidates: string[]; optional?: boolean; t: number }[];
   nextLogId: number;
   log: LogEntry[];
 };

@@ -6,7 +6,7 @@ import { BOND_HOURS, KIND_EFFECTS } from './rules.ts';
 import { addLog, isPerson, landUnusable, outOfTime, player } from './state.ts';
 import type { State, Task } from './state.ts';
 import { startTravel, travelBlocked } from './step.ts';
-import { bondBlocked, bondTargets, fetchBlocked, growBlocked, targetedBondEffect } from './abilities.ts';
+import { bondBlocked, bondTargets, fetchBlocked, firesOnBond, growBlocked, targetedBondEffect } from './abilities.ts';
 import { CLAIM_HOURS, claimBlocked, itemDef } from './items.ts';
 import { EON_HOURS, spendBlocked, storeBlocked } from './eons.ts';
 import { castBlocked, learnBlocked, spellDef } from './spells.ts';
@@ -32,7 +32,8 @@ export const ActionSchema = z.discriminatedUnion('type', [
   // Tame an item that stands here: pay its cost and it becomes yours.
   z.object({ type: z.literal('claim'), item: z.string() }),
   // Give up a fetch land you hold to seek out a land of its types, from wherever you are.
-  z.object({ type: z.literal('fetch'), from: z.string(), to: z.string() }),
+  // `target`: whom a Valakut's fire falls on, if the land sought is a mountain that wakes it.
+  z.object({ type: z.literal('fetch'), from: z.string(), to: z.string(), target: z.string().optional() }),
   // Leave a day in a land that keeps days (losing tomorrow), or take one back (an extra day).
   z.object({ type: z.literal('store_day'), land: z.string() }),
   z.object({ type: z.literal('spend_day'), land: z.string() }),
@@ -95,8 +96,10 @@ export function startAction(state: State, world: World, action: Action): string 
       const targets = eff ? bondTargets(state, world, p, p.region, eff) : [];
       if (targets.length && !targets.some((x) => x.id === action.target))
         return `이 땅은 곁의 하나에게 힘을 미친다 (${bondEffectText(eff!)}). 누구로 할지 골라야 한다: ${targets.map((x) => (x.id === p.id ? '나' : shortName(x.name))).join(', ')}.`;
+      // A mountain that wakes a Valakut they hold: `target`, if given, is whom its fire falls on.
+      const fire = !eff && action.target && firesOnBond(state, world, { ...p, bonds: [...(p.bonds ?? []), p.region] }, p.region).length ? action.target : undefined;
       const target = targets.find((x) => x.id === action.target);
-      task = { kind: 'bond', activity: '땅과 유대 맺기', emoji: '🌱', until: until(BOND_HOURS), ...(target ? { target: target.id } : {}) };
+      task = { kind: 'bond', activity: '땅과 유대 맺기', emoji: '🌱', until: until(BOND_HOURS), ...(target ? { target: target.id } : fire ? { target: fire } : {}) };
       text = `${BOND_HOURS}시간 동안 이 땅과 유대를 맺는다.${
         !target ? ''
         : eff!.type === 'lose_life' ? ` ${josa(shortName(target.name), '이', '가')} 이 땅에 생명을 앗길 것이다.`
@@ -142,7 +145,7 @@ export function startAction(state: State, world: World, action: Action): string 
       const why = fetchBlocked(state, world, p, action.from, action.to);
       if (why) return why;
       const [from, to] = [region(world, action.from), region(world, action.to)];
-      task = { kind: 'fetch', activity: `${from.name}에서 길 찾기`, emoji: '🧭', until: until(1), from: from.id, land: to.id };
+      task = { kind: 'fetch', activity: `${from.name}에서 길 찾기`, emoji: '🧭', until: until(1), from: from.id, land: to.id, ...(action.target ? { target: action.target } : {}) };
       text = `${josa(from.name, '을', '를')} 내어 주고 ${toward(to.name)} 이어지는 길을 찾는다 (생명 ${from.fetch!.life}).`;
       break;
     }

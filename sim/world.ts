@@ -116,6 +116,10 @@ export const LandSimSchema = z.strictObject({
   // whoever holds it may tap it to give every creature of that color that came into play
   // today a +1/+1 counter, whoever they serve.
   grow_entered: z.strictObject({ color: z.enum(COLORS) }).optional(),
+  // "Whenever a Mountain enters under your control, if you control at least N other Mountains,
+  // you may have this land deal D damage to any target" (Valakut): whoever holds it and bonds
+  // with a mountain while holding N others may burn someone anywhere in this land's region.
+  mountain_fire: z.strictObject({ others: z.number().int().min(0), damage: z.number().int().positive() }).optional(),
 });
 export type BondEffect = z.infer<typeof LandSimSchema>['on_bond'][number];
 
@@ -401,6 +405,8 @@ export type Region = {
   eon?: { cost: ManaCost; costText: string };
   // Tapped, gives a +1/+1 counter to each creature of this color that came into play today.
   growEntered?: { color: Color };
+  // Burns someone in its region when its holder bonds with a mountain and holds N others.
+  mountainFire?: { others: number; damage: number };
   // An area inside this region (its x, y are the region's). Areas are lands of their own:
   // people meet, bond, and get hit by events there, but an event on the region reaches them.
   parent?: string;
@@ -545,6 +551,7 @@ export function buildWorld(entities: RawEntity[]): { world: World; errors: strin
           upkeepRevive: land.data?.upkeep_revive,
           eon: land.data?.eon && { cost: parseManaCost(land.data.eon.cost)!, costText: land.data.eon.cost },
           growEntered: land.data?.grow_entered,
+          mountainFire: land.data?.mountain_fire,
         });
       }
     }
