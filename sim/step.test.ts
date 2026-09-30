@@ -3153,6 +3153,38 @@ test('drawing is coming to know secrets of the world: traps and what sets them o
   assert.equal(knownSecrets(x, state.minutes + 1440).some((k) => k.id === 'today:0:0'), false);
 });
 
+test('enter_draw: arriving, the sphinx learns three secrets; kicked from its own mana it keeps its spells, unkicked it lets three go', () => {
+  const sphinx = (mana: object) => ({ ...npcSim('loc-a', 'work', [3, 5]), needs: ['energy'], mana, abilities: ['fly'], enter_draw: { count: 3, discard: 3, kicker: '{1}{U}' } });
+  const world = fixture([runeflare, bolt, vessel, npc('chr-s', sphinx({ U: 5 })), npc('chr-p', sphinx({ U: 1 }))]);
+  const state = newState(world, { seed: 1, mode: 'observer' });
+  const [s, p] = [state.actors['chr-s'], state.actors['chr-p']];
+  const t = state.minutes;
+  s.spells = ['spl-bolt'];
+  p.spells = ['spl-bolt'];
+  onEnter(state, world, s, t);
+  assert.equal(knownSecrets(s, t).length, 3);
+  assert.deepEqual(manaAvailable(state, world, s, t), { U: 3 }); // paid {1}{U}
+  assert.deepEqual(s.spells, ['spl-bolt']);
+  assert.ok(texts(state).some((l) => l.includes('되찾은 진실')));
+  // Once a day.
+  onEnter(state, world, s, t);
+  assert.deepEqual(manaAvailable(state, world, s, t), { U: 3 });
+  // Can't pay the kicker: learns, then lets its spells go (no more than three: all, no pick).
+  onEnter(state, world, p, t);
+  assert.equal(knownSecrets(p, t).length, 3);
+  assert.deepEqual(p.spells, []);
+  assert.deepEqual(p.graveyard, ['spl-bolt']);
+});
+
+test('the real Sphinx of Lost Truths broods on Sejiri\'s snow', () => {
+  const world = loadWorld();
+  const state = newState(world, { seed: 1, mode: 'observer' });
+  const s = state.actors['cre-sphinx-of-lost-truths'];
+  assert.equal(s.region, 'loc-sejiri');
+  assert.ok(hasAbility(s, 'fly', state.minutes));
+  assert.deepEqual(npcDef(state, world, s.id)?.enterDraw, { count: 3, discard: 3, kicker: parseManaCost('{1}{U}')!, kickerText: '{1}{U}' });
+});
+
 test('both seas count as islands', () => {
   const world = loadWorld();
   assert.deepEqual(landTypes(region(world, 'loc-silundi-sea')), ['island']);

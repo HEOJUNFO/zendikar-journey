@@ -256,6 +256,11 @@ export const CharacterSimSchema = z.strictObject({
   // gain life equal to the life lost this way" (Malakir Bloodwitch: Vampires). Everyone else
   // standing there (not their side) loses it; their controller gains it (sim/abilities.ts).
   enter_drain: z.strictObject({ per: z.string() }).optional(),
+  // "Kicker <cost>. When this enters, draw N cards. Then if it wasn't kicked, discard M cards"
+  // (Sphinx of Lost Truths): on their first arrival of the day their controller learns N
+  // secrets (sim/knowledge.ts); they pay the kicker from their own mana if they can, and if not
+  // (or with no kicker) the controller lets go of M spells (sim/abilities.ts `enterDraw`).
+  enter_draw: z.strictObject({ count: z.number().int().min(1), discard: z.number().int().min(1).optional(), kicker: CostSchema.optional() }).optional(),
   // "Protection from <color>" (Malakir Bloodwitch: white): nothing of that color damages them,
   // blocks them (strikes back, flies from them), or picks them (spells, abilities, lands).
   protection: z.array(z.enum(COLORS)).default([]),
@@ -634,6 +639,7 @@ export type NpcDef = {
   types?: CreatureType[];
   enterDestroy?: CreatureType;
   enterDrain?: { per: string };
+  enterDraw?: { count: number; discard?: number; kicker?: ManaCost; kickerText?: string };
   protection?: Color[];
   // The creature kind they are (e.g. cre-vampire), for "a Vampire you control".
   creature?: string;
@@ -809,7 +815,7 @@ export function buildWorld(entities: RawEntity[]): { world: World; errors: strin
         err(e.id, `sim 오류: ${issues(sim.error)}`);
         continue;
       }
-      const { knows_colors, activated, wins_at_life, extra_combat, landfall_token, landfall_seize, landfall_lose, landfall_grant, landfall_drain, enter_destroy, enter_drain, tap_draw_allies, name, ...rest } = sim.data;
+      const { knows_colors, activated, wins_at_life, extra_combat, landfall_token, landfall_seize, landfall_lose, landfall_grant, landfall_drain, enter_destroy, enter_drain, enter_draw, tap_draw_allies, name, ...rest } = sim.data;
 
       world.npcs.push({
         id: e.id,
@@ -825,6 +831,7 @@ export function buildWorld(entities: RawEntity[]): { world: World; errors: strin
         ...(landfall_grant.length ? { landfallGrant: landfall_grant } : {}),
         ...(enter_destroy ? { enterDestroy: enter_destroy } : {}),
         ...(enter_drain ? { enterDrain: enter_drain } : {}),
+        ...(enter_draw ? { enterDraw: { count: enter_draw.count, discard: enter_draw.discard, ...(enter_draw.kicker ? { kicker: parseManaCost(enter_draw.kicker)!, kickerText: enter_draw.kicker } : {}) } } : {}),
         ...(landfall_drain ? { landfallDrain: landfall_drain } : {}),
         ...(tap_draw_allies ? { tapDrawAllies: true } : {}),
         ...(extra_combat ? { extraCombat: { cost: parseManaCost(extra_combat.cost)!, costText: extra_combat.cost } } : {}),

@@ -11,6 +11,7 @@ import { masterOf, retainersOf } from './retainers.ts';
 import { DEPLETED_LABEL } from './rules.ts';
 import { castSpell, spellDef } from './spells.ts';
 import { drawKnowledge } from './knowledge.ts';
+import { owesDiscard } from './discard.ts';
 import { landSealed, powersSealed, sealText } from './seal.ts';
 import { addLog, hasAbility, npcDef, outOfTime, present, ptOf, random, targetable, untargetableText } from './state.ts';
 import type { Actor, ChoiceEffect, State } from './state.ts';
@@ -586,11 +587,30 @@ export function applyDrainGrow(state: State, world: World, a: Actor, target: Act
 // once a day for balance (user decision 2026-09-30).
 export function onEnter(state: State, world: World, a: Actor, t: number) {
   const def = npcDef(state, world, a.id);
-  if (!def?.enterDestroy && !def?.enterDrain) return;
+  if (!def?.enterDestroy && !def?.enterDrain && !def?.enterDraw) return;
   if (a.dead || a.enteredDay === gameDay(t)) return;
   a.enteredDay = gameDay(t);
   enterDestroy(state, world, a, t);
   enterDrain(state, world, a, t);
+  enterDraw(state, world, a, t);
+}
+
+// "Kicker {1}{U}. When this enters, draw three cards. Then if it wasn't kicked, discard three
+// cards" (Sphinx of Lost Truths). Their controller (master, or themselves) learns the secrets
+// (sim/knowledge.ts); the kicker comes out of their own mana, paid if they can ([결정]
+// 2026-09-30, as an NPC's spell kicker); unkicked, the controller lets go of that many spells.
+export function enterDraw(state: State, world: World, a: Actor, t: number) {
+  const draw = npcDef(state, world, a.id)?.enterDraw;
+  if (!draw || a.dead || powersSealed(state, world, a, t)) return;
+  const controller = masterOf(state, a) ?? a;
+  const kicked = !!draw.kicker && !!planPayment(manaAvailable(state, world, a, t), draw.kicker);
+  if (kicked) {
+    payMana(state, world, a, draw.kicker!, t);
+    addLog(state, { kind: 'effect', text: `${josa(shortName(a.name), '이', '가')} 힘(${draw.kickerText})을 더 들여, 되찾은 진실을 하나도 흘리지 않는다.`, regions: [a.region], actors: [a.id], t });
+  }
+  const cause = `${josa(shortName(a.name), '이', '가')} 들어설 때`;
+  drawKnowledge(state, world, controller, draw.count, t, cause);
+  if (!kicked && draw.discard) owesDiscard(state, world, controller, cause, t, draw.discard);
 }
 
 // "When this enters, each opponent loses life equal to the number of <kind>s you control. You

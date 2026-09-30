@@ -5,9 +5,10 @@ name: 스핑크스
 name_en: Sphinx
 summary: 사람의 얼굴과 사자의 몸, 커다란 날개를 지닌 옛 지식의 수호자. 모든 유물의 자리를 안다지만 좀처럼 입을 열지 않는다. 즈와르 섬에 한 마리가 산다
 status: canon
-sources: [ZEN-68]
+sources: [ZEN-68, ZEN-69]
 tags: [스핑크스, 청색, 비행]
 links:
+  - { to: cre-sphinx-of-lost-truths, rel: 세지리의 또 다른 스핑크스 }
   - { to: law-mana-colors, rel: 청색의 존재 }
   - { to: loc-jwar-isle, rel: 사는 곳 }
 sim:
