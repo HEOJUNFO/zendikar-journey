@@ -1373,3 +1373,18 @@ test('the real deepwater realm: Lorthos\'s tides reach Tazeem and Murasa and the
   assert.ok(!coast.includes('loc-ondu'));
   assert.equal(world.npcs.find((n) => n.id === 'chr-lorthos')?.home, 'loc-deepwater-realm');
 });
+
+test('the real Malakir: one who gained life today walks in and the needlebite trap bites; one who did not walks in freely', async () => {
+  const world = loadWorld();
+  const state = newState(world, { seed: 5, mode: 'character', player: { name: '나', background: '떠돌이', region: 'loc-guul-draz' } });
+  const p = state.actors[PLAYER_ID];
+  await act(state, world, { type: 'move', to: 'loc-malakir' });
+  assert.equal(p.region, 'loc-malakir');
+  assert.ok(!texts(state).some((x) => x.includes('가시가 튀어나와')));
+  await act(state, world, { type: 'move', to: 'loc-guul-draz' });
+  gainLife(state, p, 1, state.minutes, '피난처');
+  const before = p.stats.energy;
+  await act(state, world, { type: 'move', to: 'loc-malakir' });
+  assert.ok(texts(state).some((x) => x.includes('가시가 튀어나와')));
+  assert.ok(p.stats.energy <= before - 50);
+});
