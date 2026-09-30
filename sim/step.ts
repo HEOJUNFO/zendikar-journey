@@ -22,6 +22,7 @@ import {
 import { gainedLifeToday, loseLife } from './life.ts';
 import { forget, forgetAbout } from './relations.ts';
 import { markSealed } from './seal.ts';
+import { handSize } from './knowledge.ts';
 import { recall, RECALL_HOURS, recallBlocked } from './loremaster.ts';
 import { addLog, alive, landUnusable, needsOf, npcDef, outOfTime, present, ptOf, random } from './state.ts';
 import { addFoe, attackBlocked, dealDamage, foesOf, hostileNpcs } from './combat.ts';
@@ -306,9 +307,10 @@ function fire(state: State, world: World, ev: EventDef, t: number, omened: boole
       for (const id of cause.by ?? []) {
         const a = state.actors[id];
         if (!a || a.dead || a.travel) continue;
-        const n = a.spells?.length ?? 0;
-        if (n) dealDamage(state, a, n, t, `${ev.name} (쥔 주문 ${n})`);
-        else addLog(state, { kind: 'effect', text: `${josa(shortName(a.name), '은', '는')} 쥔 주문이 없어 불길이 비껴갔다.`, regions: [a.region], actors: [a.id], t });
+        // Their hand: spells held and secrets known (sim/knowledge.ts).
+        const n = handSize(a, t);
+        if (n) dealDamage(state, a, n, t, `${ev.name} (머릿속에 쥔 것 ${n})`);
+        else addLog(state, { kind: 'effect', text: `${josa(shortName(a.name), '은', '는')} 머릿속에 쥔 것이 없어 불길이 비껴갔다.`, regions: [a.region], actors: [a.id], t });
       }
     } else if (eff.type === 'lose_life') {
       for (const id of cause.by ?? []) {

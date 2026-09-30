@@ -14,6 +14,7 @@ import { BOND_HOURS } from '../sim/actions.ts';
 import { CLAIM_HOURS, claimBlocked, itemsAt, itemsOf } from '../sim/items.ts';
 import { eonLand, eonsIn, spendBlocked, storeBlocked } from '../sim/eons.ts';
 import { castBlocked, harmful, learnBlocked, spellsTaughtAt } from '../sim/spells.ts';
+import { knownSecrets } from '../sim/knowledge.ts';
 import { sealToday } from '../sim/seal.ts';
 import { isWinner } from '../sim/win.ts';
 import { lifeOf } from '../sim/life.ts';
@@ -326,6 +327,16 @@ export function PlayerCard({ world, state }: { world: World; state: State }) {
         아는 주문:{' '}
         {p.spells?.length ? world.spells.filter((s) => p.spells!.includes(s.id)).map((s) => `${s.name} ${s.costText}`).join(', ') : '없음'}
       </p>
+      {knownSecrets(p, state.minutes).length > 0 && (
+        <details className="muted">
+          <summary>아는 비밀 {knownSecrets(p, state.minutes).length}가지</summary>
+          <ul>
+            {knownSecrets(p, state.minutes).map((k) => (
+              <li key={k.id}>{k.text}</li>
+            ))}
+          </ul>
+        </details>
+      )}
       <p className="muted">
         길들인 것:{' '}
         {itemsOf(state, world, p.id)
@@ -584,7 +595,7 @@ export function CharacterControls(props: {
           <span className="muted">📜 {shortName(loremastersOf(state, world, p)[0].name)}:</span>
           <button
             disabled={busy || !!stuck || !!recallBlocked(state, world, p, state.minutes)}
-            title={recallBlocked(state, world, p, state.minutes) ?? `동료 ${recallCount(state, world, p)}만큼 주문을 떠올린다`}
+            title={recallBlocked(state, world, p, state.minutes) ?? `동료 ${recallCount(state, world, p)}만큼 숨은 것을 알게 된다`}
             onClick={() => onAct({ type: 'recall' })}
           >
             기억 빌리기

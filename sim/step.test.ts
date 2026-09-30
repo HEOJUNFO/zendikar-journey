@@ -20,6 +20,7 @@ import { foresightText } from './foresight.ts';
 import { withPositions } from './wander.ts';
 import { crushRelic, relicsHere } from './relics.ts';
 import { recallBlocked, recallCount } from './loremaster.ts';
+import { drawKnowledge, handSize, knownSecrets, secretsOf } from './knowledge.ts';
 import { claimBlocked } from './items.ts';
 import { spendBlocked, storeBlocked } from './eons.ts';
 import { applyEnterDestroy, bondBlocked, enterDestroy, onEnter, bondLand, bondTargets, callForth, fetchTargets, fireTargets, firesOnBond, growBlocked, spawnWild, summonLibrary, useAbility } from './abilities.ts';
@@ -795,7 +796,8 @@ test('a planeswalker: loyalty abilities once a day, a red spell let go becomes f
   assert.equal(useAbility(state, world, 'chr-w', 'wheel', '', state.minutes), null);
   assert.equal(w.loyalty, 4);
   assert.ok(state.actors[PLAYER_ID].graveyard?.includes('spl-bolt'));
-  assert.deepEqual(state.actors[PLAYER_ID].spells, ['spl-bolt']); // the only spell in this world
+  assert.deepEqual(state.actors[PLAYER_ID].spells, []); // let go of
+  assert.ok((state.actors[PLAYER_ID].knowledge?.length ?? 0) > 0); // draws: secrets of the world
   // Blows come off loyalty; at 0 the walker leaves this plane (not a death).
   state.actors[PLAYER_ID].pt = [4, 4];
   await act(state, world, { type: 'attack', to: 'chr-w' });
@@ -1824,7 +1826,7 @@ const runeflare: RawEntity = {
 };
 const spell = (id: string): RawEntity => ({ ...bolt, id, name: id });
 
-test('a drew trap burns, once a day, each one here who drew three spells, for the spells they hold', async () => {
+test('a drew trap burns, once a day, each one here who drew three, for what they hold in mind', async () => {
   const world = fixture([walker, bolt, spell('spl-2'), spell('spl-3'), runeflare, npc('chr-x', npcSim('loc-a', 'social', [1, 5])), npc('chr-y', npcSim('loc-b', 'social', [1, 5]))]);
   const state = newState(world, { seed: 1, mode: 'observer' });
   const x = state.actors['chr-x'];
@@ -3023,7 +3025,7 @@ test('relic crush reaches an enchantment that is no aura, standing in a place', 
   assert.ok(state.items?.['itm-e']?.gone);
 });
 
-test('a loremaster: whoever controls him taps him to come to hold a spell per Ally of their party', async () => {
+test('a loremaster: whoever controls him taps him to come to know a secret per Ally of their party', async () => {
   const lore1 = { ...npcSim('loc-a', 'work', [1, 3]), mana: { U: 5 }, ally: true, hireable: true, tap_draw_allies: true };
   const ogre = { ...npcSim('loc-a', 'work', [3, 2]), mana: { B: 5 }, ally: true, hireable: true };
   const world = fixture([tribute('loc-a'), mantle, desecrate, sludge, lore('cre-v', 'creature'), npc('chr-l', lore1), npc('chr-o', ogre)]);
@@ -3035,16 +3037,17 @@ test('a loremaster: whoever controls him taps him to come to hold a spell per Al
   await act(state, world, { type: 'hire', to: 'chr-o' });
   assert.equal(recallCount(state, world, p), 2);
   await act(state, world, { type: 'recall' });
-  assert.equal(p.spells?.length, 2);
+  assert.equal(p.knowledge?.length, 2);
+  assert.equal(p.spells, undefined);
   assert.equal(p.drawn?.count, 2);
   assert.ok(l.boundUntil !== undefined); // tapped until midnight
   assert.match(recallBlocked(state, world, p, state.minutes)!, /지금 쓸 수 없다/);
-  assert.ok(texts(state).some((t) => t.includes('기억을 빌려')));
+  assert.ok(texts(state).some((t) => t.includes('의 기억 (동료 2)') && t.includes('숨은 것 2가지를 알게 되었다')));
   // Alone, he draws on himself: his own plan's recall block.
   const w2 = fixture([tribute('loc-a'), mantle, lore('cre-v', 'creature'), npc('chr-l', { ...lore1, plan: [['00:00', '24:00', 'loc-a', 'recall', '기억 빌리기', '📜']] })]);
   const s2 = newState(w2, { seed: 1, mode: 'observer' });
   await advance(s2, w2, 2);
-  assert.equal(s2.actors['chr-l'].spells?.length, 1);
+  assert.equal(s2.actors['chr-l'].knowledge?.length, 1);
 });
 
 test('the real Sea Gate Loremaster lives in Sea Gate, an island in Tazeem, for 50 coin', () => {
@@ -3056,4 +3059,21 @@ test('the real Sea Gate Loremaster lives in Sea Gate, an island in Tazeem, for 5
   const def = world.npcs.find((x) => x.id === 'chr-sea-gate-loremaster')!;
   assert.equal(hirePrice(def), 50);
   assert.ok(def.tapDrawAllies && def.ally);
+});
+
+test('drawing is coming to know secrets of the world: traps and what sets them off, relics, where spells are taught, what comes today', () => {
+  const world = fixture([runeflare, bolt, vessel, npc('chr-x', npcSim('loc-a'))]);
+  const state = newState(world, { seed: 1, mode: 'observer' });
+  const x = state.actors['chr-x'];
+  const all = secretsOf(state, world, state.minutes).map((s) => s.id);
+  assert.deepEqual(all.sort(), ['item:itm-v', 'spell:spl-bolt', 'trap:evt-rune']);
+  assert.match(secretsOf(state, world, state.minutes).find((s) => s.id === 'trap:evt-rune')!.text, /비밀을 3가지 이상 알게 된 이가/);
+  const got = drawKnowledge(state, world, x, 5, state.minutes, '시험');
+  assert.equal(got.length, 3); // no more than there is
+  assert.equal(handSize(x, state.minutes), 3);
+  assert.deepEqual(drawKnowledge(state, world, x, 1, state.minutes, '시험'), []);
+  assert.ok(texts(state).some((t) => t.includes('더 알아낼 것이 없었다')));
+  // A secret of the day passes with it.
+  x.knowledge!.push({ id: 'today:0:0', text: '오늘 무엇', day: 0 });
+  assert.equal(knownSecrets(x, state.minutes + 1440).some((k) => k.id === 'today:0:0'), false);
 });

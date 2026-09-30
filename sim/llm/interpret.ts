@@ -56,7 +56,7 @@ export async function interpret({ world, state, text }: InterpretInput): Promise
   }
   // A Sea Gate Loremaster they control: draw a spell per Ally of their party.
   if (!recallBlocked(state, world, p, state.minutes)) {
-    days.push(`- {"type":"recall"}  (tap ${shortName(loremastersOf(state, world, p)[0].name)}: come to hold ${recallCount(state, world, p)} spell(s) of the world, one per Ally of their party; 1 hour)`);
+    days.push(`- {"type":"recall"}  (tap ${shortName(loremastersOf(state, world, p)[0].name)}: come to know ${recallCount(state, world, p)} hidden secret(s) of the world, one per Ally of their party; 1 hour)`);
   }
   // A Valakut they hold: bonding with (or seeking out) a mountain may wake it.
   const valakut = world.regions.find((r) => r.mountainFire && p.bonds?.includes(r.id));

@@ -10,6 +10,7 @@ import { allyJoined } from './allies.ts';
 import { masterOf, retainersOf } from './retainers.ts';
 import { DEPLETED_LABEL } from './rules.ts';
 import { castSpell, spellDef } from './spells.ts';
+import { drawKnowledge } from './knowledge.ts';
 import { landSealed, powersSealed, sealText } from './seal.ts';
 import { addLog, hasAbility, npcDef, outOfTime, present, ptOf, random, targetable, untargetableText } from './state.ts';
 import type { Actor, ChoiceEffect, State } from './state.ts';
@@ -378,7 +379,7 @@ export function useAbility(state: State, world: World, beingId: string, abilityI
       const gone = discardSpell(state, world, bs, t);
       if (gone && spellColors(gone).includes(eff.if_color) && target) dealDamage(state, target, eff.damage, t, cause);
     } else if (eff.type === 'wheel') {
-      for (const x of present(state, bs.region)) wheel(state, world, x, eff.draw, t);
+      for (const x of present(state, bs.region)) wheel(state, world, x, eff.draw, t, cause);
     } else if (eff.type === 'damage' && target) {
       if (dealDamage(state, target, eff.amount, t, cause)) died = true;
     } else if (eff.type === 'gain_life') {
@@ -416,21 +417,14 @@ function discardSpell(state: State, world: World, a: Actor, t: number) {
   return s;
 }
 
-// Let go of every spell held, then come to hold `draw` spells of the world at random.
-function wheel(state: State, world: World, a: Actor, draw: number, t: number) {
-  a.graveyard = [...(a.graveyard ?? []), ...(a.spells ?? [])];
-  const pool = [...world.spells];
-  const got: string[] = [];
-  while (got.length < draw && pool.length) got.push(pool.splice(Math.floor(random(state) * pool.length), 1)[0].id);
-  a.spells = got;
-  const day = gameDay(t);
-  a.drawn = { day, count: (a.drawn?.day === day ? a.drawn.count : 0) + got.length, sprung: a.drawn?.day === day ? a.drawn.sprung : undefined };
-  addLog(state, {
-    kind: 'effect',
-    text: `${josa(shortName(a.name), '은', '는')} 알던 주문을 잊고${got.length ? ` ${got.map((id) => spellDef(world, id)!.name).join(', ')}${josa(spellDef(world, got.at(-1)!)!.name, '을', '를').slice(-1)} 떠올렸다` : ' 아무것도 떠올리지 못했다'}.`,
-    regions: [a.region],
-    actors: [a.id],
-  });
+// Let go of every spell held (discard the hand), then draw `draw`: come to know that many
+// secrets of the world (sim/knowledge.ts).
+function wheel(state: State, world: World, a: Actor, draw: number, t: number, cause: string) {
+  const had = a.spells ?? [];
+  a.graveyard = [...(a.graveyard ?? []), ...had];
+  a.spells = [];
+  if (had.length) addLog(state, { kind: 'effect', text: `${josa(shortName(a.name), '은', '는')} 알던 주문을 모두 잊었다.`, regions: [a.region], actors: [a.id], t });
+  drawKnowledge(state, world, a, draw, t, cause);
 }
 
 // A token id no one has yet (two tokens made with no log line between would share the base).

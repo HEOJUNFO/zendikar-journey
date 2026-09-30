@@ -42,6 +42,8 @@ export type PlanDayInput = {
   news: string[];
   // What is still to come today, for one who foresees (sim/foresight.ts).
   foresight?: string[];
+  // Secrets of the world they came to know by drawing (sim/knowledge.ts).
+  knowledge?: string[];
   // What they think of the people they know ("- 이오나 (…): …").
   relations?: string[];
   // Items no one holds that they could tame today ("- itm-… in loc-…: …").
@@ -127,7 +129,7 @@ role and goals, their needs, what they know happened, and the people they know.
 Answer with JSON only, no prose.`;
 
 function userPrompt(input: PlanDayInput) {
-  const { day, now, name, persona, goal, role, home, here, stats, life, needs, regions, news, foresight, stranded, relations = [], items = [], days, grow, recall, fetch = [], learn = [], cast = [], court = [], hire = [], people = [] } = input;
+  const { day, now, name, persona, goal, role, home, here, stats, life, needs, regions, news, foresight, knowledge = [], stranded, relations = [], items = [], days, grow, recall, fetch = [], learn = [], cast = [], court = [], hire = [], people = [] } = input;
   const kinds = kindsFor(input);
   const state = [
     needs.includes('energy') && `energy ${Math.round(stats.energy)}/100 (low = tired; sleep restores it)`,
@@ -146,6 +148,8 @@ Now: ${formatTimeOfDay(now)} in ${here}${now ? ' (the hours before now are alrea
 Current state: ${state.length ? state.join(', ') : 'never tires or hungers'}${needs.includes('hunger') || !state.length ? '' : ' (does not need food)'}${stranded ? `\nDanger: ${stranded}.` : ''}
 ${news.length ? `\nWhat they know happened lately:\n${news.map((n) => `- ${n}`).join('\n')}\n` : ''}${
     foresight ? `\nThey see what is coming (foresight). Still to come today, as the world has it set:\n${foresight.length ? foresight.map((n) => `- ${n}`).join('\n') : '- nothing out of the ordinary'}\n` : ''
+  }${
+    knowledge.length ? `\nSecrets of the world they have come to know (hidden traps, relics, where spells are taught, what is coming today):\n${knowledge.map((n) => `- ${n}`).join('\n')}\n` : ''
   }${
     relations.length ? `\nPeople they know, and what they think of them:\n${relations.join('\n')}\n` : ''
   }
@@ -175,7 +179,7 @@ Rules:
       : ''
   }${
     kinds.includes('recall')
-      ? `\n- "recall" takes 1 hour, anywhere: ${recall!.who}, who remembers everything their band has seen, is tapped (bound until midnight) and they come to hold ${recall!.count} spell(s) of the world they don't know yet (one per Ally of their party), at random.`
+      ? `\n- "recall" takes 1 hour, anywhere: ${recall!.who}, who remembers everything their band has seen, is tapped (bound until midnight) and they come to know ${recall!.count} hidden secret(s) of the world (one per Ally of their party): traps and what sets them off, where relics stand, where spells are taught, what is coming today.`
       : ''
   }${
     kinds.includes('fetch')

@@ -8,6 +8,7 @@ import type { Conversation, ConverseInput } from '../run.ts';
 import { canPledge, recentNews } from '../run.ts';
 import { relationsText, relationTo } from '../relations.ts';
 import { foresees, foresightText } from '../foresight.ts';
+import { knowledgeText } from '../knowledge.ts';
 import { shortName } from '../text.ts';
 import { placeName, region } from '../world.ts';
 import { chatCompletion, extractJson } from './chat.ts';
@@ -28,13 +29,14 @@ export async function converse({ world, state, a, b }: ConverseInput): Promise<C
   const who = (s: typeof a, me: typeof x, other: typeof y) => {
     const ahead = foresees(state, world, s.id) ? foresightText(state, world, state.minutes) : null;
     const others = relationsText(me).filter((l) => !l.includes(shortName(other.name)));
+    const secrets = knowledgeText(me, state.minutes);
     return `${s.name} (${bearingText(state, me)}), doing: ${me.task?.activity ?? '(nothing)'}
   Who they are: ${s.persona}
   Goal: ${s.goal}
   Role: ${s.role}
   What they think of ${shortName(other.name)}: ${relationTo(me, other.id) ?? '(they have not met before)'}${others.length ? `\n  Others they know:\n${others.map((l) => `  ${l}`).join('\n')}` : ''}${
       ahead ? `\n  They see what is coming. Still to come today (theirs to tell or keep):\n${ahead.length ? ahead.map((n) => `  - ${n}`).join('\n') : '  - nothing out of the ordinary'}` : ''
-    }`;
+    }${secrets.length ? `\n  Secrets they have come to know (theirs to tell or keep):\n${secrets.map((n) => `  - ${n}`).join('\n')}` : ''}`;
   };
   // Their past exchanges, oldest first.
   const history = state.log

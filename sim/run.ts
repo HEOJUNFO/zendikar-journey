@@ -12,6 +12,7 @@ import { relationsText, remember } from './relations.ts';
 import { claimableItems } from './items.ts';
 import { lifeOf } from './life.ts';
 import { foresightText } from './foresight.ts';
+import { knowledgeText } from './knowledge.ts';
 import { setOff, wandersDue, withPositions } from './wander.ts';
 import { discardOwed, letGo } from './discard.ts';
 import { crushRelic, relicsHere } from './relics.ts';
@@ -764,6 +765,7 @@ async function prepare(state: State, world: World, llm: Llm): Promise<string | n
           hire: hireInput(state, world, a),
           people: peopleInput(state, world, a),
           ...(npc.foresight ? { foresight: foresightText(state, world, state.minutes) } : {}),
+          knowledge: knowledgeText(a, state.minutes),
           ...spellsInput(state, world, a, npc),
           news,
         });

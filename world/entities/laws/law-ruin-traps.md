@@ -8,7 +8,7 @@ status: canon
 sources: [ZEN-146, ZEN-135, ZEN-105, ZEN-160, ZEN-184, ZEN-41, ZEN-2, ZEN-156]
 tags: [함정, 탐험]
 links:
-  - { to: evt-runeflare-trap, rel: 주문을 뽑은 이를 태우는 함정 }
+  - { to: evt-runeflare-trap, rel: 비밀을 한꺼번에 알게 된 이를 태우는 함정 }
   - { to: evt-summoning-trap, rel: 거절당한 이에게 생물을 불러내는 함정 }
   - { to: evt-archive-trap, rel: 땅을 찾아온 이의 기억을 쓸어 가는 함정 }
   - { to: evt-arrow-volley-trap, rel: 떼 지어 덤비는 자들에게 화살을 쏟는 함정 }
@@ -28,7 +28,7 @@ links:
 
 - 탐험에 위험과 긴장감을 주는 기본 규칙이다.
 - 함정은 지역에 딸린 사건이다 (`trigger: landfall`). 누군가 그 땅과 유대를 맺을 때(상륙), 그날 몇 번째로 차지한 땅인지를 보고 깨어난다.
-- 함정마다 깨어나는 조건이 카드를 따른다. 용암공 함정은 하루 두 번째 상륙, 바늘이빨 함정은 그날 생명을 얻은 이가 들어올 때(`trigger: enter`), 코브라 함정은 푸른 지하묘지의 지속물이 부서질 때(`trigger: destroyed`), 룬불꽃 함정은 그날 주문을 셋 이상 뽑은 이가 아쿰에 있을 때(`trigger: drew`), 소환 함정은 그날 무언가를 따르게 하려다 거절당한 이가 발라 게드에 들어설 때(`trigger: enter`, `refused`), 기록보관소 함정은 그날 페치로 땅을 찾아온 이가 즈와르 섬에 들어설 때(`trigger: enter`, `searched`), 화살 세례 함정은 같은 시간에 넷 이상이 온두에서 덤빌 때(`trigger: attacked`), 발로스 우리 함정은 그날 아이템을 길들인 이가 발라 게드에 들어설 때(`trigger: enter`, `claimed`).
+- 함정마다 깨어나는 조건이 카드를 따른다. 용암공 함정은 하루 두 번째 상륙, 바늘이빨 함정은 그날 생명을 얻은 이가 들어올 때(`trigger: enter`), 코브라 함정은 푸른 지하묘지의 지속물이 부서질 때(`trigger: destroyed`), 룬불꽃 함정은 그날 셋 이상 뽑은(비밀을 알게 된) 이가 아쿰에 있을 때(`trigger: drew`), 소환 함정은 그날 무언가를 따르게 하려다 거절당한 이가 발라 게드에 들어설 때(`trigger: enter`, `refused`), 기록보관소 함정은 그날 페치로 땅을 찾아온 이가 즈와르 섬에 들어설 때(`trigger: enter`, `searched`), 화살 세례 함정은 같은 시간에 넷 이상이 온두에서 덤빌 때(`trigger: attacked`), 발로스 우리 함정은 그날 아이템을 길들인 이가 발라 게드에 들어설 때(`trigger: enter`, `claimed`).
 - 하루에 여러 땅을 몰아서 차지하지 않는 쪽이 안전하다. 전조가 오면 조심스럽게 움직이던 이는 피할 수 있다.
 
 ## 미정/질문

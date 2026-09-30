@@ -1,13 +1,14 @@
 // "{T}: Draw a card for each Ally you control" (Sea Gate Loremaster): a power of whoever
 // controls him (his master, or himself when he serves no one). He is tapped (bound until 00:00),
-// and they come to hold as many spells of the world as their party has Allies, at random ("draw"
-// = come to hold a spell of the world). The player uses it by an action, an NPC by a `recall`
+// and they come to know as many secrets of the world as their party has Allies ("draw" = come
+// to know a secret, sim/knowledge.ts). The player uses it by an action, an NPC by a `recall`
 // block in their plan.
-import { untapTime, gameDay } from './clock.ts';
+import { untapTime } from './clock.ts';
+import { drawKnowledge } from './knowledge.ts';
 import { alliesOf } from './allies.ts';
 import { retainersOf } from './retainers.ts';
 import { powersSealed } from './seal.ts';
-import { addLog, npcDef, outOfTime, random } from './state.ts';
+import { npcDef, outOfTime } from './state.ts';
 import type { Actor, State } from './state.ts';
 import { josa, shortName } from './text.ts';
 import type { World } from './world.ts';
@@ -43,24 +44,5 @@ export function recall(state: State, world: World, a: Actor, t: number) {
   if (!lm || a.dead) return;
   lm.boundUntil = untapTime(t);
   const n = recallCount(state, world, a);
-  const got = drawSpells(state, world, a, n, t);
-  addLog(state, {
-    kind: 'effect',
-    text: `${shortName(lm.name)}의 기억을 빌려 ${josa(shortName(a.name), '이', '가')} ${got.length ? `${got.map((id) => world.spells.find((s) => s.id === id)!.name).join(', ')}을(를) 떠올렸다` : '더 떠올릴 주문이 없었다'} (동료 ${n}).`,
-    regions: [a.region],
-    actors: [a.id, lm.id],
-    t,
-  });
-}
-
-// "Draw N": they come to hold N spells of the world they don't hold yet, at random. Counts
-// toward what they drew today (the Runeflare Trap).
-export function drawSpells(state: State, world: World, a: Actor, n: number, t: number) {
-  const pool = world.spells.filter((s) => !a.spells?.includes(s.id)).map((s) => s.id);
-  const got: string[] = [];
-  while (got.length < n && pool.length) got.push(pool.splice(Math.floor(random(state) * pool.length), 1)[0]);
-  a.spells = [...(a.spells ?? []), ...got];
-  const day = gameDay(t);
-  a.drawn = { day, count: (a.drawn?.day === day ? a.drawn.count : 0) + got.length, sprung: a.drawn?.day === day ? a.drawn.sprung : undefined };
-  return got;
+  drawKnowledge(state, world, a, n, t, `${shortName(lm.name)}의 기억 (동료 ${n})`);
 }

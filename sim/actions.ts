@@ -188,7 +188,7 @@ export function startAction(state: State, world: World, action: Action): string 
       const why = recallBlocked(state, world, p, t);
       if (why) return why;
       task = { kind: 'recall', activity: '전승술사의 기억 빌리기', emoji: '📜', until: until(RECALL_HOURS) };
-      text = `전승술사가 기억하는 것을 함께 짚어 본다. 동료 ${recallCount(state, world, p)}만큼 주문을 떠올린다.`;
+      text = `전승술사가 기억하는 것을 함께 짚어 본다. 동료 ${recallCount(state, world, p)}만큼 숨은 것을 알게 된다.`;
       break;
     }
     case 'hire': {

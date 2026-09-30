@@ -47,7 +47,7 @@ function describeEffect(e: GmDayInput['abilities'][number]['ability']['effects']
     case 'discard_spell':
       return `they let go of a spell they hold; if it is ${e.if_color}, ${e.damage} damage to the target`;
     case 'wheel':
-      return `everyone where they are forgets their spells and recalls ${e.draw} at random`;
+      return `everyone where they are forgets their spells and comes to know ${e.draw} hidden secrets of the world`;
     case 'flashback':
       return `they cast every ${e.color} spell they let go of on the target, free`;
     case 'damage':
