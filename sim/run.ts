@@ -37,6 +37,8 @@ import { opponentsOf, sealsDue, setSeal } from './seal.ts';
 import { applyPump, pumpController, pumpMax, pumpsDue } from './pump.ts';
 import { applyBind, bindsDue, bindTargets } from './bind.ts';
 import { applyEngulf, engulfsDue, engulfTargets, ENGULF_HOURS } from './engulf.ts';
+import { applyHarrow, harrowOptions } from './harrow.ts';
+import type { HarrowEffect } from './harrow.ts';
 import { COLOR_LABELS, COLORS } from './mana.ts';
 import type { Color } from './mana.ts';
 import { abilityBlocked, applyBondEffect, applyDrainGrow, applyEnterDestroy, applySearch, enteredToday, fetchBlocked, fetchSource, fetchTargets, growBlocked, growLand, callForth } from './abilities.ts';
@@ -305,6 +307,29 @@ async function pilferChoice(state: State, world: World, llm: Llm, a: Actor, npc:
   }
   if (!pick || !shown.includes(pick)) pick = shown[Math.floor(random(state) * shown.length)];
   letGo(state, world, target, pick, state.minutes);
+}
+
+// Harrow: the NPC caster's picks, one at a time (the LLM). The land to give up must go (with no
+// usable answer, the first); a land to seek they may pass on.
+async function harrowChoice(state: State, world: World, llm: Llm, a: Actor, npc: Speaker, first: HarrowEffect) {
+  let eff: HarrowEffect | undefined = first;
+  while (eff) {
+    const options = harrowOptions(state, world, a, eff);
+    if (!options.length) return;
+    let pick: string | null = null;
+    if (llm.pick) {
+      try {
+        const what = eff.given
+          ? `${eff.spell}: 아직 이어지지 않은 기본 땅(세계 어디든) 하나와 멀리서 유대를 맺는다 (그날 마나를 낸다, 하루 한 땅에 들지 않는다). 그만둘 수도 있다 (남은 수 ${eff.left})`
+          : `${eff.spell}: 먼저 유대를 맺은 땅 하나를 내어 준다 (다시 맺을 수 있다). 어느 땅을?`;
+        pick = await llm.pick({ world, state, npc, what, options, optional: eff.given });
+      } catch (e) {
+        console.warn(`pick (harrow) for ${a.id} failed:`, e);
+      }
+    }
+    const next = applyHarrow(state, world, a, eff, pick, state.minutes);
+    eff = next?.effect.type === 'harrow' ? next.effect : undefined;
+  }
 }
 
 // Relic Crush: the NPC caster picks what to destroy, one at a time (the LLM); the first must go
@@ -598,6 +623,11 @@ async function choices(state: State, world: World, llm: Llm) {
       }
       if (!options.some((o) => o.id === pick)) pick = options[Math.floor(random(state) * options.length)].id;
       demolish(state, world, by, pick!, c.effect.spell, state.minutes);
+      continue;
+    }
+    // Harrow: the land to give up (one must), then the basic lands to seek out, one at a time.
+    if (c.effect.type === 'harrow') {
+      if (by && !by.dead && npc) await harrowChoice(state, world, llm, by, npc, c.effect);
       continue;
     }
     // Relics to destroy (candidates are things, not people).

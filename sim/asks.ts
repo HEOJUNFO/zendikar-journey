@@ -23,6 +23,7 @@ import { answerReturnLand } from './items.ts';
 import { answerTide } from './tide.ts';
 import { applyBind } from './bind.ts';
 import { applyEngulf, ENGULF_HOURS } from './engulf.ts';
+import { applyHarrow, harrowOptions } from './harrow.ts';
 import type { World } from './world.ts';
 
 // What the pick is about, for them.
@@ -42,6 +43,7 @@ export function askText(state: State, world: World, c: Choice) {
   if (c.effect.type === 'cast') return `${world.spells.find((s) => s.id === (c.effect as { spell: string }).spell)?.name ?? ''}을(를) 하나 더, 값 없이 걸 수 있다. 누구에게?`;
   if (c.effect.type === 'sacrifice') return `${state.items?.[c.effect.item]?.name ?? c.effect.item}이(가) 오늘의 제물을 요구한다. 부리는 이(당신 자신도) 가운데 누구를 바칠까? (바친 이는 죽는다) 아니면 그것을 무너뜨려 내놓는다.`;
   if (c.effect.type === 'demolish') return `${c.effect.spell}: 이 자리의 마법물체 하나나 땅 하나를 부순다 (땅은 7일 동안 누구에게도 아무것도 내주지 않는다). 무엇을?`;
+  if (c.effect.type === 'harrow') return c.effect.given ? `${c.effect.spell}: 아직 이어지지 않은 기본 땅 하나와 멀리서 유대를 맺는다 (남은 수 ${c.effect.left}). 어디와?` : `${c.effect.spell}: 먼저 유대를 맺은 땅 하나를 내어 준다 (다시 맺을 수 있다). 어느 땅을?`;
   if (c.effect.type === 'crush') return `${c.effect.spell}: 이 자리의 마법물체나 부여마법을 ${c.effect.first ? '부순다. 무엇을?' : '하나 더 부술 수 있다. 무엇을?'}`;
   if (c.effect.type === 'drain_grow') return `땅의 타락한 마나가 흐른다. 누구에게서 생명 ${c.effect.life}을 빼앗아 +1/+1 카운터 ${c.effect.counters}을 얻을까?`;
   if (c.effect.type === 'quell') {
@@ -81,6 +83,11 @@ export function askOptions(state: State, world: World, c: Choice): { pick: strin
   if (c.effect.type === 'demolish') {
     const p = state.actors[c.by];
     return p ? demolishOptions(state, world, p).map((o) => ({ pick: o.id as string | null, label: o.label })) : [];
+  }
+  if (c.effect.type === 'harrow') {
+    const p = state.actors[c.by];
+    const opts = p ? harrowOptions(state, world, p, c.effect).map((o) => ({ pick: o.id as string | null, label: o.label })) : [];
+    return c.effect.given ? [...opts, { pick: null, label: '그만둔다' }] : opts;
   }
   if (c.effect.type === 'crush') {
     const relics = relicsHere(state, world, c.land, state.actors[c.by]?.tile);
@@ -168,6 +175,9 @@ export function answerAsk(state: State, world: World, pick: string | null, t: nu
     const options = demolishOptions(state, world, p);
     const id = pick && options.some((o) => o.id === pick) ? pick : options[0]?.id;
     if (id) demolish(state, world, p, id, c.effect.spell, t);
+  } else if (c.effect.type === 'harrow') {
+    const next = applyHarrow(state, world, p, c.effect, pick, t);
+    if (next) (state.asks ??= []).unshift(next);
   } else if (c.effect.type === 'crush') {
     // The first must go: an answer that isn't one goes to the first there.
     const relics = relicsHere(state, world, p.region, p.tile);

@@ -12,6 +12,7 @@ import { spawnWild } from './abilities.ts';
 import { castEvents, destroyLand } from './step.ts';
 import { owesDiscard } from './discard.ts';
 import { crushOwed, demolishOptions, demolishOwed, relicsHere } from './relics.ts';
+import { harrowGive, harrowOwed } from './harrow.ts';
 import { remember } from './relations.ts';
 import { copyable, replicate } from './replicate.ts';
 import { holdCast, reactionSpell } from './counter.ts';
@@ -90,6 +91,7 @@ export function castBlocked(state: State, world: World, a: Actor, spellId: strin
   if (s.effects.some((e) => e.type === 'copy_target') && !copyable(target)) return `${josa(shortName(target.name), '은', '는')} 생물이 아니다 (플레인즈워커). 복제할 수 없다.`;
   if (s.effects.some((e) => e.type === 'destroy_relics') && !relicsHere(state, world, a.region, a.tile).length) return '여기엔 부술 마법물체도 부여마법도 없다.';
   if (s.effects.some((e) => e.type === 'demolish') && !demolishOptions(state, world, a).length) return '여기엔 부술 마법물체도 땅도 없다.';
+  if (s.effects.some((e) => e.type === 'harrow') && !harrowGive(world, a).length) return `${josa(s.name, '은', '는')} 땅 하나를 내어 주어야 쓴다 (유대를 맺은 땅이 없다).`;
   if (s.target !== 'self' && !targetable(target, t, spellColors(s))) return untargetableText(target, t, spellColors(s));
   if (!planPayment(manaAvailable(state, world, a, t), s.cost))
     return `마나가 모자라다 (${s.costText}, 지금 ${formatMana(manaAvailable(state, world, a, t))}).`;
@@ -132,6 +134,7 @@ export function npcCastBlocked(state: State, world: World, a: Actor, spellId: st
   if (used !== undefined) return usedText(s, used);
   const by = sealedBy(state, a, s, t);
   if (by) return sealText(by, t);
+  if (s.effects.some((e) => e.type === 'harrow') && !harrowGive(world, a).length) return '내어 줄 땅이 없다.';
   if (!planPayment(manaAvailable(state, world, a, t), s.cost)) return `마나가 모자라다 (${s.costText}).`;
   return null;
 }
@@ -254,6 +257,9 @@ export function resolveSpell(state: State, world: World, a: Actor, spellId: stri
       owesDiscard(state, world, target, s.name, t);
     } else if (eff.type === 'demolish') {
       const owed = demolishOwed(state, world, a, s.name, t);
+      if (owed) (state.choices ??= []).push(owed);
+    } else if (eff.type === 'harrow') {
+      const owed = harrowOwed(state, world, a, { type: 'harrow', spell: s.name, left: eff.count, given: false }, t);
       if (owed) (state.choices ??= []).push(owed);
     } else if (eff.type === 'destroy_all') {
       judgment(state, world, a, s.name, t);

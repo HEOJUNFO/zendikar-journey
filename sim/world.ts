@@ -592,6 +592,10 @@ export const SpellSimSchema = z.strictObject({
         // "Destroy target artifact or land" (Demolish): after casting, the caster picks an artifact
         // on their tile, the land they stand in, or a land someone there holds (sim/relics.ts).
         z.strictObject({ type: z.literal('demolish') }),
+        // "As an additional cost, sacrifice a land. Search your library for up to N basic land
+        // cards, put them onto the battlefield" (Harrow): the caster gives up a land they hold,
+        // then bonds from afar with up to N basic lands of the world (sim/harrow.ts).
+        z.strictObject({ type: z.literal('harrow'), count: z.number().int().positive() }),
         // "Destroy all creatures" (Day of Judgment): every being on the caster's tile, the caster
         // too (user decision 2026-10-01), not planeswalkers; the indestructible stand.
         z.strictObject({ type: z.literal('destroy_all') }),

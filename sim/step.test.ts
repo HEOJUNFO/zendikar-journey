@@ -4220,6 +4220,54 @@ test('demolish by the player: one must go; the artifact standing here', async ()
   assert.equal(state.regions['loc-a']?.destroyed, undefined);
 });
 
+const harrowSpell: RawEntity = { id: 'spl-hw', kind: 'spell', name: '써레질', status: 'canon', sim: { cost: '{1}', learn_at: 'loc-a', target: 'self', effects: [{ type: 'harrow', count: 2 }] } };
+
+test('harrow by the player: a land given up (it must), then up to two basic lands bonded from afar, their mana today, not their land for the day', async () => {
+  const named: RawEntity = { ...loc('loc-n', 50, 30, 'volcanic'), sim: { nonbasic: true } };
+  const world = fixture([harrowSpell, named]);
+  const state = character(world, 'loc-a');
+  const p = state.actors[PLAYER_ID];
+  p.spells = ['spl-hw'];
+  assert.match(castBlocked(state, world, p, 'spl-hw', p.id, false, state.minutes) ?? '', /내어 주어야/);
+  p.bonds = ['loc-a'];
+  await act(state, world, { type: 'cast', spell: 'spl-hw', to: p.id, kick: false });
+  await act(state, world, { type: 'wait', hours: 1 });
+  let ask = state.asks![0];
+  assert.equal(ask.effect.type, 'harrow');
+  assert.deepEqual(ask.candidates, ['loc-a']);
+  assert.equal(askOptions(state, world, ask).some((o) => o.pick === null), false);
+  await act(state, world, { type: 'choose', pick: 'loc-a' });
+  assert.deepEqual(p.bonds, []);
+  ask = state.asks![0];
+  assert.ok(ask.candidates.includes('loc-b') && ask.candidates.includes('loc-c'));
+  assert.ok(!ask.candidates.includes('loc-n')); // a named land is no basic land
+  await act(state, world, { type: 'choose', pick: 'loc-b' });
+  await act(state, world, { type: 'choose', pick: 'loc-c' });
+  assert.deepEqual(p.bonds, ['loc-b', 'loc-c']);
+  assert.equal(p.searched, gameDay(state.minutes));
+  assert.equal(bondBlocked(state, world, p, state.minutes), null); // still a land of the day to bond
+  assert.equal(state.asks?.some((c) => c.effect.type === 'harrow'), false);
+});
+
+test('harrow by an NPC: the LLM gives up a land and seeks out basic lands, and may stop after one', async () => {
+  const world = fixture([harrowSpell, npc('chr-c', { ...npcSim('loc-a'), mana: { G: 1 } })]);
+  const state = newState(world, { seed: 1, mode: 'observer' });
+  const c = state.actors['chr-c'];
+  c.bonds = ['loc-c'];
+  c.spells = ['spl-hw'];
+  readyCast(state, world, c, 'spl-hw', state.minutes);
+  let n = 0;
+  await advance(state, world, 1, { pick: async ({ options }) => (n++ === 0 ? 'loc-c' : n === 2 ? 'loc-b' : null) });
+  assert.deepEqual(c.bonds, ['loc-b']);
+});
+
+test('the real Harrow is taught in Tazeem', () => {
+  const world = loadWorld();
+  const s = world.spells.find((x) => x.id === 'spl-harrow')!;
+  assert.equal(s.learnAt, 'loc-tazeem');
+  assert.deepEqual(s.effects, [{ type: 'harrow', count: 2 }]);
+});
+
 test('the real Demolish is taught in Oran-Rief', () => {
   const world = loadWorld();
   const s = world.spells.find((x) => x.id === 'spl-demolish')!;
