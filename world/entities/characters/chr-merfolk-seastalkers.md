@@ -5,7 +5,7 @@ name: 인어 바다추적자
 name_en: Merfolk Seastalkers
 summary: 보주카 만의 얕은 물에 숨은 인어 정찰병 무리. 배의 돛줄을 타고 오르고, 물살로 적을 휘감아 묶는다. 도적인지 은인인지는 누가 이야기를 읊느냐에 달렸다
 status: canon
-sources: [ZEN-55]
+sources: [ZEN-55, ZEN-54]
 tags: [인어, 정찰병, 도적, 청색]
 links:
   - { to: law-mana-colors, rel: 청색의 존재 }

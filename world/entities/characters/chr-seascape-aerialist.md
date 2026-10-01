@@ -5,7 +5,7 @@ name: 해경 비행술사
 name_en: Seascape Aerialist
 summary: 바람의 물결을 부리는 인어 마법사. 원정대에 들면 동료들에게 하늘을 헤엄치는 법을 빌려준다
 status: canon
-sources: [ZEN-64]
+sources: [ZEN-64, ZEN-54]
 tags: [동료, 용병, 인어, 마법사, 청색, 비행]
 links:
   - { to: law-allies, rel: 동료 }

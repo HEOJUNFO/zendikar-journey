@@ -5,7 +5,7 @@ name: 바다 관문의 전승술사
 name_en: Sea Gate Loremaster
 summary: 원정대가 본 모든 것을 기억하는 늙은 인어 마법사. 살아 있는 서고라 불리며, 무리의 동료가 많을수록 더 많은 것을 떠올리게 해 준다
 status: canon
-sources: [ZEN-63]
+sources: [ZEN-63, ZEN-54]
 tags: [동료, 용병, 인어, 마법사, 청색, 원정대]
 links:
   - { to: law-allies, rel: 동료 }
