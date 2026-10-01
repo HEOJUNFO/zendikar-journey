@@ -5,7 +5,7 @@ name: 말라키르
 name_en: Malakir
 summary: 굴 드라즈의 흡혈귀 도시. 도시 둘레에 피를 빠는 함정이 깔려 있다
 status: canon
-sources: [ZEN-105, ZEN-81, ZEN-100]
+sources: [ZEN-105, ZEN-81, ZEN-100, ZEN-110]
 tags: [흡혈귀, 도시, 흑색, 구역]
 links:
   - { to: loc-guul-draz, rel: 바깥 지역 }
@@ -14,6 +14,7 @@ links:
   - { to: evt-needlebite-trap, rel: 둘레의 함정 }
   - { to: cre-vampire, rel: 사는 이들 }
   - { to: spl-blood-tribute, rel: 가르치는 주문 }
+  - { to: spl-sadistic-sacrament, rel: 가르치는 주문 (피의 의례) }
   - { to: chr-malakir-bloodwitch, rel: 도시의 흡혈귀 주술사 }
 map: { in: loc-guul-draz, terrain: swamp, pos: [-0.4, -0.15], tiles: 25 }   # 기본 늪: 흑 마나 [결정] 2026-09-30. 25칸은 안의 게트 혈족의 영지 포함 [결정] 2026-10-01
 ---
@@ -28,6 +29,7 @@ map: { in: loc-guul-draz, terrain: swamp, pos: [-0.4, -0.15], tiles: 25 }   # �
 - 도시는 다섯 구역으로 나뉘고, 그 가운데 물에 잠긴 가난한 동네 **게트 혈족의 영지**(`loc-ghet-estate`)가 말라키르 안의 구역이다 ([배경], [결정] 2026-10-01: 구역 안의 구역). 그래서 25칸이다 (게트 10칸 포함). 동쪽 곁에 하그라 저수조가 붙어 있다 ([배경]: 하그라 저수조는 말라키르 가까이).
 - 들어오는 길에 바늘이빨 함정(`evt-needlebite-trap`)이 있다. 그날 생명을 얻은 이가 들어오면 문다.
 - 흡혈귀의 주문 피의 공물(`spl-blood-tribute`, ZEN-81)을 배울 수 있다 (4시간). 플레이어도 NPC도.
+- 가학의 성례(`spl-sadistic-sacrament`, ZEN-110)도 배울 수 있다 (4시간, [결정] 2026-10-01): 곁의 한 사람이 아직 익히지 않은 주문을 셋(킥커면 열다섯)까지 골라 그의 앞날에서 도려낸다.
 - 흡혈귀 주술사 말라키르 피마녀(`chr-malakir-bloodwitch`, ZEN-100)가 산다. 날아다니며 백색으로부터 보호받고, 그날 처음 들어서는 곳의 모두에게서 생명을 빨아들인다 ([결정] 2026-09-30).
 
 ## 미정/질문

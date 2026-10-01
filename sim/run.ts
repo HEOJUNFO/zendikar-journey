@@ -21,6 +21,8 @@ import { setOff, wandersDue, withPositions } from './wander.ts';
 import { cardLabel, discardOwed, handOf, letGo } from './discard.ts';
 import { applyShatter, crushRelic, demolish, demolishOptions, relicsHere, shatterOptions } from './relics.ts';
 import { applyEscape, escapeOptions } from './escape.ts';
+import { applySacrament } from './sacrament.ts';
+import type { SacramentEffect } from './sacrament.ts';
 import { loremastersOf, recallBlocked, recallCount } from './loremaster.ts';
 import { biteable, readyBiter } from './bite.ts';
 import { readyTapper, tapAmount, tapTargetable } from './tapper.ts';
@@ -627,6 +629,24 @@ async function choices(state: State, world: World, llm: Llm) {
       }
       if (!options.some((o) => o.id === pick)) pick = options[Math.floor(random(state) * options.length)].id;
       demolish(state, world, by, pick!, c.effect.spell, state.minutes);
+      continue;
+    }
+    // Sadistic Sacrament: spells of the target's to exile, one at a time; they may stop.
+    if (c.effect.type === 'sacrament') {
+      if (!by || by.dead || !npc || !llm.pick) continue;
+      let next: Choice | null = c;
+      while (next && next.effect.type === 'sacrament') {
+        const eff: SacramentEffect = next.effect;
+        const target = state.actors[eff.target];
+        const options = next.candidates.map((id) => ({ id, label: world.spells.find((s) => s.id === id)?.name ?? id }));
+        let pick: string | null = null;
+        try {
+          pick = await llm.pick({ world, state, npc, what: `${eff.spell}: ${shortName(target?.name ?? '')}이(가) 아직 익히지 않은 주문 하나를 그의 앞날에서 도려낸다 (영영 익힐 수 없게 된다). 남은 수 ${eff.left}. 그만둘 수도 있다`, options, optional: true });
+        } catch (e) {
+          console.warn(`pick (sacrament) for ${by.id} failed:`, e);
+        }
+        next = applySacrament(state, world, by, eff, pick, state.minutes);
+      }
       continue;
     }
     // Narrow Escape: one of what they control to return; one must (with no usable answer, at random).

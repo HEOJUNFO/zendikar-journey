@@ -636,6 +636,10 @@ export const SpellSimSchema = z.strictObject({
         // the caster picks a being of theirs on their tile (themselves too), a land they hold, an
         // item of theirs or an aura they cast there; one must be picked (sim/escape.ts).
         z.strictObject({ type: z.literal('return_own') }),
+        // "Search target player's library for up to N cards, exile them" (Sadistic Sacrament;
+        // kicked: `kicked_count`): the spells the target could still learn; the caster picks
+        // (sim/sacrament.ts).
+        z.strictObject({ type: z.literal('exile_library'), count: z.number().int().positive(), kicked_count: z.number().int().positive().optional() }),
         // "You gain N life": the caster.
         z.strictObject({ type: z.literal('gain_life'), amount: z.number().int().positive() }),
         // "Destroy target non<color> creature. Its controller loses N life" (Hideous End): one on

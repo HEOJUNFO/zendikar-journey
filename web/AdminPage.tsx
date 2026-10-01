@@ -447,6 +447,8 @@ function spellEffectText(e: SpellEffect) {
       return '같은 칸의 모두를 파괴 (시전자도, 플레인즈워커 빼고)';
     case 'demolish':
       return '그 칸의 마법물체나 땅 하나를 골라 파괴';
+    case 'exile_library':
+      return `대상이 아직 익히지 않은 주문 ${e.count}${e.kicked_count ? ` (킥커 시 ${e.kicked_count})` : ''}까지 골라 추방 (영영 못 익힘)`;
     case 'return_own':
       return '조종하는 것(자신·곁의 권속, 쥔 땅, 아이템, 건 오라) 하나를 되돌림';
     case 'gain_life':

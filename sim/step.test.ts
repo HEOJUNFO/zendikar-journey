@@ -45,6 +45,8 @@ import { askOptions, askText } from './asks.ts';
 import { applyEscape, escapeOptions } from './escape.ts';
 import { applyHarrow } from './harrow.ts';
 import type { HarrowEffect } from './harrow.ts';
+import { applySacrament } from './sacrament.ts';
+import type { SacramentEffect } from './sacrament.ts';
 import { shielded, tapBlocked } from './tapper.ts';
 import type { Actor, State } from './state.ts';
 import { affectedRegions, buildWorld, descendantsOf, distance, landTypes, placeName, realmOf, region, travelHours, within } from './world.ts';
@@ -6430,4 +6432,53 @@ test('the real Ruinous Minotaur rages in the hedron wastes of Akoum: a 5/2 beast
   assert.deepEqual(ptOf(r), [5, 2]);
   const def = npcDef(state, world, r.id)!;
   assert.ok(def.beast && def.hitSacrificeLand && def.needs.includes('hunger'));
+});
+
+const sacrament: RawEntity = { id: 'spl-sac', kind: 'spell', name: '가학의 성례', status: 'canon', sim: { cost: '{1}', learn_at: 'loc-a', target: 'other_here', kicker: { mana: '{1}' }, effects: [{ type: 'exile_library', count: 3, kicked_count: 15 }] } };
+
+test('Sadistic Sacrament by the player: they pick spells the target could still learn, one at a time, and may stop; those are lost for good', async () => {
+  const world = fixture([sacrament, demolishSpell, escapeSpell, graspSpell, npc('chr-x', npcSim('loc-a', 'social', [0, 5]))]);
+  const state = character(world, 'loc-a');
+  const [p, x] = [state.actors[PLAYER_ID], state.actors['chr-x']];
+  x.tile = p.tile;
+  p.pt = [0, 20]; // the one cast on turns on them
+  x.spells = ['spl-dm'];
+  p.spells = ['spl-sac'];
+  p.bonds = ['loc-a'];
+  await act(state, world, { type: 'cast', spell: 'spl-sac', to: 'chr-x', kick: false });
+  if (state.asks?.[0]?.effect.type !== 'sacrament') await act(state, world, { type: 'wait', hours: 1 });
+  const ask = state.asks![0];
+  assert.equal(ask.effect.type, 'sacrament');
+  assert.equal((ask.effect as SacramentEffect).left, 3);
+  const picks = askOptions(state, world, ask).map((o) => o.pick);
+  assert.ok(!picks.includes('spl-dm') && picks.includes('spl-ne') && picks.includes(null));
+  await act(state, world, { type: 'choose', pick: 'spl-ne' });
+  await act(state, world, { type: 'choose', pick: 'spl-pg' });
+  assert.equal((state.asks![0].effect as SacramentEffect).left, 1);
+  await act(state, world, { type: 'choose', pick: null });
+  assert.deepEqual(x.exiled, ['spl-ne', 'spl-pg']);
+  assert.ok(learnBlocked(world, x, 'spl-ne')?.includes('추방'));
+  assert.ok(foesOf(x, state.minutes).includes(p.id));
+});
+
+test('Sadistic Sacrament between NPCs: a step lighter, what is cut goes to the graveyard (to be learned again); kicked, up to fifteen', () => {
+  const world = fixture([sacrament, demolishSpell, escapeSpell, npc('chr-c', { ...npcSim('loc-a'), mana: { B: 9 } }), npc('chr-x', npcSim('loc-a'))]);
+  const state = newState(world, { seed: 1, mode: 'observer' });
+  const [c, x] = [state.actors['chr-c'], state.actors['chr-x']];
+  x.tile = c.tile;
+  castSpell(state, world, c, 'spl-sac', 'chr-x', true, state.minutes);
+  const ch = state.choices!.find((y) => y.effect.type === 'sacrament')!;
+  assert.equal((ch.effect as SacramentEffect).left, 15);
+  const next = applySacrament(state, world, c, ch.effect as SacramentEffect, 'spl-dm', state.minutes);
+  assert.deepEqual(x.graveyard, ['spl-dm']);
+  assert.equal(x.exiled, undefined);
+  assert.ok(next && !next.candidates.includes('spl-dm'));
+});
+
+test('the real Sadistic Sacrament is taught in Malakir: three spells cut from one\'s future, fifteen kicked', () => {
+  const world = loadWorld();
+  const s = world.spells.find((x) => x.id === 'spl-sadistic-sacrament')!;
+  assert.equal(s.learnAt, 'loc-malakir');
+  const e = s.effects[0];
+  assert.ok(e.type === 'exile_library' && e.count === 3 && e.kicked_count === 15);
 });

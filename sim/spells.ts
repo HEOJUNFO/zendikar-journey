@@ -13,6 +13,7 @@ import { castEvents, destroyLand } from './step.ts';
 import { owesDiscard } from './discard.ts';
 import { crushOwed, demolishOptions, demolishOwed, relicsHere } from './relics.ts';
 import { escapeOptions, escapeOwed } from './escape.ts';
+import { sacramentOwed } from './sacrament.ts';
 import { harrowGive, harrowOwed } from './harrow.ts';
 import { remember } from './relations.ts';
 import { copyable, replicate } from './replicate.ts';
@@ -193,7 +194,7 @@ export function castableSpells(state: State, world: World, a: Actor, t: number) 
 
 // Whether a spell does harm (the target takes it as an attack).
 export function harmful(s: SpellDef) {
-  return s.effects.some((e) => e.type === 'lose_half_life' || (e.type === 'aura' && e.no_untap) || e.type === 'damage' || e.type === 'threaten' || e.type === 'destroy_target' || e.type === 'destroy_land' || e.type === 'discard' || e.type === 'discard_per_land' || e.type === 'damage_per_land');
+  return s.effects.some((e) => e.type === 'lose_half_life' || (e.type === 'aura' && e.no_untap) || e.type === 'exile_library' || e.type === 'damage' || e.type === 'threaten' || e.type === 'destroy_target' || e.type === 'destroy_land' || e.type === 'discard' || e.type === 'discard_per_land' || e.type === 'damage_per_land');
 }
 
 // Pays and resolves. A harmful spell's target (if an NPC) takes it as an attack. Returns whether
@@ -279,6 +280,9 @@ export function resolveSpell(state: State, world: World, a: Actor, spellId: stri
       owesDiscard(state, world, target, s.name, t);
     } else if (eff.type === 'demolish') {
       const owed = demolishOwed(state, world, a, s.name, t);
+      if (owed) (state.choices ??= []).push(owed);
+    } else if (eff.type === 'exile_library') {
+      const owed = sacramentOwed(state, world, a, { type: 'sacrament', spell: s.name, target: target.id, left: kicked && eff.kicked_count ? eff.kicked_count : eff.count }, t);
       if (owed) (state.choices ??= []).push(owed);
     } else if (eff.type === 'return_own') {
       const owed = escapeOwed(state, world, a, s.name, t);
