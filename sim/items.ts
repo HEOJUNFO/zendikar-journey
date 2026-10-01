@@ -95,7 +95,9 @@ export function claimItem(state: State, world: World, a: Actor, itemId: string, 
 // Ascension). `how`: what the log says they did.
 export function takeItem(state: State, world: World, a: Actor, x: ItemDef, t: number, how: string) {
   const counters = x.effects.some((e) => e.type === 'charge_life') ? lifeOf(a) : 0;
-  (state.items ??= {})[x.id] = { name: x.name, owner: a.id, counters, ...(x.equip ? { carried: true } : {}) };
+  // When it was taken: what comes to serve them after counts (Electropotence).
+  const since = x.effects.some((e) => e.type === 'enter_strike') ? { since: t } : {};
+  (state.items ??= {})[x.id] = { name: x.name, owner: a.id, counters, ...since, ...(x.equip ? { carried: true } : {}) };
   // "An artifact entered the battlefield under their control this turn" (Baloth Cage Trap).
   a.claimed = gameDay(t);
   addLog(state, {

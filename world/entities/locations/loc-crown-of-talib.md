@@ -5,11 +5,12 @@ name: 탈리브의 왕관
 name_en: Crown of Talib
 summary: 베이엔 섬의 화산 산맥. 불의 신 탈리브의 이름을 딴 봉우리들이 왕관처럼 둘러서고, 그 가장 높은 봉우리가 녹아내리는 발라쿠트다
 status: canon
-sources: [ZEN-228]
+sources: [ZEN-228, ZEN-122]
 tags: [산맥, 화산, 적색]
 links:
   - { to: loc-beyeen, rel: 바깥 지역 }
   - { to: loc-valakut, rel: 안의 구역 (가장 높은 봉우리) }
+  - { to: itm-electropotence, rel: 화산 바위의 번개 }
 map: { in: loc-beyeen, terrain: volcanic, pos: [0, 0.1], tiles: 15 }   # 기본 산: 적 마나 [결정] 2026-10-01. 15칸은 안의 발라쿠트 포함
 ---
 
@@ -22,6 +23,7 @@ map: { in: loc-beyeen, terrain: volcanic, pos: [0, 0.1], tiles: 15 }   # 기본 
 - **베이엔 안의 구역**이다 (지형 `volcanic`) ([결정] 2026-10-01: 세계를 설정대로 정리하며 더함. 발라쿠트의 설정상 바깥 땅). 15칸, 섬의 대부분.
 - **그 안에 구역 발라쿠트(`loc-valakut`, 10칸)를 품는다**: 베이엔 › 탈리브의 왕관 › 발라쿠트, 구역 안의 구역.
 - **기본 산**처럼 친다: 유대를 맺으면 적 마나 1, 산 종류 (발라쿠트가 세는 산).
+- 발라쿠트 바깥 남서쪽 화산 바위에 전기의 힘(`itm-electropotence`, ZEN-122)이 서 있다: 길들인 이에게 새 권속이 들 때마다 힘 {2}{R}로 그 권속이 곁의 하나에게 번개를.
 
 ## 미정/질문
 

@@ -4,6 +4,7 @@
 // nothing is raised that day.
 //
 // Order within an hour: raised events -> factions -> regions -> characters -> meetings.
+import { electroHour } from './electro.ts';
 import { upkeepQuest } from './ascension.ts';
 import { formatClock, gameDay, minuteOfDay, STEP_MINUTES, untapTime } from './clock.ts';
 import {
@@ -67,6 +68,7 @@ export function step(state: State, placed: World) {
   regionLayer(state, world, t);
   syncEquipment(state, world);
   anthemHour(state, world);
+  electroHour(state, world, t);
   dryOut(state, world, t);
   hostileNpcs(state, world, t);
   for (const a of alive(state)) {

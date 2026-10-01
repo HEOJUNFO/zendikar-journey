@@ -4,7 +4,8 @@
 // pick they owe); one there must be picked. A permanent (user decision 2026-10-01):
 // - a being of that color (a card's color; one with none, the colors of their lands; the player
 //   too; a planeswalker too): exiled, they are gone from the world (sim/erase.ts; the player's
-//   life ends);
+//   life ends) if the player is in it (its controller, or the one exiled); between NPCs it is a
+//   death instead (user decision 2026-10-01);
 // - an aura of that color on someone there, an item of that color standing or carried there:
 //   gone;
 // - a land of that color someone there holds: their bond with it broken for good, never to be
@@ -61,6 +62,14 @@ export function applyExile(state: State, world: World, source: Actor, pick: stri
   const by = shortName(source.name);
   if (kind === 'being') {
     const x = state.actors[rest[0]];
+    // Between NPCs, a death (the body and the memories stay; user decision 2026-10-01, as a fight
+    // between them ends in a knockout); with the player in it, gone from the world.
+    const controller = masterOf(state, source) ?? source;
+    if (controller.kind !== 'player' && x.kind !== 'player') {
+      addLog(state, { kind: 'event', text: `${by}의 빛이 ${josa(shortName(x.name), '을', '를')} 감싸 태워 버렸다.`, regions: [x.region], actors: [source.id, x.id], t });
+      die(state, x, t, `${by}의 빛에 추방됨`, source);
+      return true;
+    }
     addLog(state, { kind: 'event', text: `${by}의 빛이 ${josa(shortName(x.name), '을', '를')} 감싸, 세상에서 지워 버렸다.`, regions: [x.region], actors: [source.id, x.id], t });
     die(state, x, t, `${by}의 빛에 추방됨`);
     if (x.kind !== 'player') eraseFromWorld(state, x.id);

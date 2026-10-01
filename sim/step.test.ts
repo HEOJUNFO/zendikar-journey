@@ -5224,11 +5224,19 @@ test('Devout Lightcaster: arriving, one black permanent on its tile is exiled: a
   assert.deepEqual(p.exiledLands, ['loc-sw']);
   p.region = 'loc-sw';
   assert.match(bondBlocked(state, world, p, state.minutes) ?? '', /다시는/);
-  // A being: erased from the world.
+  // A being, between NPCs: a death, not erased (user decision 2026-10-01).
   p.region = 'loc-a';
   assert.ok(applyExile(state, world, l, 'being:chr-v', state.minutes));
-  assert.equal(state.actors['chr-v'], undefined);
-  assert.ok(state.erased?.includes('chr-v'));
+  assert.ok(state.actors['chr-v']?.dead);
+  assert.ok(!state.erased?.includes('chr-v'));
+  // Under the player: gone from the world.
+  const s2 = character(world, 'loc-a');
+  const [l2, v2, p2] = [s2.actors['chr-lc'], s2.actors['chr-v'], s2.actors[PLAYER_ID]];
+  v2.tile = p2.tile = l2.tile;
+  l2.master = p2.id;
+  assert.ok(applyExile(s2, world, l2, 'being:chr-v', s2.minutes));
+  assert.equal(s2.actors['chr-v'], undefined);
+  assert.ok(s2.erased?.includes('chr-v'));
 });
 
 test('the real Devout Lightcaster walks the Arid Mesa', () => {
@@ -5239,6 +5247,32 @@ test('the real Devout Lightcaster walks the Arid Mesa', () => {
   const def = npcDef(state, world, l.id)!;
   assert.deepEqual(def.enterExile, { color: 'B' });
   assert.deepEqual(def.protection, ['B']);
+});
+
+test('Electropotence: one coming to serve its owner may, for {2}{R}, strike one there for its power; between NPCs a knockout', async () => {
+  const ep: RawEntity = { id: 'itm-ep', kind: 'item', name: '전기의 힘', status: 'canon', sim: { card_type: 'enchantment', cost: '{0}', at: 'loc-a', effects: [{ type: 'enter_strike', cost: '{R}' }] } };
+  const world = fixture([ep, npc('chr-o', { ...npcSim('loc-a'), mana: { R: 2 } }), npc('chr-r', { ...npcSim('loc-a', 'social', [3, 3]) }), npc('chr-old', npcSim('loc-a')), npc('chr-x', npcSim('loc-a', 'social', [1, 2]))]);
+  const state = newState(world, { seed: 1, mode: 'observer' });
+  const [o, r, old, x] = [state.actors['chr-o'], state.actors['chr-r'], state.actors['chr-old'], state.actors['chr-x']];
+  for (const a of [r, old, x]) a.tile = o.tile;
+  bindRetainer(state, world, old, o, state.minutes, '설득'); // before: nothing
+  state.minutes += 60;
+  claimItem(state, world, o, 'itm-ep', state.minutes);
+  bindRetainer(state, world, r, o, state.minutes, '설득');
+  const asked: string[][] = [];
+  await advance(state, world, 2, { planDay: async () => [], choose: async ({ candidates }) => (asked.push(candidates.map((c) => c.id).sort()), 'chr-x') });
+  assert.equal(asked.length, 1); // only the one who came after
+  assert.ok(asked[0].includes('chr-x') && !asked[0].includes('chr-r'));
+  assert.ok(texts(state).some((l) => l.includes('붉은 번개')));
+  assert.ok(!x.dead); // a knockout between NPCs
+  assert.ok(texts(state).some((l) => l.includes('쓰러졌다') || l.includes('기절')));
+});
+
+test('the real Electropotence stands on the Crown of Talib', () => {
+  const world = loadWorld();
+  const x = world.items.find((i) => i.id === 'itm-electropotence')!;
+  assert.equal(x.at, 'loc-crown-of-talib');
+  assert.deepEqual(x.effects, [{ type: 'enter_strike', cost: '{2}{R}' }]);
 });
 
 test('the real Oracle of Mul Daya lives in Riverroot, in the Guum Wilds of Bala Ged', () => {

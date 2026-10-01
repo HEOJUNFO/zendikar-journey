@@ -1,6 +1,7 @@
 // Turn driver. Time only moves here: the observer advances N hours, the player acts and the
 // world runs until the action is done. The game passes every LLM hook (sim/llm/index.ts);
 // tests pass fakes or none.
+import { applyStrike, strikeTargets } from './electro.ts';
 import { applyExile, banishOptions } from './banish.ts';
 import { answerCounter, answerCounterCast, summon } from './counter.ts';
 import { formatClock, gameDay, untapTime } from './clock.ts';
@@ -560,6 +561,7 @@ async function choices(state: State, world: World, llm: Llm) {
       // A joining that waited on them goes through.
       else if (c.effect.type === 'counter') answerCounter(state, world, by, c.effect, false, state.minutes);
       else if (c.effect.type === 'counter_cast') answerCounterCast(state, world, by, c.effect, false, state.minutes);
+      else if (c.effect.type === 'strike' || c.effect.type === 'exile') {} // nothing waits on these
       continue;
     }
     const npc = speakerDef(state, world, c.by);
@@ -650,6 +652,23 @@ async function choices(state: State, world: World, llm: Llm) {
         }
       }
       answerCounter(state, world, by, eff, pick === eff.joiner, state.minutes);
+      continue;
+    }
+    // Electropotence: one come to serve them may strike someone there, if they pay (or no one).
+    if (c.effect.type === 'strike') {
+      const x = state.actors[c.effect.creature];
+      if (by && !by.dead && npc && x && llm.choose) {
+        const targets = strikeTargets(state, world, x, state.minutes).filter((y) => c.candidates.includes(y.id));
+        let pick: string | null = null;
+        if (targets.length) {
+          try {
+            pick = await llm.choose({ world, state, npc, candidates: targets, optional: true, what: `${josa(shortName(x.name), '이', '가')} 당신을 섬기러 들었다. ${state.items?.[c.effect.item]?.name ?? ''}에 힘을 들이면 그가 붉은 번개를 휘감고 곁의 하나에게 공격력(${ptOf(x)[0]})만큼 피해를 준다. 누구에게, 아니면 아무에게도` });
+          } catch (e) {
+            console.warn(`choose (strike) for ${c.by} failed:`, e);
+          }
+        }
+        if (pick) applyStrike(state, world, by, c.effect, pick, state.minutes);
+      }
       continue;
     }
     // Devout Lightcaster, arriving: which permanent of its color there its controller exiles (one

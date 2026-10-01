@@ -2,6 +2,7 @@
 // What an NPC decides by the LLM, the player decides here: whom an Ally's rally in their party
 // falls on (sim/allies.ts), whether to serve one who asks it of them, and whether to take to
 // the air when one who can't fly sets on them.
+import { applyStrike } from './electro.ts';
 import { applyExile, banishOptions } from './banish.ts';
 import { answerCounter, answerCounterCast, summon } from './counter.ts';
 import { untapTime } from './clock.ts';
@@ -51,6 +52,7 @@ export function askText(state: State, world: World, c: Choice) {
     const s = world.spells.find((x) => x.id === (c.effect as { spell: string }).spell);
     return `${shortName(state.actors[c.effect.joiner]?.name ?? '')}이(가) ${shortName(state.actors[c.effect.master]?.name ?? '')}의 곁에 들려 한다 (${c.effect.how}). ${s?.name ?? ''}(${s?.costText ?? ''})로 무산시키면 그는 들지 못하고 당신 곁에 ${s?.summary ?? ''}. 어떻게?`;
   }
+  if (c.effect.type === 'strike') return `${shortName(state.actors[c.effect.creature]?.name ?? '')}이(가) 당신을 섬기러 들었다. ${state.items?.[c.effect.item]?.name ?? ''}에 힘을 들이면 그가 곁의 하나에게 공격력만큼 번개를 내리꽂는다. 누구에게?`;
   if (c.effect.type === 'exile') return `${shortName(state.actors[c.effect.source]?.name ?? '')}의 빛이 이 자리의 지속물 하나를 추방한다 (반드시 하나: 존재는 세상에서 지워지고, 오라·아이템은 사라지고, 땅은 그 이와의 유대가 영영 끊긴다). 무엇을?`;
   if (c.effect.type === 'counter_cast') {
     const e = c.effect;
@@ -180,6 +182,8 @@ export function answerAsk(state: State, world: World, pick: string | null, t: nu
     const x = state.actors[c.effect.source];
     const target = pick && c.candidates.includes(pick) ? state.actors[pick] : undefined;
     if (x && target) applyBind(state, world, x, target, t);
+  } else if (c.effect.type === 'strike') {
+    if (pick && c.candidates.includes(pick)) applyStrike(state, world, p, c.effect, pick, t);
   } else if (c.effect.type === 'exile') {
     const source = state.actors[c.effect.source];
     const ex = source && npcDef(state, world, source.id)?.enterExile;
