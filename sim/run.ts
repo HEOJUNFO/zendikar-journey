@@ -29,7 +29,7 @@ import { strandedText } from './stranded.ts';
 import { bounce, bounceCandidates } from './bounce.ts';
 import { eventTile } from './tiles.ts';
 import { applyQuell, permanentsOf, QUELL_KINDS, QUELL_LABELS, quellGive } from './quell.ts';
-import { applyRally, hireableFor, hireMerc, hirePrice, rallyText } from './allies.ts';
+import { applyRally, applyWard, hireableFor, hireMerc, hirePrice, rallyText } from './allies.ts';
 import { answerAsk, askText, canServe } from './asks.ts';
 import { eonLand, eonsIn, spendBlocked, storeBlocked } from './eons.ts';
 import { castableSpells, castBlocked, castSpell, harmful, learnableSpells, spellDef } from './spells.ts';
@@ -623,6 +623,20 @@ async function choices(state: State, world: World, llm: Llm) {
       }
       if (!options.some((o) => o.id === pick)) pick = options[Math.floor(random(state) * options.length)].id;
       demolish(state, world, by, pick!, c.effect.spell, state.minutes);
+      continue;
+    }
+    // Kabira Evangel's rally: a color for the party's Allies to be protected from, or none.
+    if (c.effect.type === 'ward') {
+      if (!by || by.dead || !npc || !llm.pick) continue;
+      let pick: string | null = null;
+      try {
+        const what = `당신 무리에 동료가 들었다. ${shortName(state.actors[c.effect.source]?.name ?? '')}의 설교: 색 하나를 고르면 무리의 동료 모두가 자정까지 그 색으로부터 보호받는다 (그 색 존재의 싸움 피해를 받지 않고, 그 색 주문·능력에 골라지지 않는다). 고르지 않을 수도 있다`;
+        pick = await llm.pick({ world, state, npc, what, options: COLORS.map((x) => ({ id: x, label: `${COLOR_LABELS[x]}색` })), optional: true });
+      } catch (e) {
+        console.warn(`pick (ward) for ${by.id} failed:`, e);
+      }
+      const color = COLORS.find((x) => x === pick);
+      if (color) applyWard(state, world, by, c.effect.source, color, state.minutes);
       continue;
     }
     // Harrow: the land to give up (one must), then the basic lands to seek out, one at a time.

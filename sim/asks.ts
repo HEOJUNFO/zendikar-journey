@@ -8,7 +8,8 @@ import { answerCounter, answerCounterCast, summon } from './counter.ts';
 import { untapTime } from './clock.ts';
 import { applyDrainGrow, applyEnterDestroy, applySearch } from './abilities.ts';
 import { crushOwed, crushRelic, demolish, demolishOptions, relicsHere } from './relics.ts';
-import { applyRally, rallyText, rallyWord } from './allies.ts';
+import { applyRally, applyWard, rallyText, rallyWord } from './allies.ts';
+import { COLOR_LABELS, COLORS } from './mana.ts';
 import { bindRetainer, refuse } from './retainers.ts';
 import { cardLabel, discardOwed, handOf, letGo } from './discard.ts';
 import { crumble, sacrifice, sacrificeDefault } from './monument.ts';
@@ -30,6 +31,7 @@ import type { World } from './world.ts';
 export function askText(state: State, world: World, c: Choice) {
   const from = 'from' in c.effect ? state.actors[c.effect.from] : undefined;
   if (c.effect.type === 'rally') return `${rallyText(state, world, c.effect.source)}. 누구에게?`;
+  if (c.effect.type === 'ward') return `무리에 동료가 들었다. ${shortName(state.actors[c.effect.source]?.name ?? '')}의 설교: 색 하나를 고르면 무리의 동료 모두가 자정까지 그 색으로부터 보호받는다. 어느 색을?`;
   if (c.effect.type === 'pledge') return `${josa(shortName(from?.name ?? ''), '이', '가')} 자신을 따르고 섬기라 한다`;
   if (c.effect.type === 'evade') return `날지 못하는 ${josa(shortName(from?.name ?? ''), '이', '가')} 덤벼든다. 날아올라 피하면 자정까지 닿지 않는다`;
   if (c.effect.type === 'discard') return `${c.effect.cause}: 지닌 주문 ${c.effect.count ? `${c.effect.count}개를` : '하나를'} 잊어야 한다. 먼저 무엇을?`;
@@ -80,6 +82,7 @@ export function askOptions(state: State, world: World, c: Choice): { pick: strin
     const target = state.actors[c.effect.target];
     return c.candidates.map((id) => ({ pick: id, label: cardLabel(world, id) }));
   }
+  if (c.effect.type === 'ward') return [...COLORS.map((x) => ({ pick: x as string | null, label: `${COLOR_LABELS[x]}색` })), { pick: null, label: '고르지 않는다' }];
   if (c.effect.type === 'demolish') {
     const p = state.actors[c.by];
     return p ? demolishOptions(state, world, p).map((o) => ({ pick: o.id as string | null, label: o.label })) : [];
@@ -136,6 +139,9 @@ export function answerAsk(state: State, world: World, pick: string | null, t: nu
     const target = pick ? state.actors[pick] : undefined;
     if (target && c.candidates.includes(target.id)) applyRally(state, world, c.effect.source, target.id, t);
     else addLog(state, { kind: 'status', text: `${shortName(state.actors[c.effect.source]?.name ?? '')}의 ${rallyWord(state, world, c.effect.source)}을 거두었다.`, regions: [c.land], actors: [c.by], t });
+  } else if (c.effect.type === 'ward') {
+    const color = COLORS.find((x) => x === pick);
+    if (color) applyWard(state, world, p, c.effect.source, color, t);
   } else if (c.effect.type === 'pledge') {
     const master = state.actors[c.effect.from];
     if (pick === master?.id && canServe(p, master)) summon(state, world, p, master, t, '설득');

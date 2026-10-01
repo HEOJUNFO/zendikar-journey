@@ -12,7 +12,7 @@ import { revealHand } from './discard.ts';
 import { bindRetainer, masterOf, retainersOf, swayBlocked } from './retainers.ts';
 import { untapTime } from './clock.ts';
 import { grantAbility, spawnWild } from './abilities.ts';
-import { creatureColors } from './mana.ts';
+import { COLOR_LABELS, COLORS, creatureColors } from './mana.ts';
 import type { Color } from './mana.ts';
 import { powersSealed } from './seal.ts';
 import { addLog, awayText, npcDef, present, targetable, together } from './state.ts';
@@ -52,6 +52,9 @@ export function allyJoined(state: State, world: World, a: Actor, master: Actor, 
     // "You may have Ally creatures you control gain <ability> until end of turn": the same, no one
     // to pick, always.
     for (const eff of rally) if (eff.type === 'grant_allies') for (const y of alliesOf(state, world, master)) grantAbility(state, y, eff.ability, untapTime(t), `${shortName(x.name)}의 부름`, t);
+    // "You may choose a color. If you do, Allies you control gain protection from it until end of
+    // turn": the color is the controller's pick, after the hour (or none).
+    if (rally.some((eff) => eff.type === 'ward_allies')) (state.choices ??= []).push({ by: master.id, land: x.region, effect: { type: 'ward', source: x.id }, candidates: [...COLORS], optional: true, t });
     if (!rally.some(targeted)) continue;
     const candidates = present(state, x.region, x.tile).filter((y) => y.id !== x.id && targetable(y, t, creatureColors(npcDef(state, world, x.id)))).map((y) => y.id);
     if (candidates.length) (state.choices ??= []).push({ by: master.id, land: x.region, effect: { type: 'rally', source: x.id }, candidates, optional: true, t });
@@ -60,7 +63,7 @@ export function allyJoined(state: State, world: World, a: Actor, master: Actor, 
 
 // A rally that falls on someone picked (not the counters on the party's Allies).
 function targeted(eff: { type: string }) {
-  return eff.type !== 'counters_allies' && eff.type !== 'counter_self' && eff.type !== 'token_counter' && eff.type !== 'grant_allies';
+  return eff.type !== 'counters_allies' && eff.type !== 'counter_self' && eff.type !== 'token_counter' && eff.type !== 'grant_allies' && eff.type !== 'ward_allies';
 }
 
 // Kazuul Warlord's war cry: a +1/+1 counter (Actor.plusCounters, for good) on each Ally of the party.
@@ -203,5 +206,21 @@ export function hireableFor(state: State, world: World, a: Actor) {
   return Object.values(state.actors).filter((x) => {
     const def = npcDef(state, world, x.id);
     return def?.hireable && !x.dead && x.id !== a.id && !swayBlocked(state, world, x) && a.stats.coin >= hirePrice(def);
+  });
+}
+
+// Kabira Evangel's color named: each Ally of `master`'s party is protected from it until midnight.
+export function applyWard(state: State, world: World, master: Actor, sourceId: string, color: Color, t: number) {
+  const x = state.actors[sourceId];
+  if (!x || x.dead || (masterOf(state, x) ?? x).id !== master.id) return;
+  const party = alliesOf(state, world, master);
+  const until = untapTime(t);
+  for (const y of party) y.warded = [...(y.warded ?? []).filter((w) => w.until > t && w.color !== color), { color, until }];
+  addLog(state, {
+    kind: 'status',
+    text: `${shortName(x.name)}의 설교에 무리의 동료들이 ${COLOR_LABELS[color]}색으로부터 보호받는다 (자정까지: ${party.map((y) => shortName(y.name)).join(', ')}).`,
+    regions: [...new Set(party.map((y) => y.region))],
+    actors: party.map((y) => y.id),
+    t,
   });
 }

@@ -116,6 +116,8 @@ export type Actor = {
   sealedOut?: number;
   // Protection from these colors (a card's, e.g. Malakir Bloodwitch: white).
   protection?: Color[];
+  // Protection from a color until a time (Kabira Evangel's rally: until midnight).
+  warded?: { color: Color; until: number }[];
   // The home the world gave them when last seen (sim/state.ts `syncWorld`): if the world moves
   // it, they go there.
   home?: string;
@@ -194,7 +196,7 @@ export type Actor = {
 // What falls on the one picked: a land's bonding effect, a burst of damage (Valakut), or a
 // spell an NPC casts (sim/spells.ts).
 export type Choice = { by: string; land: string; effect: ChoiceEffect; candidates: string[]; optional?: boolean; t: number };
-export type ChoiceEffect = BondEffect | { type: 'damage'; amount: number } | { type: 'cast'; spell: string; free?: boolean; second?: boolean } | { type: 'follow' } | { type: 'rally'; source: string } | { type: 'seize' } | { type: 'pledge'; from: string } | { type: 'evade'; from: string } | { type: 'discard'; cause: string; count?: number } | { type: 'pilfer'; source: string; target: string } | { type: 'pour'; source: string } | { type: 'demolish'; spell: string } | { type: 'sacrifice'; item: string } | { type: 'destroy'; kind?: CreatureType; kicker?: string } | { type: 'drain_grow'; life: number; counters: number } | { type: 'crush'; spell: string; left: number; first: boolean } | { type: 'quell'; source: string } | { type: 'quelled'; kind: QuellKind; source: string } | { type: 'return_lands'; item: string; left: number } | { type: 'search'; source: string } | { type: 'tide'; source: string } | { type: 'bind'; source: string } | { type: 'engulf'; source: string } | { type: 'harrow'; spell: string; left: number; given: boolean } | { type: 'shatter' } | { type: 'counter'; spell: string; joiner: string; master: string; how: string } | { type: 'counter_cast'; spell: string; caster: string; cast: string; target: string; kicked: boolean } | { type: 'exile'; source: string } | { type: 'strike'; item: string; creature: string };
+export type ChoiceEffect = BondEffect | { type: 'damage'; amount: number } | { type: 'cast'; spell: string; free?: boolean; second?: boolean } | { type: 'follow' } | { type: 'rally'; source: string } | { type: 'seize' } | { type: 'pledge'; from: string } | { type: 'evade'; from: string } | { type: 'discard'; cause: string; count?: number } | { type: 'pilfer'; source: string; target: string } | { type: 'pour'; source: string } | { type: 'demolish'; spell: string } | { type: 'sacrifice'; item: string } | { type: 'destroy'; kind?: CreatureType; kicker?: string } | { type: 'drain_grow'; life: number; counters: number } | { type: 'crush'; spell: string; left: number; first: boolean } | { type: 'quell'; source: string } | { type: 'quelled'; kind: QuellKind; source: string } | { type: 'return_lands'; item: string; left: number } | { type: 'search'; source: string } | { type: 'tide'; source: string } | { type: 'bind'; source: string } | { type: 'engulf'; source: string } | { type: 'harrow'; spell: string; left: number; given: boolean } | { type: 'ward'; source: string } | { type: 'shatter' } | { type: 'counter'; spell: string; joiner: string; master: string; how: string } | { type: 'counter_cast'; spell: string; caster: string; cast: string; target: string; kicked: boolean } | { type: 'exile'; source: string } | { type: 'strike'; item: string; creature: string };
 
 export type Condition = {
   label: string;
@@ -600,7 +602,7 @@ export function targetable(a: Actor, t: number, colors: readonly string[] = []) 
 // Protection from one of `colors` (while their powers aren't sealed): the first one, if any.
 export function protectedFrom(a: Actor, colors: readonly string[], t: number): Color | undefined {
   if (a.sealedOut === gameDay(t)) return undefined;
-  return (a.protection ?? []).find((c) => colors.includes(c));
+  return (a.protection ?? []).find((c) => colors.includes(c)) ?? a.warded?.find((w) => w.until > t && colors.includes(w.color))?.color;
 }
 
 // Why they can't be picked (shroud, protection), for the one trying.

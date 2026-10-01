@@ -72,7 +72,7 @@ export function bondTargets(state: State, world: World, a: Actor, regionId: stri
 }
 
 // The effect falls on `target`, if they are still there.
-export function applyBondEffect(state: State, world: World, a: Actor, regionId: string, eff: Exclude<ChoiceEffect, { type: 'cast' | 'follow' | 'rally' | 'seize' | 'pledge' | 'evade' | 'discard' | 'pilfer' | 'pour' | 'demolish' | 'sacrifice' | 'destroy' | 'drain_grow' | 'crush' | 'quell' | 'quelled' | 'return_lands' | 'search' | 'tide' | 'bind' | 'engulf' | 'harrow' | 'shatter' | 'counter' | 'counter_cast' | 'exile' | 'strike' }>, targetId: string | undefined, t: number) {
+export function applyBondEffect(state: State, world: World, a: Actor, regionId: string, eff: Exclude<ChoiceEffect, { type: 'cast' | 'follow' | 'rally' | 'seize' | 'pledge' | 'evade' | 'discard' | 'pilfer' | 'pour' | 'demolish' | 'sacrifice' | 'destroy' | 'drain_grow' | 'crush' | 'quell' | 'quelled' | 'return_lands' | 'search' | 'tide' | 'bind' | 'engulf' | 'harrow' | 'ward' | 'shatter' | 'counter' | 'counter_cast' | 'exile' | 'strike' }>, targetId: string | undefined, t: number) {
   const r = region(world, regionId);
   if (eff.type === 'damage') return mountainFire(state, world, a, r, eff.amount, targetId, t);
   const target = targetId ? bondTargets(state, world, a, regionId, eff).find((x) => x.id === targetId) : undefined;
@@ -109,6 +109,7 @@ export function expireGranted(state: State, t: number) {
       x.pumps = x.pumps.filter((b) => b.until > t);
       if (!x.dead) addLog(state, { kind: 'status', text: `${shortName(x.name)}에게 깃든 기운이 가라앉았다 (${ptOf(x).join('/')}).`, regions: [x.region], actors: [x.id], t });
     }
+    if (x.warded?.some((w) => w.until <= t)) x.warded = x.warded.filter((w) => w.until > t);
     const gone = (x.granted ?? []).filter((g) => g.until <= t);
     if (!gone.length) continue;
     x.granted = x.granted!.filter((g) => g.until > t);

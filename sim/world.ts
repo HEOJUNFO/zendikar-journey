@@ -369,9 +369,11 @@ export const CharacterSimSchema = z.strictObject({
   // token_counter: a <creature> token born at their side, the controller's retainer, and a
   // +1/+1 counter on the one with the rally (Turntimber Ranger: a 2/2 green Wolf).
   // grant_allies: each Ally in the party gains <ability> until the turn ends (Seascape Aerialist: flying).
+  // ward_allies: their controller may name a color; each Ally in the party gains protection from it
+  // until the turn ends (Kabira Evangel; sim/allies.ts `applyWard`).
   // reveal_discard: one there shows as many of their spells as the party's Allies;
   // the controller picks one they forget (Bala Ged Thief; sim/discard.ts `revealHand`).
-  rally: z.array(z.discriminatedUnion('type', [z.strictObject({ type: z.literal('damage_allies') }), z.strictObject({ type: z.literal('lose_life_allies') }), z.strictObject({ type: z.literal('reveal_discard') }), z.strictObject({ type: z.literal('counters_allies') }), z.strictObject({ type: z.literal('counter_self') }), z.strictObject({ type: z.literal('token_counter'), creature: z.string(), pt: PtSchema, colors: z.array(z.enum(COLORS)) }), z.strictObject({ type: z.literal('grant_allies'), ability: z.enum(ABILITIES) })])).default([]),
+  rally: z.array(z.discriminatedUnion('type', [z.strictObject({ type: z.literal('damage_allies') }), z.strictObject({ type: z.literal('lose_life_allies') }), z.strictObject({ type: z.literal('reveal_discard') }), z.strictObject({ type: z.literal('counters_allies') }), z.strictObject({ type: z.literal('counter_self') }), z.strictObject({ type: z.literal('token_counter'), creature: z.string(), pt: PtSchema, colors: z.array(z.enum(COLORS)) }), z.strictObject({ type: z.literal('grant_allies'), ability: z.enum(ABILITIES) }), z.strictObject({ type: z.literal('ward_allies') })])).default([]),
   // "You may look at the top card of your library any time" (Sphinx of Jwar Isle): they see
   // what is coming. The rest of today's events and powers the morning LLM picked are in their
   // plan (made after it) and their talk (sim/foresight.ts).
@@ -851,7 +853,7 @@ export type NpcDef = {
   attackPump?: { land: LandType; pt: [number, number] };
   discardOnHit?: boolean;
   ally?: boolean;
-  rally?: ({ type: 'damage_allies' | 'lose_life_allies' | 'reveal_discard' | 'counters_allies' | 'counter_self' } | { type: 'grant_allies'; ability: Ability } | { type: 'token_counter'; creature: string; pt: [number, number]; colors: Color[] })[];
+  rally?: ({ type: 'damage_allies' | 'lose_life_allies' | 'reveal_discard' | 'counters_allies' | 'counter_self' | 'ward_allies' } | { type: 'grant_allies'; ability: Ability } | { type: 'token_counter'; creature: string; pt: [number, number]; colors: Color[] })[];
   hireable?: boolean;
   foresight?: boolean;
   landfall?: { pt: [number, number]; trample: boolean };

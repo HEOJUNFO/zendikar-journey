@@ -20,7 +20,7 @@ import { actorColors, COLORS, formatMana, manaAvailable, manaCapacity, parseMana
 import { MAX_TALKS_PER_DAY, usableAbilities, volleyShares, burnTargets } from './run.ts';
 import { destroyLand, eligibleGmEvents, moveHours, startTravel, travelBlocked } from './step.ts';
 import { gainLife, lifeOf } from './life.ts';
-import { awayText, buriedToday, hasAbility, here, needsOf, newState, npcDef, outOfTime, PLAYER_ID, present, ptOf, syncWorld, targetable, together } from './state.ts';
+import { awayText, buriedToday, hasAbility, here, needsOf, newState, npcDef, outOfTime, PLAYER_ID, present, protectedFrom, ptOf, syncWorld, targetable, together } from './state.ts';
 import { foresightText } from './foresight.ts';
 import { withPositions } from './wander.ts';
 import { nodeAt } from '../web/view.ts';
@@ -40,7 +40,7 @@ import { joinedToday } from './bounce.ts';
 import { centroid, eventTile, fixedTile, nearestTile, ownsTile, sameTile, TILE, tileCenter, tilesOf, tileSteps, tooSmall } from './tiles.ts';
 import { applyQuell, upkeepQuell } from './quell.ts';
 import { upkeepWins } from './win.ts';
-import { hireMerc, hirePrice } from './allies.ts';
+import { allyJoined, hireMerc, hirePrice } from './allies.ts';
 import { askOptions, askText } from './asks.ts';
 import type { Actor, State } from './state.ts';
 import { affectedRegions, buildWorld, descendantsOf, distance, landTypes, placeName, realmOf, region, travelHours, within } from './world.ts';
@@ -5174,6 +5174,47 @@ test('the real Hellfire Mongrel roams Akoum: a hungry beast that may follow some
   const def = npcDef(state, world, h.id)!;
   assert.ok(def.beast && def.tamable && def.needs.includes('hunger'));
   assert.deepEqual(def.upkeepBurn, { damage: 2, maxHand: 2 });
+});
+
+const evangel = () => npc('chr-e', { ...npcSim('loc-a', 'work', [2, 3]), mana: { W: 3 }, ally: true, hireable: true, rally: [{ type: 'ward_allies' }] });
+
+test('Kabira Evangel: an Ally joining, the controller may name a color; the party\'s Allies are protected from it until midnight', async () => {
+  const world = fixture([evangel(), npc('chr-m', npcSim('loc-a', 'work')), npc('chr-o', { ...npcSim('loc-a', 'work'), ally: true })]);
+  const state = newState(world, { seed: 1, mode: 'observer' });
+  const [e, m, o] = ['chr-e', 'chr-m', 'chr-o'].map((id) => state.actors[id]);
+  e.master = m.id;
+  o.master = m.id;
+  allyJoined(state, world, o, m, state.minutes);
+  assert.deepEqual(state.choices?.find((c) => c.effect.type === 'ward')?.candidates, ['W', 'U', 'B', 'R', 'G']);
+  await advance(state, world, 1, { pick: async ({ options }) => (options.some((x) => x.id === 'R') ? 'R' : null) });
+  for (const a of [e, o]) assert.equal(protectedFrom(a, ['R'], state.minutes), 'R');
+  assert.equal(protectedFrom(m, ['R'], state.minutes), undefined); // not an Ally
+  assert.equal(protectedFrom(e, ['R'], 1440), undefined); // gone at midnight
+});
+
+test('Kabira Evangel serving the player: the color is theirs to name, or none', async () => {
+  const world = fixture([evangel()]);
+  const state = character(world, 'loc-a');
+  const [p, e] = [state.actors[PLAYER_ID], state.actors['chr-e']];
+  e.master = p.id;
+  e.tile = p.tile;
+  allyJoined(state, world, e, p, state.minutes);
+  await act(state, world, { type: 'wait', hours: 1 });
+  const ask = state.asks?.find((c) => c.effect.type === 'ward');
+  assert.ok(ask);
+  assert.ok(askOptions(state, world, ask!).some((o) => o.pick === null));
+  await act(state, world, { type: 'choose', pick: 'B' });
+  assert.equal(protectedFrom(e, ['B'], state.minutes), 'B');
+});
+
+test('the real Kabira Evangel preaches at Kabira Crossroads: an Ally for 30 coin', () => {
+  const world = loadWorld();
+  const state = newState(world, { seed: 1, mode: 'observer' });
+  const e = state.actors['chr-kabira-evangel'];
+  assert.equal(e?.region, 'loc-kabira-crossroads');
+  const def = world.npcs.find((x) => x.id === 'chr-kabira-evangel')!;
+  assert.deepEqual(def.rally, [{ type: 'ward_allies' }]);
+  assert.equal(hirePrice(def), 30);
 });
 
 test('the real Merfolk Seastalkers lurk in Bojuka Bay, a basic island on the edge of the Guum Wilds in Bala Ged: islandwalk', () => {

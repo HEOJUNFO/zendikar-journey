@@ -5,9 +5,10 @@ name: 카비라 교차로
 name_en: Kabira Crossroads
 summary: 아게딤 섬의 고원 위, 탑들이 솟은 도시 카비라. 섬의 길들이 이곳에서 모이고 갈라진다
 status: canon
-sources: [ZEN-216, ZEN-3]
+sources: [ZEN-216, ZEN-3, ZEN-15]
 tags: [도시, 교차로, 길, 백색]
 links:
+  - { to: chr-kabira-evangel, rel: 쉼터의 모닥불 앞에서 설교하는 전도사 }
   - { to: loc-agadeem, rel: 바깥 지역 }
   - { to: loc-agadeem-crypt, rel: 길이 이어지는 묘역 }
   - { to: law-life, rel: 들어서면 생명 }

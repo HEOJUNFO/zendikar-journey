@@ -64,6 +64,7 @@ export function shed(state: State, world: World, a: Actor, cause: string) {
   delete a.boost;
   delete a.pumps;
   delete a.granted;
+  delete a.warded;
   delete a.lost;
   delete a.wounds;
   if (def) a.abilities = [...def.abilities];
