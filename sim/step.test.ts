@@ -15,7 +15,7 @@ import { actorColors, COLORS, formatMana, manaAvailable, manaCapacity, parseMana
 import { MAX_TALKS_PER_DAY, usableAbilities, volleyShares, burnTargets } from './run.ts';
 import { destroyLand, eligibleGmEvents, moveHours, startTravel, travelBlocked } from './step.ts';
 import { gainLife, lifeOf } from './life.ts';
-import { awayText, hasAbility, here, needsOf, newState, npcDef, outOfTime, PLAYER_ID, present, ptOf, syncWorld, targetable, together } from './state.ts';
+import { awayText, buriedToday, hasAbility, here, needsOf, newState, npcDef, outOfTime, PLAYER_ID, present, ptOf, syncWorld, targetable, together } from './state.ts';
 import { foresightText } from './foresight.ts';
 import { withPositions } from './wander.ts';
 import { nodeAt } from '../web/view.ts';
@@ -25,7 +25,7 @@ import { bite, biteBlocked } from './bite.ts';
 import { pumpMax, pumpsDue } from './pump.ts';
 import { bindTargets } from './bind.ts';
 import { drawKnowledge, handSize, huntKnowledge, knownSecrets, secretsOf } from './knowledge.ts';
-import { revealHand } from './discard.ts';
+import { letGo, revealHand } from './discard.ts';
 import { claimBlocked, claimItem, itemOwner, itemsAt, itemWhere } from './items.ts';
 import { spendBlocked, storeBlocked } from './eons.ts';
 import { applyEnterDestroy, bondBlocked, enterDestroy, onEnter, bondLand, bondTargets, callForth, fetchTargets, fireTargets, firesOnBond, growBlocked, spawnWild, summonLibrary, useAbility } from './abilities.ts';
@@ -2461,6 +2461,46 @@ test('the real Archive Trap lies on Jwar Isle, for those who searched', () => {
   const ev = world.events.find((e) => e.id === 'evt-archive-trap');
   assert.equal(ev?.region, 'loc-jwar-isle');
   assert.equal(ev?.searched, true);
+});
+
+test('a ravenous trap: one who sent three or more to their graveyard today (spells let go of, retainers fallen) and steps in loses that graveyard for good', async () => {
+  const maw: RawEntity = {
+    id: 'evt-maw',
+    kind: 'event',
+    name: '탐식의 함정',
+    status: 'canon',
+    sim: { region: 'loc-b', pos: [-1, 0], trigger: 'enter', buried: 3, text: '아가리가 닫혔다.', effects: [{ type: 'exile_graveyard' }] },
+  };
+  const world = fixture([maw, mantle, bolt, npc('chr-x', npcSim('loc-b')), npc('chr-y', npcSim('loc-b')), npc('chr-r', npcSim('loc-a'))]);
+  const state = newState(world, { seed: 1, mode: 'observer' });
+  const [x, y, r] = [state.actors['chr-x'], state.actors['chr-y'], state.actors['chr-r']];
+  x.region = y.region = 'loc-a';
+  // x lets go of two spells and loses a retainer today: three to the graveyard.
+  x.spells = [mantle.id, bolt.id];
+  letGo(state, world, x, mantle.id, state.minutes);
+  letGo(state, world, x, bolt.id, state.minutes);
+  r.master = x.id;
+  die(state, r, state.minutes, '시험');
+  assert.equal(buriedToday(x, state.minutes), 3);
+  assert.deepEqual(x.fallen, ['chr-r']);
+  // y let go of two: not enough.
+  y.spells = [mantle.id, bolt.id];
+  letGo(state, world, y, mantle.id, state.minutes);
+  letGo(state, world, y, bolt.id, state.minutes);
+  await advance(state, world, 3);
+  assert.deepEqual(x.graveyard, []);
+  assert.deepEqual(x.fallen, []);
+  assert.equal(y.graveyard?.length, 2);
+  assert.ok(texts(state).some((t) => t.includes('아가리 속으로 사라졌다')));
+  assert.equal(buriedToday(x, state.minutes + 1440), 0); // a new day counts anew
+});
+
+test('the real Ravenous Trap lies in the Crypt of Agadeem, for those who buried three or more', () => {
+  const world = loadWorld();
+  const ev = world.events.find((e) => e.id === 'evt-ravenous-trap');
+  assert.equal(ev?.region, 'loc-agadeem-crypt');
+  assert.equal(ev?.buried, 3);
+  assert.deepEqual(ev?.effects, [{ type: 'exile_graveyard' }]);
 });
 
 test('an archive trap on the player: those who know them forget them', async () => {

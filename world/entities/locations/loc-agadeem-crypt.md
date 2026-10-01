@@ -5,11 +5,12 @@ name: 아게딤의 묘실
 name_en: Crypt of Agadeem
 summary: 아게딤 섬의 땅 밑에 잠든 고대 도시 아게딤의 묘역. 부서진 석조 기둥 사이로 보랏빛이 흘러넘치고, 섬기던 이를 잃은 자의 망자들이 이곳에서 힘이 된다
 status: canon
-sources: [ZEN-212, ZEN-216, ZEN-86, ZEN-85]
+sources: [ZEN-212, ZEN-216, ZEN-86, ZEN-85, ZEN-109]
 tags: [폐허, 묘역, 지하, 흑색]
 links:
   - { to: spl-desecrated-earth, rel: 배우는 주문 }
   - { to: cre-crypt-ripper, rel: 깃든 그늘 }
+  - { to: evt-ravenous-trap, rel: 숨은 함정 }
   - { to: loc-agadeem, rel: 바깥 지역 }
   - { to: loc-kabira-crossroads, rel: 길이 이어지는 도시 }
   - { to: law-retainers, rel: 죽은 권속의 힘 }
@@ -36,6 +37,7 @@ sim:
 - 더럽혀진 대지(`spl-desecrated-earth`, ZEN-86)를 여기서 배운다. 상대가 쥔 땅을 부수고 주문 하나를 잊게 하는 주문이다.
 
 - 그늘 묘실 찢개(`cre-crypt-ripper`, ZEN-85)가 깃들어 있다 ([결정] 2026-10-01). 산 자를 덮치고, 싸울 때 흑 마나를 부어 커진다.
+- 묘실 깊은 곳 한 칸에 탐식의 함정(`evt-ravenous-trap`, ZEN-109)이 숨어 있다 ([결정] 2026-10-01). 그날 무덤에 셋 이상(잊은 주문, 섬기다 죽은 권속)을 보낸 이가 들어서면 그의 무덤을 모두 삼킨다.
 
 ## 미정/질문
 

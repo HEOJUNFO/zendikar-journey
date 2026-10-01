@@ -26,7 +26,7 @@ import { markSealed } from './seal.ts';
 import { handSize } from './knowledge.ts';
 import { recall, RECALL_HOURS, recallBlocked } from './loremaster.ts';
 import { bite, BITE_HOURS, biteBlocked } from './bite.ts';
-import { addLog, alive, here, landUnusable, needsOf, npcDef, outOfTime, present, ptOf, random, together } from './state.ts';
+import { addLog, alive, buriedToday, here, landUnusable, needsOf, npcDef, outOfTime, present, ptOf, random, together } from './state.ts';
 import { addFoe, attackBlocked, dealDamage, foesOf, hostileNpcs } from './combat.ts';
 import { bondBlocked, bondLand, expireGranted, upkeepFleeting, onEnter, FETCH_HOURS, fetchLand, fetchSource, growBlocked, growEntered, growLand, spawnWild, summonLibrary, TOP, upkeepRevive, useAbility } from './abilities.ts';
 import { CLAIM_HOURS, claimBlocked, claimItem, itemsAt, itemWhere } from './items.ts';
@@ -214,7 +214,7 @@ function enterEvents(state: State, world: World, at: number) {
     if (ev.trigger !== 'enter' || onCooldown(state, ev, at)) continue;
     if (state.pending.some((p) => p.eventId === ev.id)) continue;
     // A trap lies on one tile of its land: those who stepped onto it this hour.
-    const by = present(state, ev.region, eventTile(world, ev)).filter((a) => a.steppedAt === at && (!ev.gained_life || gainedLifeToday(a, at)) && (!ev.refused || refusedToday(a, at)) && (!ev.searched || a.searched === gameDay(at)) && (!ev.claimed || a.claimed === gameDay(at)) && (!ev.joined || joinedToday(state, a, at) >= ev.joined));
+    const by = present(state, ev.region, eventTile(world, ev)).filter((a) => a.steppedAt === at && (!ev.gained_life || gainedLifeToday(a, at)) && (!ev.refused || refusedToday(a, at)) && (!ev.searched || a.searched === gameDay(at)) && (!ev.claimed || a.claimed === gameDay(at)) && (!ev.joined || joinedToday(state, a, at) >= ev.joined) && (!ev.buried || buriedToday(a, at) >= ev.buried));
     if (by.length) trigger(state, world, ev, at, { by: by.map((a) => a.id), lands: [] });
   }
 }
@@ -395,6 +395,25 @@ function fire(state: State, world: World, ev: EventDef, t: number, omened: boole
     } else if (eff.type === 'burn') {
       // Which of those who hurt them it falls on is the trap's, asked after the hour.
       if (cause.by?.length) (state.burns ??= []).push({ event: ev.id, amount: eff.amount, ...(eff.color ? { color: eff.color } : {}), by: cause.by, region: ev.region, t });
+    } else if (eff.type === 'exile_graveyard') {
+      for (const id of cause.by ?? []) {
+        const a = state.actors[id];
+        if (!a || a.dead) continue;
+        const spells = (a.graveyard ?? []).map((x) => spellDef(world, x)?.name ?? x);
+        const fallen = (a.fallen ?? []).map((x) => shortName(state.actors[x]?.name ?? state.tokens?.[x]?.name ?? x));
+        a.graveyard = [];
+        a.fallen = [];
+        const gone = [...spells, ...fallen];
+        addLog(state, {
+          kind: 'effect',
+          text: gone.length
+            ? `${josa(shortName(a.name), '이', '가')} 무덤에 둔 것들이 아가리 속으로 사라졌다: ${gone.join(', ')} (다시는 꺼내지도 되살리지도 못한다).`
+            : `${josa(shortName(a.name), '은', '는')} 무덤에 둔 것이 없어 삼켜질 것도 없었다.`,
+          regions: [a.region],
+          actors: [a.id],
+          t,
+        });
+      }
     } else if (eff.type === 'forget') {
       for (const id of cause.by ?? []) {
         const a = state.actors[id];

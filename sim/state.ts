@@ -154,6 +154,9 @@ export type Actor = {
   spells?: string[];
   // Spells they let go of (discarded): their graveyard.
   graveyard?: string[];
+  // How many went into their graveyard today (spells let go of, retainers who died serving them):
+  // Ravenous Trap's "three or more cards put into their graveyard this turn".
+  buried?: { day: number; count: number };
   // A planeswalker's loyalty now, and the game day they last used a loyalty ability.
   loyalty?: number;
   loyaltyDay?: number;
@@ -521,6 +524,16 @@ export function outOfTime(state: State, a: Actor, t = state.minutes) {
   if (a.skipDay === day) return true;
   const extra = state.extraDays?.find((x) => x.day === day);
   return !!extra && extra.actor !== a.id;
+}
+
+// `n` more went into `a`'s graveyard at `t` (sim/state.ts `buried`).
+export function buryCount(a: Actor, n: number, t: number) {
+  if (n <= 0) return;
+  const day = gameDay(t);
+  a.buried = { day, count: (a.buried?.day === day ? a.buried.count : 0) + n };
+}
+export function buriedToday(a: Actor, t: number) {
+  return a.buried?.day === gameDay(t) ? a.buried.count : 0;
 }
 
 // Living actors standing in a region (not on the road, not out of time).

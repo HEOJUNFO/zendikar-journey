@@ -16,7 +16,7 @@ import { castSpell, spellDef } from './spells.ts';
 import { drawKnowledge } from './knowledge.ts';
 import { owesDiscard } from './discard.ts';
 import { landSealed, powersSealed, sealText } from './seal.ts';
-import { addLog, hasAbility, npcDef, outOfTime, present, ptOf, random, targetable, together, untargetableText } from './state.ts';
+import { addLog, buryCount, hasAbility, npcDef, outOfTime, present, ptOf, random, targetable, together, untargetableText } from './state.ts';
 import { nearestTile } from './tiles.ts';
 import type { Tile } from './tiles.ts';
 import type { Actor, Choice, ChoiceEffect, State } from './state.ts';
@@ -478,6 +478,7 @@ function discardSpell(state: State, world: World, a: Actor, t: number) {
   const id = hand[Math.floor(random(state) * hand.length)];
   a.spells = hand.filter((x) => x !== id);
   a.graveyard = [...(a.graveyard ?? []), id];
+  buryCount(a, 1, t);
   const s = spellDef(world, id);
   addLog(state, { kind: 'effect', text: `${josa(shortName(a.name), '이', '가')} ${josa(s?.name ?? id, '을', '를')} 불살라 날렸다.`, regions: [a.region], actors: [a.id], t });
   return s;
@@ -488,6 +489,7 @@ function discardSpell(state: State, world: World, a: Actor, t: number) {
 function wheel(state: State, world: World, a: Actor, draw: number, t: number, cause: string) {
   const had = a.spells ?? [];
   a.graveyard = [...(a.graveyard ?? []), ...had];
+  buryCount(a, had.length, t);
   a.spells = [];
   if (had.length) addLog(state, { kind: 'effect', text: `${josa(shortName(a.name), '은', '는')} 알던 주문을 모두 잊었다.`, regions: [a.region], actors: [a.id], t });
   drawKnowledge(state, world, a, draw, t, cause);

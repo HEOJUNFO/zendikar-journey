@@ -13,7 +13,7 @@ import { doubleLife, gainLife, lifeOf } from './life.ts';
 import { actorColors, COLOR_LABELS, manaAvailable, payMana, planPayment } from './mana.ts';
 import { HUNT_HUNGER, KILL_FEED, KO_ACTIVITY, KO_HOURS } from './rules.ts';
 import { powersSealed } from './seal.ts';
-import { addLog, awayText, hasAbility, needsOf, npcDef, outOfTime, present, protectedFrom, ptOf, random, together } from './state.ts';
+import { addLog, awayText, buryCount, hasAbility, needsOf, npcDef, outOfTime, present, protectedFrom, ptOf, random, together } from './state.ts';
 import type { Actor, State } from './state.ts';
 import { hasPowers, LAND_TYPE_LABELS, landTypes } from './world.ts';
 import type { Ability, LandType, World } from './world.ts';
@@ -63,7 +63,10 @@ export function die(state: State, a: Actor, t: number, cause: string) {
   a.dead = { at: t, cause };
   // A retainer who dies goes to their master's graveyard.
   const m = a.master ? state.actors[a.master] : undefined;
-  if (m) m.fallen = [...(m.fallen ?? []), a.id];
+  if (m) {
+    m.fallen = [...(m.fallen ?? []), a.id];
+    buryCount(m, 1, t);
+  }
   for (const r of retainersOf(state, a.id)) releaseRetainer(state, r, `${shortName(a.name)}의 죽음`);
   releaseItems(state, a, t);
   a.task = undefined;

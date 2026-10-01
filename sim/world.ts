@@ -473,6 +473,10 @@ const EffectSchema = z.discriminatedUnion('type', [
   // memories, at random: what they think of those they know (sim/relations.ts). Not for
   // morning (gm) events.
   z.strictObject({ type: z.literal('forget'), count: z.number().int().positive() }),
+  // "Exile all cards from target player's graveyard" (Ravenous Trap): whoever set it off loses
+  // their graveyard for good: the spells they let go of (no casting them from there again) and
+  // the retainers who died serving them (none to raise, none to count). Not for morning events.
+  z.strictObject({ type: z.literal('exile_graveyard') }),
   // "N damage divided as you choose among any number of target attacking creatures" (Arrow
   // Volley Trap): N damage among those who set it off; the LLM, as the trap, divides it after
   // the hour. Not for morning (gm) events.
@@ -668,6 +672,10 @@ export const EventSimSchema = z.discriminatedUnion('trigger', [
     // (Whiplash Trap: "if an opponent had two or more creatures enter the battlefield under
     // their control this turn"): retainers who joined, were born or were raised theirs today.
     joined: z.number().int().min(1).optional(),
+    // Only for those who had this many or more go into their graveyard this turn (Ravenous Trap:
+    // "if an opponent had three or more cards put into their graveyard from anywhere this turn"):
+    // spells let go of, retainers who died serving them (`Actor.buried`).
+    buried: z.number().int().min(1).optional(),
   }),
   // Goes off when a noncreature permanent in `region` is destroyed by someone else's doing (a
   // spell, an ability or another event): for now the land itself (law-permanents).
@@ -843,6 +851,7 @@ export type EventDef = {
   searched?: boolean; // enter
   claimed?: boolean; // enter
   joined?: number; // enter
+  buried?: number; // enter
   cards?: number; // drew
   attackers?: number; // attacked
   creatures?: number; // hurt
@@ -1020,8 +1029,8 @@ export function buildWorld(entities: RawEntity[]): { world: World; errors: strin
       if (rest.trigger !== 'hurt' && effects.some((x) => x.type === 'burn')) err(e.id, 'burn 은 trigger: hurt 사건에만 쓸 수 있음 (누가 누구에게 다쳤는지 알아야 함)');
       if (rest.trigger !== 'landfall' && effects.some((x) => x.type === 'destroy_lands'))
         err(e.id, 'destroy_lands 는 trigger: landfall 사건에만 쓸 수 있음 (누가 상륙한 땅인지 알아야 함)');
-      if (rest.trigger === 'gm' && effects.some((x) => x.type === 'lose_life' || x.type === 'damage_hand' || x.type === 'forget' || x.type === 'summon' || x.type === 'volley' || x.type === 'bounce'))
-        err(e.id, 'lose_life, damage_hand, forget, summon, volley, bounce 는 trigger: gm 사건에 쓸 수 없음 (누가 일으켰는지 알아야 함)');
+      if (rest.trigger === 'gm' && effects.some((x) => x.type === 'lose_life' || x.type === 'damage_hand' || x.type === 'forget' || x.type === 'exile_graveyard' || x.type === 'summon' || x.type === 'volley' || x.type === 'bounce'))
+        err(e.id, 'lose_life, damage_hand, forget, exile_graveyard, summon, volley, bounce 는 trigger: gm 사건에 쓸 수 없음 (누가 일으켰는지 알아야 함)');
       world.events.push({
         id: e.id,
         name: e.name,

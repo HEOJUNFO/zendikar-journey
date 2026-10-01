@@ -30,6 +30,7 @@ function triggerText(ev: EventDef) {
         ev.searched && '그날 페치로 땅을 찾아온 이',
         ev.claimed && '그날 아이템을 길들인 이',
         ev.joined && `그날 권속이 ${ev.joined} 이상 새로 든 이`,
+        ev.buried && `그날 무덤에 ${ev.buried} 이상을 보낸 이(잊은 주문, 섬기다 죽은 권속)`,
       ].filter(Boolean);
       return `${who.length ? who.join(', ') : '누군가'}가 그 자리에 발을 들일 때 터진다`;
     }
