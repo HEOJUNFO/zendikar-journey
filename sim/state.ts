@@ -133,6 +133,8 @@ export type Actor = {
   // seized can only wait.
   seized?: boolean;
   seizedUntil?: number;
+  // Whom they served before a hold with an end (`seizedUntil`): they go back to them after.
+  seizedFrom?: string;
   // A flyer's answer, for the day, to one who can't fly attacking them (sim/combat.ts): out
   // of their reach until `until` (evade), or standing to fight.
   evasions?: { from: string; evade: boolean; until: number }[];

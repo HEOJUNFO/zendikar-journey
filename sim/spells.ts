@@ -8,7 +8,7 @@ import { formatClock, untapTime } from './clock.ts';
 import { addFoe, dealDamage, destroy } from './combat.ts';
 import { gainLife, lifeOf, loseLife } from './life.ts';
 import { actorColors, addCosts, COLOR_LABELS, formatMana, manaAvailable, manaCapacity, payMana, planPayment } from './mana.ts';
-import { spawnWild } from './abilities.ts';
+import { grantAbility, spawnWild } from './abilities.ts';
 import { castEvents, destroyLand } from './step.ts';
 import { owesDiscard } from './discard.ts';
 import { crushOwed, demolishOptions, demolishOwed, relicsHere } from './relics.ts';
@@ -16,7 +16,7 @@ import { harrowGive, harrowOwed } from './harrow.ts';
 import { remember } from './relations.ts';
 import { copyable, replicate } from './replicate.ts';
 import { holdCast, reactionSpell } from './counter.ts';
-import { controlledCreatures, creatureOf, masterOf, retainersOf } from './retainers.ts';
+import { controlledCreatures, creatureOf, masterOf, retainersOf, seize } from './retainers.ts';
 import { addLog, buryCount, npcDef, present, ptOf, targetable, together, untargetableText } from './state.ts';
 import type { Actor, State } from './state.ts';
 import { sealedBy, sealText } from './seal.ts';
@@ -123,7 +123,7 @@ export function castTargets(state: State, a: Actor, s: SpellDef, world?: World) 
 // "Destroy target non<color> creature": why `x` can't be it, or null.
 function destroyBarred(world: World, state: State, s: SpellDef, x: Actor) {
   // "Target creature": a planeswalker is none.
-  if (s.effects.some((e) => e.type === 'damage' || e.type === 'destroy_target') && x.loyalty !== undefined) return `${josa(shortName(x.name), '은', '는')} 생물이 아니다 (플레인즈워커).`;
+  if (s.effects.some((e) => e.type === 'damage' || e.type === 'destroy_target' || e.type === 'threaten') && x.loyalty !== undefined) return `${josa(shortName(x.name), '은', '는')} 생물이 아니다 (플레인즈워커).`;
   const eff = s.effects.find((e) => e.type === 'destroy_target');
   if (eff?.type !== 'destroy_target') return null;
   if (eff.not_color && actorColors(state, world, x).includes(eff.not_color)) return `${josa(shortName(x.name), '은', '는')} ${COLOR_LABELS[eff.not_color]}색이라 고를 수 없다.`;
@@ -191,7 +191,7 @@ export function castableSpells(state: State, world: World, a: Actor, t: number) 
 
 // Whether a spell does harm (the target takes it as an attack).
 export function harmful(s: SpellDef) {
-  return s.effects.some((e) => e.type === 'lose_half_life' || e.type === 'damage' || e.type === 'destroy_target' || e.type === 'destroy_land' || e.type === 'discard' || e.type === 'discard_per_land' || e.type === 'damage_per_land');
+  return s.effects.some((e) => e.type === 'lose_half_life' || e.type === 'damage' || e.type === 'threaten' || e.type === 'destroy_target' || e.type === 'destroy_land' || e.type === 'discard' || e.type === 'discard_per_land' || e.type === 'damage_per_land');
 }
 
 // Pays and resolves. A harmful spell's target (if an NPC) takes it as an attack. Returns whether
@@ -283,6 +283,12 @@ export function resolveSpell(state: State, world: World, a: Actor, spellId: stri
       const controller = masterOf(state, target) ?? target;
       destroy(state, target, t, s.name, a);
       if (eff.lose_life && !controller.dead) loseLife(state, controller, eff.lose_life, t, s.name, a);
+    } else if (eff.type === 'threaten') {
+      const until = untapTime(t);
+      seize(state, target, a, t, until, `${josa(shortName(a.name), '이', '가')} 새긴 ${s.name}이(가) ${shortName(target.name)}의 이마에서 타오른다. ${josa(shortName(target.name), '은', '는')} 자정까지 ${shortName(a.name)}의 뜻대로 날뛴다.`);
+      if (eff.counters) target.plusCounters = (target.plusCounters ?? 0) + eff.counters;
+      delete target.boundUntil;
+      for (const ab of eff.abilities) grantAbility(state, target, ab, until, s.name, t);
     } else if (eff.type === 'damage') {
       dealDamage(state, target, eff.amount, t, s.name, false, a);
     } else if (eff.type === 'sacrifice_land') {

@@ -35,7 +35,7 @@ import { claimBlocked, claimItem, itemOwner, itemsAt, itemWhere } from './items.
 import { spendBlocked, storeBlocked } from './eons.ts';
 import { applyEnterDestroy, bondBlocked, enterDestroy, onEnter, bondLand, bondTargets, callForth, fetchTargets, fireTargets, firesOnBond, growBlocked, spawnWild, summonLibrary, useAbility } from './abilities.ts';
 import { DEPLETED_LABEL, DESTROYED_DAYS, TRAVEL_UNITS_PER_HOUR } from './rules.ts';
-import { bindRetainer, controlledCreatures, releaseRetainer, retainersOf, swayBlocked } from './retainers.ts';
+import { bindRetainer, controlledCreatures, releaseRetainer, retainersOf, swayBlocked, upkeepPossessions } from './retainers.ts';
 import { joinedToday } from './bounce.ts';
 import { centroid, eventTile, fixedTile, nearestTile, ownsTile, sameTile, TILE, tileCenter, tilesOf, tileSteps, tooSmall } from './tiles.ts';
 import { applyQuell, upkeepQuell } from './quell.ts';
@@ -4390,6 +4390,34 @@ test('the real Magma Rift is taught in the Teeth of Akoum', () => {
   const s = world.spells.find((x) => x.id === 'spl-magma-rift')!;
   assert.equal(s.learnAt, 'loc-teeth-of-akoum');
   assert.deepEqual(s.effects, [{ type: 'sacrifice_land' }, { type: 'damage', amount: 5 }]);
+});
+
+const mutiny: RawEntity = { id: 'spl-mm', kind: 'spell', name: '반란의 낙인', status: 'canon', sim: { cost: '{1}', speed: 'sorcery', learn_at: 'loc-a', effects: [{ type: 'threaten', counters: 1, abilities: ['haste'] }] } };
+
+test('mark of mutiny: the target serves the caster till midnight, with a +1/+1 counter for good, unbound and hasty; then back to whom it served', () => {
+  const world = fixture([mutiny, npc('chr-c', { ...npcSim('loc-a'), mana: { R: 2 } }), npc('chr-x', npcSim('loc-a', 'work', [2, 2])), npc('chr-m', npcSim('loc-a'))]);
+  const state = newState(world, { seed: 1, mode: 'observer' });
+  const [c, x, m] = ['chr-c', 'chr-x', 'chr-m'].map((id) => state.actors[id]);
+  x.tile = m.tile = c.tile;
+  x.master = m.id;
+  x.boundUntil = 1440;
+  c.spells = ['spl-mm'];
+  assert.equal(castSpell(state, world, c, 'spl-mm', x.id, false, state.minutes), true);
+  assert.equal(x.master, c.id);
+  assert.equal(x.boundUntil, undefined);
+  assert.deepEqual(ptOf(x), [3, 3]);
+  assert.ok(hasAbility(x, 'haste', state.minutes));
+  upkeepPossessions(state, 1440);
+  assert.equal(x.master, m.id);
+  assert.equal(x.seized, undefined);
+  assert.deepEqual(ptOf(x), [3, 3]); // the counter stays
+});
+
+test('the real Mark of Mutiny is taught in Akoum', () => {
+  const world = loadWorld();
+  const s = world.spells.find((x) => x.id === 'spl-mark-of-mutiny')!;
+  assert.equal(s.learnAt, 'loc-akoum');
+  assert.deepEqual(s.effects, [{ type: 'threaten', counters: 1, abilities: ['haste'] }]);
 });
 
 test('the real Demolish is taught in Oran-Rief', () => {

@@ -617,6 +617,10 @@ export const SpellSimSchema = z.strictObject({
         // "As an additional cost to cast this spell, sacrifice a land" (Magma Rift): cast, the caster
         // gives up a land they hold, one must (as Harrow's first step, sim/harrow.ts).
         z.strictObject({ type: z.literal('sacrifice_land') }),
+        // "Gain control of target creature until end of turn. Put N +1/+1 counters on it and untap
+        // it. It gains <abilities> until end of turn" (Mark of Mutiny): held as the caster's
+        // retainer until midnight, then back to whom it served (sim/retainers.ts `seize`).
+        z.strictObject({ type: z.literal('threaten'), counters: z.number().int().min(0).default(0), abilities: z.array(z.enum(ABILITIES)).default([]) }),
         // "Deals N damage to target creature" (Magma Rift): no planeswalker.
         z.strictObject({ type: z.literal('damage'), amount: z.number().int().positive() }),
         // "Destroy all creatures" (Day of Judgment): every being on the caster's tile, the caster

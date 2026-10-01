@@ -106,16 +106,25 @@ export function bindRetainer(state: State, world: World, a: Actor, master: Actor
 // "Gain control of target creature for as long as you control this" (Roil Elemental): `a` is
 // torn from whoever they served (or from themselves, the player too) and serves `master` until
 // `master` is gone. Not an Ally joining a party: control changes, nothing enters.
-export function seize(state: State, a: Actor, master: Actor, t: number, until?: number) {
+// A hold with an end (`until`: Sorin's possession, Mark of Mutiny) gives them back afterwards to
+// whom they served before (`seizedFrom`). `how`: the log's account of it.
+export function seize(state: State, a: Actor, master: Actor, t: number, until?: number, how?: string) {
+  const before = a.master && a.master !== master.id ? a.master : undefined;
   a.master = master.id;
   a.seized = true;
-  if (until !== undefined) a.seizedUntil = until;
-  else delete a.seizedUntil;
+  if (until !== undefined) {
+    a.seizedUntil = until;
+    if (before) a.seizedFrom = before;
+    else delete a.seizedFrom;
+  } else {
+    delete a.seizedUntil;
+    delete a.seizedFrom;
+  }
   a.task = undefined;
   remember(a, master, `나를 삼켜 끌고 다닌다 (${formatClock(t)})`, t);
   addLog(state, {
     kind: 'event',
-    text: `${josa(shortName(master.name), '이', '가')} 일으킨 소용돌이가 ${josa(shortName(a.name), '을', '를')} 삼켰다. ${josa(shortName(a.name), '은', '는')} 이제 ${shortName(master.name)}에게 휩쓸려 다닌다.`,
+    text: how ?? `${josa(shortName(master.name), '이', '가')} 일으킨 소용돌이가 ${josa(shortName(a.name), '을', '를')} 삼켰다. ${josa(shortName(a.name), '은', '는')} 이제 ${shortName(master.name)}에게 휩쓸려 다닌다.`,
     regions: [a.region],
     actors: [a.id, master.id],
     t,
@@ -127,14 +136,23 @@ export function releaseRetainer(state: State, a: Actor, why: string) {
   delete a.master;
   delete a.seized;
   delete a.seizedUntil;
+  delete a.seizedFrom;
   addLog(state, { kind: 'status', text: `${josa(shortName(a.name), '이', '가')} 권속에서 풀려났다 (${why}).`, regions: [a.region], actors: [a.id] });
 }
 
 // At a turn's start (00:00): a possession ends (their day is theirs again), or begins (Sorin's
 // "you control target player during that player's next turn").
 export function upkeepPossessions(state: State, t: number) {
-  for (const a of Object.values(state.actors))
-    if (a.seizedUntil !== undefined && a.seizedUntil <= t) releaseRetainer(state, a, `${shortName(state.actors[a.master ?? '']?.name ?? '')}의 지배가 끝남`);
+  for (const a of Object.values(state.actors)) {
+    if (a.seizedUntil === undefined || a.seizedUntil > t) continue;
+    const back = a.seizedFrom ? state.actors[a.seizedFrom] : undefined;
+    releaseRetainer(state, a, `${shortName(state.actors[a.master ?? '']?.name ?? '')}의 지배가 끝남`);
+    // Back to whom they served before (control returns), if they are still there to serve.
+    if (back && !back.dead && !a.dead) {
+      a.master = back.id;
+      addLog(state, { kind: 'status', text: `${josa(shortName(a.name), '이', '가')} 다시 ${shortName(back.name)}의 곁으로 돌아갔다.`, regions: [a.region], actors: [a.id, back.id], t });
+    }
+  }
   const due = (state.possessions ?? []).filter((x) => x.from <= t);
   state.possessions = (state.possessions ?? []).filter((x) => x.from > t);
   for (const x of due) {
