@@ -334,6 +334,7 @@ export function resolveSpell(state: State, world: World, a: Actor, spellId: stri
       for (const b of born) {
         b.master = a.id;
         if (eff.until_midnight) state.tokens![b.id].vanishAt = untapTime(t);
+        if (eff.types?.length) state.tokens![b.id].types = [...eff.types];
         if (kicked && eff.kicked_pump) b.pumps = [...(b.pumps ?? []), { pt: [...eff.kicked_pump], until: untapTime(t) }];
       }
       const kind = world.lore.find((l) => l.id === eff.creature)?.name ?? eff.creature;

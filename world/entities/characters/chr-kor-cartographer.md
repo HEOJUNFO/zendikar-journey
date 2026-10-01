@@ -5,7 +5,7 @@ name: 코르 지도 제작자
 name_en: Kor Cartographer
 summary: 마킨디 협곡의 코르 정찰병. 탐험이 아니라 잊힌 고향으로 돌아가는 길을 따라 걸으며, 함께하는 이를 먼 평원과 이어 준다
 status: canon
-sources: [ZEN-18]
+sources: [ZEN-18, ZEN-1]
 tags: [코르, 정찰병, 백색]
 links:
   - { to: law-mana-colors, rel: 백색의 존재 }
@@ -23,6 +23,7 @@ sim:
   mana: { W: 4 }           # 카드 {3}{W}
   needs: [energy, hunger]
   enter_search: { types: [plains], tapped: true }   # [카드] 들어올 때 평원 하나를 찾아 탭된 채 전장에
+  types: [kor]             # [카드] 코르 (ZEN-1 에서 더함: 무장의 달인이 센다)
 ---
 
 ## 설정

@@ -6710,3 +6710,34 @@ test('the real Aether Figment drifts on Jwar Isle: unblockable, swelling when ki
   assert.ok(hasAbility(f, 'unblockable', state.minutes));
   assert.deepEqual(npcDef(state, world, f.id)?.enterPump?.pt, [2, 2]);
 });
+
+test('Armament Master: each Equipment on it gives the other Kor its controller has +2/+2; not itself, not one who is no Kor', () => {
+  const master = { ...npcSim('loc-a', 'work', [2, 2]), types: ['kor'], equip_anthem: { kind: 'kor', pt: [2, 2] } };
+  const world = fixture([hook, npc('chr-am', master), npc('chr-m', npcSim('loc-a')), npc('chr-k', { ...npcSim('loc-a', 'work', [1, 1]), types: ['kor'] }), npc('chr-n', npcSim('loc-a', 'work', [1, 1]))]);
+  const state = newState(world, { seed: 1, mode: 'observer' });
+  const [am, k, n] = ['chr-am', 'chr-k', 'chr-n'].map((id) => state.actors[id]);
+  for (const x of [am, k, n]) x.master = 'chr-m';
+  anthemHour(state, world);
+  assert.deepEqual(ptOf(k), [1, 1]); // nothing borne yet
+  state.items = { 'itm-h': { name: '갈고리', owner: 'chr-m', counters: 0, carried: true, bearer: 'chr-am' } };
+  anthemHour(state, world);
+  assert.deepEqual(ptOf(k), [3, 3]);
+  assert.deepEqual(ptOf(n), [1, 1]);
+  assert.deepEqual(ptOf(am), [2, 2]);
+  // Taken off: gone at the next hour.
+  delete state.items['itm-h'].bearer;
+  anthemHour(state, world);
+  assert.deepEqual(ptOf(k), [1, 1]);
+});
+
+test('the real Armament Master keeps the Kor camp in Makindi; the world\'s Kor are Kor now, the Pledge\'s soldiers too', () => {
+  const world = loadWorld();
+  const state = newState(world, { seed: 1, mode: 'observer' });
+  const a = state.actors['chr-armament-master'];
+  assert.equal(a?.region, 'loc-makindi');
+  assert.deepEqual(npcDef(state, world, a.id)?.equipAnthem, { kind: 'kor', pt: [2, 2] });
+  for (const id of ['chr-devout-lightcaster', 'chr-kor-cartographer', 'chr-kor-hookmaster', 'chr-makindi-shieldmate', 'chr-kor-sanctifiers', 'chr-armament-master'])
+    assert.ok(npcDef(state, world, id)?.types?.includes('kor'), id);
+  const pledge = world.spells.find((s) => s.id === 'spl-conquerors-pledge')!.effects[0];
+  assert.ok(pledge.type === 'create_retainers' && pledge.types?.includes('kor'));
+});

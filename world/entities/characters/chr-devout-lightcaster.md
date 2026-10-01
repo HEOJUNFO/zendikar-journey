@@ -5,7 +5,7 @@ name: 독실한 빛술사
 name_en: Devout Lightcaster
 summary: 메마른 메사를 순례하는 캄사의 코르 사제. 두 손에서 금빛을 터뜨려 세상의 그림자를 몰아내고, 흑색의 것은 그녀를 다치게 하지 못한다
 status: canon
-sources: [ZEN-10]
+sources: [ZEN-10, ZEN-1]
 tags: [코르, 성직자, 캄사, 백색]
 links:
   - { to: law-mana-colors, rel: 백색의 존재 }
@@ -24,6 +24,7 @@ sim:
   needs: [energy, hunger]
   protection: [B]          # [카드] 흑색으로부터 보호
   enter_exile: { color: B } # [카드] 들어올 때 흑색 지속물 하나를 추방
+  types: [kor]             # [카드] 코르 (ZEN-1 에서 더함: 무장의 달인이 센다)
 ---
 
 ## 설정

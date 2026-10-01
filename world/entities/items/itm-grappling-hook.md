@@ -5,9 +5,10 @@ name: 갈고리
 name_en: Grappling Hook
 summary: 코르가 벼랑을 오르고 싸울 때 쓰는 사슬 달린 쌍갈고리. 지닌 이가 매면 두 번 내리치고, 걸린 적은 날아서 달아나지 못한다
 status: canon
-sources: [ZEN-203]
+sources: [ZEN-203, ZEN-1]
 tags: [마법물체, 장비, 무색, 코르]
 links:
+  - { to: chr-armament-master, rel: 무장의 달인 }
   - { to: law-permanents, rel: 마법물체 (장비) }
   - { to: loc-makindi, rel: 놓여 있는 협곡 }
   - { to: cre-kor-soldier, rel: 코르의 도구 }

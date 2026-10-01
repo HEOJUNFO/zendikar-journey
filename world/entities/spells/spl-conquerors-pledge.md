@@ -5,7 +5,7 @@ name: 정복자의 서약
 name_en: Conqueror's Pledge
 summary: 코르 전사들을 불러 모아 시전자에게 충성을 서약하게 하는 백색 주문. 마나를 더 치르면 두 배의 전사가 모인다
 status: canon
-sources: [ZEN-8]
+sources: [ZEN-8, ZEN-1]
 tags: [주문, 백색, 코르, 집중마법]
 links:
   - { to: cre-kor-soldier, rel: 불러 모으는 병사 }
@@ -20,7 +20,7 @@ sim:
   target: self             # 대상 없음: 시전자의 것
   kicker: { mana: "{6}" }  # [카드] 킥커 {6}
   effects:
-    - { type: create_retainers, creature: cre-kor-soldier, count: 6, kicked_count: 12, pt: [1, 1], colors: [W] }
+    - { type: create_retainers, creature: cre-kor-soldier, count: 6, kicked_count: 12, pt: [1, 1], colors: [W], types: [kor] }
 ---
 
 ## 설정

@@ -7,8 +7,8 @@
 // by the LLM, the player's as a pick they owe (sim/run.ts `choices`).
 import { die } from './combat.ts';
 import { itemDef } from './items.ts';
-import { controlledCreatures } from './retainers.ts';
-import { addLog, alive, ptOf } from './state.ts';
+import { controlledCreatures, masterOf } from './retainers.ts';
+import { addLog, alive, npcDef, ptOf } from './state.ts';
 import type { Actor, State } from './state.ts';
 import { josa, shortName } from './text.ts';
 import type { Ability, World } from './world.ts';
@@ -38,6 +38,20 @@ export function anthemHour(state: State, world: World) {
         const w = want.get(x.id) ?? { pt: [0, 0], abilities: [] };
         want.set(x.id, { pt: [w.pt[0] + eff.pt[0], w.pt[1] + eff.pt[1]], abilities: [...new Set([...w.abilities, ...eff.abilities])] });
       }
+    }
+  }
+  // "Other <type> creatures you control get +P/+T for each Equipment attached to this" (Armament
+  // Master): what it bears, for the others of that type its controller has.
+  for (const x of alive(state)) {
+    const ea = npcDef(state, world, x.id)?.equipAnthem;
+    if (!ea) continue;
+    const n = Object.values(state.items ?? {}).filter((s) => s.bearer === x.id && !s.gone).length;
+    if (!n) continue;
+    const controller = masterOf(state, x) ?? x;
+    for (const y of controlledCreatures(state, world, controller)) {
+      if (y.id === x.id || !(npcDef(state, world, y.id)?.types ?? []).includes(ea.kind)) continue;
+      const w = want.get(y.id) ?? { pt: [0, 0], abilities: [] };
+      want.set(y.id, { pt: [w.pt[0] + ea.pt[0] * n, w.pt[1] + ea.pt[1] * n], abilities: w.abilities });
     }
   }
   for (const a of alive(state)) {

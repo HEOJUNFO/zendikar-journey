@@ -19,9 +19,9 @@ export type Ability = (typeof ABILITIES)[number];
 export const ABILITY_LABELS: Record<Ability, string> = { fly: '비행', aquatic: '물에 삶', lifelink: '생명연결', vigilance: '경계', haste: '속공', trample: '돌진', defender: '수비대', shroud: '방어막', swampwalk: '늪걷기', forestwalk: '숲걷기', islandwalk: '섬걷기', indestructible: '파괴불가', intimidate: '위협', first_strike: '선제공격', double_strike: '이중 타격', cant_block: '막지 못함', bite: '물어뜯기', deathtouch: '죽음의 손길', reach: '도달', unblockable: '막을 수 없음' };
 // Creature types a card may name ("destroy target Angel"), and `artifact` for an artifact
 // creature (마법물체 생물: it may block an intimidating one).
-export const CREATURE_TYPES = ['angel', 'demon', 'artifact', 'elf', 'merfolk'] as const;
+export const CREATURE_TYPES = ['angel', 'demon', 'artifact', 'elf', 'merfolk', 'kor'] as const;
 export type CreatureType = (typeof CREATURE_TYPES)[number];
-export const CREATURE_TYPE_LABELS: Record<CreatureType, string> = { angel: '천사', demon: '악마', artifact: '마법물체', elf: '엘프', merfolk: '인어' };
+export const CREATURE_TYPE_LABELS: Record<CreatureType, string> = { angel: '천사', demon: '악마', artifact: '마법물체', elf: '엘프', merfolk: '인어', kor: '코르' };
 
 export const TERRAIN_IDS = [
   'grassland',
@@ -337,6 +337,9 @@ export const CharacterSimSchema = z.strictObject({
   // "{T}: Target player draws a card, then discards a card" (Reckless Scholar): whoever controls
   // it has one on its tile come to know a secret, then let go of a spell (sim/tapper.ts).
   tap_loot: z.boolean().default(false),
+  // "Other <type> creatures you control get +P/+T for each Equipment attached to this" (Armament
+  // Master: Kor, +2/+2): recounted every hour (sim/monument.ts `anthemHour`).
+  equip_anthem: z.strictObject({ kind: z.enum(CREATURE_TYPES), pt: PtBonusSchema }).optional(),
   // "Whenever this creature deals damage to an opponent, sacrifice a land" (Ruinous Minotaur): each
   // exchange it deals someone damage in, whoever controls it gives up a land they hold (sim/harrow.ts).
   hit_sacrifice_land: z.boolean().default(false),
@@ -703,6 +706,8 @@ export const SpellSimSchema = z.strictObject({
           colors: z.array(z.enum(COLORS)),
           // Keywords the tokens have (Elemental Appeal: trample, haste).
           abilities: z.array(z.enum(ABILITIES)).optional(),
+          // Creature types the tokens have (Conqueror's Pledge: Kor Soldiers).
+          types: z.array(z.enum(CREATURE_TYPES)).optional(),
           // "Exile it at the beginning of the next end step": gone at midnight.
           until_midnight: z.boolean().optional(),
           // "If kicked, that creature gets +P/+T until end of turn".
@@ -918,6 +923,7 @@ export type NpcDef = {
   followsOnly?: string;
   tapShield?: number;
   tapLoot?: boolean;
+  equipAnthem?: { kind: CreatureType; pt: [number, number] };
   hitSacrificeLand?: boolean;
   cantBlockUnless?: string;
   upkeepReturnLand?: boolean;
@@ -1152,7 +1158,7 @@ export function buildWorld(entities: RawEntity[]): { world: World; errors: strin
         err(e.id, `sim 오류: ${issues(sim.error)}`);
         continue;
       }
-      const { knows_colors, activated, wins_at_life, extra_combat, pump, empty_hand_pump, attack_pump, discard_on_hit, landfall_token, landfall_seize, landfall_lose, landfall_grant, landfall_life, landfall_drain, landfall_lure, enter_destroy, enter_drain, enter_draw, enter_search, enter_shatter, enter_exile, enter_tap, enter_damage, enter_pump, enter_reveal, upkeep_return_land, extra_lands, reveal_top, tap_foe, tap_draw_allies, engulf, tap_mana, upkeep_burn, counter_tokens, follows_only, cant_block_unless, tap_shield, tap_loot, hit_sacrifice_land, name, home_pos, ...rest } = sim.data;
+      const { knows_colors, activated, wins_at_life, extra_combat, pump, empty_hand_pump, attack_pump, discard_on_hit, landfall_token, landfall_seize, landfall_lose, landfall_grant, landfall_life, landfall_drain, landfall_lure, enter_destroy, enter_drain, enter_draw, enter_search, enter_shatter, enter_exile, enter_tap, enter_damage, enter_pump, enter_reveal, upkeep_return_land, extra_lands, reveal_top, tap_foe, tap_draw_allies, engulf, tap_mana, upkeep_burn, counter_tokens, follows_only, cant_block_unless, tap_shield, tap_loot, equip_anthem, hit_sacrifice_land, name, home_pos, ...rest } = sim.data;
 
       world.npcs.push({
         id: e.id,
@@ -1185,6 +1191,7 @@ export function buildWorld(entities: RawEntity[]): { world: World; errors: strin
         ...(follows_only ? { followsOnly: follows_only } : {}),
         ...(tap_shield ? { tapShield: tap_shield } : {}),
         ...(tap_loot ? { tapLoot: true } : {}),
+        ...(equip_anthem ? { equipAnthem: equip_anthem } : {}),
         ...(hit_sacrifice_land ? { hitSacrificeLand: true } : {}),
         ...(cant_block_unless ? { cantBlockUnless: cant_block_unless } : {}),
         ...(counter_tokens ? { counterTokens: { creature: counter_tokens.creature, pt: [...counter_tokens.pt], colors: [...counter_tokens.colors] } } : {}),

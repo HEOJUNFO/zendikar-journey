@@ -5,7 +5,7 @@ name: 코르 정화자들
 name_en: Kor Sanctifiers
 summary: 메마른 메사를 순례하는 코르 성직자 한 쌍. 소유를 여행의 짐으로 여겨, 들어서는 곳의 마법물체나 부여마법을 캄사의 빛으로 정화해 없앤다
 status: canon
-sources: [ZEN-22]
+sources: [ZEN-22, ZEN-1]
 tags: [코르, 성직자, 캄사, 백색]
 links:
   - { to: law-mana-colors, rel: 백색의 존재 }
@@ -24,6 +24,7 @@ sim:
   mana: { W: 3 }           # 카드 {2}{W}
   needs: [energy, hunger, coin]
   enter_shatter: { kicker: '{W}', relics: true }   # [카드] 킥커 {W}: 들어올 때 마법물체나 부여마법 하나를 파괴
+  types: [kor]             # [카드] 코르 (ZEN-1 에서 더함: 무장의 달인이 센다)
 ---
 
 ## 설정

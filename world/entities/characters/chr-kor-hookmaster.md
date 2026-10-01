@@ -5,7 +5,7 @@ name: 코르 갈고리술사
 name_en: Kor Hookmaster
 summary: 마킨디 협곡의 코르 여전사. 갈고리 달린 밧줄을 휘둘러 어디에 들어서든 맞서는 이 하나를 꽁꽁 묶어 버린다. 코르에게 밧줄은 유대지만, 남에게는 말 그대로다
 status: canon
-sources: [ZEN-20]
+sources: [ZEN-20, ZEN-1]
 tags: [코르, 병사, 백색, 밧줄]
 links:
   - { to: law-mana-colors, rel: 백색의 존재 }
@@ -25,6 +25,7 @@ sim:
   mana: { W: 3 }           # 카드 {2}{W}
   needs: [energy, hunger, coin]
   enter_tap: true          # [카드] 들어올 때 상대가 조종하는 생물을 탭, 다음 언탭단에 언탭하지 않음
+  types: [kor]             # [카드] 코르 (ZEN-1 에서 더함: 무장의 달인이 센다)
 ---
 
 ## 설정

@@ -5,9 +5,10 @@ name: 마킨디 협곡
 name_en: Makindi Trenches
 summary: 온두 본토를 가로지르는 높은 벽의 협곡 미로. 옛 코르 제국의 수도가 무너진 자리이고, 마나 섞인 바람이 협곡을 울리며, 코르가 벼랑에 밧줄을 걸고 산다
 status: canon
-sources: [ZEN-124, ZEN-203, ZEN-18, ZEN-78, ZEN-20, ZEN-26, ZEN-207]
+sources: [ZEN-124, ZEN-203, ZEN-18, ZEN-78, ZEN-20, ZEN-26, ZEN-207, ZEN-1]
 tags: [협곡, 코르, 폐허, 바람, 백색]
 links:
+  - { to: chr-armament-master, rel: 야영지의 무장의 달인 }
   - { to: cre-stonework-puma, rel: 북쪽 산길의 돌 퓨마 }
   - { to: chr-makindi-shieldmate, rel: 석상 풀밭의 코르 방패동료 }
   - { to: chr-kor-hookmaster, rel: 절벽 길목의 코르 갈고리술사 }
@@ -41,6 +42,8 @@ map: { in: loc-ondu, terrain: grassland, pos: [-0.2, 0.1], tiles: 70 }   # 기�
 - 바람타기 뱀장어(`cre-windrider-eel`, ZEN-78)가 북서쪽 떠 있는 바위들 사이를 헤엄친다 (비행 2/2 짐승, 상륙 +2/+2).
 
 - 석조 퓨마(`cre-stonework-puma`, ZEN-207)가 북쪽 절벽 산길에서 원정대의 짐을 진다 ([결정] 2026-10-01). 무색 마법물체 동료로, 길들이거나 30코인에 살 수 있다.
+
+- 무장의 달인(`chr-armament-master`, ZEN-1)이 한가운데 코르 야영지에서 장비를 손질한다 ([결정] 2026-10-01). 그가 장비를 맬수록 그와 함께하는 코르들이 +2/+2씩 강해진다.
 
 ## 미정/질문
 

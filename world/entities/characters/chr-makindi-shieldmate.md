@@ -5,7 +5,7 @@ name: 마킨디 방패동료
 name_en: Makindi Shieldmate
 summary: 마킨디 협곡의 석상 늘어선 풀밭을 지키는 코르 방패병. 먼저 덤비는 일은 없지만, 그에게 기대는 동료가 늘수록 더 굳건해져 무리를 덮치는 자를 막아선다
 status: canon
-sources: [ZEN-26]
+sources: [ZEN-26, ZEN-1]
 tags: [코르, 병사, 동료, 백색, 방패]
 links:
   - { to: law-mana-colors, rel: 백색의 존재 }
@@ -29,6 +29,7 @@ sim:
   hireable: true           # [결정] 2026-10-01: 용병으로도. 마나 값 3 × 10 = 30코인
   rally:
     - type: counter_self   # [카드] 이것이나 다른 동료가 들어올 때 이것에 +1/+1 카운터
+  types: [kor]             # [카드] 코르 (ZEN-1 에서 더함: 무장의 달인이 센다)
 ---
 
 ## 설정
