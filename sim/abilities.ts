@@ -755,7 +755,9 @@ export function searchTargets(state: State, world: World, a: Actor, types: reado
 // day); tapped, it gives no mana today.
 export function applySearch(state: State, world: World, a: Actor, landId: string, sourceId: string, t: number) {
   const source = state.actors[sourceId];
-  const search = source && npcDef(state, world, source.id)?.enterSearch;
+  // Kor Cartographer's on arriving, or Frontier Guide's when tapped (always tapped: no mana today).
+  const def = source && npcDef(state, world, source.id);
+  const search = def?.enterSearch ?? (def?.tapSearch && { types: def.tapSearch.types, tapped: true });
   if (!search || !searchTargets(state, world, a, search.types).some((r) => r.id === landId)) return;
   addLog(state, {
     kind: 'status',

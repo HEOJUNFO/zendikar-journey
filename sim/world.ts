@@ -337,6 +337,9 @@ export const CharacterSimSchema = z.strictObject({
   // "{T}: Target player draws a card, then discards a card" (Reckless Scholar): whoever controls
   // it has one on its tile come to know a secret, then let go of a spell (sim/tapper.ts).
   tap_loot: z.boolean().default(false),
+  // "<cost>, {T}: Search your library for a basic land card, put it onto the battlefield tapped"
+  // (Frontier Guide): whoever controls it pays and bonds from afar with a basic land (sim/tapper.ts).
+  tap_search: z.strictObject({ cost: CostSchema, types: z.array(z.enum(LAND_TYPES)).min(1) }).optional(),
   // "Other <type> creatures you control get +P/+T for each Equipment attached to this" (Armament
   // Master: Kor, +2/+2): recounted every hour (sim/monument.ts `anthemHour`).
   equip_anthem: z.strictObject({ kind: z.enum(CREATURE_TYPES), pt: PtBonusSchema }).optional(),
@@ -937,6 +940,7 @@ export type NpcDef = {
   followsOnly?: string;
   tapShield?: number;
   tapLoot?: boolean;
+  tapSearch?: { cost: ManaCost; costText: string; types: LandType[] };
   equipAnthem?: { kind: CreatureType; pt: [number, number] };
   hitSacrificeLand?: boolean;
   cantBlockUnless?: string;
@@ -1176,7 +1180,7 @@ export function buildWorld(entities: RawEntity[]): { world: World; errors: strin
         err(e.id, `sim 오류: ${issues(sim.error)}`);
         continue;
       }
-      const { knows_colors, activated, wins_at_life, extra_combat, pump, empty_hand_pump, attack_pump, discard_on_hit, landfall_token, landfall_seize, landfall_lose, landfall_grant, landfall_life, landfall_drain, landfall_lure, landfall_return, drain_on_join, haste_low_life, enter_destroy, enter_drain, enter_draw, enter_search, enter_shatter, enter_exile, enter_tap, enter_damage, enter_pump, enter_reveal, upkeep_return_land, extra_lands, reveal_top, tap_foe, tap_draw_allies, engulf, tap_mana, upkeep_burn, counter_tokens, follows_only, cant_block_unless, tap_shield, tap_loot, equip_anthem, hit_sacrifice_land, name, home_pos, ...rest } = sim.data;
+      const { knows_colors, activated, wins_at_life, extra_combat, pump, empty_hand_pump, attack_pump, discard_on_hit, landfall_token, landfall_seize, landfall_lose, landfall_grant, landfall_life, landfall_drain, landfall_lure, landfall_return, drain_on_join, haste_low_life, enter_destroy, enter_drain, enter_draw, enter_search, enter_shatter, enter_exile, enter_tap, enter_damage, enter_pump, enter_reveal, upkeep_return_land, extra_lands, reveal_top, tap_foe, tap_draw_allies, engulf, tap_mana, upkeep_burn, counter_tokens, follows_only, cant_block_unless, tap_shield, tap_loot, tap_search, equip_anthem, hit_sacrifice_land, name, home_pos, ...rest } = sim.data;
 
       world.npcs.push({
         id: e.id,
@@ -1209,6 +1213,7 @@ export function buildWorld(entities: RawEntity[]): { world: World; errors: strin
         ...(follows_only ? { followsOnly: follows_only } : {}),
         ...(tap_shield ? { tapShield: tap_shield } : {}),
         ...(tap_loot ? { tapLoot: true } : {}),
+        ...(tap_search ? { tapSearch: { cost: parseManaCost(tap_search.cost)!, costText: tap_search.cost, types: tap_search.types } } : {}),
         ...(equip_anthem ? { equipAnthem: equip_anthem } : {}),
         ...(hit_sacrifice_land ? { hitSacrificeLand: true } : {}),
         ...(cant_block_unless ? { cantBlockUnless: cant_block_unless } : {}),

@@ -26,7 +26,7 @@ import { applySacrament } from './sacrament.ts';
 import type { SacramentEffect } from './sacrament.ts';
 import { loremastersOf, recallBlocked, recallCount } from './loremaster.ts';
 import { biteable, readyBiter } from './bite.ts';
-import { readyTapper, tapAmount, tapTargetable } from './tapper.ts';
+import { readyTapper, tapAmount, tapBlocked, tapTargetable } from './tapper.ts';
 import { altarOf } from './altar.ts';
 import type { TapPower } from './tapper.ts';
 import { crumble, sacrifice, sacrificeDefault } from './monument.ts';
@@ -1314,6 +1314,7 @@ async function prepare(state: State, world: World, llm: Llm): Promise<string | n
           bite: biteInput(state, a),
           shield: tapInput(state, world, a, 'shield'),
           loot: tapInput(state, world, a, 'loot'),
+          scout: tapBlocked(state, world, a, 'scout', a.id, state.minutes) ? undefined : tapInput(state, world, a, 'scout'),
           altar: altarInput(state, world, a),
           fetch: fetchInput(state, world, a),
           court: courtInput(state, world, a),

@@ -65,6 +65,9 @@ export const ActionSchema = z.discriminatedUnion('type', [
   // Have a Reckless Scholar you control tell `to` (yourself if none), one standing with it, what it
   // has heard: they come to know a secret, then let go of a spell. It is tapped until midnight.
   z.object({ type: z.literal('loot'), to: z.string().optional() }),
+  // Have a Frontier Guide you control find you the way to a basic land: pay its cost; it is tapped
+  // until midnight, and you may bond from afar with a basic land you don't hold yet.
+  z.object({ type: z.literal('scout') }),
   // Offer `to`, one who serves you standing with you, at your Carnage Altar (before it): they die,
   // you come to know a secret.
   z.object({ type: z.literal('altar'), to: z.string() }),
@@ -270,6 +273,14 @@ export function startAction(state: State, world: World, action: Action): string 
       const name = shortName(b.name);
       task = { kind: 'bite', activity: `${name} 물어뜯기`, emoji: '🦷', until: until(BITE_HOURS), who: b.id };
       text = biter.id === p.id ? `포식 충동에 몸을 맡겨 ${josa(name, '을', '를')} 물어뜯으려 한다. 자정까지 묶인다.` : `${josa(shortName(biter.name), '이', '가')} ${josa(name, '을', '를')} 물어뜯게 한다.`;
+      break;
+    }
+    case 'scout': {
+      const why = tapBlocked(state, world, p, 'scout', p.id, t);
+      if (why) return why;
+      const w = readyTapper(state, world, p, 'scout', t)!;
+      task = { kind: 'scout', activity: '길잡이와 길 찾기', emoji: '🧭', until: until(TAP_HOURS) };
+      text = `${josa(shortName(w.name), '이', '가')} 아무도 찾아보지 않은 길을 더듬는다. 아직 유대 없는 기본 땅 하나와 멀리서 이어질 수 있다.`;
       break;
     }
     case 'shield':

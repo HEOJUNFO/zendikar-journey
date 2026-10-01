@@ -86,7 +86,7 @@ export function step(state: State, placed: World) {
     actorHour(state, world, a, t);
     // A timed task done: the player's action, or an NPC's bonding, taming or keeping days.
     const done = a.task?.until !== undefined && a.task.until <= t + STEP_MINUTES && !a.travel;
-    const timed = ['bond', 'claim', 'equip', 'store_day', 'spend_day', 'grow', 'fetch', 'learn', 'cast', 'court', 'hire', 'recall', 'bite', 'shield', 'loot', 'altar'];
+    const timed = ['bond', 'claim', 'equip', 'store_day', 'spend_day', 'grow', 'fetch', 'learn', 'cast', 'court', 'hire', 'recall', 'bite', 'shield', 'loot', 'scout', 'altar'];
     if (done && (a.kind === 'player' || timed.includes(a.task!.kind))) {
       const at = t + STEP_MINUTES;
       if (a.task!.kind === 'bond') bondLand(state, world, a, at, a.region, a.task!.target);
@@ -98,7 +98,7 @@ export function step(state: State, placed: World) {
       if (a.task!.kind === 'spend_day' && a.task!.land) spendDay(state, world, a, a.task!.land, at);
       if (a.task!.kind === 'grow' && a.task!.land) growEntered(state, world, a, a.task!.land, at);
       if (a.task!.kind === 'recall') recall(state, world, a, at);
-      if (a.task!.kind === 'shield' || a.task!.kind === 'loot') useTap(state, world, a, a.task!.kind, a.task!.who, at);
+      if (a.task!.kind === 'shield' || a.task!.kind === 'loot' || a.task!.kind === 'scout') useTap(state, world, a, a.task!.kind, a.task!.who, at);
       if (a.task!.kind === 'altar') sacrificeAtAltar(state, world, a, a.task!.who, at);
       // An NPC's spell: whom it falls on is asked of the LLM after the hour (the player's was cast as they began).
       if (a.task!.kind === 'cast' && a.kind === 'npc' && a.task!.spell) readyCast(state, world, a, a.task!.spell, at);
@@ -762,10 +762,10 @@ function npcTask(state: State, world: World, a: Actor, t: number): Task | undefi
     : block.kind === 'grow' ? growBlocked(state, world, a, land!.id, t)
     : block.kind === 'recall' ? recallBlocked(state, world, a, t)
     : block.kind === 'bite' ? biteBlocked(state, world, a, block.who, t)
-    : block.kind === 'shield' || block.kind === 'loot' ? tapBlocked(state, world, a, block.kind, block.who, t, false)
+    : block.kind === 'shield' || block.kind === 'loot' || block.kind === 'scout' ? tapBlocked(state, world, a, block.kind, block.kind === 'scout' ? undefined : block.who, t, false)
     : block.kind === 'altar' ? altarBlocked(state, world, a, block.who, t, false)
     : null;
-  const timed = ['bond', 'claim', 'equip', 'store_day', 'spend_day', 'grow', 'fetch', 'learn', 'cast', 'court', 'hire', 'recall', 'bite', 'shield', 'loot', 'altar'];
+  const timed = ['bond', 'claim', 'equip', 'store_day', 'spend_day', 'grow', 'fetch', 'learn', 'cast', 'court', 'hire', 'recall', 'bite', 'shield', 'loot', 'scout', 'altar'];
   if (!cannot && timed.includes(block.kind) && a.task?.kind === block.kind) return a.task;
   const task: Task =
     block.kind === 'work' && landUnusable(state, a.region)
@@ -782,8 +782,8 @@ function npcTask(state: State, world: World, a: Actor, t: number): Task | undefi
             ? { kind: 'recall', activity: block.activity, emoji: block.emoji, until: t + RECALL_HOURS * 60 }
           : block.kind === 'bite'
             ? { kind: 'bite', activity: block.activity, emoji: block.emoji, until: t + BITE_HOURS * 60, who: block.who }
-          : block.kind === 'shield' || block.kind === 'loot'
-            ? { kind: block.kind, activity: block.activity, emoji: block.emoji, until: t + TAP_HOURS * 60, who: block.who }
+          : block.kind === 'shield' || block.kind === 'loot' || block.kind === 'scout'
+            ? { kind: block.kind, activity: block.activity, emoji: block.emoji, until: t + TAP_HOURS * 60, who: block.kind === 'scout' ? undefined : block.who }
           : block.kind === 'altar'
             ? { kind: 'altar', activity: block.activity, emoji: block.emoji, until: t + ALTAR_HOURS * 60, who: block.who }
           : block.kind === 'attack' || (block.kind === 'social' && block.who)

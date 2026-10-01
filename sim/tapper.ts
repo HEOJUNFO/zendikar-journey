@@ -10,30 +10,35 @@
 // - loot (Reckless Scholar, `sim.tap_loot`): "Target player draws a card, then discards a card":
 //   they come to know a secret of the world, then let go of a spell of theirs, their pick
 //   (sim/knowledge.ts, sim/discard.ts; with no spell, nothing goes).
+// - scout (Frontier Guide, `sim.tap_search`): "<cost>, {T}: Search your library for a basic land,
+//   put it onto the battlefield tapped": no one else, its controller pays and may bond from afar
+//   with a basic land of the world they don't hold yet, as Kor Cartographer's (sim/abilities.ts
+//   `applySearch`: not their land for the day, no mana today).
 import { gameDay, untapTime } from './clock.ts';
 import { down } from './combat.ts';
 import { owesDiscard } from './discard.ts';
 import { drawKnowledge } from './knowledge.ts';
-import { creatureColors } from './mana.ts';
+import { creatureColors, manaAvailable, payMana, planPayment } from './mana.ts';
+import { searchTargets } from './abilities.ts';
 import { retainersOf } from './retainers.ts';
 import { powersSealed } from './seal.ts';
 import { addLog, npcDef, outOfTime, targetable, together, untargetableText } from './state.ts';
-import type { Actor, State } from './state.ts';
+import type { Actor, Choice, State } from './state.ts';
 import { josa, shortName } from './text.ts';
 import type { NpcDef, World } from './world.ts';
 
-export type TapPower = 'shield' | 'loot';
-export const TAP_POWERS: TapPower[] = ['shield', 'loot'];
+export type TapPower = 'shield' | 'loot' | 'scout';
+export const TAP_POWERS: TapPower[] = ['shield', 'loot', 'scout'];
 
 // Hours it takes.
 export const TAP_HOURS = 1;
 
 // How much of the power `def` has (0: none).
 function powerOf(def: NpcDef | undefined, power: TapPower) {
-  return (power === 'shield' ? def?.tapShield : def?.tapLoot ? 1 : 0) ?? 0;
+  return (power === 'shield' ? def?.tapShield : power === 'loot' ? (def?.tapLoot ? 1 : 0) : def?.tapSearch ? 1 : 0) ?? 0;
 }
 
-const NONE: Record<TapPower, string> = { shield: '가호를 걸 영혼이 없다.', loot: '부릴 학자가 없다.' };
+const NONE: Record<TapPower, string> = { shield: '가호를 걸 영혼이 없다.', loot: '부릴 학자가 없다.', scout: '부릴 길잡이가 없다.' };
 
 // Those with the power `a` controls: themselves (serving no one) and those who serve them.
 export function tappersOf(state: State, world: World, a: Actor, power: TapPower) {
@@ -60,6 +65,16 @@ export function tapBlocked(state: State, world: World, a: Actor, power: TapPower
   if (!theirs.length) return NONE[power];
   const b = state.actors[whoId ?? a.id];
   if (!b || b.dead) return '그런 이는 없다.';
+  // The scout's is for its controller alone, and costs mana.
+  if (power === 'scout') {
+    if (b.id !== a.id) return '길잡이는 조종하는 이에게만 길을 찾아 준다.';
+    const w = readyTapper(state, world, a, power, t);
+    if (!w) return `${josa(shortName(theirs[0].name), '은', '는')} 지금 쓸 수 없다 (이미 묶였거나 힘이 봉인됨).`;
+    const ts = npcDef(state, world, w.id)!.tapSearch!;
+    if (!planPayment(manaAvailable(state, world, a, t), ts.cost)) return `마나가 모자라다 (${ts.costText}).`;
+    if (!searchTargets(state, world, a, ts.types).length) return '이을 수 있는 기본 땅이 없다.';
+    return null;
+  }
   const w = readyTapper(state, world, a, power, t, here ? b : undefined) ?? readyTapper(state, world, a, power, t);
   if (!w) return `${josa(shortName(theirs[0].name), '은', '는')} 지금 쓸 수 없다 (이미 묶였거나 힘이 봉인됨).`;
   if (outOfTime(state, b, t)) return `${josa(shortName(b.name), '은', '는')} 시간 밖에 있다. 닿지 않는다.`;
@@ -76,6 +91,7 @@ export function tapAmount(state: State, world: World, w: Actor, power: TapPower)
 
 // The power: the creature is tapped, and it falls on `whoId` (themselves if none).
 export function useTap(state: State, world: World, a: Actor, power: TapPower, whoId: string | undefined, t: number) {
+  if (power === 'scout') return scout(state, world, a, t);
   const b = state.actors[whoId ?? a.id];
   const w = b && readyTapper(state, world, a, power, t, b);
   if (!b || !w || !tapTargetable(state, world, w, b, t)) {
@@ -93,6 +109,23 @@ export function useTap(state: State, world: World, a: Actor, power: TapPower, wh
   addLog(state, { kind: 'status', text: `${josa(x, '이', '가')} ${y}${b.id === w.id ? '(자신)' : ''}에게 주워들은 것을 늘어놓는다. 금을 거르려면 모래도 버려야 한다. ${josa(x, '은', '는')} 자정까지 묶인다.`, regions: [w.region], actors: [w.id, b.id, a.id], t });
   drawKnowledge(state, world, b, 1, t, `${x}의 이야기`);
   owesDiscard(state, world, b, `${x}의 이야기`, t);
+}
+
+// Frontier Guide: paid and tapped, it shows its controller the ways to the basic lands they don't
+// hold yet; which (if any) is theirs to pick (the player now, an NPC by the LLM after the hour).
+function scout(state: State, world: World, a: Actor, t: number) {
+  const w = readyTapper(state, world, a, 'scout', t);
+  if (!w || tapBlocked(state, world, a, 'scout', a.id, t)) {
+    addLog(state, { kind: 'status', text: `${shortName(a.name)}: 길잡이가 길을 찾지 못했다.`, regions: [a.region], actors: [a.id], t });
+    return;
+  }
+  const ts = npcDef(state, world, w.id)!.tapSearch!;
+  payMana(state, world, a, ts.cost, t);
+  w.boundUntil = untapTime(t);
+  addLog(state, { kind: 'status', text: `${josa(shortName(w.name), '이', '가')} 힘(${ts.costText})을 들여 아무도 찾아보지 않은 길을 더듬는다. ${josa(shortName(w.name), '은', '는')} 자정까지 묶인다.`, regions: [w.region], actors: [w.id, a.id], t });
+  const candidates = searchTargets(state, world, a, ts.types).map((r) => r.id);
+  const owed: Choice = { by: a.id, land: a.region, effect: { type: 'search', source: w.id }, candidates, optional: true, t };
+  (a.kind === 'player' ? (state.asks ??= []) : (state.choices ??= [])).push(owed);
 }
 
 // Damage `a` would take, less what their ward prevents today (the ward spent that much).

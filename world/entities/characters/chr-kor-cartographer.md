@@ -5,9 +5,10 @@ name: 코르 지도 제작자
 name_en: Kor Cartographer
 summary: 마킨디 협곡의 코르 정찰병. 탐험이 아니라 잊힌 고향으로 돌아가는 길을 따라 걸으며, 함께하는 이를 먼 평원과 이어 준다
 status: canon
-sources: [ZEN-18, ZEN-1]
+sources: [ZEN-18, ZEN-1, ZEN-161]
 tags: [코르, 정찰병, 백색]
 links:
+  - { to: chr-frontier-guide, rel: 같은 '잊힌 길' (값을 치르고 탭) }
   - { to: law-mana-colors, rel: 백색의 존재 }
   - { to: cre-kor-soldier, rel: 같은 코르 }
   - { to: loc-makindi, rel: 사는 곳 (옛 코르 제국의 수도) }

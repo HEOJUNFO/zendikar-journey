@@ -17,7 +17,8 @@ import type { TapPower } from '../sim/tapper.ts';
 // The buttons for a creature's power on someone (sim/tapper.ts).
 const TAP_UI: Record<TapPower, { emoji: string; self: string; other: string; title: string }> = {
   shield: { emoji: '🕯️', self: '자신에게 가호', other: '가호', title: '오늘 받을 다음 피해를 막는다 (영혼은 자정까지 묶임)' },
-  loot: { emoji: '🧭', self: '학자의 이야기 듣기', other: '학자의 이야기', title: '숨은 것 하나를 알게 되고 주문 하나를 잊는다 (학자는 자정까지 묶임)' },
+  loot: { emoji: '📖', self: '학자의 이야기 듣기', other: '학자의 이야기', title: '숨은 것 하나를 알게 되고 주문 하나를 잊는다 (학자는 자정까지 묶임)' },
+  scout: { emoji: '🧭', self: '길잡이와 길 찾기', other: '', title: '값을 치르고, 아직 유대 없는 기본 땅 하나와 멀리서 이어진다 (길잡이는 자정까지 묶임)' },
 };
 import { bondBlocked, bondTargets, enteredToday, fetchTargets, landDropBlocked, fireTargets, firesOnBond, growBlocked, growLand, targetedBondEffect } from '../sim/abilities.ts';
 import { BOND_HOURS } from '../sim/actions.ts';
@@ -712,7 +713,7 @@ export function CharacterControls(props: {
           <button
             disabled={busy || !!stuck || !!tapBlocked(state, world, p, power, p.id, state.minutes)}
             title={tapBlocked(state, world, p, power, p.id, state.minutes) ?? TAP_UI[power].title}
-            onClick={() => onAct({ type: power })}
+            onClick={() => onAct(power === 'scout' ? { type: 'scout' } : { type: power })}
           >
             {TAP_UI[power].self}
           </button>
@@ -758,13 +759,13 @@ export function CharacterControls(props: {
             </button>
           )}
           {target &&
-            TAP_POWERS.filter((power) => tappersOf(state, world, p, power).length > 0).map((power) => (
+            TAP_POWERS.filter((power) => power !== 'scout' && tappersOf(state, world, p, power).length > 0).map((power) => (
               <button
                 key={power}
                 type="button"
                 disabled={busy || !!stuck || !!tapBlocked(state, world, p, power, target.id, state.minutes)}
                 title={tapBlocked(state, world, p, power, target.id, state.minutes) ?? `${shortName(target.name)}: ${TAP_UI[power].title}`}
-                onClick={() => onAct({ type: power, to: target.id })}
+                onClick={() => power !== 'scout' && onAct({ type: power, to: target.id })}
               >
                 {TAP_UI[power].emoji} {TAP_UI[power].other}
               </button>

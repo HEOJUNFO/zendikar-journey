@@ -33,7 +33,7 @@ import { drawKnowledge, handSize, huntKnowledge, knownSecrets, secretsOf } from 
 import { letGo, revealHand } from './discard.ts';
 import { claimBlocked, claimItem, itemOwner, itemsAt, itemWhere } from './items.ts';
 import { spendBlocked, storeBlocked } from './eons.ts';
-import { applyEnterDestroy, applyLure, bondBlocked, enterDestroy, onEnter, bondLand, bondTargets, callForth, fetchTargets, fireTargets, firesOnBond, growBlocked, spawnWild, summonLibrary, useAbility } from './abilities.ts';
+import { applyEnterDestroy, applyLure, applySearch, bondBlocked, enterDestroy, onEnter, bondLand, bondTargets, callForth, fetchTargets, fireTargets, firesOnBond, growBlocked, spawnWild, summonLibrary, useAbility } from './abilities.ts';
 import { DEPLETED_LABEL, DESTROYED_DAYS, TRAVEL_UNITS_PER_HOUR } from './rules.ts';
 import { bindRetainer, controlledCreatures, controlsKind, courtBlocked, courtTargets, creatureOf, followBlocked, refusedToday, releaseRetainer, retainersOf, swayBlocked, upkeepPossessions } from './retainers.ts';
 import { joinedToday } from './bounce.ts';
@@ -51,7 +51,7 @@ import { applyHarrow } from './harrow.ts';
 import type { HarrowEffect } from './harrow.ts';
 import { applySacrament } from './sacrament.ts';
 import type { SacramentEffect } from './sacrament.ts';
-import { shielded, tapBlocked } from './tapper.ts';
+import { shielded, tapBlocked, useTap } from './tapper.ts';
 import type { Actor, State } from './state.ts';
 import { affectedRegions, buildWorld, descendantsOf, distance, landTypes, placeName, realmOf, region, travelHours, within } from './world.ts';
 import type { RawEntity } from './world.ts';
@@ -5653,7 +5653,7 @@ test('the real Nissa Revane bides in the Tangled Vale; the world\'s elves are th
   assert.equal(n.loyalty, 2);
   assert.deepEqual(npcDef(state, world, n.id)?.activated?.map((x) => x.loyalty), [1, 1, -7]);
   const elves = world.npcs.filter((x) => x.types?.includes('elf')).map((x) => x.id).sort();
-  assert.deepEqual(elves, ['chr-greenweaver-druid', 'chr-joraga-bard', 'chr-oracle-of-mul-daya', 'chr-tajuru-archer', 'chr-turntimber-ranger']);
+  assert.deepEqual(elves, ['chr-frontier-guide', 'chr-greenweaver-druid', 'chr-joraga-bard', 'chr-oracle-of-mul-daya', 'chr-tajuru-archer', 'chr-turntimber-ranger']);
 });
 
 test('a blaze counter: the target\'s latest unburning land catches fire; all bonded with it lose 1 life each midnight, even after the fireheart dies, until the land is destroyed', async () => {
@@ -6911,4 +6911,37 @@ test('the real Feast of Blood is taught in Malakir: two vampires needed', () => 
   const s = world.spells.find((x) => x.id === 'spl-feast-of-blood')!;
   assert.equal(s.learnAt, 'loc-malakir');
   assert.deepEqual(s.requires, { kind: 'cre-vampire', count: 2 });
+});
+
+test('Frontier Guide: its controller pays {3}{G} and taps it; they may bond from afar with a basic land, tapped (no mana today)', () => {
+  const guide = { ...npcSim('loc-a', 'work', [1, 1]), types: ['elf'], tap_search: { cost: '{3}{G}', types: ['plains', 'island', 'swamp', 'mountain', 'forest'] } };
+  const world = fixture([npc('chr-g', guide), npc('chr-m', { ...npcSim('loc-a'), mana: { G: 5 } }), npc('chr-p', npcSim('loc-a'))]);
+  const state = newState(world, { seed: 1, mode: 'observer' });
+  const [g, m] = ['chr-g', 'chr-m'].map((id) => state.actors[id]);
+  g.master = 'chr-m';
+  assert.ok(tapBlocked(state, world, m, 'scout', 'chr-g', state.minutes)?.includes('조종하는 이에게만'));
+  assert.equal(tapBlocked(state, world, m, 'scout', undefined, state.minutes), null);
+  useTap(state, world, m, 'scout', undefined, state.minutes);
+  assert.ok(g.boundUntil !== undefined);
+  assert.equal(manaAvailable(state, world, m, state.minutes).G, 1);
+  const c = state.choices!.find((x) => x.effect.type === 'search')!;
+  assert.ok(c.by === 'chr-m' && c.candidates.includes('loc-b'));
+  applySearch(state, world, m, 'loc-b', 'chr-g', state.minutes);
+  assert.ok(m.bonds?.includes('loc-b'));
+  assert.ok(m.landsTapped?.ids.includes('loc-b'));
+  // One with no mana to spare can't.
+  const w2 = fixture([npc('chr-g', guide), npc('chr-p', npcSim('loc-a'))]);
+  const s2 = newState(w2, { seed: 1, mode: 'observer' });
+  s2.actors['chr-g'].master = 'chr-p';
+  assert.ok(tapBlocked(s2, w2, s2.actors['chr-p'], 'scout', undefined, s2.minutes)?.includes('마나가 모자라다'));
+});
+
+test('the real Frontier Guide roams the Kazandu treetops: a Tajuru elf who finds the way to a basic land', () => {
+  const world = loadWorld();
+  const state = newState(world, { seed: 1, mode: 'observer' });
+  const g = state.actors['chr-frontier-guide'];
+  assert.equal(g?.region, 'loc-kazandu');
+  const def = npcDef(state, world, g.id)!;
+  assert.equal(def.tapSearch?.costText, '{3}{G}');
+  assert.ok(def.types?.includes('elf'));
 });

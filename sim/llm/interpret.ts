@@ -16,7 +16,7 @@ import { itemsAt, itemOwner } from '../items.ts';
 import { equipBlocked, equipmentOf, equipTargets } from '../equipment.ts';
 import { loremastersOf, recallBlocked, recallCount } from '../loremaster.ts';
 import { biteable, readyBiter } from '../bite.ts';
-import { readyTapper, TAP_POWERS, tapAmount, tapTargetable } from '../tapper.ts';
+import { readyTapper, TAP_POWERS, tapAmount, tapBlocked, tapTargetable } from '../tapper.ts';
 import { altarBlocked, altarOf, altarVictims } from '../altar.ts';
 import { enteredToday, fetchTargets, fireTargets, growBlocked, growLand, landDropBlocked, targetedBondEffect } from '../abilities.ts';
 import { topBlocked, topLand } from '../oracle.ts';
@@ -84,7 +84,10 @@ export async function interpret({ world, state, text }: InterpretInput): Promise
     if (victims.length) days.push(`- {"type":"altar","to":"<retainer id>"}  (offer one who serves them on ${altar.name}: that one dies, they come to know a hidden secret; 1 hour. Who: ${victims.map((x) => `${x.id} (${shortName(x.name)})`).join(', ')})`);
   }
   // A Noble Vestige or a Reckless Scholar they control: its power on one standing with it.
+  if (!tapBlocked(state, world, p, 'scout', p.id, state.minutes))
+    days.push(`- {"type":"scout"}  (tap ${shortName(readyTapper(state, world, p, 'scout', state.minutes)!.name)}, paying its cost: bond from afar with a basic land they don't hold yet, no mana from it today; 1 hour)`);
   for (const power of TAP_POWERS) {
+    if (power === 'scout') continue;
     const w = readyTapper(state, world, p, power, state.minutes);
     if (!w) continue;
     const near = Object.values(state.actors).filter((x) => (x.id === w.id || together(w, x)) && tapTargetable(state, world, w, x, state.minutes));

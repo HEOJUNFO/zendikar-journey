@@ -5,9 +5,10 @@ name: 타주루 궁수
 name_en: Tajuru Archer
 summary: 오란리프 우듬지에 매단 타주루 마을의 엘프 궁수. 짚라인을 타고 숲을 건너는 길잡이이며, 무리가 늘 때마다 하늘의 것을 쏘아 떨어뜨린다
 status: canon
-sources: [ZEN-185]
+sources: [ZEN-185, ZEN-161]
 tags: [엘프, 타주루, 궁수, 동료, 녹색]
 links:
+  - { to: chr-frontier-guide, rel: 같은 타주루 }
   - { to: law-mana-colors, rel: 녹색의 존재 }
   - { to: loc-oran-rief, rel: 우듬지의 타주루 마을 }
   - { to: law-allies, rel: 동료 }
