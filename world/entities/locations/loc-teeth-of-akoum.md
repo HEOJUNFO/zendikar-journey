@@ -5,9 +5,10 @@ name: 아쿰의 이빨
 name_en: Teeth of Akoum
 summary: 아쿰 북쪽을 가로지르는 눈 덮인 산맥. 용이 사냥하고 카르간 부족과 고블린 둥지가 산비탈에 매달리며, 그 아래 깊은 곳에 우긴의 눈이 잠들어 있다
 status: canon
-sources: [ZEN-120, ZEN-131, ZEN-152, ZEN-118, ZEN-148, ZEN-127]
+sources: [ZEN-120, ZEN-131, ZEN-152, ZEN-118, ZEN-148, ZEN-127, ZEN-136]
 tags: [산맥, 산, 용, 고블린, 적색]
 links:
+  - { to: spl-magma-rift, rel: 배우는 주문 (용암 균열) }
   - { to: chr-goblin-ruinblaster, rel: 남동쪽 기슭의 고블린 폐허폭파꾼 }
   - { to: loc-akoum, rel: 바깥 지역 }
   - { to: chr-chandra, rel: 우긴의 눈을 찾는 플레인즈워커 }

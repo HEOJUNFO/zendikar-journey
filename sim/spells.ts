@@ -93,7 +93,7 @@ export function castBlocked(state: State, world: World, a: Actor, spellId: strin
   if (s.effects.some((e) => e.type === 'copy_target') && !copyable(target)) return `${josa(shortName(target.name), '은', '는')} 생물이 아니다 (플레인즈워커). 복제할 수 없다.`;
   if (s.effects.some((e) => e.type === 'destroy_relics') && !relicsHere(state, world, a.region, a.tile).length) return '여기엔 부술 마법물체도 부여마법도 없다.';
   if (s.effects.some((e) => e.type === 'demolish') && !demolishOptions(state, world, a).length) return '여기엔 부술 마법물체도 땅도 없다.';
-  if (s.effects.some((e) => e.type === 'harrow') && !harrowGive(world, a).length) return `${josa(s.name, '은', '는')} 땅 하나를 내어 주어야 쓴다 (유대를 맺은 땅이 없다).`;
+  if (s.effects.some((e) => e.type === 'harrow' || e.type === 'sacrifice_land') && !harrowGive(world, a).length) return `${josa(s.name, '은', '는')} 땅 하나를 내어 주어야 쓴다 (유대를 맺은 땅이 없다).`;
   if (s.target !== 'self' && !targetable(target, t, spellColors(s))) return untargetableText(target, t, spellColors(s));
   if (!planPayment(manaAvailable(state, world, a, t), s.cost))
     return `마나가 모자라다 (${s.costText}, 지금 ${formatMana(manaAvailable(state, world, a, t))}).`;
@@ -122,9 +122,10 @@ export function castTargets(state: State, a: Actor, s: SpellDef, world?: World) 
 
 // "Destroy target non<color> creature": why `x` can't be it, or null.
 function destroyBarred(world: World, state: State, s: SpellDef, x: Actor) {
+  // "Target creature": a planeswalker is none.
+  if (s.effects.some((e) => e.type === 'damage' || e.type === 'destroy_target') && x.loyalty !== undefined) return `${josa(shortName(x.name), '은', '는')} 생물이 아니다 (플레인즈워커).`;
   const eff = s.effects.find((e) => e.type === 'destroy_target');
   if (eff?.type !== 'destroy_target') return null;
-  if (x.loyalty !== undefined) return `${josa(shortName(x.name), '은', '는')} 생물이 아니다 (플레인즈워커).`;
   if (eff.not_color && actorColors(state, world, x).includes(eff.not_color)) return `${josa(shortName(x.name), '은', '는')} ${COLOR_LABELS[eff.not_color]}색이라 고를 수 없다.`;
   return null;
 }
@@ -153,7 +154,7 @@ export function npcCastBlocked(state: State, world: World, a: Actor, spellId: st
   if (used !== undefined) return usedText(s, used);
   const by = sealedBy(state, a, s, t);
   if (by) return sealText(by, t);
-  if (s.effects.some((e) => e.type === 'harrow') && !harrowGive(world, a).length) return '내어 줄 땅이 없다.';
+  if (s.effects.some((e) => e.type === 'harrow' || e.type === 'sacrifice_land') && !harrowGive(world, a).length) return '내어 줄 땅이 없다.';
   if (!planPayment(manaAvailable(state, world, a, t), s.cost)) return `마나가 모자라다 (${s.costText}).`;
   return null;
 }
@@ -190,7 +191,7 @@ export function castableSpells(state: State, world: World, a: Actor, t: number) 
 
 // Whether a spell does harm (the target takes it as an attack).
 export function harmful(s: SpellDef) {
-  return s.effects.some((e) => e.type === 'lose_half_life' || e.type === 'destroy_target' || e.type === 'destroy_land' || e.type === 'discard' || e.type === 'discard_per_land' || e.type === 'damage_per_land');
+  return s.effects.some((e) => e.type === 'lose_half_life' || e.type === 'damage' || e.type === 'destroy_target' || e.type === 'destroy_land' || e.type === 'discard' || e.type === 'discard_per_land' || e.type === 'damage_per_land');
 }
 
 // Pays and resolves. A harmful spell's target (if an NPC) takes it as an attack. Returns whether
@@ -282,6 +283,11 @@ export function resolveSpell(state: State, world: World, a: Actor, spellId: stri
       const controller = masterOf(state, target) ?? target;
       destroy(state, target, t, s.name, a);
       if (eff.lose_life && !controller.dead) loseLife(state, controller, eff.lose_life, t, s.name, a);
+    } else if (eff.type === 'damage') {
+      dealDamage(state, target, eff.amount, t, s.name, false, a);
+    } else if (eff.type === 'sacrifice_land') {
+      const owed = harrowOwed(state, world, a, { type: 'harrow', spell: s.name, left: 0, given: false }, t);
+      if (owed) (state.choices ??= []).push(owed);
     } else if (eff.type === 'harrow') {
       const owed = harrowOwed(state, world, a, { type: 'harrow', spell: s.name, left: eff.count, given: false }, t);
       if (owed) (state.choices ??= []).push(owed);

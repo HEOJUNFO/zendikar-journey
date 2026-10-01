@@ -4363,6 +4363,35 @@ test('the real Hideous End is taught in the Guum Wilds', () => {
   assert.deepEqual(s.effects, [{ type: 'destroy_target', not_color: 'B', lose_life: 2 }]);
 });
 
+const magmaRift: RawEntity = { id: 'spl-mr', kind: 'spell', name: '용암 균열', status: 'canon', sim: { cost: '{1}', speed: 'sorcery', learn_at: 'loc-a', effects: [{ type: 'sacrifice_land' }, { type: 'damage', amount: 5 }] } };
+
+test('magma rift by the player: a land must be given up, and 5 damage to one there (no planeswalker); none held, it can\'t be cast', async () => {
+  const world = fixture([magmaRift, npc('chr-x', npcSim('loc-a', 'work', [0, 6])), being('chr-pw', { home: 'loc-a', abilities: [], pt: [0, 2], loyalty: 3 })]);
+  const state = character(world, 'loc-a');
+  const [p, x, pw] = [state.actors[PLAYER_ID], state.actors['chr-x'], state.actors['chr-pw']];
+  x.tile = pw.tile = p.tile;
+  p.spells = ['spl-mr'];
+  assert.match(castBlocked(state, world, p, 'spl-mr', x.id, false, state.minutes) ?? '', /내어 주어야/);
+  p.bonds = ['loc-a', 'loc-b'];
+  assert.match(castBlocked(state, world, p, 'spl-mr', pw.id, false, state.minutes) ?? '', /생물이 아니다/);
+  await act(state, world, { type: 'cast', spell: 'spl-mr', to: x.id, kick: false });
+  assert.ok(woundsOf(x, state.minutes) >= 5); // (and it may have fought back since)
+  if (!state.asks?.length) await act(state, world, { type: 'wait', hours: 1 });
+  const ask = state.asks![0];
+  assert.equal(ask.effect.type, 'harrow');
+  assert.equal(askOptions(state, world, ask).some((o) => o.pick === null), false);
+  await act(state, world, { type: 'choose', pick: 'loc-b' });
+  assert.deepEqual(p.bonds, ['loc-a']);
+  assert.equal(state.asks?.length ?? 0, 0);
+});
+
+test('the real Magma Rift is taught in the Teeth of Akoum', () => {
+  const world = loadWorld();
+  const s = world.spells.find((x) => x.id === 'spl-magma-rift')!;
+  assert.equal(s.learnAt, 'loc-teeth-of-akoum');
+  assert.deepEqual(s.effects, [{ type: 'sacrifice_land' }, { type: 'damage', amount: 5 }]);
+});
+
 test('the real Demolish is taught in Oran-Rief', () => {
   const world = loadWorld();
   const s = world.spells.find((x) => x.id === 'spl-demolish')!;
