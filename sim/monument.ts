@@ -1,13 +1,14 @@
 // Items that bless the creatures their owner controls, at a price (Eldrazi Monument): "creatures
 // you control get +P/+T and have <abilities>" (`anthem`), and "at the beginning of your upkeep,
-// sacrifice a creature; if you can't, sacrifice this" (`upkeep_sacrifice`). The creatures one
+// sacrifice a creature; if you can't, sacrifice this" (`upkeep_sacrifice`): the owner may give up
+// the item instead (user decision 2026-10-01). The creatures one
 // controls are themselves and their retainers, the player too (user decision 2026-10-01: one
 // rule everywhere); planeswalkers are no creatures. What is sacrificed is the owner's pick: an NPC's
 // by the LLM, the player's as a pick they owe (sim/run.ts `choices`).
 import { die } from './combat.ts';
 import { itemDef } from './items.ts';
 import { controlledCreatures } from './retainers.ts';
-import { addLog, alive } from './state.ts';
+import { addLog, alive, ptOf } from './state.ts';
 import type { Actor, State } from './state.ts';
 import { josa, shortName } from './text.ts';
 import type { Ability, World } from './world.ts';
@@ -60,12 +61,27 @@ export function upkeepSacrifice(state: State, world: World, t: number) {
     if (!owner || owner.dead) continue;
     const creatures = controlledCreatures(state, world, owner);
     if (!creatures.length) {
-      state.items![id] = { ...s, owner: undefined, gone: true };
-      addLog(state, { kind: 'event', text: `바칠 것이 없어 ${josa(def.name, '이', '가')} 무너져 사라졌다.`, regions: [owner.region], actors: [owner.id], scope: 'world', t });
+      crumble(state, world, owner, id, t, '바칠 것이 없어');
       continue;
     }
     (state.choices ??= []).push({ by: owner.id, land: owner.region, effect: { type: 'sacrifice', item: id }, candidates: creatures.map((x) => x.id), t });
   }
+}
+
+// The owner gives up the item itself instead (user decision 2026-10-01: they are a creature they
+// control, so "if you can't" would never come; they may let it go rather than give themselves).
+export function crumble(state: State, world: World, owner: Actor, itemId: string, t: number, why: string) {
+  const s = state.items?.[itemId];
+  if (!s || s.gone) return;
+  const name = itemDef(world, itemId)?.name ?? s.name;
+  state.items![itemId] = { ...s, owner: undefined, gone: true };
+  addLog(state, { kind: 'event', text: `${why} ${josa(name, '이', '가')} 무너져 사라졌다.`, regions: [owner.region], actors: [owner.id], scope: 'world', t });
+}
+
+// What a sacrifice owed comes to when no usable answer is given: the weakest of those who serve
+// them, or else the item itself (never themselves unasked).
+export function sacrificeDefault(state: State, owner: Actor, candidates: Actor[]) {
+  return [...candidates].filter((x) => x.id !== owner.id).sort((p, q) => ptOf(p)[1] - ptOf(q)[1] || p.id.localeCompare(q.id))[0];
 }
 
 export function sacrifice(state: State, world: World, x: Actor, itemId: string, t: number) {

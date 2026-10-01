@@ -20,7 +20,7 @@ import { cardLabel, discardOwed, handOf, letGo } from './discard.ts';
 import { applyShatter, crushRelic, demolish, demolishOptions, relicsHere, shatterOptions } from './relics.ts';
 import { loremastersOf, recallBlocked, recallCount } from './loremaster.ts';
 import { biteable, readyBiter } from './bite.ts';
-import { sacrifice } from './monument.ts';
+import { crumble, sacrifice, sacrificeDefault } from './monument.ts';
 import { answerTide } from './tide.ts';
 import { topLand } from './oracle.ts';
 import { strandedText } from './stranded.ts';
@@ -699,20 +699,24 @@ async function choices(state: State, world: World, llm: Llm) {
       await followChoice(state, world, llm, by, npc, candidates[0]);
       continue;
     }
-    // A creature owed to an item (Eldrazi Monument): one must be given. The LLM picks, as the
-    // owner; with no usable answer, the weakest.
+    // A creature owed to an item (Eldrazi Monument): one given, or the item let go (user decision
+    // 2026-10-01). The LLM picks, as the owner; with no usable answer, the weakest who serves
+    // them, or else the item goes (never themselves unasked).
     if (c.effect.type === 'sacrifice') {
       const item = c.effect.item;
+      const name = state.items?.[item]?.name ?? item;
       let pick: string | null = null;
-      if (llm.choose) {
+      if (llm.pick) {
         try {
-          pick = await llm.choose({ world, state, npc, candidates, what: `${state.items?.[item]?.name ?? item}이(가) 오늘의 제물을 요구한다. 당신이 부리는 생물(당신 자신도 든다) 가운데 하나를 바쳐야 한다. 바친 이는 죽는다` });
+          const options = [...candidates.map((x) => ({ id: x.id, label: x.id === by.id ? `${shortName(x.name)} (당신 자신: 죽는다)` : shortName(x.name) })), { id: item, label: `${name}을(를) 무너뜨려 내놓는다 (축복도 사라진다)` }];
+          pick = await llm.pick({ world, state, npc, what: `${name}이(가) 오늘의 제물을 요구한다. 당신이 부리는 생물(당신 자신도 든다) 가운데 하나를 바치거나(바친 이는 죽는다), ${josa(name, '을', '를')} 무너뜨려 내놓는다`, options });
         } catch (e) {
-          console.warn(`choose (sacrifice) for ${c.by} failed:`, e);
+          console.warn(`pick (sacrifice) for ${c.by} failed:`, e);
         }
       }
-      const x = candidates.find((y) => y.id === pick) ?? [...candidates].sort((p, q) => ptOf(p)[1] - ptOf(q)[1] || p.id.localeCompare(q.id))[0];
-      sacrifice(state, world, x, item, state.minutes);
+      const x = pick === item ? undefined : (candidates.find((y) => y.id === pick) ?? sacrificeDefault(state, by, candidates));
+      if (x) sacrifice(state, world, x, item, state.minutes);
+      else crumble(state, world, by, item, state.minutes, `${josa(shortName(by.name), '이', '가')} 제물 대신 내놓아`);
       continue;
     }
     // Ob Nixilis, bonding: whom (if anyone) he drains, growing for it.

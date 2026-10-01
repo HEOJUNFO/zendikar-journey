@@ -3118,8 +3118,9 @@ test('an Eldrazi Monument: its owner\'s creatures (themselves too, a creature ca
   // Midnight: the owner gives one.
   const asked: string[][] = [];
   state.minutes = 1440 - 60;
-  await advance(state, world, 2, { choose: async ({ npc, candidates }) => (asked.push([npc.id, ...candidates.map((c) => c.id).sort()]), 'chr-r2') });
-  assert.deepEqual(asked, [['chr-o', 'chr-o', 'chr-r1', 'chr-r2']]);
+  await advance(state, world, 2, { pick: async ({ npc, options }) => (asked.push([npc.id, ...options.map((o) => o.id).sort()]), 'chr-r2') });
+  // Themselves, those who serve them, or the monument itself (user decision 2026-10-01).
+  assert.deepEqual(asked, [['chr-o', 'chr-o', 'chr-r1', 'chr-r2', 'itm-mon']]);
   assert.ok(r2.dead);
   assert.ok(texts(state).some((t) => t.includes('기념비에 바쳐졌다')));
   // Released from it (the owner lost it), the blessing leaves them.
@@ -3144,8 +3145,14 @@ test('an Eldrazi Monument whose owner has nothing to give crumbles away; the pla
   state.minutes = 1440 - 60;
   await act(state, world, { type: 'wait', hours: 2 });
   assert.deepEqual(state.asks?.[0]?.candidates, [PLAYER_ID]);
-  await act(state, world, { type: 'choose', pick: PLAYER_ID });
-  assert.ok(state.actors[PLAYER_ID].dead && state.over);
+  // Or let the monument go instead (user decision 2026-10-01).
+  assert.ok(askOptions(state, world, state.asks![0]).some((o) => o.pick === 'itm-mon'));
+  const keep = structuredClone(state);
+  await act(state, world, { type: 'choose', pick: 'itm-mon' });
+  assert.ok(!state.actors[PLAYER_ID].dead);
+  assert.equal(state.items['itm-mon'].gone, true);
+  await act(keep, world, { type: 'choose', pick: PLAYER_ID });
+  assert.ok(keep.actors[PLAYER_ID].dead && keep.over);
   // With a retainer: the player gives it.
   const s2 = character(world, 'loc-a');
   s2.actors['chr-r'].master = PLAYER_ID;

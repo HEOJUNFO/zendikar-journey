@@ -9,7 +9,7 @@ import { crushOwed, crushRelic, demolish, demolishOptions, relicsHere } from './
 import { applyRally, rallyText, rallyWord } from './allies.ts';
 import { bindRetainer, refuse } from './retainers.ts';
 import { cardLabel, discardOwed, handOf, letGo } from './discard.ts';
-import { sacrifice } from './monument.ts';
+import { crumble, sacrifice, sacrificeDefault } from './monument.ts';
 import { applyQuell, permanentsOf, QUELL_KINDS, QUELL_LABELS, quellGive } from './quell.ts';
 import { castSpell } from './spells.ts';
 import { addLog, npcDef, player, together } from './state.ts';
@@ -37,7 +37,7 @@ export function askText(state: State, world: World, c: Choice) {
   }
   if (c.effect.type === 'cast' && c.effect.second) return `${world.spells.find((s) => s.id === (c.effect as { spell: string }).spell)?.name ?? ''}의 둘째 대상: 자신이나 곁의 권속 가운데 누구에게?`;
   if (c.effect.type === 'cast') return `${world.spells.find((s) => s.id === (c.effect as { spell: string }).spell)?.name ?? ''}을(를) 하나 더, 값 없이 걸 수 있다. 누구에게?`;
-  if (c.effect.type === 'sacrifice') return `${state.items?.[c.effect.item]?.name ?? c.effect.item}이(가) 오늘의 제물을 요구한다. 부리는 이 가운데 누구를 바칠까? (바친 이는 죽는다)`;
+  if (c.effect.type === 'sacrifice') return `${state.items?.[c.effect.item]?.name ?? c.effect.item}이(가) 오늘의 제물을 요구한다. 부리는 이(당신 자신도) 가운데 누구를 바칠까? (바친 이는 죽는다) 아니면 그것을 무너뜨려 내놓는다.`;
   if (c.effect.type === 'demolish') return `${c.effect.spell}: 이 자리의 마법물체 하나나 땅 하나를 부순다 (땅은 7일 동안 누구에게도 아무것도 내주지 않는다). 무엇을?`;
   if (c.effect.type === 'crush') return `${c.effect.spell}: 이 자리의 마법물체나 부여마법을 ${c.effect.first ? '부순다. 무엇을?' : '하나 더 부술 수 있다. 무엇을?'}`;
   if (c.effect.type === 'drain_grow') return `땅의 타락한 마나가 흐른다. 누구에게서 생명 ${c.effect.life}을 빼앗아 +1/+1 카운터 ${c.effect.counters}을 얻을까?`;
@@ -89,7 +89,7 @@ export function askOptions(state: State, world: World, c: Choice): { pick: strin
     return owned.map((x) => ({ pick: x.id, label: x.label }));
   }
   // One must be given: no "none".
-  if (c.effect.type === 'sacrifice') return c.candidates.map((id) => ({ pick: id, label: shortName(state.actors[id]?.name ?? id) }));
+  if (c.effect.type === 'sacrifice') return [...c.candidates.map((id) => ({ pick: id as string | null, label: id === c.by ? `${shortName(state.actors[id]?.name ?? id)} (자신)` : shortName(state.actors[id]?.name ?? id) })), { pick: c.effect.item, label: `${state.items?.[c.effect.item]?.name ?? c.effect.item}을(를) 무너뜨린다` }];
   if (c.effect.type === 'pledge') return [{ pick: c.effect.from, label: '따른다' }, { pick: null, label: '거절한다' }];
   if (c.effect.type === 'evade') return [{ pick: c.effect.from, label: '날아올라 피한다' }, { pick: null, label: '맞선다' }];
   // The second target of a spell that needs two: no "none".
@@ -120,8 +120,9 @@ export function answerAsk(state: State, world: World, pick: string | null, t: nu
     }
   } else if (c.effect.type === 'sacrifice') {
     const living = c.candidates.map((id) => state.actors[id]).filter((x) => x && !x.dead);
-    const x = living.find((y) => y.id === pick) ?? living[0];
+    const x = pick === c.effect.item ? undefined : (living.find((y) => y.id === pick) ?? sacrificeDefault(state, p, living));
     if (x) sacrifice(state, world, x, c.effect.item, t);
+    else crumble(state, world, p, c.effect.item, t, `${josa(shortName(p.name), '이', '가')} 제물 대신 내놓아`);
   } else if (c.effect.type === 'cast' && c.effect.free) {
     // A second target must be named: an answer that isn't one goes to the first there.
     const target = pick && c.candidates.includes(pick) ? state.actors[pick] : c.effect.second ? c.candidates.map((id) => state.actors[id]).find((x) => x && !x.dead && together(x, p)) : undefined;
