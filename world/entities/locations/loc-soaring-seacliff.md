@@ -5,12 +5,13 @@ name: 솟아오른 바다절벽
 name_en: Soaring Seacliff
 summary: 타짐 해안의 깎아지른 바다절벽. 파도가 바위에 부서지고, 절벽을 타고 치솟는 바람에 날개 가진 것들이 미끄러져 내린다
 status: canon
-sources: [ZEN-225, ZEN-66]
+sources: [ZEN-225, ZEN-66, ZEN-51]
 tags: [절벽, 해안, 바람, 청색]
 links:
   - { to: loc-tazeem, rel: 바깥 지역 }
   - { to: loc-emeria, rel: 바람을 타고 닿는 하늘 }
   - { to: cre-sky-ruin-drake, rel: 바람을 타는 에메리아의 드레이크 }
+  - { to: evt-lethargy-trap, rel: 안개에 깃든 함정 }
 map: { in: loc-tazeem, terrain: beach, color: U, pos: [0.55, 0.2], tiles: 10 }
 sim:
   nonbasic: true                          # 이름 있는 대지: 섬이 아니다
@@ -34,6 +35,8 @@ sim:
   - 플레이어는 유대 맺기를 할 때 고르고, NPC는 유대가 맺어진 뒤 LLM이 고른다 (피라냐 습지와 같다).
   - 나는 동안 공중섬에 날아서 오간다 (에메리아까지 밧줄 대신 1시간). 공격받으면 날아서 피할 수도 있다.
   - 00:00에 날개가 사라진다. 이동 중이던 이는 그대로 닿고, 밧줄 없는 공중섬에 있던 이는 내려오지 못한다 ([가공]).
+
+- 무기력 함정(`evt-lethargy-trap`, ZEN-51)이 깃들어 있다 ([결정] 2026-10-01). 같은 시간에 셋 이상이 덤비면 덤빈 이들 모두 그날 공격력 -3.
 
 ## 미정/질문
 

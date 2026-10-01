@@ -449,6 +449,9 @@ const EffectSchema = z.discriminatedUnion('type', [
   // Volley Trap): N damage among those who set it off; the LLM, as the trap, divides it after
   // the hour. Not for morning (gm) events.
   z.strictObject({ type: z.literal('volley'), amount: z.number().int().positive() }),
+  // "Attacking creatures get +P/+T until end of turn" (Lethargy Trap: -3/-0): each attacker who
+  // set it off, until midnight. Only for `attacked` events.
+  z.strictObject({ type: z.literal('pump_attackers'), pt: z.tuple([z.number().int(), z.number().int()]) }),
   // "N damage to target creature", a trap set off by one beset (Inferno Trap): N damage to one of
   // those who hurt them, still standing with them; the LLM, as the trap, picks after the hour.
   // `color`: the trap's (protection from it shields). Only for `hurt` events.
@@ -958,6 +961,7 @@ export function buildWorld(entities: RawEntity[]): { world: World; errors: strin
         continue;
       }
       const { cooldown_hours, effects, cost, ...rest } = sim.data;
+      if (rest.trigger !== 'attacked' && effects.some((x) => x.type === 'pump_attackers')) err(e.id, 'pump_attackers 는 trigger: attacked 사건에만 쓸 수 있음 (덤빈 이들에게)');
       if (rest.trigger !== 'hurt' && effects.some((x) => x.type === 'burn')) err(e.id, 'burn 은 trigger: hurt 사건에만 쓸 수 있음 (누가 누구에게 다쳤는지 알아야 함)');
       if (rest.trigger !== 'landfall' && effects.some((x) => x.type === 'destroy_lands'))
         err(e.id, 'destroy_lands 는 trigger: landfall 사건에만 쓸 수 있음 (누가 상륙한 땅인지 알아야 함)');

@@ -4213,3 +4213,32 @@ test('the real Kor Cartographer walks the Makindi Trenches', () => {
   assert.equal(k?.region, 'loc-makindi');
   assert.deepEqual(npcDef(state, world, k.id)?.enterSearch, { types: ['plains'], tapped: true });
 });
+
+test('a lethargy trap: three or more striking in the same hour there, each attacker gets -3/-0 until midnight (power not below 0)', async () => {
+  const lethargy: RawEntity = { id: 'evt-leth', kind: 'event', name: '무기력 함정', status: 'canon', sim: { region: 'loc-a', trigger: 'attacked', attackers: 3, text: '안개가 피어올랐다.', effects: [{ type: 'pump_attackers', pt: [-3, 0] }] } };
+  const band = ['chr-a1', 'chr-a2', 'chr-a3'];
+  const world = fixture([lethargy, npc('chr-t', npcSim('loc-a', 'work', [0, 30])), npc('chr-a1', npcSim('loc-a', 'work', [5, 9])), npc('chr-a2', npcSim('loc-a', 'work', [2, 9])), npc('chr-a3', npcSim('loc-a', 'work', [1, 9]))]);
+  const state = newState(world, { seed: 1, mode: 'observer' });
+  for (const id of band) addFoe(state.actors[id], 'chr-t', state.minutes);
+  await advance(state, world, 1);
+  assert.deepEqual(ptOf(state.actors['chr-a1']), [2, 9]);
+  assert.deepEqual(ptOf(state.actors['chr-a2']), [0, 9]);
+  assert.deepEqual(ptOf(state.actors['chr-a3']), [0, 9]);
+  assert.deepEqual(ptOf(state.actors['chr-t']), [0, 30]);
+  // Next hour, the sapped strike for no more than they have.
+  const before = woundsOf(state.actors['chr-t'], state.minutes);
+  await advance(state, world, 1);
+  assert.equal(woundsOf(state.actors['chr-t'], state.minutes) - before, 2);
+  // Midnight: back to themselves.
+  const midnight = (Math.floor(state.minutes / 1440) + 1) * 1440;
+  for (const id of band) state.actors[id].foes = undefined;
+  await advance(state, world, Math.ceil((midnight - state.minutes) / 60) + 1);
+  assert.deepEqual(ptOf(state.actors['chr-a1']), [5, 9]);
+});
+
+test('the real Lethargy Trap lies on the Soaring Seacliff', () => {
+  const world = loadWorld();
+  const ev = world.events.find((e) => e.id === 'evt-lethargy-trap');
+  assert.equal(ev?.region, 'loc-soaring-seacliff');
+  assert.equal(ev?.attackers, 3);
+});

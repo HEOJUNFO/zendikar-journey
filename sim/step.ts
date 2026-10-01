@@ -355,6 +355,14 @@ function fire(state: State, world: World, ev: EventDef, t: number, omened: boole
     } else if (eff.type === 'volley') {
       // How it falls among them is the trap's, asked after the hour.
       if (cause.by?.length) (state.volleys ??= []).push({ event: ev.id, amount: eff.amount, by: cause.by, region: ev.region, t });
+    } else if (eff.type === 'pump_attackers') {
+      // Each who struck as an attacker: until midnight.
+      for (const id of cause.by ?? []) {
+        const a = state.actors[id];
+        if (!a || a.dead) continue;
+        (a.pumps ??= []).push({ pt: eff.pt, until: untapTime(t) });
+        addLog(state, { kind: 'effect', text: `${josa(shortName(a.name), '은', '는')} 힘이 빠졌다 (${eff.pt.map((n) => (n >= 0 ? `+${n}` : `${n}`)).join('/')}, ${ptOf(a).join('/')}).`, regions: [a.region], actors: [a.id], t });
+      }
     } else if (eff.type === 'burn') {
       // Which of those who hurt them it falls on is the trap's, asked after the hour.
       if (cause.by?.length) (state.burns ??= []).push({ event: ev.id, amount: eff.amount, ...(eff.color ? { color: eff.color } : {}), by: cause.by, region: ev.region, t });

@@ -581,7 +581,8 @@ export function ptOf(a: Actor): Pt {
   if (a.anthem) [p, t] = [p + a.anthem.pt[0], t + a.anthem.pt[1]];
   if (a.emptyHand) [p, t] = [p + a.emptyHand[0], t + a.emptyHand[1]];
   if (a.dried) t -= a.dried;
-  return [p, t];
+  // Power below zero deals no damage: count it as 0 (Lethargy Trap).
+  return [Math.max(0, p), t];
 }
 
 export function addLog(
