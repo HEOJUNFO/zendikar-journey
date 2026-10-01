@@ -5,9 +5,10 @@ name: 소린 마르코프
 name_en: Sorin Markov
 summary: 수천 년을 산 흡혈귀 플레인즈워커. 흰 머리칼에 검은 갑옷, 차가운 눈. 온두에 내려와 그레이펠트와 턴팀버 숲 가장자리를 거닐며 이 세계의 동요를 살핀다
 status: canon
-sources: [ZEN-111, ZEN-9]
+sources: [ZEN-111, ZEN-9, ZEN-88]
 tags: [플레인즈워커, 전설, 흑색, 흡혈귀]
 links:
+  - { to: spl-feast-of-blood, rel: 이 세계 흡혈귀를 비웃는 말 }
   - { to: spl-day-of-judgment, rel: 그가 말한 주문 }
   - { to: law-planeswalkers, rel: 플레인즈워커 }
   - { to: law-life, rel: 생명을 빼앗고 정한다 }

@@ -6888,3 +6888,27 @@ test('the real Cliff Threader crosses the Makindi cliffs: a Kor scout with mount
   assert.ok(npcDef(state, world, c.id)?.types?.includes('kor'));
   assert.equal(swayBlocked(state, world, c), null);
 });
+
+const feast: RawEntity = { id: 'spl-feast', kind: 'spell', name: '피의 향연', status: 'canon', sim: { cost: '{0}', requires: { kind: 'cre-v', count: 2 }, learn_at: 'loc-a', target: 'other_here', effects: [{ type: 'destroy_target' }, { type: 'gain_life', amount: 4 }] } };
+
+test('Feast of Blood: only with two vampires of one\'s own (themselves counting); then the target dies and the caster gains 4', () => {
+  const world = fixture([vampireKind(), feast, npc('chr-c', { ...npcSim('loc-a'), creature: 'cre-v' }), npc('chr-v', { ...npcSim('loc-a'), creature: 'cre-v' }), npc('chr-x', npcSim('loc-a'))]);
+  const state = newState(world, { seed: 1, mode: 'observer' });
+  const [c, v, x] = ['chr-c', 'chr-v', 'chr-x'].map((id) => state.actors[id]);
+  for (const a of [v, x]) a.tile = c.tile;
+  c.spells = ['spl-feast'];
+  assert.ok(castBlocked(state, world, c, 'spl-feast', 'chr-x', false, state.minutes)?.includes('2 이상 거느려야'));
+  assert.ok(npcCastBlocked(state, world, c, 'spl-feast', state.minutes)?.includes('지금 1'));
+  v.master = 'chr-c';
+  assert.equal(castBlocked(state, world, c, 'spl-feast', 'chr-x', false, state.minutes), null);
+  castSpell(state, world, c, 'spl-feast', 'chr-x', false, state.minutes);
+  assert.ok(x.dead);
+  assert.equal(lifeOf(c), 24);
+});
+
+test('the real Feast of Blood is taught in Malakir: two vampires needed', () => {
+  const world = loadWorld();
+  const s = world.spells.find((x) => x.id === 'spl-feast-of-blood')!;
+  assert.equal(s.learnAt, 'loc-malakir');
+  assert.deepEqual(s.requires, { kind: 'cre-vampire', count: 2 });
+});

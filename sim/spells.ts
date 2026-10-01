@@ -81,6 +81,8 @@ export function castBlocked(state: State, world: World, a: Actor, spellId: strin
   if (reactionSpell(s)) return `${josa(s.name, '은', '는')} 곁에서 누군가 권속을 들일 때 그것을 막으려고만 쓴다.`;
   const by = sealedBy(state, a, s, t);
   if (by) return sealText(by, t);
+  const req = requiresBlocked(state, world, a, s);
+  if (req) return req;
   const target = state.actors[targetId];
   if (!target || target.dead || (target.id === a.id && s.target === 'other_here') || (s.target === 'self' && target.id !== a.id)) return '그런 대상은 없다.';
   if (target.id !== a.id && !present(state, a.region, a.tile).some((x) => x.id === target.id))
@@ -159,8 +161,19 @@ export function npcCastBlocked(state: State, world: World, a: Actor, spellId: st
   const by = sealedBy(state, a, s, t);
   if (by) return sealText(by, t);
   if (s.effects.some((e) => e.type === 'harrow' || e.type === 'sacrifice_land') && !harrowGive(world, a).length) return '내어 줄 땅이 없다.';
+  const req = requiresBlocked(state, world, a, s);
+  if (req) return req;
   if (!planPayment(manaAvailable(state, world, a, t), s.cost)) return `마나가 모자라다 (${s.costText}).`;
   return null;
+}
+
+// Why `a` doesn't meet the spell's condition ("only if you control two or more Vampires"), or null.
+function requiresBlocked(state: State, world: World, a: Actor, s: SpellDef) {
+  const r = s.requires;
+  if (!r) return null;
+  const n = controlledCreatures(state, world, a).filter((x) => creatureOf(state, world, x.id) === r.kind).length;
+  if (n >= r.count) return null;
+  return `${josa(s.name, '은', '는')} ${world.lore.find((l) => l.id === r.kind)?.name ?? r.kind}을(를) ${r.count} 이상 거느려야 쓴다 (지금 ${n}).`;
 }
 
 // An NPC finished readying a spell: whom it falls on is theirs to pick (the LLM, after the

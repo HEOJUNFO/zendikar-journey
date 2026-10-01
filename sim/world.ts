@@ -605,6 +605,9 @@ export const SpellSimSchema = z.strictObject({
   cost: CostSchema,
   // sorcery: only when the caster is free to act; instant: any time (no difference yet).
   speed: z.enum(['sorcery', 'instant']).default('sorcery'),
+  // "Cast this spell only if you control N or more <kind>" (Feast of Blood: two Vampires): the caster
+  // and those who serve them hold that many of a creature kind (a creature entity, e.g. cre-vampire).
+  requires: z.strictObject({ kind: z.string(), count: z.number().int().positive() }).optional(),
   // Where it is learned, and how long that takes.
   learn_at: z.string(),
   learn_hours: z.number().int().min(1).default(4),
@@ -1000,6 +1003,7 @@ export type SpellDef = {
   cost: ManaCost;
   costText: string;
   speed: 'sorcery' | 'instant';
+  requires?: { kind: string; count: number };
   target: 'other_here' | 'any_here' | 'self';
   learnAt: string;
   learnHours: number;
@@ -1264,6 +1268,7 @@ export function buildWorld(entities: RawEntity[]): { world: World; errors: strin
         cost: parseManaCost(d.cost)!,
         costText: d.cost,
         speed: d.speed,
+        ...(d.requires ? { requires: d.requires } : {}),
         target: d.target,
         learnAt: d.learn_at,
         learnHours: d.learn_hours,
