@@ -6648,3 +6648,18 @@ test('the real Turntimber Basilisk lurks deep in the Turntimber Grove: deathtouc
   const def = npcDef(state, world, b.id)!;
   assert.ok(def.beast && def.landfallLure && def.needs.includes('hunger'));
 });
+
+test('the real Umara Raptor nests by the falls of the Umara gorge: a flying bird Ally, tamed or bought for 30, growing as Allies join', () => {
+  const world = loadWorld();
+  const state = newState(world, { seed: 1, mode: 'observer' });
+  const r = state.actors['cre-umara-raptor'];
+  assert.equal(r?.region, 'loc-umara-gorge');
+  const def = npcDef(state, world, r.id)!;
+  assert.ok(def.beast && def.ally && def.hireable && hasAbility(r, 'fly', state.minutes));
+  assert.equal(hirePrice(def), 30);
+  assert.deepEqual(def.rally, [{ type: 'counter_self' }]);
+  // Joining someone's party (one with no Allies of their own), it grows.
+  const m = state.actors['chr-reckless-scholar'];
+  bindRetainer(state, world, r, m, state.minutes, '고용');
+  assert.equal(r.plusCounters, 1);
+});
