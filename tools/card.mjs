@@ -44,6 +44,7 @@ async function sync() {
     toughness: c.toughness,
     artist: c.artist,
     image: c.image_uris?.normal,
+    multiverse: c.multiverse_ids?.[0],
     scryfall: c.scryfall_uri?.split('?')[0],
   })).filter((c) => !/\bBasic\b/.test(c.type_line));
   writeFileSync(queueFile, JSON.stringify(queue, null, 2) + '\n');
@@ -107,6 +108,9 @@ ${quote(card.flavor_text)}
   if (card.oracle_text) console.log(card.oracle_text);
   if (card.flavor_text) console.log(`"${card.flavor_text}"`);
   console.log(`이미지: ${card.image}`);
+  // cards.scryfall.io can be unreachable from here (2026-10-01: the route to its OVH host dies);
+  // Gatherer serves the same art (as webp: `sips -s format jpeg` to view it).
+  if (card.multiverse) console.log(`이미지(대체, Gatherer): https://gatherer.wizards.com/Handlers/Image.ashx?multiverseid=${card.multiverse}&type=card`);
   placeCheck(card);
   console.log(`파일: world/cards/${card.id}.md (진행 ${done}/${queue.length})`);
 }
