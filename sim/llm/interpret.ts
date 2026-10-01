@@ -1,4 +1,5 @@
 // Free text from the player -> one Action the engine can run.
+import { reactionSpell } from '../counter.ts';
 import { z } from 'zod';
 import { nearestTile, sameTile, tileCenter, tileLabel } from '../tiles.ts';
 import { moveHours } from '../step.ts';
@@ -40,7 +41,8 @@ export async function interpret({ world, state, text }: InterpretInput): Promise
       return `- ${r.id}: ${placeName(world, r)} (${r.summary}) — ${why ? `갈 수 없음: ${why}` : `${moveHours(world, p, r.id, nearestTile(world, r.id, p.tile && tileCenter(p.tile)))}시간`}`;
     });
   const taught = spellsTaughtAt(world, p.region).filter((s) => !p.spells?.includes(s.id));
-  const known = world.spells.filter((s) => p.spells?.includes(s.id));
+  // Not those cast only in answer to someone joining another (Summoner's Bane): a pick then.
+  const known = world.spells.filter((s) => p.spells?.includes(s.id) && !reactionSpell(s));
   const items = itemsAt(state, world, p.region).filter((x) => !itemOwner(state, x.id));
   const fetches = world.regions
     .filter((r) => r.fetch && p.bonds?.includes(r.id))

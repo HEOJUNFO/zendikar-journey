@@ -604,6 +604,9 @@ export const SpellSimSchema = z.strictObject({
         // "Create a token that's a copy of target creature" (kicked: `kicked_count` instead,
         // Rite of Replication): copies of the target, born the caster's retainers; planeswalkers
         // can't be copied (sim/replicate.ts).
+        // "Counter target creature spell" (Summoner's Bane): cast only in answer to someone
+        // joining another on the caster's tile; the joining comes to nothing (sim/counter.ts).
+        z.strictObject({ type: z.literal('counter_creature') }),
         z.strictObject({ type: z.literal('copy_target'), count: z.number().int().positive(), kicked_count: z.number().int().positive().optional() }),
       ]),
     )

@@ -2,6 +2,7 @@
 // What an NPC decides by the LLM, the player decides here: whom an Ally's rally in their party
 // falls on (sim/allies.ts), whether to serve one who asks it of them, and whether to take to
 // the air when one who can't fly sets on them.
+import { answerCounter, summon } from './counter.ts';
 import { untapTime } from './clock.ts';
 import { applyDrainGrow, applyEnterDestroy, applySearch } from './abilities.ts';
 import { crushOwed, crushRelic, demolish, demolishOptions, relicsHere } from './relics.ts';
@@ -44,6 +45,10 @@ export function askText(state: State, world: World, c: Choice) {
     return `${s}의 새벽: 유형 하나를 부르면 ${s} 곁의 모두(당신도)가 그 유형의 제 것 하나를 내놓는다 (땅: 유대 하나, 생물: 부리는 생물 하나, 마법물체: 아이템 하나, 부여마법: 오라 하나). 무엇을?`;
   }
   if (c.effect.type === 'bind') return `${shortName(state.actors[c.effect.source]?.name ?? '')}의 싸움이 이어진다. 마나 ${npcDef(state, world, c.effect.source)?.tapFoe?.costText ?? ''}를 내면 날지 못하는 적 하나를 자정까지 묶을 수 있다. 누구를?`;
+  if (c.effect.type === 'counter') {
+    const s = world.spells.find((x) => x.id === (c.effect as { spell: string }).spell);
+    return `${shortName(state.actors[c.effect.joiner]?.name ?? '')}이(가) ${shortName(state.actors[c.effect.master]?.name ?? '')}의 곁에 들려 한다 (${c.effect.how}). ${s?.name ?? ''}(${s?.costText ?? ''})로 무산시키면 그는 들지 못하고 당신 곁에 ${s?.summary ?? ''}. 어떻게?`;
+  }
   if (c.effect.type === 'tide') return `나를 섬기는 ${shortName(state.actors[c.effect.source]?.name ?? '')}이(가) 썰물에 무너지려 한다. 유대를 맺은 땅 하나를 내어 주면(다시 맺을 수 있다) 남는다. 어느 땅을?`;
   if (c.effect.type === 'search') return `${shortName(state.actors[c.effect.source]?.name ?? '')}이(가) 잊힌 길을 안다. 아직 유대가 없는 땅 하나와 멀리서 유대를 맺을 수 있다 (하루 한 땅에 들지 않고, 오늘은 마나를 내지 않는다). 어느 땅과?`;
   if (c.effect.type === 'return_lands') return `${state.items?.[c.effect.item]?.name ?? c.effect.item}: 유대를 맺은 땅 ${c.effect.left}곳을 내어 주어야 한다 (다시 맺을 수 있다). 먼저 어느 땅을?`;
@@ -70,6 +75,7 @@ export function askOptions(state: State, world: World, c: Choice): { pick: strin
     return c.effect.first ? opts : [...opts, { pick: null, label: '그만둔다' }];
   }
   if (c.effect.type === 'quell') return [...QUELL_KINDS.map((k) => ({ pick: k as string | null, label: QUELL_LABELS[k] })), { pick: null, label: '부르지 않는다' }];
+  if (c.effect.type === 'counter') return [{ pick: c.effect.joiner, label: `무산시킨다 (${world.spells.find((x) => x.id === (c.effect as { spell: string }).spell)?.costText ?? ''})` }, { pick: null, label: '두고 본다' }];
   if (c.effect.type === 'tide') return [...c.candidates.map((id) => ({ pick: id as string | null, label: region(world, id).name })), { pick: null, label: '내어 주지 않는다 (흩어진다)' }];
   if (c.effect.type === 'search') return [...c.candidates.map((id) => ({ pick: id as string | null, label: region(world, id).name })), { pick: null, label: '맺지 않는다' }];
   if (c.effect.type === 'return_lands') {
@@ -104,7 +110,7 @@ export function answerAsk(state: State, world: World, pick: string | null, t: nu
     else addLog(state, { kind: 'status', text: `${shortName(state.actors[c.effect.source]?.name ?? '')}의 ${rallyWord(state, world, c.effect.source)}을 거두었다.`, regions: [c.land], actors: [c.by], t });
   } else if (c.effect.type === 'pledge') {
     const master = state.actors[c.effect.from];
-    if (pick === master?.id && canServe(p, master)) bindRetainer(state, world, p, master, t, '설득');
+    if (pick === master?.id && canServe(p, master)) summon(state, world, p, master, t, '설득');
     else if (master) {
       addLog(state, { kind: 'status', text: `${josa(shortName(master.name), '을', '를')} 따르기를 거절했다.`, regions: [p.region], actors: [p.id, master.id], t });
       refuse(state, master, t);
@@ -155,6 +161,8 @@ export function answerAsk(state: State, world: World, pick: string | null, t: nu
     const x = state.actors[c.effect.source];
     const target = pick && c.candidates.includes(pick) ? state.actors[pick] : undefined;
     if (x && target) applyBind(state, world, x, target, t);
+  } else if (c.effect.type === 'counter') {
+    answerCounter(state, world, p, c.effect, pick === c.effect.joiner, t);
   } else if (c.effect.type === 'tide') {
     answerTide(state, world, p, c.effect.source, pick, t);
   } else if (c.effect.type === 'search') {

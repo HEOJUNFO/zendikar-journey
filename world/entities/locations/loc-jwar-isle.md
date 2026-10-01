@@ -5,7 +5,7 @@ name: 즈와르 섬
 name_en: Jwar Isle
 summary: 온두 남쪽 앞바다의 안개 낀 작은 바위섬. 거친 해류와 짐승 머리 같은 검은 암초가 둘러싸고, 섬 안에는 초록빛이 어린다. 비밀의 섬이라 불린다
 status: canon
-sources: [ZEN-215, ZEN-68, ZEN-41]
+sources: [ZEN-215, ZEN-68, ZEN-41, ZEN-71]
 tags: [섬, 해안, 암초, 청색]
 links:
   - { to: loc-nimana, rel: 뱃길이 닿는 굴 드라즈의 항구 }
@@ -13,6 +13,7 @@ links:
   - { to: loc-ondu, rel: 붙어 있는 대륙 }
   - { to: cre-sphinx, rel: 사는 스핑크스 }
   - { to: evt-archive-trap, rel: 묻힌 기록보관소의 함정 }
+  - { to: spl-summoners-bane, rel: 배우는 주문 }
 map: { x: 1000.4, y: 1323, terrain: beach, size: island, of: loc-ondu, tiles: 15 }
 ---
 
@@ -29,6 +30,7 @@ map: { x: 1000.4, y: 1323, terrain: beach, size: island, of: loc-ondu, tiles: 15
 - 안에 구역 즈와르 섬 피난처(`loc-jwar-isle-refuge`)가 있다.
 - 즈와르 섬의 스핑크스(`cre-sphinx`)가 산다 (ZEN-68). 섬 안쪽의 초록빛과 빛나는 수정이 그의 둥지다 ([가공]).
 - 섬 안쪽 안개 밑에 옛 기록보관소가 묻혀 있고, 기록보관소 함정(`evt-archive-trap`, ZEN-41)이 숨어 있다. 그날 페치로 땅을 찾아온 이가 들어서면 기억을 모두 잃는다.
+- 소환자의 파멸(`spl-summoners-bane`, ZEN-71)을 배운다: 청색 정신 마법과 환영 ([결정] 2026-10-01, [가공]).
 
 ## 미정/질문
 

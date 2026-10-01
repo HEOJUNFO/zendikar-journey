@@ -1,6 +1,7 @@
 // Turn driver. Time only moves here: the observer advances N hours, the player acts and the
 // world runs until the action is done. The game passes every LLM hook (sim/llm/index.ts);
 // tests pass fakes or none.
+import { answerCounter, summon } from './counter.ts';
 import { formatClock, gameDay, untapTime } from './clock.ts';
 import { startAction } from './actions.ts';
 import type { Action } from './actions.ts';
@@ -249,7 +250,7 @@ async function conversations(state: State, world: World, since: number, llm: Llm
     // with a fight).
     const follower = talk.follower === x.id ? x : talk.follower === y.id ? y : undefined;
     if (follower && !talk.attacker && canPledge(state, world, follower, follower === x ? y : x))
-      bindRetainer(state, world, follower, follower === x ? y : x, state.minutes, '설득');
+      summon(state, world, follower, follower === x ? y : x, state.minutes, '설득');
     const refused = talk.refused === x.id ? x : talk.refused === y.id ? y : undefined;
     if (refused && !follower) refuse(state, refused, state.minutes);
     if (talk.attacker === x.id || talk.attacker === y.id) {
@@ -555,6 +556,8 @@ async function choices(state: State, world: World, llm: Llm) {
     // The player's own picks wait for them (a "choose" action).
     if (by?.kind === 'player') {
       if (!by.dead) (state.asks ??= []).push(c);
+      // A joining that waited on them goes through.
+      else if (c.effect.type === 'counter') answerCounter(state, world, by, c.effect, false, state.minutes);
       continue;
     }
     const npc = speakerDef(state, world, c.by);
@@ -628,6 +631,23 @@ async function choices(state: State, world: World, llm: Llm) {
         }
         if (pick && options.some((o) => o.id === pick)) applyShatter(state, world, by, pick, state.minutes);
       }
+      continue;
+    }
+    // Summoner's Bane: whether they answer someone joining another (sim/counter.ts). The joining
+    // waits on this; with no answer, it goes through.
+    if (c.effect.type === 'counter') {
+      const eff = c.effect;
+      let pick: string | null = null;
+      const [joiner, master] = [state.actors[eff.joiner], state.actors[eff.master]];
+      const s = spellDef(world, eff.spell);
+      if (by && !by.dead && npc && llm.pick && joiner && master && s) {
+        try {
+          pick = await llm.pick({ world, state, npc, what: `${josa(shortName(joiner.name), '이', '가')} ${shortName(master.name)}의 곁에 들려 한다 (${eff.how}). 당신이 쥔 ${s.name}(${s.costText})로 무산시킬 수 있다: 그러면 그는 들지 못하고(고용비 등 치른 것은 돌아오지 않는다), 당신 곁에 2/2 청색 환영이 나 당신을 섬긴다. 두고 볼 수도 있다`, options: [{ id: joiner.id, label: '무산시킨다' }], optional: true });
+        } catch (e) {
+          console.warn(`pick (counter) for ${c.by} failed:`, e);
+        }
+      }
+      answerCounter(state, world, by, eff, pick === eff.joiner, state.minutes);
       continue;
     }
     // Living Tsunami at midnight: which land its master gives back to keep it (or none: it goes).
@@ -819,7 +839,7 @@ async function followChoice(state: State, world: World, llm: Llm, by: Actor, npc
     refuse(state, suitor, state.minutes);
     return;
   }
-  bindRetainer(state, world, by, suitor, state.minutes, '인정');
+  summon(state, world, by, suitor, state.minutes, '인정');
 }
 
 // Those who seal a color (Iona) and just entered a fight name one (sim/seal.ts). The LLM
@@ -931,7 +951,7 @@ function applyReply(state: State, world: World, me: Actor, p: Actor, reply: Repl
   const name = shortName(me.name);
   if (reply.impression) remember(me, p, reply.impression, state.minutes);
   if (reply.refused && !reply.follow) refuse(state, p, state.minutes);
-  if (reply.follow && !reply.attack && !swayBlocked(state, world, me)) bindRetainer(state, world, me, p, state.minutes, '설득');
+  if (reply.follow && !reply.attack && !swayBlocked(state, world, me)) summon(state, world, me, p, state.minutes, '설득');
   else if (reply.recruit && !reply.attack && canServe(p, me))
     (state.asks ??= []).push({ by: p.id, land: p.region, effect: { type: 'pledge', from: me.id }, candidates: [me.id], t: state.minutes });
   if (reply.attack) {

@@ -14,6 +14,7 @@ import { owesDiscard } from './discard.ts';
 import { crushOwed, demolishOptions, demolishOwed, relicsHere } from './relics.ts';
 import { remember } from './relations.ts';
 import { copyable, replicate } from './replicate.ts';
+import { reactionSpell } from './counter.ts';
 import { creatureOf, retainersOf } from './retainers.ts';
 import { addLog, npcDef, present, ptOf, targetable, untargetableText } from './state.ts';
 import type { Actor, State } from './state.ts';
@@ -57,6 +58,7 @@ export function tappable(state: State, world: World, a: Actor, kind: string) {
 export function castBlocked(state: State, world: World, a: Actor, spellId: string, targetId: string, kick: boolean, t: number): string | null {
   const s = spellDef(world, spellId);
   if (!s || !a.spells?.includes(s.id)) return '모르는 주문이다.';
+  if (reactionSpell(s)) return `${josa(s.name, '은', '는')} 곁에서 누군가 권속을 들일 때 그것을 막으려고만 쓴다.`;
   const by = sealedBy(state, a, s, t);
   if (by) return sealText(by, t);
   const target = state.actors[targetId];
@@ -95,6 +97,7 @@ export function landToDestroy(state: State, a: Actor) {
 export function npcCastBlocked(state: State, world: World, a: Actor, spellId: string, t: number): string | null {
   const s = spellDef(world, spellId);
   if (!s || !a.spells?.includes(s.id)) return '모르는 주문이다.';
+  if (reactionSpell(s)) return `${josa(s.name, '은', '는')} 곁에서 누군가 권속을 들일 때 그것을 막으려고만 쓴다.`;
   const by = sealedBy(state, a, s, t);
   if (by) return sealText(by, t);
   if (!planPayment(manaAvailable(state, world, a, t), s.cost)) return `마나가 모자라다 (${s.costText}).`;
@@ -128,7 +131,7 @@ export function landsOfType(state: State, world: World, a: Actor, type: LandType
 
 // Spells an NPC holds and could pay for today.
 export function castableSpells(state: State, world: World, a: Actor, t: number) {
-  return world.spells.filter((s) => a.spells?.includes(s.id) && planPayment(manaCapacity(state, world, a, t), s.cost));
+  return world.spells.filter((s) => a.spells?.includes(s.id) && !reactionSpell(s) && planPayment(manaCapacity(state, world, a, t), s.cost));
 }
 
 // Whether a spell does harm (the target takes it as an attack).
@@ -136,14 +139,15 @@ export function harmful(s: SpellDef) {
   return s.effects.some((e) => e.type === 'lose_half_life' || e.type === 'destroy_land' || e.type === 'discard' || e.type === 'discard_per_land' || e.type === 'damage_per_land');
 }
 
-// Pays and resolves. A harmful spell's target (if an NPC) takes it as an attack.
+// Pays and resolves. A harmful spell's target (if an NPC) takes it as an attack. Returns whether
+// it resolved (not sealed off, not broken by a trap).
 export function castSpell(state: State, world: World, a: Actor, spellId: string, targetId: string, kick: boolean, t: number, free = false) {
   const s = spellDef(world, spellId)!;
   const target = state.actors[targetId];
   const by = sealedBy(state, a, s, t);
   if (by) {
     addLog(state, { kind: 'status', text: `${josa(shortName(a.name), '은', '는')} ${josa(s.name, '을', '를')} 쓰지 못했다: ${sealText(by, t)}`, regions: [a.region], actors: [a.id, by.id], t });
-    return;
+    return false;
   }
   // A mana kicker is paid with the spell, if they can.
   const manaKick = kick && !!s.kicker?.mana && !free && !!planPayment(manaAvailable(state, world, a, t), addCosts(s.cost, s.kicker.mana));
@@ -163,7 +167,7 @@ export function castSpell(state: State, world: World, a: Actor, spellId: string,
     a.spells = (a.spells ?? []).filter((x) => x !== s.id);
     a.exiled = [...new Set([...(a.exiled ?? []), s.id])];
     addLog(state, { kind: 'effect', text: `${josa(shortName(a.name), '이', '가')} 쓰던 ${josa(s.name, '은', '는')} 허공에서 부서져 사라졌다. 그 주문은 영영 다시 쓰지도 익히지도 못한다.`, regions: [a.region], actors: [a.id], t });
-    return;
+    return false;
   }
   const on = target.id === a.id ? '자신' : shortName(target.name);
   const paid = free ? '값 없이' : kicked && s.kicker?.mana ? `${s.costText} + 킥커 ${s.kicker.manaText}` : s.costText;
@@ -242,6 +246,7 @@ export function castSpell(state: State, world: World, a: Actor, spellId: string,
     addFoe(target, a.id, t);
     remember(target, a, `나에게 ${josa(s.name, '을', '를')} 걸었다`, t);
   }
+  return true;
 }
 
 // Day of Judgment: light falls on everyone on the caster's tile, the caster last; planeswalkers

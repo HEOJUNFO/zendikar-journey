@@ -5,6 +5,7 @@
 // back). Every Ally in that party with a rally power (`sim.rally`) then answers, the joiner too
 // ("this or another Ally"). What it falls on is the controller's pick: the player's (state.asks,
 // sim/asks.ts) or, for an NPC, the LLM's. Mercenaries (`sim.hireable`) serve whoever pays.
+import { summon } from './counter.ts';
 import { addFoe, dealDamage } from './combat.ts';
 import { loseLife } from './life.ts';
 import { revealHand } from './discard.ts';
@@ -194,7 +195,7 @@ export function hireMerc(state: State, world: World, a: Actor, mercId: string, t
     actors: [a.id, merc.id],
     t,
   });
-  bindRetainer(state, world, merc, a, t, '고용');
+  summon(state, world, merc, a, t, '고용');
 }
 
 // Mercenaries `a` could hire today, and where each is, for their plan.

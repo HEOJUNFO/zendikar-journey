@@ -10,7 +10,8 @@ import { startAction } from './actions.ts';
 import type { World } from './world.ts';
 import { addFoe, attackBlocked, caughtAsleep, clash, dealDamage, destroy, die, foesOf, hostileNpcs, intimidated, knockedOut, landwalked, unblockable, woundsOf } from './combat.ts';
 import { landSealed, powersSealed, sealedBy, sealToday, setSeal } from './seal.ts';
-import { castBlocked, castSpell, castTargets, learnBlocked, readyCast } from './spells.ts';
+import { castBlocked, castSpell, castTargets, learnBlocked, npcCastBlocked, readyCast } from './spells.ts';
+import { answerCounter, counterHolders, reactionSpell, summon } from './counter.ts';
 import { actorColors, COLORS, formatMana, manaAvailable, manaCapacity, parseManaCost, planPayment } from './mana.ts';
 import { MAX_TALKS_PER_DAY, usableAbilities, volleyShares, burnTargets } from './run.ts';
 import { destroyLand, eligibleGmEvents, moveHours, startTravel, travelBlocked } from './step.ts';
@@ -35,7 +36,7 @@ import { joinedToday } from './bounce.ts';
 import { centroid, eventTile, fixedTile, nearestTile, ownsTile, sameTile, TILE, tileCenter, tilesOf, tileSteps, tooSmall } from './tiles.ts';
 import { applyQuell, upkeepQuell } from './quell.ts';
 import { upkeepWins } from './win.ts';
-import { hirePrice } from './allies.ts';
+import { hireMerc, hirePrice } from './allies.ts';
 import { askOptions, askText } from './asks.ts';
 import type { Actor, State } from './state.ts';
 import { affectedRegions, buildWorld, descendantsOf, distance, landTypes, placeName, realmOf, region, travelHours, within } from './world.ts';
@@ -2903,6 +2904,68 @@ test('the real Rite of Replication is taught in Sea Gate: a copy, five kicked fo
   assert.equal(s.target, 'any_here');
   assert.equal(s.kicker?.manaText, '{5}');
   assert.deepEqual(s.effects[0], { type: 'copy_target', count: 1, kicked_count: 5 });
+});
+
+const bane: RawEntity = { id: 'spl-sb', kind: 'spell', name: '소환자의 파멸', status: 'canon', sim: { cost: '{U}', speed: 'instant', learn_at: 'loc-a', effects: [{ type: 'counter_creature' }, { type: 'create_retainers', creature: 'cre-il', count: 1, pt: [2, 2], colors: ['U'] }] } };
+const baneWorld = () =>
+  fixture([bane, lore('cre-il', 'creature'), npc('chr-m', npcSim('loc-a')), npc('chr-h', { ...npcSim('loc-a'), mana: { R: 2 }, ally: true, hireable: true }), npc('chr-b', { ...npcSim('loc-a'), mana: { U: 2 } })]);
+
+test('Summoner\'s Bane: one joining another waits an hour on the holder there; answered, it comes to nothing and an Illusion serves the holder', async () => {
+  const world = baneWorld();
+  const state = newState(world, { seed: 1, mode: 'observer' });
+  const [m, h, b] = [state.actors['chr-m'], state.actors['chr-h'], state.actors['chr-b']];
+  for (const x of [h, b]) x.tile = m.tile;
+  b.spells = ['spl-sb'];
+  // Only ever cast in answer: no plain casting.
+  assert.match(castBlocked(state, world, b, 'spl-sb', h.id, false, state.minutes) ?? '', /막으려고만/);
+  assert.match(npcCastBlocked(state, world, b, 'spl-sb', state.minutes) ?? '', /막으려고만/);
+  assert.equal(counterHolders(state, world, h, m, state.minutes)[0]?.id, b.id);
+  m.stats.coin = 100;
+  hireMerc(state, world, m, h.id, state.minutes);
+  // Paid, but not theirs yet: the holder is asked.
+  assert.equal(h.master, undefined);
+  assert.equal(m.stats.coin, 100 - hirePrice(npcDef(state, world, h.id)!));
+  assert.equal(state.choices?.[0]?.effect.type, 'counter');
+  assert.equal(state.choices?.[0]?.by, b.id);
+  const asked: string[] = [];
+  await advance(state, world, 1, { planDay: async () => [], pick: async ({ what, options }) => (asked.push(what), options[0].id) });
+  assert.match(asked[0], /무산/);
+  assert.equal(h.master, undefined);
+  assert.equal(m.refused, gameDay(state.minutes));
+  assert.equal(m.stats.coin < 100, true); // the coin stays paid
+  const [il] = retainersOf(state, b.id);
+  assert.deepEqual(ptOf(il), [2, 2]);
+  assert.ok(texts(state).some((l) => l.includes('부름이 무산되었다')));
+});
+
+test('Summoner\'s Bane left alone, or no one able to pay: the joining goes through', () => {
+  const world = baneWorld();
+  const state = newState(world, { seed: 1, mode: 'observer' });
+  const [m, h, b] = [state.actors['chr-m'], state.actors['chr-h'], state.actors['chr-b']];
+  for (const x of [h, b]) x.tile = m.tile;
+  b.spells = ['spl-sb'];
+  summon(state, world, h, m, state.minutes, '설득');
+  const c = state.choices!.find((x) => x.effect.type === 'counter')!;
+  answerCounter(state, world, b, c.effect as never, false, state.minutes);
+  assert.equal(h.master, m.id);
+  assert.deepEqual(retainersOf(state, b.id).filter((x) => x.id !== h.id), []);
+  // The holder far off: done at once.
+  const s2 = newState(world, { seed: 1, mode: 'observer' });
+  const [m2, h2, b2] = [s2.actors['chr-m'], s2.actors['chr-h'], s2.actors['chr-b']];
+  h2.tile = m2.tile;
+  b2.spells = ['spl-sb'];
+  b2.tile = tilesOf(world, 'loc-a').find((t) => !sameTile(t, m2.tile))!;
+  summon(s2, world, h2, m2, s2.minutes, '설득');
+  assert.equal(h2.master, m2.id);
+});
+
+test('the real Summoner\'s Bane is taught on Jwar Isle and leaves a 2/2 blue Illusion', () => {
+  const world = loadWorld();
+  const s = world.spells.find((x) => x.id === 'spl-summoners-bane')!;
+  assert.equal(s.learnAt, 'loc-jwar-isle');
+  assert.equal(s.costText, '{2}{U}{U}');
+  assert.ok(reactionSpell(s));
+  assert.deepEqual(s.effects[1], { type: 'create_retainers', creature: 'cre-illusion', count: 1, pt: [2, 2], colors: ['U'] });
 });
 
 test('the real Conqueror\'s Pledge is taught in Ondu: six Kor Soldiers, twelve kicked for {6}', () => {

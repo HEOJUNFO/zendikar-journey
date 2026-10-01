@@ -16,6 +16,7 @@ import { CLAIM_HOURS, claimBlocked, itemsAt, itemsOf } from '../sim/items.ts';
 import { EQUIP_HOURS, equipBlocked, equipmentOf, equipTargets } from '../sim/equipment.ts';
 import { eonLand, eonsIn, spendBlocked, storeBlocked } from '../sim/eons.ts';
 import { castBlocked, harmful, learnBlocked, spellsTaughtAt } from '../sim/spells.ts';
+import { reactionSpell } from '../sim/counter.ts';
 import { knownSecrets } from '../sim/knowledge.ts';
 import { sealToday } from '../sim/seal.ts';
 import { isWinner } from '../sim/win.ts';
@@ -464,7 +465,7 @@ export function CharacterControls(props: {
 }) {
   const { world, state, busy, onAct, onSay } = props;
   const p = player(state)!;
-  const known = world.spells.filter((s) => p.spells?.includes(s.id));
+  const known = world.spells.filter((s) => p.spells?.includes(s.id) && !reactionSpell(s));
   const [text, setText] = useState('');
   const [hours, setHours] = useState(2);
   const [pace, setPace] = useState<Pace>('careful');
@@ -491,7 +492,7 @@ export function CharacterControls(props: {
   if (ask) {
     return (
       <div className="controls controls-player">
-        <p>{ask.effect.type === 'rally' ? '🔥' : ask.effect.type === 'evade' ? '🪽' : ask.effect.type === 'discard' ? '📜' : ask.effect.type === 'pilfer' ? '🗝️' : ask.effect.type === 'pour' ? '🩸' : ask.effect.type === 'sacrifice' ? '🗿' : ask.effect.type === 'crush' || ask.effect.type === 'demolish' ? '💥' : ask.effect.type === 'quell' || ask.effect.type === 'quelled' ? '🗻' : ask.effect.type === 'cast' ? '✨' : '🤝'} {askText(state, world, ask)}</p>
+        <p>{ask.effect.type === 'rally' ? '🔥' : ask.effect.type === 'evade' ? '🪽' : ask.effect.type === 'discard' ? '📜' : ask.effect.type === 'pilfer' ? '🗝️' : ask.effect.type === 'pour' ? '🩸' : ask.effect.type === 'sacrifice' ? '🗿' : ask.effect.type === 'crush' || ask.effect.type === 'demolish' ? '💥' : ask.effect.type === 'quell' || ask.effect.type === 'quelled' ? '🗻' : ask.effect.type === 'cast' || ask.effect.type === 'counter' ? '✨' : '🤝'} {askText(state, world, ask)}</p>
         <div className="row">
           {askOptions(state, world, ask).map((o) => (
             <button key={o.pick ?? '-'} disabled={busy} onClick={() => onAct({ type: 'choose', pick: o.pick })}>
