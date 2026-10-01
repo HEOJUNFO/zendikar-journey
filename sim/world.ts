@@ -19,9 +19,9 @@ export type Ability = (typeof ABILITIES)[number];
 export const ABILITY_LABELS: Record<Ability, string> = { fly: '비행', aquatic: '물에 삶', lifelink: '생명연결', vigilance: '경계', haste: '속공', trample: '돌진', defender: '수비대', shroud: '방어막', swampwalk: '늪걷기', forestwalk: '숲걷기', islandwalk: '섬걷기', indestructible: '파괴불가', intimidate: '위협', first_strike: '선제공격', double_strike: '이중 타격', cant_block: '막지 못함' };
 // Creature types a card may name ("destroy target Angel"), and `artifact` for an artifact
 // creature (마법물체 생물: it may block an intimidating one).
-export const CREATURE_TYPES = ['angel', 'demon', 'artifact'] as const;
+export const CREATURE_TYPES = ['angel', 'demon', 'artifact', 'elf'] as const;
 export type CreatureType = (typeof CREATURE_TYPES)[number];
-export const CREATURE_TYPE_LABELS: Record<CreatureType, string> = { angel: '천사', demon: '악마', artifact: '마법물체' };
+export const CREATURE_TYPE_LABELS: Record<CreatureType, string> = { angel: '천사', demon: '악마', artifact: '마법물체', elf: '엘프' };
 
 export const TERRAIN_IDS = [
   'grassland',
@@ -225,6 +225,15 @@ const AbilityEffectSchema = z.discriminatedUnion('type', [
   // "You control target player during that player's next turn": the target's next day (00:00
   // to 00:00) is the user's: seized as their retainer for it (sim/retainers.ts).
   z.strictObject({ type: z.literal('possess_next_turn') }),
+  // "Search your library for a card named X, put it onto the battlefield" (Nissa Revane +1): one
+  // of that kind is born at the user's side, theirs (a token, with its creature `types`).
+  z.strictObject({ type: z.literal('create_token'), creature: z.string(), pt: PtSchema, colors: z.array(z.enum(COLORS)), types: z.array(z.enum(CREATURE_TYPES)).default([]) }),
+  // "You gain N life for each <type> you control" (Nissa Revane +1): their retainers of it.
+  z.strictObject({ type: z.literal('gain_life_per'), kind: z.enum(CREATURE_TYPES), amount: z.number().int().positive() }),
+  // "Search your library for any number of <type> creature cards, put them onto the
+  // battlefield" (Nissa Revane −7): every living one of that type serving no one, anywhere,
+  // comes to the user's side as theirs (user decision 2026-10-01).
+  z.strictObject({ type: z.literal('call_kind'), kind: z.enum(CREATURE_TYPES) }),
 ]);
 export type AbilityEffect = z.infer<typeof AbilityEffectSchema>;
 
@@ -1064,6 +1073,7 @@ export function buildWorld(entities: RawEntity[]): { world: World; errors: strin
     if (r && TERRAINS[r.terrain].sea) err(x.id, `sim.at ${x.at} 은 바다라 아무도 머물 수 없음`);
   }
   for (const b of world.npcs) {
+    for (const x of b.activated ?? []) for (const eff of x.effects) if (eff.type === 'create_token' && !ids.has(eff.creature)) err(b.id, `activated ${x.id}: creature ${eff.creature} 가 없음`);
     for (const x of b.activated ?? [])
       for (const eff of x.effects)
         if (eff.type === 'raise') {

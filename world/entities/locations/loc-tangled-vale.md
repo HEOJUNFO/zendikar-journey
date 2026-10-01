@@ -5,11 +5,12 @@ name: 탱글드 베일
 name_en: Tangled Vale
 summary: 발라 게드 남쪽, 가파른 언덕 사이로 이어진 밀림 골짜기들. 사람을 잡아먹는 덩굴이 얽힌 위험한 수렁이고, 조라가 엘프 부족의 본거지다
 status: canon
-sources: [ZEN-166]
+sources: [ZEN-166, ZEN-170]
 tags: [골짜기, 밀림, 엘프, 조라가, 녹색]
 links:
   - { to: loc-bala-ged, rel: 바깥 지역 }
   - { to: chr-joraga-bard, rel: 사는 조라가 음유시인 }
+  - { to: chr-nissa-revane, rel: 나고 자란 플레인즈워커 }
   - { to: loc-bojuka-bay, rel: 가까운 바다 만 }
 map: { in: loc-bala-ged, terrain: forest, pos: [-0.1, 0.75], tiles: 10 }   # 기본 숲: 녹 마나 [결정] 2026-10-01. 남쪽은 [배경], 동서는 [가공]
 ---
@@ -24,6 +25,7 @@ map: { in: loc-bala-ged, terrain: forest, pos: [-0.1, 0.75], tiles: 10 }   # 기
 - **기본 숲**처럼 친다 ([결정] 2026-10-01): 유대를 맺으면 녹 마나 1을 내고, 숲 종류라 숲걷기의 숲이고 페치로 찾을 수 있다.
 - 자리: 발라 게드 남쪽(`pos: [-0.1, 0.75]`). 남쪽은 [배경]("발라 게드 남쪽의 언덕 사이 골짜기"), 동서 자리는 설정에 없어 [가공]이다. 남동쪽 깊은 밀림의 젠디카르 길잡이와 겹치지 않게 조금 서쪽에 둔다.
 - 조라가 음유시인(`chr-joraga-bard`, ZEN-166)이 산다.
+- 조라가 출신의 플레인즈워커 니사 레베인(`chr-nissa-revane`, ZEN-170)이 머문다.
 
 ## 미정/질문
 

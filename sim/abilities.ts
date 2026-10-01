@@ -8,7 +8,7 @@ import { itemsOnLandfall } from './items.ts';
 import { enterShatter } from './relics.ts';
 import { gainLife, lifeOf, loseLife, setLife } from './life.ts';
 import { allyJoined } from './allies.ts';
-import { masterOf, releaseRetainer, retainersOf } from './retainers.ts';
+import { bindRetainer, masterOf, releaseRetainer, retainersOf } from './retainers.ts';
 import { DEPLETED_LABEL } from './rules.ts';
 import { castSpell, spellDef } from './spells.ts';
 import { drawKnowledge } from './knowledge.ts';
@@ -19,7 +19,7 @@ import { nearestTile } from './tiles.ts';
 import type { Tile } from './tiles.ts';
 import type { Actor, Choice, ChoiceEffect, State } from './state.ts';
 import { josa, shortName, toward } from './text.ts';
-import { ABILITY_LABELS, LAND_TYPE_LABELS, landIdOf, landTypes, realmOf, region, spellColors } from './world.ts';
+import { ABILITY_LABELS, CREATURE_TYPE_LABELS, LAND_TYPE_LABELS, landIdOf, landTypes, realmOf, region, spellColors } from './world.ts';
 import type { Ability, ActivatedAbility, BondEffect, LandType, Region, World } from './world.ts';
 
 // Why `a` can't bond with the land they stand on now, or null. One land per turn, as one
@@ -397,6 +397,35 @@ export function useAbility(state: State, world: World, beingId: string, abilityI
       const from = untapTime(t);
       (state.possessions ??= []).push({ target: target.id, by: bs.id, from, until: from + 1440 });
       addLog(state, { kind: 'event', text: `${shortName(target.name)}의 내일은 ${name}의 것이 되었다.`, regions: [bs.region, target.region], actors: [bs.id, target.id], t });
+    } else if (eff.type === 'create_token') {
+      const [born] = spawnWild(state, world, eff.creature, eff.pt, 1, bs.region, eff.colors, bs.tile);
+      if (eff.types.length) state.tokens![born.id].types = [...eff.types];
+      born.master = bs.id;
+      addLog(state, { kind: 'event', text: `${name}의 부름에 ${josa(shortName(born.name), '이', '가')} 곁에 나타났다 (${eff.pt.join('/')}).`, regions: [bs.region], actors: [bs.id, born.id], t });
+    } else if (eff.type === 'gain_life_per') {
+      const n = retainersOf(state, bs.id).filter((x) => !x.dead && (npcDef(state, world, x.id)?.types ?? []).includes(eff.kind)).length;
+      if (n) gainLife(state, bs, eff.amount * n, t, `${cause} (${CREATURE_TYPE_LABELS[eff.kind]} ${n})`);
+      else addLog(state, { kind: 'effect', text: `${josa(name, '은', '는')} 거느린 ${CREATURE_TYPE_LABELS[eff.kind]}가 없다.`, regions: [bs.region], actors: [bs.id], t });
+    } else if (eff.type === 'call_kind') {
+      const called = Object.values(state.actors).filter(
+        (x) => !x.dead && x.id !== bs.id && x.kind === 'npc' && !x.master && !outOfTime(state, x, t) && npcDef(state, world, x.id)?.loyalty === undefined && (npcDef(state, world, x.id)?.types ?? []).includes(eff.kind),
+      );
+      for (const x of called) {
+        x.region = bs.region;
+        x.tile = bs.tile;
+        x.travel = undefined;
+        x.task = undefined;
+        x.forced = undefined;
+        bindRetainer(state, world, x, bs, t, cause);
+      }
+      addLog(state, {
+        kind: 'event',
+        text: called.length ? `${name}의 부름에 ${josa(called.map((x) => shortName(x.name)).join(', '), '이', '가')} 세계 곳곳에서 곁으로 모여들었다.` : `${name}의 부름에 답할 ${CREATURE_TYPE_LABELS[eff.kind]}가 없었다.`,
+        regions: [bs.region],
+        actors: [bs.id, ...called.map((x) => x.id)],
+        t,
+        scope: 'world',
+      });
     } else if (eff.type === 'flashback' && target) {
       for (const id of bs.graveyard ?? []) {
         const s = spellDef(world, id);

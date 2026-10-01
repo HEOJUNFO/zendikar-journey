@@ -4417,3 +4417,51 @@ test('the real Nimana Sell-Sword seeks work in the Free City of Nimana, a basic 
   assert.deepEqual(def.rally, [{ type: 'counter_self' }]);
   assert.equal(hirePrice(def), 40);
 });
+
+test('Nissa Revane: +1 calls an elf warrior to her side, +1 gains 2 life per elf serving her, −7 draws every free elf in the world to her', () => {
+  const chosen: RawEntity = { id: 'cre-ch', kind: 'creature', name: '선택받은 자', status: 'canon' };
+  const nissa = being('chr-n', {
+    home: 'loc-a',
+    abilities: [],
+    pt: [0, 2],
+    loyalty: 7,
+    activated: [
+      { id: 'call', name: '부르기', loyalty: 1, target: false, effects: [{ type: 'create_token', creature: 'cre-ch', pt: [2, 3], colors: ['G'], types: ['elf'] }] },
+      { id: 'kin', name: '엘프의 피', loyalty: 1, target: false, effects: [{ type: 'gain_life_per', kind: 'elf', amount: 2 }] },
+      { id: 'gather', name: '집결', loyalty: -7, target: false, effects: [{ type: 'call_kind', kind: 'elf' }] },
+    ],
+  });
+  const elf = (region: string) => ({ ...npcSim(region, 'work'), types: ['elf'] });
+  const world = fixture([chosen, nissa, npc('chr-e1', elf('loc-b')), npc('chr-e2', elf('loc-c')), npc('chr-h', npcSim('loc-b', 'work')), npc('chr-m', npcSim('loc-b', 'work'))]);
+  const state = newState(world, { seed: 1, mode: 'observer' });
+  const n = state.actors['chr-n'];
+  let t = state.minutes;
+  assert.equal(useAbility(state, world, 'chr-n', 'call', '', t), null);
+  const born = Object.values(state.actors).find((x) => x.master === 'chr-n')!;
+  assert.deepEqual(ptOf(born), [2, 3]);
+  assert.deepEqual(npcDef(state, world, born.id)?.types, ['elf']);
+  // Next day: 2 life for the one elf serving her.
+  t += 1440;
+  const before = n.life ?? 20;
+  assert.equal(useAbility(state, world, 'chr-n', 'kin', '', t), null);
+  assert.equal((n.life ?? 20) - before, 2);
+  // e2 serves someone already: not called. e1 comes from afar; the human stays.
+  state.actors['chr-e2'].master = 'chr-m';
+  t += 1440;
+  assert.equal(useAbility(state, world, 'chr-n', 'gather', '', t), null);
+  assert.equal(state.actors['chr-e1'].master, 'chr-n');
+  assert.equal(state.actors['chr-e1'].region, n.region);
+  assert.equal(state.actors['chr-e2'].master, 'chr-m');
+  assert.equal(state.actors['chr-h'].master, undefined);
+});
+
+test('the real Nissa Revane bides in the Tangled Vale; the world\'s elves are the ranger and the bard', () => {
+  const world = loadWorld();
+  const state = newState(world, { seed: 1, mode: 'observer' });
+  const n = state.actors['chr-nissa-revane'];
+  assert.equal(n?.region, 'loc-tangled-vale');
+  assert.equal(n.loyalty, 2);
+  assert.deepEqual(npcDef(state, world, n.id)?.activated?.map((x) => x.loyalty), [1, 1, -7]);
+  const elves = world.npcs.filter((x) => x.types?.includes('elf')).map((x) => x.id).sort();
+  assert.deepEqual(elves, ['chr-joraga-bard', 'chr-turntimber-ranger']);
+});

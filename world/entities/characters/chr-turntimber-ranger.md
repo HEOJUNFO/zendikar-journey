@@ -23,6 +23,7 @@ sim:
   goal: 무리를 이루어 숲과 원정을 누빈다. 혼자 죽는 이가 없게 한다.
   pt: [2, 2]
   mana: { G: 5 }           # 카드 {3}{G}{G}
+  types: [elf]             # [카드] 엘프 (니사 레베인 ZEN-170 이 센다)
   ally: true               # 엘프 정찰병 동료
   hireable: true           # 마나 값 5 × 10 = 50코인
   rally:

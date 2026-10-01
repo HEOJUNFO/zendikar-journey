@@ -25,6 +25,7 @@ sim:
   pt: [1, 4]
   mana: { G: 4 }           # 카드 {3}{G}
   needs: [energy, hunger]
+  types: [elf]             # [카드] 엘프 (니사 레베인 ZEN-170 이 센다)
   ally: true               # 엘프 도적 동료
   hireable: true           # 마나 값 4 × 10 = 40코인
   rally:

@@ -5,11 +5,12 @@ name: 플레인즈워커
 name_en: Planeswalkers
 summary: 차원과 차원 사이를 걷는 드문 이들. 기세가 꺾이면 이 세계를 떠난다
 status: canon
-sources: [ZEN-120, ZEN-111, ZEN-107]
+sources: [ZEN-120, ZEN-111, ZEN-107, ZEN-170]
 tags: [규칙, 플레인즈워커]
 links:
   - { to: chr-chandra, rel: 예 }
   - { to: chr-sorin-markov, rel: 예 }
+  - { to: chr-nissa-revane, rel: 예 }
 ---
 
 ## 설정

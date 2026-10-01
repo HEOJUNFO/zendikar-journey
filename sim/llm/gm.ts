@@ -56,6 +56,12 @@ function describeEffect(e: GmDayInput['abilities'][number]['ability']['effects']
       return `they gain ${e.amount} life`;
     case 'set_life':
       return `the target's life becomes ${e.amount} (a loss if they have more, a gain if less)`;
+    case 'create_token':
+      return `a ${e.creature} (${e.pt.join('/')}) is born at their side, theirs`;
+    case 'gain_life_per':
+      return `they gain ${e.amount} life for each ${e.kind} serving them`;
+    case 'call_kind':
+      return `every ${e.kind} in the world serving no one comes to their side and serves them`;
     case 'possess_next_turn':
       return `the target's whole next day (from midnight to midnight) is theirs: the target follows and serves them that day`;
   }
