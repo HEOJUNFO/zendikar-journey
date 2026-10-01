@@ -404,6 +404,12 @@ function fire(state: State, world: World, ev: EventDef, t: number, omened: boole
       for (const id of cause.by ?? []) {
         const a = state.actors[id];
         if (!a || a.dead) continue;
+        // Exile without the player in it is one step lighter (user decision 2026-10-01): what is
+        // in an NPC's graveyard stays there.
+        if (a.kind !== 'player') {
+          addLog(state, { kind: 'effect', text: `${josa(shortName(a.name), '이', '가')} 무덤에 둔 것들 위로 아가리가 닫혔지만, 아무것도 삼키지 못했다.`, regions: [a.region], actors: [a.id], t });
+          continue;
+        }
         const spells = (a.graveyard ?? []).map((x) => spellDef(world, x)?.name ?? x);
         const fallen = (a.fallen ?? []).map((x) => shortName(state.actors[x]?.name ?? state.tokens?.[x]?.name ?? x));
         a.exiled = [...new Set([...(a.exiled ?? []), ...(a.graveyard ?? [])])];

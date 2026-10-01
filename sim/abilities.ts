@@ -609,7 +609,8 @@ export function upkeepFleeting(state: State, t: number) {
     a.forced = undefined;
     a.travel = undefined;
     addLog(state, { kind: 'event', text: `${josa(shortName(a.name), '이', '가')} 흩어져 사라졌다.`, regions: [a.region], actors: [a.id], t });
-    // "Exile it": erased from the world (sim/erase.ts, user decision 2026-10-01).
+    // "Exile it": erased from the world (sim/erase.ts, user decision 2026-10-01). A token has no
+    // graveyard to fall back to, so not even an NPC's is spared (user decision 2026-10-01).
     eraseFromWorld(state, id);
   }
 }

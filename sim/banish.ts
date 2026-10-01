@@ -65,7 +65,8 @@ export function applyExile(state: State, world: World, source: Actor, pick: stri
     // Between NPCs, a death (the body and the memories stay; user decision 2026-10-01, as a fight
     // between them ends in a knockout); with the player in it, gone from the world.
     const controller = masterOf(state, source) ?? source;
-    if (controller.kind !== 'player' && x.kind !== 'player') {
+    // A token has no graveyard to fall back to: erased all the same (user decision 2026-10-01).
+    if (controller.kind !== 'player' && x.kind !== 'player' && !state.tokens?.[x.id]) {
       addLog(state, { kind: 'event', text: `${by}의 빛이 ${josa(shortName(x.name), '을', '를')} 감싸 태워 버렸다.`, regions: [x.region], actors: [source.id, x.id], t });
       die(state, x, t, `${by}의 빛에 추방됨`, source);
       return true;
@@ -79,8 +80,10 @@ export function applyExile(state: State, world: World, source: Actor, pick: stri
     const [whoId, landId] = rest;
     const x = state.actors[whoId];
     x.bonds = (x.bonds ?? []).filter((b) => b !== landId);
-    x.exiledLands = [...new Set([...(x.exiledLands ?? []), landId])];
-    addLog(state, { kind: 'event', text: `${by}의 빛이 ${shortName(x.name)}과(와) ${region(world, landId).name} 사이를 끊었다. 다시는 이어지지 않는다.`, regions: [x.region], actors: [source.id, x.id], t });
+    // Between NPCs, one step lighter: the bond broken, to be made again (user decision 2026-10-01).
+    const forGood = (masterOf(state, source) ?? source).kind === 'player' || x.kind === 'player';
+    if (forGood) x.exiledLands = [...new Set([...(x.exiledLands ?? []), landId])];
+    addLog(state, { kind: 'event', text: `${by}의 빛이 ${shortName(x.name)}과(와) ${region(world, landId).name} 사이를 끊었다.${forGood ? ' 다시는 이어지지 않는다.' : ''}`, regions: [x.region], actors: [source.id, x.id], t });
     return true;
   }
   addLog(state, { kind: 'event', text: `${by}의 빛이 그림자를 몰아낸다.`, regions: [source.region], actors: [source.id], t });

@@ -2466,7 +2466,7 @@ test('the real Archive Trap lies on Jwar Isle, for those who searched', () => {
   assert.equal(ev?.searched, true);
 });
 
-test('a ravenous trap: one who sent three or more to their graveyard today (spells let go of, retainers fallen) and steps in loses that graveyard for good', async () => {
+test('a ravenous trap: an NPC who sent three or more to their graveyard today steps in, and it closes on nothing (exile without the player is one step lighter)', async () => {
   const maw: RawEntity = {
     id: 'evt-maw',
     kind: 'event',
@@ -2474,41 +2474,58 @@ test('a ravenous trap: one who sent three or more to their graveyard today (spel
     status: 'canon',
     sim: { region: 'loc-b', pos: [-1, 0], trigger: 'enter', buried: 3, text: '아가리가 닫혔다.', effects: [{ type: 'exile_graveyard' }] },
   };
-  const world = fixture([maw, mantle, bolt, npc('chr-x', npcSim('loc-b')), npc('chr-y', npcSim('loc-b')), npc('chr-r', npcSim('loc-a'))]);
+  const world = fixture([maw, mantle, bolt, npc('chr-x', npcSim('loc-b')), npc('chr-r', npcSim('loc-a'))]);
   const state = newState(world, { seed: 1, mode: 'observer' });
-  const [x, y, r] = [state.actors['chr-x'], state.actors['chr-y'], state.actors['chr-r']];
-  x.region = y.region = 'loc-a';
-  // x lets go of two spells and loses a retainer today: three to the graveyard.
+  const [x, r] = [state.actors['chr-x'], state.actors['chr-r']];
+  x.region = 'loc-a';
   x.spells = [mantle.id, bolt.id];
   letGo(state, world, x, mantle.id, state.minutes);
   letGo(state, world, x, bolt.id, state.minutes);
   r.master = x.id;
-  y.relations = { 'chr-r': { name: 'r', text: '옛 벗', t: 0 } };
   die(state, r, state.minutes, '시험');
   assert.equal(buriedToday(x, state.minutes), 3);
-  assert.deepEqual(x.fallen, ['chr-r']);
-  // y let go of two: not enough.
-  y.spells = [mantle.id, bolt.id];
-  letGo(state, world, y, mantle.id, state.minutes);
-  letGo(state, world, y, bolt.id, state.minutes);
   await advance(state, world, 3);
-  assert.deepEqual(x.graveyard, []);
-  assert.deepEqual(x.fallen, []);
+  assert.ok(texts(state).some((t) => t.includes('아무것도 삼키지 못했다')));
+  assert.equal(x.graveyard?.length, 2);
+  assert.deepEqual(x.fallen, ['chr-r']);
+  assert.ok(state.actors['chr-r']?.dead);
+  assert.equal(x.exiled, undefined);
+});
+
+test('a ravenous trap: the player who sent three or more to their graveyard today steps in and loses that graveyard for good', async () => {
+  const maw: RawEntity = {
+    id: 'evt-maw',
+    kind: 'event',
+    name: '탐식의 함정',
+    status: 'canon',
+    sim: { region: 'loc-b', pos: [-1, 0], trigger: 'enter', buried: 3, text: '아가리가 닫혔다.', effects: [{ type: 'exile_graveyard' }] },
+  };
+  const world = fixture([maw, mantle, bolt, npc('chr-y', npcSim('loc-a')), npc('chr-r', npcSim('loc-a'))]);
+  const state = character(world, 'loc-a');
+  const [p, y, r] = [state.actors[PLAYER_ID], state.actors['chr-y'], state.actors['chr-r']];
+  p.spells = [mantle.id, bolt.id];
+  letGo(state, world, p, mantle.id, state.minutes);
+  letGo(state, world, p, bolt.id, state.minutes);
+  r.master = p.id;
+  y.relations = { 'chr-r': { name: 'r', text: '옛 벗', t: 0 } };
+  die(state, r, state.minutes, '시험');
+  assert.equal(buriedToday(p, state.minutes), 3);
+  assert.deepEqual(p.fallen, ['chr-r']);
+  await act(state, world, { type: 'move', to: 'loc-b', tile: eventTile(world, world.events.find((e) => e.id === 'evt-maw')!) }, { planDay: async () => [] });
+  assert.deepEqual(p.graveyard, []);
+  assert.deepEqual(p.fallen, []);
   // The dead in it are erased from the world: gone from the save and from every memory, for good.
   assert.equal(state.actors['chr-r'], undefined);
   assert.equal(y.relations?.['chr-r'], undefined);
   assert.deepEqual(state.erased, ['chr-r']);
   syncWorld(state, world);
   assert.equal(state.actors['chr-r'], undefined); // not made anew from their card
-  assert.equal(y.graveyard?.length, 2);
   assert.ok(texts(state).some((t) => t.includes('아가리 속으로 사라졌다')));
-  assert.equal(buriedToday(x, state.minutes + 1440), 0); // a new day counts anew
+  assert.equal(buriedToday(p, state.minutes + 1440), 0); // a new day counts anew
   // Exiled, a spell is theirs never again: not learned anew (a graveyard's may be).
-  assert.deepEqual(x.exiled?.sort(), [bolt.id, mantle.id].sort());
-  x.region = 'loc-a';
-  assert.match(learnBlocked(world, x, mantle.id)!, /추방되어/);
-  y.region = 'loc-a';
-  assert.equal(learnBlocked(world, y, mantle.id), null); // only in the graveyard: may learn again
+  assert.deepEqual(p.exiled?.sort(), [bolt.id, mantle.id].sort());
+  p.region = 'loc-a';
+  assert.match(learnBlocked(world, p, mantle.id)!, /추방되어/);
 });
 
 test('a ravenous trap on one who holds every spell of a color (Chandra): the exiled spell never comes back to their hand', () => {
@@ -4866,14 +4883,29 @@ test('a mindbreak trap: one casting their third spell of the day there sees it b
   castSpell(state, world, c, 'spl-h', c.id, false, t); // the third counted: broken
   assert.equal(c.auras?.length, 3);
   assert.deepEqual(c.spells, []);
-  assert.ok(texts(state).some((l) => l.includes('허공에서 부서져 사라졌다')));
-  // Exiled: theirs never again, not even learned anew.
-  assert.deepEqual(c.exiled, ['spl-h']);
-  assert.match(learnBlocked(world, c, 'spl-h')!, /추방되어/);
+  // An NPC's goes to their graveyard: forgotten, to be learned again (exile without the player is
+  // one step lighter, user decision 2026-10-01).
+  assert.ok(texts(state).some((l) => l.includes('그 주문을 잊었다')));
+  assert.deepEqual(c.graveyard, ['spl-h']);
+  assert.equal(c.exiled, undefined);
+  assert.equal(learnBlocked(world, c, 'spl-h'), null);
   // Elsewhere, no trap.
   for (let i = 0; i < 3; i++) castSpell(state, world, far, 'spl-h', far.id, false, t);
   assert.equal(far.auras?.length, 3);
   assert.deepEqual(far.spells, ['spl-h']);
+});
+
+test('a mindbreak trap on the player: the broken spell is exiled, theirs never again', () => {
+  const mind: RawEntity = { id: 'evt-mind', kind: 'event', name: '정신파괴 함정', status: 'canon', sim: { region: 'loc-a', trigger: 'cast', spells: 1, text: '주문이 부서졌다.', effects: [{ type: 'counter_spell' }] } };
+  const heal: RawEntity = { id: 'spl-h', kind: 'spell', name: '치유', status: 'canon', sim: { cost: '{0}', learn_at: 'loc-a', target: 'self', effects: [{ type: 'aura', pt: [1, 1] }] } };
+  const world = fixture([mind, heal]);
+  const state = character(world, 'loc-a');
+  const p = state.actors[PLAYER_ID];
+  p.spells = ['spl-h'];
+  castSpell(state, world, p, 'spl-h', p.id, false, state.minutes);
+  assert.ok(texts(state).some((l) => l.includes('허공에서 부서져 사라졌다')));
+  assert.deepEqual(p.exiled, ['spl-h']);
+  assert.match(learnBlocked(world, p, 'spl-h')!, /추방되어/);
 });
 
 test('the real Mindbreak Trap lies in Tazeem', () => {

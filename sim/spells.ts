@@ -16,7 +16,7 @@ import { remember } from './relations.ts';
 import { copyable, replicate } from './replicate.ts';
 import { holdCast, reactionSpell } from './counter.ts';
 import { controlledCreatures, creatureOf, retainersOf } from './retainers.ts';
-import { addLog, npcDef, present, ptOf, targetable, together, untargetableText } from './state.ts';
+import { addLog, buryCount, npcDef, present, ptOf, targetable, together, untargetableText } from './state.ts';
 import type { Actor, State } from './state.ts';
 import { sealedBy, sealText } from './seal.ts';
 import { josa, shortName } from './text.ts';
@@ -178,6 +178,14 @@ export function castSpell(state: State, world: World, a: Actor, spellId: string,
   // exiled: theirs never again, not even learned anew (user decision 2026-10-01, `Actor.exiled`).
   if (!free && castEvents(state, world, a, t)) {
     a.spells = (a.spells ?? []).filter((x) => x !== s.id);
+    // Exile without the player in it is one step lighter (user decision 2026-10-01): an NPC's
+    // spell goes to their graveyard (forgotten, to be learned again).
+    if (a.kind !== 'player') {
+      a.graveyard = [...new Set([...(a.graveyard ?? []), s.id])];
+      buryCount(a, 1, t);
+      addLog(state, { kind: 'effect', text: `${josa(shortName(a.name), '이', '가')} 쓰던 ${josa(s.name, '은', '는')} 허공에서 부서졌다. ${josa(shortName(a.name), '은', '는')} 그 주문을 잊었다.`, regions: [a.region], actors: [a.id], t });
+      return false;
+    }
     a.exiled = [...new Set([...(a.exiled ?? []), s.id])];
     addLog(state, { kind: 'effect', text: `${josa(shortName(a.name), '이', '가')} 쓰던 ${josa(s.name, '은', '는')} 허공에서 부서져 사라졌다. 그 주문은 영영 다시 쓰지도 익히지도 못한다.`, regions: [a.region], actors: [a.id], t });
     return false;
