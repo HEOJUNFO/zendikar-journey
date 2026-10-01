@@ -18,6 +18,7 @@ import { setOff, wandersDue, withPositions } from './wander.ts';
 import { cardLabel, discardOwed, handOf, letGo } from './discard.ts';
 import { applyShatter, crushRelic, demolish, demolishOptions, relicsHere, shatterOptions } from './relics.ts';
 import { loremastersOf, recallBlocked, recallCount } from './loremaster.ts';
+import { biteable, readyBiter } from './bite.ts';
 import { sacrifice } from './monument.ts';
 import { answerTide } from './tide.ts';
 import { topLand } from './oracle.ts';
@@ -1046,6 +1047,7 @@ async function prepare(state: State, world: World, llm: Llm): Promise<string | n
           days: daysInput(state, world, a),
           grow: growInput(state, world, a),
           recall: recallInput(state, world, a),
+          bite: biteInput(state, a),
           fetch: fetchInput(state, world, a),
           court: courtInput(state, world, a),
           hire: hireInput(state, world, a),
@@ -1092,6 +1094,12 @@ function equipInput(state: State, world: World, a: Actor): PlanDayInput['equip']
   };
 }
 
+// One they control bearing Predatory Urge who could bite today, for their plan.
+function biteInput(state: State, a: Actor): PlanDayInput['bite'] {
+  const biter = readyBiter(state, a, state.minutes);
+  return biter && { who: biter.id === a.id ? 'they themselves' : shortName(biter.name), power: ptOf(biter)[0] };
+}
+
 // A Sea Gate Loremaster they control they could tap today, for their plan.
 function recallInput(state: State, world: World, a: Actor): PlanDayInput['recall'] {
   if (recallBlocked(state, world, a, state.minutes)) return undefined;
@@ -1136,6 +1144,7 @@ function hireInput(state: State, world: World, a: Actor): PlanDayInput['hire'] {
 // one who holds them.
 function peopleInput(state: State, world: World, a: Actor): PlanDayInput['people'] {
   const canAttack = !hasAbility(a, 'defender', state.minutes);
+  const biter = readyBiter(state, a, state.minutes);
   const out = Object.values(state.actors)
     .filter((x) => !x.dead && x.id !== a.id && !outOfTime(state, x))
     .map((x) => {
@@ -1146,6 +1155,7 @@ function peopleInput(state: State, world: World, a: Actor): PlanDayInput['people
         text: `${x.name} (${x.kind === 'player' ? 'the player' : def?.beast ? 'beast' : (def?.role ?? '')}, ${ptOf(x).join('/')})`,
         talk: !def?.beast,
         attack: canAttack && !(a.seized && a.master === x.id),
+        bite: !!biter && biteable(state, world, biter, x, state.minutes),
       };
     });
   return out.length ? out : undefined;

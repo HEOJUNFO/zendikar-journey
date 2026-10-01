@@ -9,6 +9,7 @@ import { askOptions, askText } from '../sim/asks.ts';
 import { woundsOf } from '../sim/combat.ts';
 import { COLOR_LABELS, formatMana, manaAvailable, manaCapacity, manaLabel } from '../sim/mana.ts';
 import { loremastersOf, recallBlocked, recallCount } from '../sim/loremaster.ts';
+import { biteBlocked, bitersOf } from '../sim/bite.ts';
 import { bondBlocked, bondTargets, enteredToday, fetchTargets, landDropBlocked, fireTargets, firesOnBond, growBlocked, growLand, targetedBondEffect } from '../sim/abilities.ts';
 import { BOND_HOURS } from '../sim/actions.ts';
 import { CLAIM_HOURS, claimBlocked, itemsAt, itemsOf } from '../sim/items.ts';
@@ -690,6 +691,17 @@ export function CharacterControls(props: {
           >
             공격
           </button>
+          {target && bitersOf(state, p, state.minutes).length > 0 && (
+            <button
+              type="button"
+              className="danger"
+              disabled={busy || !!stuck || !!biteBlocked(state, world, p, target.id, state.minutes)}
+              title={biteBlocked(state, world, p, target.id, state.minutes) ?? `포식 충동: ${shortName(target.name)}와(과) 서로 공격력만큼 피해, 물어뜯은 이는 자정까지 묶임`}
+              onClick={() => onAct({ type: 'bite', to: target.id })}
+            >
+              🦷 물어뜯기
+            </button>
+          )}
           {target &&
             known.filter((s) => s.target !== 'self').map((s) => {
               const kick = !!s.kicker && !castBlocked(state, world, p, s.id, target.id, true, state.minutes);

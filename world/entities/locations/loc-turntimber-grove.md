@@ -5,7 +5,7 @@ name: 턴팀버 숲
 name_en: Turntimber Grove
 summary: 온두 남쪽, 나무들이 나선처럼 비틀려 자라는 숲. 금빛 햇살이 비틀린 줄기 사이로 스며들고, 그 기운이 곁의 이를 북돋운다
 status: canon
-sources: [ZEN-227, ZEN-187, ZEN-191, ZEN-160]
+sources: [ZEN-227, ZEN-187, ZEN-191, ZEN-160, ZEN-175]
 tags: [숲, 나선 나무, 녹색]
 links:
   - { to: evt-cobra-trap, rel: 무너진 무덤에 도사린 함정 }
@@ -13,6 +13,7 @@ links:
   - { to: loc-ondu, rel: 바깥 지역 }
   - { to: loc-graypelt-refuge, rel: 안의 구역 (바깥 가장자리의 야영지) }
   - { to: cre-terra-stomper, rel: 숲을 짓밟는 짐승 }
+  - { to: spl-predatory-urge, rel: 배우는 주문 }
   - { to: cre-baloth, rel: 최상위 포식자 발로스 }
   - { to: chr-territorial-baloth, rel: 영역을 지키는 발로스 }
 map: { in: loc-ondu, terrain: forest, color: G, pos: [0.55, -0.15], tiles: 50 }   # 50칸은 안의 그레이펠트 피난처 포함 [결정] 2026-10-01
@@ -38,6 +39,7 @@ sim:
 - 테라 스톰퍼(`cre-terra-stomper`, ZEN-187)가 비틀린 나무들을 짓밟으며 사냥한다 ([결정] 2026-09-30). 온두 둘레의 첫 사냥꾼이라, 온두에 드는 이는 조심해야 한다.
 
 - 설정에서 턴팀버의 최상위 포식자는 영역을 몹시 지키는 발로스다 ([배경] MTG 위키 Turntimber). 그래서 발로스 숲파괴자(`cre-baloth`)와 영역 발로스(`chr-territorial-baloth`)가 여기 산다 ([결정] 2026-10-01, 무라사에서 옮김).
+- 포식 충동(`spl-predatory-urge`, ZEN-175)을 여기서 배운다 (4시간, [결정] 2026-10-01). 걸린 이가 하루 한 번 곁의 하나와 서로 물어뜯는 녹색 오라다. 최상위 포식자 발로스의 숲이라 [가공].
 
 ## 미정/질문
 

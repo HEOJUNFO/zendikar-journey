@@ -55,6 +55,8 @@ export type PlanDayInput = {
   grow?: { land: string; creatures: string[] };
   // A Sea Gate Loremaster they control they could tap today, and how many spells it would bring.
   recall?: { who: string; count: number };
+  // One they control bearing Predatory Urge who could bite someone today (sim/bite.ts), and their power.
+  bite?: { who: string; power: number };
   // Lands they could seek out today by giving up a fetch land they hold (Arid Mesa...).
   fetch?: { id: string; text: string }[];
   // Spells they could learn (where each is taught), and spells they hold and could pay for.
@@ -69,12 +71,12 @@ export type PlanDayInput = {
   equip?: { text: string; who: { id: string; text: string }[] };
   // Others in the world and where each is now: whom they could seek out to talk with (not
   // beasts) or go after (attack), as the player may anyone standing with them.
-  people?: { id: string; at: string; text: string; talk: boolean; attack: boolean }[];
+  people?: { id: string; at: string; text: string; talk: boolean; attack: boolean; bite?: boolean }[];
 };
 
 // Kinds of blocks they may plan: no meals without hunger, taming only if there is an item for
 // them to tame, keeping days only with a land that keeps them.
-function kindsFor(input: Pick<PlanDayInput, 'needs' | 'items' | 'equip' | 'days' | 'grow' | 'recall' | 'fetch' | 'learn' | 'cast' | 'court' | 'hire' | 'people'>) {
+function kindsFor(input: Pick<PlanDayInput, 'needs' | 'items' | 'equip' | 'days' | 'grow' | 'recall' | 'bite' | 'fetch' | 'learn' | 'cast' | 'court' | 'hire' | 'people'>) {
   return LIFE_KINDS.filter(
     (k) =>
       (k !== 'eat' || input.needs.includes('hunger')) &&
@@ -89,7 +91,8 @@ function kindsFor(input: Pick<PlanDayInput, 'needs' | 'items' | 'equip' | 'days'
       (k !== 'cast' || !!input.cast?.length) &&
       (k !== 'court' || !!input.court?.length) &&
       (k !== 'hire' || !!input.hire?.length) &&
-      (k !== 'attack' || !!input.people?.some((x) => x.attack)),
+      (k !== 'attack' || !!input.people?.some((x) => x.attack)) &&
+      (k !== 'bite' || (!!input.bite && !!input.people?.some((x) => x.bite))),
   );
 }
 
@@ -122,7 +125,8 @@ export async function planDay(input: PlanDayInput): Promise<ScheduleBlock[] | nu
     (b.kind === 'hire' && mercs.get(b.who ?? '') !== b.regionId) ||
     (b.kind === 'equip' && !!b.who && !input.equip?.who.some((x) => x.id === b.who)) ||
     (b.kind === 'social' && !!b.who && !people.get(b.who)?.talk) ||
-    (b.kind === 'attack' && !people.get(b.who ?? '')?.attack);
+    (b.kind === 'attack' && !people.get(b.who ?? '')?.attack) ||
+    (b.kind === 'bite' && !people.get(b.who ?? '')?.bite);
   if (blocks?.some(bad)) blocks = null;
   if (!blocks) console.warn(`Unusable plan for ${input.name}:`, content);
   return blocks;
@@ -217,15 +221,19 @@ ${
           kinds.includes('attack')
             ? `\n- "attack" needs "who": the id of one they go after. They go wherever that one is and fall on them; the two fight hour by hour until one falls (fights between characters knock out, not kill). Only when, in character, they have real cause.`
             : ''
-        }\n  Others in the world, and where each is now:\n${people.map((x) => `  - "${x.id}" in ${x.at}: ${x.text}${x.talk ? '' : ' (no talking)'}${kinds.includes('attack') && !x.attack ? ' (not to attack)' : ''}`).join('\n')}\n`
+        }${
+          kinds.includes('bite')
+            ? `\n- "bite" takes 1 hour and needs "who": the id of one to bite. ${input.bite!.who} (power ${input.bite!.power}), seized by a predatory urge, goes to that one and bites: each deals the other damage equal to their power at once, and ${input.bite!.who} is then tapped (bound, unable to move or strike back) until midnight, while the one bitten becomes their foe for the day. Once a day; only when, in character, it is worth it.`
+            : ''
+        }\n  Others in the world, and where each is now:\n${people.map((x) => `  - "${x.id}" in ${x.at}: ${x.text}${x.talk ? '' : ' (no talking)'}${kinds.includes('attack') && !x.attack ? ' (not to attack)' : ''}${kinds.includes('bite') && !x.bite ? ' (not to bite)' : ''}`).join('\n')}\n`
       : ''
   }- Travel between regions takes hours; only change region when there is a reason.
 - Let today follow from their state, news, goal and the people they know; days need not repeat.
 - activity is a short Korean phrase shown on screen (e.g. "폐허 순찰"); emoji is a single emoji.
 
 Answer: {"blocks":[{"start":0,"end":360,"regionId":"...","activity":"...","emoji":"...","kind":"sleep"}, ...]}${
-    kinds.includes('fetch') || kinds.includes('learn') || kinds.includes('cast') || kinds.includes('court') || kinds.includes('hire') || kinds.includes('attack')
-      ? ` (${[kinds.includes('fetch') && 'a "fetch" block also has "land"', (kinds.includes('learn') || kinds.includes('cast')) && '"learn" and "cast" blocks also have "spell"', (kinds.includes('court') || kinds.includes('hire') || kinds.includes('attack')) && '"court", "hire" and "attack" blocks also have "who" (a "social" block may)'].filter(Boolean).join('; ')})`
+    kinds.includes('fetch') || kinds.includes('learn') || kinds.includes('cast') || kinds.includes('court') || kinds.includes('hire') || kinds.includes('attack') || kinds.includes('bite')
+      ? ` (${[kinds.includes('fetch') && 'a "fetch" block also has "land"', (kinds.includes('learn') || kinds.includes('cast')) && '"learn" and "cast" blocks also have "spell"', (kinds.includes('court') || kinds.includes('hire') || kinds.includes('attack') || kinds.includes('bite')) && '"court", "hire", "attack" and "bite" blocks also have "who" (a "social" block may)'].filter(Boolean).join('; ')})`
       : ''
   }`;
 }

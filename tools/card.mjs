@@ -1,5 +1,5 @@
 // Card intake from Scryfall, in the order of https://scryfall.com/sets/zen?order=cmc&dir=desc
-// (one entry per card, so basic lands with several arts appear once).
+// (one entry per card, basic lands left out).
 //   npm run card:sync   fetch the set into world/cards/_queue.json
 //   npm run card:next   write the next card not yet in world/cards/ and print it. Nonbasic
 //                       lands come first (the world's places are laid before anything stands
@@ -45,7 +45,7 @@ async function sync() {
     artist: c.artist,
     image: c.image_uris?.normal,
     scryfall: c.scryfall_uri?.split('?')[0],
-  }));
+  })).filter((c) => !/\bBasic\b/.test(c.type_line));
   writeFileSync(queueFile, JSON.stringify(queue, null, 2) + '\n');
   console.log(`${queue.length}장을 ${SET.toUpperCase()} 순서표에 저장 (world/cards/_queue.json)`);
 }

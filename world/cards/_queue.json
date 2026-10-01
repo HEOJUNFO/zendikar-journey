@@ -3616,22 +3616,6 @@
     "scryfall": "https://scryfall.com/card/zen/213/emeria-the-sky-ruin"
   },
   {
-    "order": 213,
-    "id": "ZEN-246a",
-    "name_en": "Forest",
-    "set": "ZEN",
-    "number": null,
-    "mana_cost": "",
-    "cmc": 0,
-    "type_line": "Basic Land — Forest",
-    "rarity": "common",
-    "oracle_text": "({T}: Add {G}.)",
-    "flavor_text": "",
-    "artist": "John Avon",
-    "image": "https://cards.scryfall.io/normal/front/c/6/c6d6876e-7d83-44bd-b721-5070f4087325.jpg?1783942112",
-    "scryfall": "https://scryfall.com/card/zen/246a/forest"
-  },
-  {
     "order": 214,
     "id": "ZEN-214",
     "name_en": "Graypelt Refuge",
@@ -3646,22 +3630,6 @@
     "artist": "Philip Straub",
     "image": "https://cards.scryfall.io/normal/front/c/4/c46324e3-52e7-4b21-a9a0-a3aae9f7dd5b.jpg?1783942124",
     "scryfall": "https://scryfall.com/card/zen/214/graypelt-refuge"
-  },
-  {
-    "order": 215,
-    "id": "ZEN-234a",
-    "name_en": "Island",
-    "set": "ZEN",
-    "number": null,
-    "mana_cost": "",
-    "cmc": 0,
-    "type_line": "Basic Land — Island",
-    "rarity": "common",
-    "oracle_text": "({T}: Add {U}.)",
-    "flavor_text": "",
-    "artist": "John Avon",
-    "image": "https://cards.scryfall.io/normal/front/c/4/c4ec37bf-80bd-4f51-a79e-9c20e4048a00.jpg?1783942119",
-    "scryfall": "https://scryfall.com/card/zen/234a/island"
   },
   {
     "order": 216,
@@ -3760,22 +3728,6 @@
     "scryfall": "https://scryfall.com/card/zen/220/misty-rainforest"
   },
   {
-    "order": 222,
-    "id": "ZEN-242a",
-    "name_en": "Mountain",
-    "set": "ZEN",
-    "number": null,
-    "mana_cost": "",
-    "cmc": 0,
-    "type_line": "Basic Land — Mountain",
-    "rarity": "common",
-    "oracle_text": "({T}: Add {R}.)",
-    "flavor_text": "",
-    "artist": "John Avon",
-    "image": "https://cards.scryfall.io/normal/front/4/f/4f570888-effb-44ff-a250-a7726a0b01f4.jpg?1783942115",
-    "scryfall": "https://scryfall.com/card/zen/242a/mountain"
-  },
-  {
     "order": 223,
     "id": "ZEN-221",
     "name_en": "Oran-Rief, the Vastwood",
@@ -3806,22 +3758,6 @@
     "artist": "Nic Klein",
     "image": "https://cards.scryfall.io/normal/front/e/a/ea077cff-b5c9-4a40-8e66-8810c37be5cb.jpg?1783942122",
     "scryfall": "https://scryfall.com/card/zen/222/piranha-marsh"
-  },
-  {
-    "order": 225,
-    "id": "ZEN-230a",
-    "name_en": "Plains",
-    "set": "ZEN",
-    "number": null,
-    "mana_cost": "",
-    "cmc": 0,
-    "type_line": "Basic Land — Plains",
-    "rarity": "common",
-    "oracle_text": "({T}: Add {W}.)",
-    "flavor_text": "",
-    "artist": "John Avon",
-    "image": "https://cards.scryfall.io/normal/front/5/1/51afc6cd-1a39-4160-a265-d92610db1d44.jpg?1783942120",
-    "scryfall": "https://scryfall.com/card/zen/230a/plains"
   },
   {
     "order": 226,
@@ -3886,22 +3822,6 @@
     "artist": "Zoltan Boros & Gabor Szikszai",
     "image": "https://cards.scryfall.io/normal/front/1/f/1f75f13e-43e6-4118-83a3-0446c2089d84.jpg?1783942126",
     "scryfall": "https://scryfall.com/card/zen/206/spidersilk-net"
-  },
-  {
-    "order": 230,
-    "id": "ZEN-238a",
-    "name_en": "Swamp",
-    "set": "ZEN",
-    "number": null,
-    "mana_cost": "",
-    "cmc": 0,
-    "type_line": "Basic Land — Swamp",
-    "rarity": "common",
-    "oracle_text": "({T}: Add {B}.)",
-    "flavor_text": "",
-    "artist": "John Avon",
-    "image": "https://cards.scryfall.io/normal/front/d/8/d8a3e999-c75b-4be3-ae7f-ac5430b760b6.jpg?1783942116",
-    "scryfall": "https://scryfall.com/card/zen/238a/swamp"
   },
   {
     "order": 231,

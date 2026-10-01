@@ -338,7 +338,7 @@ export function hurt(to: Actor, from: Actor, n: number, t: number) {
 
 // Lifelink: damage they deal also gains their controller (their master, or themselves) that
 // much life.
-function lifelink(state: State, x: Actor, dealt: number, t: number) {
+export function lifelink(state: State, x: Actor, dealt: number, t: number) {
   if (!x.abilities.includes('lifelink') || dealt <= 0) return;
   const controller = masterOf(state, x) ?? x;
   if (controller.dead) return;

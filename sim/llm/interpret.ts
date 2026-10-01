@@ -4,7 +4,7 @@ import { nearestTile, sameTile, tileCenter, tileLabel } from '../tiles.ts';
 import { moveHours } from '../step.ts';
 import { ActionSchema } from '../actions.ts';
 import type { Action } from '../actions.ts';
-import { isPerson, npcDef, player, present, ptOf } from '../state.ts';
+import { isPerson, npcDef, player, present, ptOf, together } from '../state.ts';
 import { hireBlocked, hirePrice } from '../allies.ts';
 import { askOptions, askText } from '../asks.ts';
 import type { InterpretInput } from '../run.ts';
@@ -14,6 +14,7 @@ import { bondEffectText, placeName, region, TERRAINS } from '../world.ts';
 import { itemsAt, itemOwner } from '../items.ts';
 import { equipBlocked, equipmentOf, equipTargets } from '../equipment.ts';
 import { loremastersOf, recallBlocked, recallCount } from '../loremaster.ts';
+import { biteable, readyBiter } from '../bite.ts';
 import { enteredToday, fetchTargets, fireTargets, growBlocked, growLand, landDropBlocked, targetedBondEffect } from '../abilities.ts';
 import { topBlocked, topLand } from '../oracle.ts';
 import { eonLand, spendBlocked, storeBlocked } from '../eons.ts';
@@ -71,6 +72,13 @@ export async function interpret({ world, state, text }: InterpretInput): Promise
   // A Sea Gate Loremaster they control: draw a spell per Ally of their party.
   if (!recallBlocked(state, world, p, state.minutes)) {
     days.push(`- {"type":"recall"}  (tap ${shortName(loremastersOf(state, world, p)[0].name)}: come to know ${recallCount(state, world, p)} hidden secret(s) of the world, one per Ally of their party; 1 hour)`);
+  }
+  // One they control bearing Predatory Urge: bite someone standing with them.
+  const biter = readyBiter(state, p, state.minutes);
+  if (biter) {
+    const prey = Object.values(state.actors).filter((x) => together(biter, x) && biteable(state, world, biter, x, state.minutes));
+    if (prey.length)
+      days.push(`- {"type":"bite","to":"<person id>"}  (${biter.id === p.id ? 'they themselves' : shortName(biter.name)}, seized by a predatory urge, bite one standing there: each deals the other damage equal to their power (${ptOf(biter)[0]} against theirs), then the biter is tapped, bound until midnight, and the one bitten turns foe; once a day; 1 hour. Who: ${prey.map((x) => `${x.id} (${shortName(x.name)}, ${ptOf(x).join('/')})`).join(', ')})`);
   }
   // A Valakut they hold: bonding with (or seeking out) a mountain may wake it.
   const valakut = world.regions.find((r) => r.mountainFire && p.bonds?.includes(r.id));

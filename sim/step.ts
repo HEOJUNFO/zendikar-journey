@@ -25,6 +25,7 @@ import { forget, forgetAbout } from './relations.ts';
 import { markSealed } from './seal.ts';
 import { handSize } from './knowledge.ts';
 import { recall, RECALL_HOURS, recallBlocked } from './loremaster.ts';
+import { bite, BITE_HOURS, biteBlocked } from './bite.ts';
 import { addLog, alive, here, landUnusable, needsOf, npcDef, outOfTime, present, ptOf, random, together } from './state.ts';
 import { addFoe, attackBlocked, dealDamage, foesOf, hostileNpcs } from './combat.ts';
 import { bondBlocked, bondLand, expireGranted, upkeepFleeting, onEnter, FETCH_HOURS, fetchLand, fetchSource, growBlocked, growEntered, growLand, spawnWild, summonLibrary, TOP, upkeepRevive, useAbility } from './abilities.ts';
@@ -75,7 +76,7 @@ export function step(state: State, placed: World) {
     actorHour(state, world, a, t);
     // A timed task done: the player's action, or an NPC's bonding, taming or keeping days.
     const done = a.task?.until !== undefined && a.task.until <= t + STEP_MINUTES && !a.travel;
-    const timed = ['bond', 'claim', 'equip', 'store_day', 'spend_day', 'grow', 'fetch', 'learn', 'cast', 'court', 'hire', 'recall'];
+    const timed = ['bond', 'claim', 'equip', 'store_day', 'spend_day', 'grow', 'fetch', 'learn', 'cast', 'court', 'hire', 'recall', 'bite'];
     if (done && (a.kind === 'player' || timed.includes(a.task!.kind))) {
       const at = t + STEP_MINUTES;
       if (a.task!.kind === 'bond') bondLand(state, world, a, at, a.region, a.task!.target);
@@ -92,6 +93,8 @@ export function step(state: State, placed: World) {
       // A court: the beast decides after the hour whether to follow them.
       if (a.task!.kind === 'court' && a.task!.who) readyCourt(state, world, a, a.task!.who, at);
       if (a.task!.kind === 'hire' && a.task!.who) hireMerc(state, world, a, a.task!.who, at);
+      // A bite last: it may fell them (and end their task).
+      if (a.task?.kind === 'bite' && a.task.who) bite(state, world, a, a.task.who, at);
       a.task = undefined;
     }
   }
@@ -631,7 +634,7 @@ function npcTask(state: State, world: World, a: Actor, t: number): Task | undefi
   const m = masterOf(state, a);
   // One they seek out (to talk, to win over, to hire) or go after (to attack): wherever that
   // one is now, to their very tile.
-  const sought = (block.kind === 'social' || block.kind === 'attack' || block.kind === 'court' || block.kind === 'hire') && block.who ? state.actors[block.who] : undefined;
+  const sought = (block.kind === 'social' || block.kind === 'attack' || block.kind === 'bite' || block.kind === 'court' || block.kind === 'hire') && block.who ? state.actors[block.who] : undefined;
   const target = m ?? (sought && !sought.dead && !outOfTime(state, sought, t) ? sought : undefined);
   if (target) {
     if (goTo(state, world, a, target, t)) return a.task;
@@ -686,8 +689,9 @@ function npcTask(state: State, world: World, a: Actor, t: number): Task | undefi
     : block.kind === 'spend_day' ? spendBlocked(state, world, a, land!.id, t)
     : block.kind === 'grow' ? growBlocked(state, world, a, land!.id, t)
     : block.kind === 'recall' ? recallBlocked(state, world, a, t)
+    : block.kind === 'bite' ? biteBlocked(state, world, a, block.who, t)
     : null;
-  const timed = ['bond', 'claim', 'equip', 'store_day', 'spend_day', 'grow', 'fetch', 'learn', 'cast', 'court', 'hire', 'recall'];
+  const timed = ['bond', 'claim', 'equip', 'store_day', 'spend_day', 'grow', 'fetch', 'learn', 'cast', 'court', 'hire', 'recall', 'bite'];
   if (!cannot && timed.includes(block.kind) && a.task?.kind === block.kind) return a.task;
   const task: Task =
     block.kind === 'work' && landUnusable(state, a.region)
@@ -702,6 +706,8 @@ function npcTask(state: State, world: World, a: Actor, t: number): Task | undefi
             ? { kind: block.kind, activity: block.activity, emoji: block.emoji, until: t + (block.kind === 'court' ? COURT_HOURS : HIRE_HOURS) * 60, who: block.who }
           : block.kind === 'recall'
             ? { kind: 'recall', activity: block.activity, emoji: block.emoji, until: t + RECALL_HOURS * 60 }
+          : block.kind === 'bite'
+            ? { kind: 'bite', activity: block.activity, emoji: block.emoji, until: t + BITE_HOURS * 60, who: block.who }
           : block.kind === 'attack' || (block.kind === 'social' && block.who)
             ? { kind: block.kind, activity: block.activity, emoji: block.emoji, who: block.who }
           : fetchFrom && 'from' in fetchFrom

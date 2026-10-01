@@ -21,6 +21,7 @@ import { withPositions } from './wander.ts';
 import { nodeAt } from '../web/view.ts';
 import { crushRelic, relicsHere } from './relics.ts';
 import { recallBlocked, recallCount } from './loremaster.ts';
+import { bite, biteBlocked } from './bite.ts';
 import { pumpMax, pumpsDue } from './pump.ts';
 import { bindTargets } from './bind.ts';
 import { drawKnowledge, handSize, huntKnowledge, knownSecrets, secretsOf } from './knowledge.ts';
@@ -3789,6 +3790,71 @@ test('a loremaster: whoever controls him taps him to come to know a secret per A
   const s2 = newState(w2, { seed: 1, mode: 'observer' });
   await advance(s2, w2, 2);
   assert.equal(s2.actors['chr-l'].knowledge?.length, 1);
+});
+
+const urge: RawEntity = { id: 'spl-u', kind: 'spell', name: '포식 충동', status: 'canon', sim: { cost: '{0}', learn_at: 'loc-a', learn_hours: 1, target: 'any_here', effects: [{ type: 'aura', abilities: ['bite'] }] } };
+
+test('Predatory Urge: its bearer bites one on their tile, each dealing the other their power; the biter is tapped till midnight, the bitten turns foe', async () => {
+  const world = fixture([urge, npc('chr-x', npcSim('loc-a', 'work', [2, 5]))]);
+  const state = character(world, 'loc-a');
+  const [p, x] = [state.actors[PLAYER_ID], state.actors['chr-x']];
+  put(world, p, 'loc-a');
+  put(world, x, 'loc-a');
+  assert.match(biteBlocked(state, world, p, x.id, state.minutes)!, /포식 충동/);
+  await act(state, world, { type: 'learn', spell: 'spl-u' });
+  await act(state, world, { type: 'cast', spell: 'spl-u', to: PLAYER_ID, kick: false });
+  assert.ok(p.abilities.includes('bite'));
+  put(world, x, 'loc-a'); // back on the player's tile
+  p.pt = [3, 4];
+  const [mine, theirs] = [ptOf(p)[0], ptOf(x)[0]];
+  assert.ok(startActionOk(state, world, { type: 'bite', to: x.id }));
+  bite(state, world, p, x.id, state.minutes); // what the hour's end does
+  assert.equal(woundsOf(x, state.minutes), mine);
+  assert.equal(woundsOf(p, state.minutes), theirs);
+  assert.ok(p.boundUntil !== undefined); // tapped: bound until midnight
+  assert.ok(foesOf(x, state.minutes).includes(PLAYER_ID)); // the bitten turns on the biter
+  assert.match(biteBlocked(state, world, p, x.id, state.minutes)!, /지금 쓸 수 없다/);
+  assert.ok(texts(state).some((t) => t.includes('포식 충동에 사로잡혀') && t.includes('자정까지 묶인다')));
+});
+
+test('Predatory Urge: an NPC bites by a plan block, between NPCs it only knocks out; a master has their retainer bite; no planeswalker can be bitten', async () => {
+  const biter = { ...npcSim('loc-a', 'work', [4, 4]), plan: [['00:00', '24:00', 'loc-a', 'bite', '물어뜯기', '🦷', null, null, 'chr-y']] };
+  const world = fixture([npc('chr-b', biter), npc('chr-y', npcSim('loc-a', 'work', [1, 1])), walker]);
+  const state = newState(world, { seed: 1, mode: 'observer' });
+  const [b, y, w] = [state.actors['chr-b'], state.actors['chr-y'], state.actors['chr-w']];
+  b.abilities = [...b.abilities, 'bite'];
+  await advance(state, world, 3);
+  assert.equal(y.dead, undefined); // knocked out, not killed
+  assert.ok(texts(state).some((t) => t.includes('쓰러져 기절했다')));
+  assert.equal(woundsOf(b, state.minutes), 1);
+  assert.ok(b.boundUntil !== undefined);
+  // No planeswalker: not a creature.
+  b.boundUntil = undefined;
+  put(world, w, b.region);
+  w.tile = b.tile;
+  assert.match(biteBlocked(state, world, b, w.id, state.minutes)!, /플레인즈워커/);
+  // A master has the one who serves them bite: the retainer is tapped, not the master.
+  const s2 = character(world, 'loc-a');
+  const [p, r, y2] = [s2.actors[PLAYER_ID], s2.actors['chr-b'], s2.actors['chr-y']];
+  r.master = PLAYER_ID;
+  r.abilities = [...r.abilities, 'bite'];
+  for (const x of [p, r, y2]) put(world, x, 'loc-a');
+  assert.equal(biteBlocked(s2, world, p, y2.id, s2.minutes), null);
+  await act(s2, world, { type: 'bite', to: y2.id });
+  assert.ok(r.boundUntil !== undefined);
+  assert.equal(p.boundUntil, undefined);
+  assert.equal(y2.dead, undefined); // two NPCs: a knockout, though one serves the player
+  assert.ok(knockedOut(y2));
+});
+
+test('the real Predatory Urge is taught in Turntimber: a green aura that gives a bite', () => {
+  const world = loadWorld();
+  const s = world.spells.find((x) => x.id === 'spl-predatory-urge')!;
+  assert.equal(s.learnAt, 'loc-turntimber-grove');
+  assert.equal(s.costText, '{3}{G}');
+  assert.equal(s.effects.length, 1);
+  assert.equal(s.effects[0].type, 'aura');
+  assert.deepEqual(s.effects[0].type === 'aura' && s.effects[0].abilities, ['bite']);
 });
 
 test('the real Sea Gate Loremaster lives in Sea Gate, an island in Tazeem, for 50 coin', () => {

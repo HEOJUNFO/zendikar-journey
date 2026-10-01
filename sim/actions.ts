@@ -9,6 +9,7 @@ import { masterOf } from './retainers.ts';
 import type { State, Task } from './state.ts';
 import { startTravel, travelBlocked } from './step.ts';
 import { RECALL_HOURS, recallBlocked, recallCount } from './loremaster.ts';
+import { BITE_HOURS, biteBlocked, readyBiter } from './bite.ts';
 import { bondBlocked, bondTargets, FETCH_HOURS, fetchBlocked, firesOnBond, growBlocked, landDropBlocked, targetedBondEffect, TOP } from './abilities.ts';
 import { topBlocked } from './oracle.ts';
 import { CLAIM_HOURS, claimBlocked, itemDef } from './items.ts';
@@ -53,6 +54,9 @@ export const ActionSchema = z.discriminatedUnion('type', [
   // Tap a land like Oran-Rief: every creature of its color that came into play today grows.
   z.object({ type: z.literal('grow'), land: z.string() }),
   z.object({ type: z.literal('recall') }),
+  // Have one you control bearing Predatory Urge (yourself, or one who serves you) bite `to`, one
+  // standing with them: the biter is tapped until midnight, the two deal each other their power.
+  z.object({ type: z.literal('bite'), to: z.string() }),
   // Hire a mercenary here: pay their price and they serve you for good (sim/allies.ts).
   z.object({ type: z.literal('hire'), to: z.string() }),
   // Answer the pick you owe (an Ally's rally in your party): someone's id, or null for no one.
@@ -236,6 +240,16 @@ export function startAction(state: State, world: World, action: Action): string 
       if (why) return why;
       task = { kind: 'recall', activity: '전승술사의 기억 빌리기', emoji: '📜', until: until(RECALL_HOURS) };
       text = `전승술사가 기억하는 것을 함께 짚어 본다. 동료 ${recallCount(state, world, p)}만큼 숨은 것을 알게 된다.`;
+      break;
+    }
+    case 'bite': {
+      const why = biteBlocked(state, world, p, action.to, t);
+      if (why) return why;
+      const b = state.actors[action.to];
+      const biter = readyBiter(state, p, t, b)!;
+      const name = shortName(b.name);
+      task = { kind: 'bite', activity: `${name} 물어뜯기`, emoji: '🦷', until: until(BITE_HOURS), who: b.id };
+      text = biter.id === p.id ? `포식 충동에 몸을 맡겨 ${josa(name, '을', '를')} 물어뜯으려 한다. 자정까지 묶인다.` : `${josa(shortName(biter.name), '이', '가')} ${josa(name, '을', '를')} 물어뜯게 한다.`;
       break;
     }
     case 'hire': {

@@ -23,6 +23,7 @@ export const KIND_EFFECTS: Record<LifeKind, Effect> = {
   hire: { energy: -1, hunger: 3, coin: 0 },
   attack: { energy: -2, hunger: 3, coin: 0 },
   recall: { energy: -1, hunger: 3, coin: 0 },
+  bite: { energy: -2, hunger: 3, coin: 0 },
 };
 // Change per game hour while travelling between regions.
 export const TRAVEL_EFFECT: Effect = { energy: -3, hunger: 4, coin: 0 };
