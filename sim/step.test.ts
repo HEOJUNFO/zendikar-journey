@@ -44,6 +44,7 @@ import { allyJoined, applyRally, hireMerc, hirePrice } from './allies.ts';
 import { askOptions, askText } from './asks.ts';
 import { applyEscape, escapeOptions } from './escape.ts';
 import { applyTorch, enterDamage } from './torch.ts';
+import { applyToll, enterSacrifice } from './toll.ts';
 import { bloodHasteHour } from './bloodghast.ts';
 import { bloodSeekHour } from './seeker.ts';
 import { altarBlocked } from './altar.ts';
@@ -6944,4 +6945,33 @@ test('the real Frontier Guide roams the Kazandu treetops: a Tajuru elf who finds
   const def = npcDef(state, world, g.id)!;
   assert.equal(def.tapSearch?.costText, '{3}{G}');
   assert.ok(def.types?.includes('elf'));
+});
+
+test('Gatekeeper of Malakir: arriving with {B} to spare, its controller may make one there pay the toll: a creature of theirs (themselves too) dies', () => {
+  const gate = { ...npcSim('loc-a', 'work', [2, 2]), mana: { B: 3 }, enter_sacrifice: { kicker: '{B}' } };
+  const world = fixture([npc('chr-g', gate), npc('chr-x', npcSim('loc-a')), npc('chr-r', npcSim('loc-a')), npc('chr-y', npcSim('loc-a'))]);
+  const state = newState(world, { seed: 1, mode: 'observer' });
+  const [g, x, r, y] = ['chr-g', 'chr-x', 'chr-r', 'chr-y'].map((id) => state.actors[id]);
+  for (const a of [x, r, y]) a.tile = g.tile;
+  r.master = 'chr-x';
+  enterSacrifice(state, world, g, state.minutes);
+  const c = state.choices!.find((z) => z.effect.type === 'toll')!;
+  assert.ok(c.optional && c.candidates.includes('chr-x') && c.candidates.includes('chr-y'));
+  // One with a retainer picks which (after the hour); one alone gives themselves.
+  applyToll(state, world, g, x, state.minutes);
+  const q = state.choices!.find((z) => z.effect.type === 'quelled')!;
+  assert.equal(q.by, 'chr-x');
+  assert.deepEqual(q.candidates.sort(), ['creature:chr-r', 'creature:chr-x']);
+  assert.equal(manaAvailable(state, world, g, state.minutes).B, 2);
+  applyToll(state, world, g, y, state.minutes);
+  assert.ok(y.dead);
+});
+
+test('the real Gatekeeper of Malakir guards the east gate of Malakir: a vampire taking a toll of blood', () => {
+  const world = loadWorld();
+  const state = newState(world, { seed: 1, mode: 'observer' });
+  const g = state.actors['chr-gatekeeper-of-malakir'];
+  assert.equal(g?.region, 'loc-malakir');
+  assert.equal(npcDef(state, world, g.id)?.enterSacrifice?.kickerText, '{B}');
+  assert.equal(creatureOf(state, world, g.id), 'cre-vampire');
 });
