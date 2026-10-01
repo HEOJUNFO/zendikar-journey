@@ -7,6 +7,7 @@ import { formatClock, gameDay, STEP_MINUTES, untapTime } from './clock.ts';
 import { remember } from './relations.ts';
 import { masterOf, releaseRetainer, retainersOf } from './retainers.ts';
 import { releaseItems } from './items.ts';
+import { owesDiscard } from './discard.ts';
 import { hooks } from './equipment.ts';
 import { doubleLife, gainLife, lifeOf } from './life.ts';
 import { actorColors, COLOR_LABELS, manaAvailable, payMana, planPayment } from './mana.ts';
@@ -195,7 +196,23 @@ export function destroy(state: State, target: Actor, t: number, cause: string) {
 }
 
 // `unblocked`: why the defender can't strike back this exchange (landwalk, intimidate), if so.
+// Guul Draz Specter: +P/+T while a foe of today standing with them holds no spell.
+export function refreshEmptyHand(state: State, world: World, a: Actor, t: number) {
+  const pt = npcDef(state, world, a.id)?.emptyHandPump;
+  const on = !!pt && !powersSealed(state, world, a, t) && foesOf(a, t).some((id) => {
+    const f = state.actors[id];
+    return f && !f.dead && together(f, a) && !f.spells?.length;
+  });
+  if (on) a.emptyHand = [pt![0], pt![1]];
+  else delete a.emptyHand;
+}
+
 export function clash(state: State, world: World, attacker: Actor, defender: Actor, t: number, unblocked: string | null = null) {
+  // Foes are made as the blow falls: the specter sees an empty hand from the first exchange.
+  addFoe(defender, attacker.id, t);
+  addFoe(attacker, defender.id, t);
+  refreshEmptyHand(state, world, attacker, t);
+  refreshEmptyHand(state, world, defender, t);
   // Protection from a color: no damage from one of that color.
   const shielded = (from: Actor, to: Actor) => protectedFrom(to, actorColors(state, world, from), t);
   let [ap] = shielded(attacker, defender) ? [0] : ptOf(attacker);
@@ -279,6 +296,10 @@ export function clash(state: State, world: World, attacker: Actor, defender: Act
       const controller = masterOf(state, x) ?? x;
       if (!controller.dead) doubleLife(state, controller, t, `${shortName(x.name)}의 ${aura.name}`);
     }
+  }
+  // "Deals combat damage to a player, that player discards a card": one who holds a spell lets one go.
+  for (const [x, dealt, to] of [[attacker, dealtA, defender], [defender, dealtD, attacker]] as const) {
+    if (dealt > 0 && !to.dead && to.spells?.length && npcDef(state, world, x.id)?.discardOnHit && !powersSealed(state, world, x, t)) owesDiscard(state, world, to, `${shortName(x.name)}의 손길`, t);
   }
   // Someone went down: the fight is over.
   if (down(attacker) || down(defender)) {

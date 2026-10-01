@@ -2,7 +2,6 @@
 // graveyard. Which is theirs to pick, as in MTG: an NPC's by the LLM, the player's as a pick they
 // owe (sim/asks.ts), both after the hour (sim/run.ts `choices`). One spell, or none: no pick.
 // "Discards N cards" (Mind Sludge): picked one at a time; holding no more than N, all go.
-import { knownSecrets } from './knowledge.ts';
 import { addLog, random } from './state.ts';
 import type { Actor, Choice, State } from './state.ts';
 import { josa, shortName } from './text.ts';
@@ -39,25 +38,22 @@ export function discardOwed(state: State, world: World, a: Actor, cause: string,
 }
 
 // "Reveals N cards from their hand. You choose one of them. That player discards that card"
-// (Bala Ged Thief): their hand is the spells they hold and the secrets they know (a secret as
-// `secret:<id>`). N of it, at random, is shown to `by`, who picks the one they forget.
-export function handOf(a: Actor, t: number) {
-  return [...(a.spells ?? []), ...knownSecrets(a, t).map((k) => `secret:${k.id}`)];
+// (Bala Ged Thief): discarding is letting go of a spell (user decision 2026-10-01: the spells
+// they hold, not the secrets they know). N of their spells, at random, are shown to `by`, who
+// picks the one they let go of.
+export function handOf(a: Actor) {
+  return [...(a.spells ?? [])];
 }
 
-export function cardLabel(world: World, a: Actor | undefined, card: string) {
-  if (card.startsWith('secret:')) {
-    const k = a?.knowledge?.find((x) => `secret:${x.id}` === card);
-    return `비밀: ${k?.text ?? card}`;
-  }
-  return `주문: ${world.spells.find((s) => s.id === card)?.name ?? card}`;
+export function cardLabel(world: World, card: string) {
+  return world.spells.find((s) => s.id === card)?.name ?? card;
 }
 
-// `n` of `target`'s hand shown to `by` (for `source`): what is left for `by` to pick, or null.
+// `n` of `target`'s spells shown to `by` (for `source`): what is left for `by` to pick, or null.
 export function revealHand(state: State, world: World, by: Actor, source: Actor, target: Actor, n: number, t: number): Choice | null {
-  const hand = handOf(target, t);
+  const hand = handOf(target);
   if (!hand.length) {
-    addLog(state, { kind: 'effect', text: `${josa(shortName(target.name), '은', '는')} 드러낼 주문도 비밀도 없었다.`, regions: [target.region], actors: [target.id, source.id], t });
+    addLog(state, { kind: 'effect', text: `${josa(shortName(target.name), '은', '는')} 드러낼 주문이 없었다.`, regions: [target.region], actors: [target.id, source.id], t });
     return null;
   }
   const shown: string[] = [];
@@ -65,19 +61,10 @@ export function revealHand(state: State, world: World, by: Actor, source: Actor,
   while (shown.length < n && pool.length) shown.push(pool.splice(Math.floor(random(state) * pool.length), 1)[0]);
   addLog(state, {
     kind: 'effect',
-    text: `${josa(shortName(source.name), '이', '가')} ${shortName(target.name)}의 품을 뒤져 ${shown.length}가지를 드러냈다: ${shown.map((c) => cardLabel(world, target, c).split(':')[0]).join(', ')}.`,
+    text: `${josa(shortName(source.name), '이', '가')} ${shortName(target.name)}의 품을 뒤져 주문 ${shown.length}가지를 드러냈다: ${shown.map((c) => cardLabel(world, c)).join(', ')}.`,
     regions: [target.region],
     actors: [source.id, target.id, by.id],
     t,
   });
   return { by: by.id, land: target.region, effect: { type: 'pilfer', source: source.id, target: target.id }, candidates: shown, t };
-}
-
-// `a` forgets `card` of their hand (a spell to their graveyard, a secret from their mind).
-export function forgetCard(state: State, world: World, a: Actor, card: string, t: number) {
-  if (!card.startsWith('secret:')) return letGo(state, world, a, card, t);
-  const k = a.knowledge?.find((x) => `secret:${x.id}` === card);
-  if (!k) return;
-  a.knowledge = a.knowledge!.filter((x) => x !== k);
-  addLog(state, { kind: 'effect', text: `${josa(shortName(a.name), '이', '가')} 알던 비밀 하나를 잊었다.`, regions: [a.region], actors: [a.id], t });
 }

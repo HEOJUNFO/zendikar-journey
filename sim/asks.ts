@@ -7,7 +7,7 @@ import { applyDrainGrow, applyEnterDestroy } from './abilities.ts';
 import { crushOwed, crushRelic, demolish, demolishOptions, relicsHere } from './relics.ts';
 import { applyRally, rallyText, rallyWord } from './allies.ts';
 import { bindRetainer, refuse } from './retainers.ts';
-import { cardLabel, discardOwed, forgetCard, handOf, letGo } from './discard.ts';
+import { cardLabel, discardOwed, handOf, letGo } from './discard.ts';
 import { sacrifice } from './monument.ts';
 import { applyQuell, permanentsOf, QUELL_KINDS, QUELL_LABELS, quellGive } from './quell.ts';
 import { castSpell } from './spells.ts';
@@ -25,7 +25,7 @@ export function askText(state: State, world: World, c: Choice) {
   if (c.effect.type === 'pledge') return `${josa(shortName(from?.name ?? ''), '이', '가')} 자신을 따르고 섬기라 한다`;
   if (c.effect.type === 'evade') return `날지 못하는 ${josa(shortName(from?.name ?? ''), '이', '가')} 덤벼든다. 날아올라 피하면 자정까지 닿지 않는다`;
   if (c.effect.type === 'discard') return `${c.effect.cause}: 지닌 주문 ${c.effect.count ? `${c.effect.count}개를` : '하나를'} 잊어야 한다. 먼저 무엇을?`;
-  if (c.effect.type === 'pilfer') return `${shortName(state.actors[c.effect.source]?.name ?? '')}의 손길에 ${shortName(state.actors[c.effect.target]?.name ?? '')}의 주문·비밀이 드러났다. 그가 잊을 하나를 고른다`;
+  if (c.effect.type === 'pilfer') return `${shortName(state.actors[c.effect.source]?.name ?? '')}의 손길에 ${shortName(state.actors[c.effect.target]?.name ?? '')}의 주문이 드러났다. 그가 잊을 하나를 고른다`;
   if (c.effect.type === 'pour') {
     const x = state.actors[c.effect.source];
     const pump = x && npcDef(state, world, x.id)?.pump;
@@ -51,7 +51,7 @@ export function askOptions(state: State, world: World, c: Choice): { pick: strin
   if (c.effect.type === 'pour') return c.candidates.map((n) => ({ pick: n, label: n === '0' ? '붓지 않는다' : `${n}번 붓는다` }));
   if (c.effect.type === 'pilfer') {
     const target = state.actors[c.effect.target];
-    return c.candidates.map((id) => ({ pick: id, label: cardLabel(world, target, id) }));
+    return c.candidates.map((id) => ({ pick: id, label: cardLabel(world, id) }));
   }
   if (c.effect.type === 'demolish') {
     const p = state.actors[c.by];
@@ -117,10 +117,10 @@ export function answerAsk(state: State, world: World, pick: string | null, t: nu
     // One must go: an answer that isn't one shown takes the first still held.
     const target = state.actors[c.effect.target];
     if (!target || target.dead) return;
-    const hand = handOf(target, t);
+    const hand = handOf(target);
     const shown = c.candidates.filter((x) => hand.includes(x));
     const card = pick && shown.includes(pick) ? pick : shown[0];
-    if (card) forgetCard(state, world, target, card, t);
+    if (card) letGo(state, world, target, card, t);
   } else if (c.effect.type === 'demolish') {
     // One must go: an answer that isn't one goes to the first.
     const options = demolishOptions(state, world, p);

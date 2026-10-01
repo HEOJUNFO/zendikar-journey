@@ -113,7 +113,7 @@ export function rallyText(state: State, world: World, sourceId: string) {
       eff.type === 'lose_life_allies'
         ? `${shortName(x.name)}의 저주: 고른 하나가 생명 ${n}을 잃는다 (무리의 동료 수, 죽을 수도 있다)`
         : eff.type === 'reveal_discard'
-          ? `${shortName(x.name)}의 손길: 고른 하나가 지닌 주문·비밀 가운데 ${n}가지(무리의 동료 수)가 드러나고, 그중 하나를 골라 잊게 한다`
+          ? `${shortName(x.name)}의 손길: 고른 하나가 지닌 주문 가운데 ${n}가지(무리의 동료 수)가 드러나고, 그중 하나를 골라 잊게 한다`
           : `${shortName(x.name)}의 불길: 고른 하나에게 피해 ${n} (무리의 동료 수, 죽을 수도 있다)`,
     )
     .join(', ');

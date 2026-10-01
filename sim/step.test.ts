@@ -23,6 +23,7 @@ import { crushRelic, relicsHere } from './relics.ts';
 import { recallBlocked, recallCount } from './loremaster.ts';
 import { pumpMax, pumpsDue } from './pump.ts';
 import { drawKnowledge, handSize, huntKnowledge, knownSecrets, secretsOf } from './knowledge.ts';
+import { revealHand } from './discard.ts';
 import { claimBlocked, itemOwner, itemsAt, itemWhere } from './items.ts';
 import { spendBlocked, storeBlocked } from './eons.ts';
 import { applyEnterDestroy, bondBlocked, enterDestroy, onEnter, bondLand, bondTargets, callForth, fetchTargets, fireTargets, firesOnBond, growBlocked, spawnWild, summonLibrary, useAbility } from './abilities.ts';
@@ -3112,6 +3113,34 @@ test('the real Grappling Hook lies in the Makindi Trenches', () => {
   assert.ok(x.equip?.lure);
 });
 
+test('a specter: a foe beside it with no spell makes it +3/+3; one it wounds lets a spell go', () => {
+  const specter = { ...npcSim('loc-a', 'work', [2, 2]), needs: ['energy'], beast: true, abilities: ['fly'], empty_hand_pump: [3, 3], discard_on_hit: true };
+  const world = fixture([npc('chr-s', specter), npc('chr-x', npcSim('loc-a', 'work', [1, 20])), npc('chr-y', npcSim('loc-a', 'work', [1, 20]))]);
+  const state = newState(world, { seed: 1, mode: 'observer' });
+  const [sp, x, y] = [state.actors['chr-s'], state.actors['chr-x'], state.actors['chr-y']];
+  x.spells = ['spl-a'];
+  clash(state, world, sp, x, state.minutes);
+  assert.equal(woundsOf(x, state.minutes), 2); // x held a spell: 2/2
+  assert.deepEqual(x.spells, []); // one spell: let go at once
+  // Now x holds none: 5/5.
+  clash(state, world, sp, x, state.minutes);
+  assert.equal(woundsOf(x, state.minutes), 7);
+  assert.deepEqual(ptOf(sp), [5, 5]);
+  // y, no spell from the start: 5/5 against them too.
+  clash(state, world, sp, y, state.minutes);
+  assert.equal(woundsOf(y, state.minutes), 5);
+});
+
+test('the real Guul Draz Specter flies over Guul Draz', () => {
+  const world = loadWorld();
+  const state = newState(world, { seed: 1, mode: 'observer' });
+  const s = state.actors['cre-guul-draz-specter'];
+  assert.equal(s?.region, 'loc-guul-draz');
+  assert.ok(hasAbility(s, 'fly', state.minutes));
+  assert.deepEqual(npcDef(state, world, s.id)?.emptyHandPump, [3, 3]);
+  assert.ok(npcDef(state, world, s.id)?.discardOnHit);
+});
+
 test('first strike: one who has it strikes first, and one it fells never strikes back; both have it, simultaneous', () => {
   const fs = (pt: [number, number]) => ({ ...npcSim('loc-a', 'work', pt), needs: ['energy'], abilities: ['first_strike'] });
   const world = fixture([npc('chr-s', fs([3, 3])), npc('chr-s2', fs([3, 3])), npc('chr-x', npcSim('loc-a', 'work', [3, 3])), npc('chr-y', npcSim('loc-a', 'work', [3, 3])), npc('chr-big', npcSim('loc-a', 'work', [2, 9]))]);
@@ -3339,41 +3368,41 @@ test('the real Turntimber Ranger rides the Turntimber Grove, calling wolves, for
   assert.deepEqual(def.rally, [{ type: 'token_counter', creature: 'cre-wolf', pt: [2, 2], colors: ['G'] }]);
 });
 
-test('a thief rifles a hand: the controller sees as many spells and secrets as their Allies, and picks one forgotten', async () => {
+test('a thief rifles a hand: the controller sees as many spells as their Allies, and picks one let go of', async () => {
   const thief = { ...npcSim('loc-a', 'work', [2, 2]), mana: { B: 4 }, ally: true, hireable: true, rally: [{ type: 'reveal_discard' }] };
   const other = { ...npcSim('loc-a', 'work', [3, 3]), mana: { R: 5 }, ally: true, hireable: true };
   const world = fixture([npc('chr-t', thief), npc('chr-o', other), npc('chr-x', npcSim('loc-a', 'work', [1, 1]))]);
   const state = character(world, 'loc-a');
   const p = state.actors[PLAYER_ID];
   const x = state.actors['chr-x'];
-  x.spells = ['spl-a', 'spl-b'];
+  x.spells = ['spl-a', 'spl-b', 'spl-c'];
   x.knowledge = [{ id: 'trap:z', text: '숨은 함정' }];
   p.stats.coin = 100;
   await act(state, world, { type: 'hire', to: 'chr-t' });
   assert.equal(state.asks?.[0]?.effect.type, 'rally');
   assert.ok(askText(state, world, state.asks![0]).includes('1가지'));
   await act(state, world, { type: 'choose', pick: 'chr-x' });
-  // One Ally: one shown.
+  // One Ally: one spell shown; secrets are not discarded (user decision 2026-10-01).
   const ask = state.asks![0];
   assert.equal(ask.effect.type, 'pilfer');
   assert.equal(ask.candidates.length, 1);
-  assert.ok(texts(state).some((t) => t.includes('품을 뒤져 1가지를 드러냈다')));
+  assert.ok(texts(state).some((t) => t.includes('품을 뒤져 주문 1가지를 드러냈다')));
   const shown = ask.candidates[0];
-  assert.ok(askOptions(state, world, ask)[0].label.startsWith(shown.startsWith('secret:') ? '비밀' : '주문'));
   await act(state, world, { type: 'choose', pick: shown });
-  assert.equal(x.spells.length + (x.knowledge?.length ?? 0), 2);
-  assert.ok(!x.spells.includes(shown) && !x.knowledge?.some((k) => `secret:${k.id}` === shown));
+  assert.equal(x.spells.length, 2);
+  assert.ok(!x.spells.includes(shown));
+  assert.deepEqual(x.graveyard, [shown]);
+  assert.equal(x.knowledge?.length, 1);
   assert.ok(foesOf(x, state.minutes).includes('chr-t'));
-  // Two Allies: two shown; the pick may be a secret, forgotten from the mind.
-  x.knowledge = [{ id: 'trap:z', text: '숨은 함정' }];
-  x.spells = ['spl-a'];
+  // Two Allies: two shown.
   await act(state, world, { type: 'hire', to: 'chr-o' });
   await act(state, world, { type: 'choose', pick: 'chr-x' });
   assert.equal(state.asks![0].candidates.length, 2);
-  await act(state, world, { type: 'choose', pick: 'secret:trap:z' });
-  assert.deepEqual(x.knowledge, []);
-  assert.deepEqual(x.spells, ['spl-a']);
-  assert.ok(texts(state).some((t) => t.includes('알던 비밀 하나를 잊었다')));
+  // No spells: nothing to show.
+  await act(state, world, { type: 'choose', pick: state.asks![0].candidates[0] });
+  x.spells = [];
+  revealHand(state, world, p, state.actors['chr-t'], x, 2, state.minutes);
+  assert.ok(texts(state).some((t) => t.includes('드러낼 주문이 없었다')));
 });
 
 test('an NPC thief\'s master picks the hand to rifle and the card, by the LLM', async () => {

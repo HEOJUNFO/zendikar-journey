@@ -299,6 +299,12 @@ export const CharacterSimSchema = z.strictObject({
   // "{B}: This creature gets +1/+1 until end of turn" (Crypt Ripper): before each hour it fights,
   // its controller pours in what they will, each `cost` +`pt` until midnight (sim/pump.ts).
   pump: z.strictObject({ cost: CostSchema, pt: PtSchema }).optional(),
+  // "Gets +P/+T as long as an opponent has no cards in hand" (Guul Draz Specter): while a foe of
+  // today standing with them holds no spell (user decision 2026-10-01).
+  empty_hand_pump: z.tuple([z.number().int().min(0), z.number().int().min(0)]).optional(),
+  // "Whenever this deals combat damage to a player, that player discards a card": one it wounds
+  // in a fight lets go of a spell, their pick (sim/discard.ts).
+  discard_on_hit: z.boolean().default(false),
   // An Ally (card type; sim/allies.ts): of Zendikar's expedition parties.
   ally: z.boolean().default(false),
   // "Whenever this or another Ally enters under your control, …": when an Ally joins their
@@ -309,7 +315,7 @@ export const CharacterSimSchema = z.strictObject({
   // token_counter: a <creature> token born at their side, the controller's retainer, and a
   // +1/+1 counter on the one with the rally (Turntimber Ranger: a 2/2 green Wolf).
   // grant_allies: each Ally in the party gains <ability> until the turn ends (Seascape Aerialist: flying).
-  // reveal_discard: one there shows as many of their hand (spells, secrets) as the party's Allies;
+  // reveal_discard: one there shows as many of their spells as the party's Allies;
   // the controller picks one they forget (Bala Ged Thief; sim/discard.ts `revealHand`).
   rally: z.array(z.discriminatedUnion('type', [z.strictObject({ type: z.literal('damage_allies') }), z.strictObject({ type: z.literal('lose_life_allies') }), z.strictObject({ type: z.literal('reveal_discard') }), z.strictObject({ type: z.literal('counters_allies') }), z.strictObject({ type: z.literal('counter_self') }), z.strictObject({ type: z.literal('token_counter'), creature: z.string(), pt: PtSchema, colors: z.array(z.enum(COLORS)) }), z.strictObject({ type: z.literal('grant_allies'), ability: z.enum(ABILITIES) })])).default([]),
   // "You may look at the top card of your library any time" (Sphinx of Jwar Isle): they see
@@ -691,6 +697,8 @@ export type NpcDef = {
   winsAtLife?: number;
   extraCombat?: { cost: ManaCost; costText: string };
   pump?: { cost: ManaCost; costText: string; pt: [number, number] };
+  emptyHandPump?: [number, number];
+  discardOnHit?: boolean;
   ally?: boolean;
   rally?: ({ type: 'damage_allies' | 'lose_life_allies' | 'reveal_discard' | 'counters_allies' | 'counter_self' } | { type: 'grant_allies'; ability: Ability } | { type: 'token_counter'; creature: string; pt: [number, number]; colors: Color[] })[];
   hireable?: boolean;
@@ -890,7 +898,7 @@ export function buildWorld(entities: RawEntity[]): { world: World; errors: strin
         err(e.id, `sim 오류: ${issues(sim.error)}`);
         continue;
       }
-      const { knows_colors, activated, wins_at_life, extra_combat, pump, landfall_token, landfall_seize, landfall_lose, landfall_grant, landfall_drain, enter_destroy, enter_drain, enter_draw, tap_draw_allies, name, home_pos, ...rest } = sim.data;
+      const { knows_colors, activated, wins_at_life, extra_combat, pump, empty_hand_pump, discard_on_hit, landfall_token, landfall_seize, landfall_lose, landfall_grant, landfall_drain, enter_destroy, enter_drain, enter_draw, tap_draw_allies, name, home_pos, ...rest } = sim.data;
 
       world.npcs.push({
         id: e.id,
@@ -912,6 +920,8 @@ export function buildWorld(entities: RawEntity[]): { world: World; errors: strin
         ...(tap_draw_allies ? { tapDrawAllies: true } : {}),
         ...(extra_combat ? { extraCombat: { cost: parseManaCost(extra_combat.cost)!, costText: extra_combat.cost } } : {}),
         ...(pump ? { pump: { cost: parseManaCost(pump.cost)!, costText: pump.cost, pt: pump.pt } } : {}),
+        ...(empty_hand_pump ? { emptyHandPump: empty_hand_pump } : {}),
+        ...(discard_on_hit ? { discardOnHit: true } : {}),
         activated: activated.map((x) => ({ ...x, cost: parseManaCost(x.cost)!, costText: x.cost })),
       });
     } else if (e.kind === 'event') {

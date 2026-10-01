@@ -138,6 +138,8 @@ export type Actor = {
   granted?: { ability: Ability; until: number }[];
   // "+N/+N until end of turn" from lands and the like, on top of `boost` (landfall's), until `until`.
   pumps?: { pt: Pt; until: number }[];
+  // Guul Draz Specter's +P/+T while a foe beside them holds no spell (sim/combat.ts `refreshEmptyHand`).
+  emptyHand?: Pt;
   // Spells they know (world/entities/spells): their hand.
   spells?: string[];
   // Spells they let go of (discarded): their graveyard.
@@ -569,6 +571,7 @@ export function ptOf(a: Actor): Pt {
   if (a.plusCounters) [p, t] = [p + a.plusCounters, t + a.plusCounters];
   for (const x of [...(a.boost ? [a.boost] : []), ...(a.pumps ?? []), ...(a.auras ?? [])]) [p, t] = [p + x.pt[0], t + x.pt[1]];
   if (a.anthem) [p, t] = [p + a.anthem.pt[0], t + a.anthem.pt[1]];
+  if (a.emptyHand) [p, t] = [p + a.emptyHand[0], t + a.emptyHand[1]];
   if (a.dried) t -= a.dried;
   return [p, t];
 }

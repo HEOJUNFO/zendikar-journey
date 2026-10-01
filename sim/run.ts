@@ -15,7 +15,7 @@ import { lifeOf } from './life.ts';
 import { foresightText } from './foresight.ts';
 import { knowledgeText } from './knowledge.ts';
 import { setOff, wandersDue, withPositions } from './wander.ts';
-import { cardLabel, discardOwed, forgetCard, handOf, letGo } from './discard.ts';
+import { cardLabel, discardOwed, handOf, letGo } from './discard.ts';
 import { crushRelic, demolish, demolishOptions, relicsHere } from './relics.ts';
 import { loremastersOf, recallBlocked, recallCount } from './loremaster.ts';
 import { sacrifice } from './monument.ts';
@@ -279,20 +279,20 @@ async function discardChoice(state: State, world: World, llm: Llm, a: Actor, npc
 async function pilferChoice(state: State, world: World, llm: Llm, a: Actor, npc: Speaker, c: Choice & { effect: { type: 'pilfer' } }) {
   const target = state.actors[c.effect.target];
   if (!target || target.dead) return;
-  const hand = handOf(target, state.minutes);
+  const hand = handOf(target);
   const shown = c.candidates.filter((x) => hand.includes(x));
   if (!shown.length) return;
   let pick: string | null = null;
   if (llm.pick) {
     try {
-      const what = `${shortName(state.actors[c.effect.source]?.name ?? '')}의 손길에 ${shortName(target.name)}의 주문·비밀이 드러났다. 그가 잊을 하나를 고른다`;
-      pick = await llm.pick({ world, state, npc, what, options: shown.map((x) => ({ id: x, label: cardLabel(world, target, x) })) });
+      const what = `${shortName(state.actors[c.effect.source]?.name ?? '')}의 손길에 ${shortName(target.name)}의 주문이 드러났다. 그가 잊을 하나를 고른다`;
+      pick = await llm.pick({ world, state, npc, what, options: shown.map((x) => ({ id: x, label: cardLabel(world, x) })) });
     } catch (e) {
       console.warn(`pick (pilfer) for ${a.id} failed:`, e);
     }
   }
   if (!pick || !shown.includes(pick)) pick = shown[Math.floor(random(state) * shown.length)];
-  forgetCard(state, world, target, pick, state.minutes);
+  letGo(state, world, target, pick, state.minutes);
 }
 
 // Relic Crush: the NPC caster picks what to destroy, one at a time (the LLM); the first must go
