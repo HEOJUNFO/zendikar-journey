@@ -14,6 +14,7 @@ import { castableSpells, castBlocked, castSpell, castTargets, learnBlocked, npcC
 import { anthemHour } from './monument.ts';
 import { answerCounter, answerCounterCast, counterHolders, reactionSpell, summon } from './counter.ts';
 import { applyExile, banishOptions } from './banish.ts';
+import { engulfTargets } from './engulf.ts';
 import { actorColors, COLORS, formatMana, manaAvailable, manaCapacity, parseManaCost, planPayment } from './mana.ts';
 import { MAX_TALKS_PER_DAY, usableAbilities, volleyShares, burnTargets } from './run.ts';
 import { destroyLand, eligibleGmEvents, moveHours, startTravel, travelBlocked } from './step.ts';
@@ -4928,6 +4929,83 @@ test('seastalkers serving the player: theirs to pick whom to bind, or none', asy
   assert.deepEqual(ask!.candidates, ['chr-x']);
   await act(state, world, { type: 'choose', pick: 'chr-x' });
   assert.ok(x.boundUntil !== undefined);
+});
+
+const gomazoa = (extra: object = {}) => ({ ...npcSim('loc-b', 'work', [0, 3]), needs: ['energy', 'hunger'], beast: true, abilities: ['defender', 'fly'], engulf: true, ...extra });
+
+test('a gomazoa with no master: one who falls on it is wrapped up and dragged with it to where it lives, stripped, bound in its tentacles; it feeds and is tapped till midnight', async () => {
+  const world = fixture([npc('chr-g', gomazoa())]);
+  const state = character(world, 'loc-a');
+  const [p, g] = [state.actors[PLAYER_ID], state.actors['chr-g']];
+  put(world, g, 'loc-a');
+  g.tile = p.tile;
+  g.stats.hunger = 80;
+  p.plusCounters = 2;
+  p.abilities = [...p.abilities, 'trample'];
+  p.auras = [{ spell: 'spl-q', name: '축복', by: 'chr-x', pt: [1, 1], doubleLifeOnHit: false, added: ['trample'] }];
+  addFoe(g, PLAYER_ID, state.minutes); // the player fell on it
+  addFoe(p, 'chr-g', state.minutes);
+  await act(state, world, { type: 'wait', hours: 1 });
+  assert.equal(p.region, 'loc-b');
+  assert.equal(g.region, 'loc-b');
+  assert.deepEqual(p.tile, g.tile);
+  // Bound in the tentacles: the player's turn waits it out.
+  assert.ok(texts(state).some((l) => l.includes('촉수에 묶여 4시간')));
+  assert.ok(state.minutes >= 6 * 60 + 4 * 60);
+  assert.equal(p.plusCounters, undefined);
+  assert.equal(p.auras, undefined);
+  assert.ok(!p.abilities.includes('trample'));
+  assert.equal(g.boundUntil, 1440);
+  assert.ok(g.stats.hunger < 80 - 30); // fed (it has grown a little hungry again since)
+  assert.ok(!foesOf(p, state.minutes).includes('chr-g'));
+  assert.ok(texts(state).some((l) => l.includes('촉수로')));
+  // Tapped: no more catching today.
+  assert.deepEqual(engulfTargets(state, world, g, state.minutes), []);
+});
+
+test('a gomazoa serving someone: its master decides whether to drag off one who fell on them (the gomazoa leaves them); the player\'s is a pick; a token is eaten', async () => {
+  const world = fixture([npc('chr-g', gomazoa()), npc('chr-m', npcSim('loc-a', 'work', [2, 2])), npc('chr-x', npcSim('loc-a', 'work', [3, 3])), npc('chr-y', npcSim('loc-a', 'work', [1, 1]))]);
+  const state = newState(world, { seed: 1, mode: 'observer' });
+  const [g, m, x, y] = ['chr-g', 'chr-m', 'chr-x', 'chr-y'].map((id) => state.actors[id]);
+  put(world, g, 'loc-a');
+  g.master = m.id;
+  g.tile = x.tile = y.tile = m.tile;
+  addFoe(m, x.id, state.minutes);
+  m.foes!.struck = [x.id]; // x fell on the master: the gomazoa blocks x
+  addFoe(m, y.id, state.minutes); // the master fell on y: not blocking
+  assert.deepEqual(engulfTargets(state, world, g, state.minutes).map((a) => a.id), ['chr-x']);
+  await advance(state, world, 1, { pick: async ({ options }) => (options.some((o) => o.id === 'chr-x') ? 'chr-x' : null) });
+  assert.equal(x.region, 'loc-b');
+  assert.equal(g.region, 'loc-b');
+  assert.equal(g.master, undefined);
+  // A token caught is eaten.
+  const world2 = fixture([npc('chr-g', gomazoa())]);
+  const s2 = character(world2, 'loc-a');
+  const [p, g2] = [s2.actors[PLAYER_ID], s2.actors['chr-g']];
+  put(world2, g2, 'loc-a');
+  g2.master = PLAYER_ID;
+  g2.tile = p.tile;
+  const tok = { ...p, id: 'tok-1', kind: 'npc' as const, name: '정령', master: undefined };
+  s2.actors[tok.id] = tok;
+  (s2.tokens ??= {})[tok.id] = { ...world2.npcs[0], id: tok.id, engulf: false };
+  addFoe(p, tok.id, s2.minutes);
+  p.foes!.struck = [tok.id];
+  await act(s2, world2, { type: 'wait', hours: 1 });
+  const ask = s2.asks?.find((c) => c.effect.type === 'engulf');
+  assert.deepEqual(ask?.candidates, ['tok-1']);
+  await act(s2, world2, { type: 'choose', pick: 'tok-1' });
+  assert.ok(s2.actors['tok-1'].dead && s2.actors['tok-1'].left);
+  assert.equal(g2.region, 'loc-b');
+});
+
+test('the real Gomazoa drifts over Tazeem: a 0/3 flying defender that drags off those it blocks', () => {
+  const world = loadWorld();
+  const state = newState(world, { seed: 1, mode: 'observer' });
+  const g = state.actors['cre-gomazoa'];
+  assert.equal(g?.region, 'loc-tazeem');
+  const def = npcDef(state, world, g.id)!;
+  assert.ok(def.beast && def.engulf && hasAbility(g, 'defender', state.minutes) && hasAbility(g, 'fly', state.minutes));
+  assert.deepEqual(ptOf(g), [0, 3]);
 });
 
 test('the real Merfolk Seastalkers lurk in Bojuka Bay, a basic island on the edge of the Guum Wilds in Bala Ged: islandwalk', () => {

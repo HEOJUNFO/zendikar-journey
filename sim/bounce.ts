@@ -41,20 +41,24 @@ function landing(state: State, world: World, a: Actor) {
   return places.length ? places[Math.floor(random(state) * places.length)] : undefined;
 }
 
-export function bounce(state: State, world: World, a: Actor, t: number, cause: string) {
-  if (a.dead) return;
+// A token leaving play: it ceases to be (`how` it went, for the log).
+export function vanishToken(state: State, a: Actor, t: number, cause: string, how: string) {
   const name = shortName(a.name);
-  if (state.tokens?.[a.id]) {
-    a.dead = { at: t, cause: `${cause}: 사라짐` };
-    a.left = true;
-    for (const r of retainersOf(state, a.id)) releaseRetainer(state, r, `${name}이(가) 사라짐`);
-    a.task = undefined;
-    a.forced = undefined;
-    a.travel = undefined;
-    addLog(state, { kind: 'event', text: `${cause}: ${josa(name, '이', '가')} 내동댕이쳐져 흔적도 없이 사라졌다.`, regions: [a.region], actors: [a.id], t });
-    return;
-  }
+  a.dead = { at: t, cause: `${cause}: 사라짐` };
+  a.left = true;
+  for (const r of retainersOf(state, a.id)) releaseRetainer(state, r, `${name}이(가) 사라짐`);
+  a.task = undefined;
+  a.forced = undefined;
+  a.travel = undefined;
+  addLog(state, { kind: 'event', text: `${cause}: ${josa(name, '이', '가')} ${how}`, regions: [a.region], actors: [a.id], t });
+}
+
+// Leaving play and coming back (to a hand, a library): all that was on them falls away (+1/+1
+// counters, auras and what they gave, the day's boosts, wounds) and so does whoever controlled
+// them.
+export function shed(state: State, world: World, a: Actor, cause: string) {
   const def = npcDef(state, world, a.id);
+  const given = (a.auras ?? []).flatMap((x) => x.added ?? []);
   delete a.plusCounters;
   delete a.auras;
   delete a.boost;
@@ -63,7 +67,15 @@ export function bounce(state: State, world: World, a: Actor, t: number, cause: s
   delete a.lost;
   delete a.wounds;
   if (def) a.abilities = [...def.abilities];
+  else if (given.length) a.abilities = a.abilities.filter((x) => !given.includes(x));
   releaseRetainer(state, a, cause);
+}
+
+export function bounce(state: State, world: World, a: Actor, t: number, cause: string) {
+  if (a.dead) return;
+  const name = shortName(a.name);
+  if (state.tokens?.[a.id]) return vanishToken(state, a, t, cause, '내동댕이쳐져 흔적도 없이 사라졌다.');
+  shed(state, world, a, cause);
   const to = landing(state, world, a);
   a.travel = undefined;
   if (to) {

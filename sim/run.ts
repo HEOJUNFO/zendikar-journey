@@ -36,6 +36,7 @@ import { castableSpells, castBlocked, castSpell, harmful, learnableSpells, spell
 import { opponentsOf, sealsDue, setSeal } from './seal.ts';
 import { applyPump, pumpController, pumpMax, pumpsDue } from './pump.ts';
 import { applyBind, bindsDue, bindTargets } from './bind.ts';
+import { applyEngulf, engulfsDue, engulfTargets, ENGULF_HOURS } from './engulf.ts';
 import { COLOR_LABELS, COLORS } from './mana.ts';
 import type { Color } from './mana.ts';
 import { abilityBlocked, applyBondEffect, applyDrainGrow, applyEnterDestroy, applySearch, enteredToday, fetchBlocked, fetchSource, fetchTargets, growBlocked, growLand, callForth } from './abilities.ts';
@@ -576,7 +577,7 @@ async function choices(state: State, world: World, llm: Llm) {
       continue;
     }
     // Pours and binds are asked before the hour (`pumps`, `binds`), not after.
-    if (c.effect.type === 'pour' || c.effect.type === 'bind') continue;
+    if (c.effect.type === 'pour' || c.effect.type === 'bind' || c.effect.type === 'engulf') continue;
     // What a thief turned up of someone's hand (candidates are spells and secrets).
     if (c.effect.type === 'pilfer') {
       if (by && !by.dead && npc) await pilferChoice(state, world, llm, by, npc, c as Choice & { effect: { type: 'pilfer' } });
@@ -993,6 +994,35 @@ async function binds(state: State, world: World, llm: Llm) {
   }
 }
 
+// Gomazoa (sim/engulf.ts): before an hour of the fight it blocks, whether its controller drags
+// one it blocks off with it. One with no master snaps shut by itself (a flytrap); an NPC master's
+// by the LLM (with no usable answer: none); the player's, a pick they owe.
+async function engulfs(state: State, world: World, llm: Llm) {
+  for (const a of engulfsDue(state, world, state.minutes)) {
+    const targets = engulfTargets(state, world, a, state.minutes);
+    const by = pumpController(state, a);
+    if (by.id === a.id && by.kind !== 'player') {
+      applyEngulf(state, world, a, targets[0], state.minutes);
+      continue;
+    }
+    if (by.kind === 'player') {
+      if (!state.asks?.some((c) => c.effect.type === 'engulf' && c.effect.source === a.id)) (state.asks ??= []).push({ by: by.id, land: a.region, effect: { type: 'engulf', source: a.id }, candidates: targets.map((x) => x.id), optional: true, t: state.minutes });
+      continue;
+    }
+    const npc = speakerDef(state, world, by.id);
+    if (!npc || !llm.pick) continue;
+    let pick: string | null = null;
+    try {
+      const what = `${shortName(a.name)}이(가) 덤벼든 이를 막고 있다. 그 촉수로 하나를 휘감아 함께 그것의 거처로 끌고 갈 수 있다 (둘 다 몸에 붙은 힘과 섬기던 이를 잃고, 끌려간 이는 ${ENGULF_HOURS}시간 묶인다. 고마조아도 당신 곁을 떠난다). 누구를 끌고 갈지, 아니면 그러지 않을지 고른다`;
+      pick = await llm.pick({ world, state, npc, what, options: targets.map((x) => ({ id: x.id, label: `${shortName(x.name)} (${ptOf(x).join('/')})` })), optional: true });
+    } catch (e) {
+      console.warn(`pick (engulf) for ${by.id} failed:`, e);
+    }
+    const target = targets.find((x) => x.id === pick);
+    if (target) applyEngulf(state, world, a, target, state.minutes);
+  }
+}
+
 function busy(state: State, p: Actor) {
   return !!(p.task || p.travel || p.forced || p.boundUntil !== undefined || outOfTime(state, p));
 }
@@ -1168,6 +1198,7 @@ async function prepare(state: State, world: World, llm: Llm): Promise<string | n
   if (!missing.length) {
     await pumps(state, world, llm);
     await binds(state, world, llm);
+    await engulfs(state, world, llm);
     return null;
   }
   return `LLM이 ${missing.map((a) => shortName(a.name)).join(', ')}의 하루를 짜지 못해 세계가 멈췄다. 다시 진행하면 이어서 짠다.`;

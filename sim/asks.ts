@@ -22,6 +22,7 @@ import { CREATURE_TYPE_LABELS, region } from './world.ts';
 import { answerReturnLand } from './items.ts';
 import { answerTide } from './tide.ts';
 import { applyBind } from './bind.ts';
+import { applyEngulf, ENGULF_HOURS } from './engulf.ts';
 import type { World } from './world.ts';
 
 // What the pick is about, for them.
@@ -47,6 +48,7 @@ export function askText(state: State, world: World, c: Choice) {
     const s = shortName(state.actors[c.effect.source]?.name ?? '');
     return `${s}의 새벽: 유형 하나를 부르면 ${s} 곁의 모두(당신도)가 그 유형의 제 것 하나를 내놓는다 (땅: 유대 하나, 생물: 부리는 생물 하나, 마법물체: 아이템 하나, 부여마법: 오라 하나). 무엇을?`;
   }
+  if (c.effect.type === 'engulf') return `${shortName(state.actors[c.effect.source]?.name ?? '')}이(가) 덤벼든 이를 막고 있다. 촉수로 하나를 휘감아 함께 그것의 거처로 끌고 갈 수 있다 (둘 다 몸에 붙은 힘과 섬기던 이를 잃고, 끌려간 이는 ${ENGULF_HOURS}시간 묶인다). 누구를?`;
   if (c.effect.type === 'bind') return `${shortName(state.actors[c.effect.source]?.name ?? '')}의 싸움이 이어진다. 마나 ${npcDef(state, world, c.effect.source)?.tapFoe?.costText ?? ''}를 내면 날지 못하는 적 하나를 자정까지 묶을 수 있다. 누구를?`;
   if (c.effect.type === 'counter') {
     const s = world.spells.find((x) => x.id === (c.effect as { spell: string }).spell);
@@ -178,6 +180,10 @@ export function answerAsk(state: State, world: World, pick: string | null, t: nu
     const source = state.actors[c.effect.source];
     const kind = QUELL_KINDS.find((k) => k === pick);
     if (source && kind) applyQuell(state, world, source, kind, t);
+  } else if (c.effect.type === 'engulf') {
+    const x = state.actors[c.effect.source];
+    const target = pick && c.candidates.includes(pick) ? state.actors[pick] : undefined;
+    if (x && target) applyEngulf(state, world, x, target, t);
   } else if (c.effect.type === 'bind') {
     const x = state.actors[c.effect.source];
     const target = pick && c.candidates.includes(pick) ? state.actors[pick] : undefined;
