@@ -332,6 +332,10 @@ export const CharacterSimSchema = z.strictObject({
   // (Gomazoa): one who falls on it or its master is wrapped up and dragged with it to where it
   // lives (sim/engulf.ts).
   engulf: z.boolean().default(false),
+  // "At the beginning of each opponent's upkeep, if that player has N or fewer cards in hand, this
+  // deals D damage to that player" (Hellfire Mongrel): at 00:00, to each on its tile but its side
+  // who holds that few spells (sim/scorch.ts).
+  upkeep_burn: z.strictObject({ damage: z.number().int().positive(), max_hand: z.number().int().min(0) }).optional(),
   // "{T}: Add {G}{G}" (Greenweaver Druid): mana for whoever controls it, standing with them, each
   // day (sim/mana.ts `manaCapacity`).
   tap_mana: z.partialRecord(z.enum(COLORS), z.number().int().positive()).optional(),
@@ -833,6 +837,7 @@ export type NpcDef = {
   revealTop?: boolean;
   tapFoe?: { cost: ManaCost; costText: string; noFly: boolean };
   engulf?: boolean;
+  upkeepBurn?: { damage: number; maxHand: number };
   tapMana?: Partial<Record<Color, number>>;
   winsAtLife?: number;
   extraCombat?: { cost: ManaCost; costText: string };
@@ -1051,7 +1056,7 @@ export function buildWorld(entities: RawEntity[]): { world: World; errors: strin
         err(e.id, `sim 오류: ${issues(sim.error)}`);
         continue;
       }
-      const { knows_colors, activated, wins_at_life, extra_combat, pump, empty_hand_pump, attack_pump, discard_on_hit, landfall_token, landfall_seize, landfall_lose, landfall_grant, landfall_life, landfall_drain, enter_destroy, enter_drain, enter_draw, enter_search, enter_shatter, enter_exile, upkeep_return_land, extra_lands, reveal_top, tap_foe, tap_draw_allies, engulf, tap_mana, name, home_pos, ...rest } = sim.data;
+      const { knows_colors, activated, wins_at_life, extra_combat, pump, empty_hand_pump, attack_pump, discard_on_hit, landfall_token, landfall_seize, landfall_lose, landfall_grant, landfall_life, landfall_drain, enter_destroy, enter_drain, enter_draw, enter_search, enter_shatter, enter_exile, upkeep_return_land, extra_lands, reveal_top, tap_foe, tap_draw_allies, engulf, tap_mana, upkeep_burn, name, home_pos, ...rest } = sim.data;
 
       world.npcs.push({
         id: e.id,
@@ -1077,6 +1082,7 @@ export function buildWorld(entities: RawEntity[]): { world: World; errors: strin
         ...(extra_lands ? { extraLands: extra_lands } : {}),
         ...(reveal_top ? { revealTop: true } : {}),
         ...(engulf ? { engulf: true } : {}),
+        ...(upkeep_burn ? { upkeepBurn: { damage: upkeep_burn.damage, maxHand: upkeep_burn.max_hand } } : {}),
         ...(tap_mana ? { tapMana: tap_mana } : {}),
         ...(tap_foe ? { tapFoe: { cost: parseManaCost(tap_foe.cost)!, costText: tap_foe.cost, noFly: tap_foe.no_fly } } : {}),
         ...(home_pos ? { homePos: home_pos } : {}),

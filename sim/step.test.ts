@@ -15,6 +15,7 @@ import { anthemHour } from './monument.ts';
 import { answerCounter, answerCounterCast, counterHolders, reactionSpell, summon } from './counter.ts';
 import { applyExile, banishOptions } from './banish.ts';
 import { engulfTargets } from './engulf.ts';
+import { upkeepScorch } from './scorch.ts';
 import { actorColors, COLORS, formatMana, manaAvailable, manaCapacity, parseManaCost, planPayment } from './mana.ts';
 import { MAX_TALKS_PER_DAY, usableAbilities, volleyShares, burnTargets } from './run.ts';
 import { destroyLand, eligibleGmEvents, moveHours, startTravel, travelBlocked } from './step.ts';
@@ -5108,6 +5109,36 @@ test('the real Greenweaver Druid lives in Riverroot with the Mul Daya: an elf wh
   assert.ok(!def.beast && def.types?.includes('elf'));
   assert.deepEqual(def.tapMana, { G: 2 });
   assert.equal(manaCapacity(state, world, d, state.minutes).G, 5);
+});
+
+test('Hellfire Mongrel: at 00:00, 2 damage to each on its tile but its side holding two spells or fewer (a knockout between NPCs)', () => {
+  const hound = { ...npcSim('loc-a', 'work', [2, 2]), needs: ['energy', 'hunger'], beast: true, tamable: true, mana: { R: 3 }, upkeep_burn: { damage: 2, max_hand: 2 } };
+  const world = fixture([npc('chr-h', hound), npc('chr-m', npcSim('loc-a', 'work', [1, 1])), npc('chr-x', npcSim('loc-a', 'work', [1, 2])), npc('chr-y', npcSim('loc-a', 'work', [1, 5])), npc('chr-z', npcSim('loc-a', 'work', [1, 5]))]);
+  const state = character(world, 'loc-a');
+  const [p, h, m, x, y, z] = [PLAYER_ID, 'chr-h', 'chr-m', 'chr-x', 'chr-y', 'chr-z'].map((id) => state.actors[id]);
+  for (const a of [m, x, y, z]) a.tile = p.tile;
+  h.tile = p.tile;
+  h.master = m.id;
+  y.spells = ['a', 'b', 'c'];
+  z.master = m.id; // the master's side
+  upkeepScorch(state, world, 1440);
+  assert.ok(knockedOut(x) && !x.dead);
+  assert.equal(woundsOf(y, 1440), 0);
+  assert.equal(woundsOf(z, 1440), 0);
+  assert.equal(woundsOf(m, 1440), 0);
+  assert.ok(woundsOf(p, 1440) === 2 || p.dead);
+  assert.ok(foesOf(x, 1440).includes('chr-h') || knockedOut(x));
+  assert.ok(texts(state).some((l) => l.includes('불길을 토했다')));
+});
+
+test('the real Hellfire Mongrel roams Akoum: a hungry beast that may follow someone, burning the empty-handed at midnight', () => {
+  const world = loadWorld();
+  const state = newState(world, { seed: 1, mode: 'observer' });
+  const h = state.actors['cre-hellfire-mongrel'];
+  assert.equal(h?.region, 'loc-akoum');
+  const def = npcDef(state, world, h.id)!;
+  assert.ok(def.beast && def.tamable && def.needs.includes('hunger'));
+  assert.deepEqual(def.upkeepBurn, { damage: 2, maxHand: 2 });
 });
 
 test('the real Merfolk Seastalkers lurk in Bojuka Bay, a basic island on the edge of the Guum Wilds in Bala Ged: islandwalk', () => {

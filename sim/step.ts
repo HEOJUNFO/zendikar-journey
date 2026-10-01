@@ -41,6 +41,7 @@ import { wanderHour, withPositions } from './wander.ts';
 import { anthemHour, upkeepSacrifice } from './monument.ts';
 import { upkeepQuell } from './quell.ts';
 import { upkeepTide } from './tide.ts';
+import { upkeepScorch } from './scorch.ts';
 import { upkeepBlaze } from './blaze.ts';
 import { upkeepOracle } from './oracle.ts';
 import { HIRE_HOURS, hireBlocked, hireMerc } from './allies.ts';
@@ -124,6 +125,7 @@ function startDay(state: State, world: World, t: number) {
     upkeepSacrifice(state, world, t);
     upkeepTide(state, world, t);
     upkeepBlaze(state, world, t);
+    upkeepScorch(state, world, t);
     upkeepOracle(state, world, t);
     upkeepQuest(state, world, t);
     upkeepQuell(state, world, t);
