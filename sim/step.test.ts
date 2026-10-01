@@ -5001,6 +5001,17 @@ test('the real Timbermaw Larva lurks in Oran-Rief: a hungry beast that swells pe
   assert.deepEqual(ptOf(l), [2, 2]);
 });
 
+test('the real Windrider Eel swims the winds of Makindi: a flying, hungry beast, +2/+2 on landfall', () => {
+  const world = loadWorld();
+  const state = newState(world, { seed: 1, mode: 'observer' });
+  const e = state.actors['cre-windrider-eel'];
+  assert.equal(e?.region, 'loc-makindi');
+  const def = npcDef(state, world, e.id)!;
+  assert.ok(def.beast && hasAbility(e, 'fly', state.minutes));
+  assert.deepEqual(def.landfall, { pt: [2, 2], trample: false });
+  assert.deepEqual(ptOf(e), [2, 2]);
+});
+
 test('the real Oracle of Mul Daya lives in Riverroot, in the Guum Wilds of Bala Ged', () => {
   const world = loadWorld();
   const state = newState(world, { seed: 1, mode: 'observer' });
