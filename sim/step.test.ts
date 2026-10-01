@@ -6999,3 +6999,16 @@ test('the real Goblin Shortcutter runs the passes of Murasa', () => {
   const def = npcDef(state, world, g.id)!;
   assert.ok(def.enterNoBlock && !def.hireable);
 });
+
+test('the real Goblin War Paint is taught on the Teeth of Akoum: +2/+2 and haste, an aura', () => {
+  const world = loadWorld();
+  const s = world.spells.find((x) => x.id === 'spl-goblin-war-paint')!;
+  assert.equal(s.learnAt, 'loc-teeth-of-akoum');
+  const state = newState(world, { seed: 1, mode: 'observer' });
+  const g = state.actors['chr-tuktuk-grunts'];
+  g.spells = ['spl-goblin-war-paint'];
+  const before = ptOf(g);
+  castSpell(state, world, g, 'spl-goblin-war-paint', g.id, false, state.minutes);
+  assert.deepEqual(ptOf(g), [before[0] + 2, before[1] + 2]);
+  assert.ok(hasAbility(g, 'haste', state.minutes));
+});

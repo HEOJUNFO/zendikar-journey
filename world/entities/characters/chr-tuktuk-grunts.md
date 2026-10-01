@@ -5,9 +5,10 @@ name: 투크투크 졸개들
 name_en: Tuktuk Grunts
 summary: 아쿰 산악의 고블린 전사 무리. 싼값에 원정대에 끼고, 무리가 늘수록 더 사나워진다
 status: canon
-sources: [ZEN-152]
+sources: [ZEN-152, ZEN-129]
 tags: [동료, 용병, 고블린, 전사, 적색]
 links:
+  - { to: spl-goblin-war-paint, rel: 고블린의 전투 물감 }
   - { to: law-allies, rel: 동료 }
   - { to: law-retainers, rel: 고용되어 섬김 }
   - { to: law-mana-colors, rel: 적색의 존재 }
