@@ -67,6 +67,9 @@ export function castBlocked(state: State, world: World, a: Actor, spellId: strin
     return `${josa(shortName(target.name), '은', '는')} 여기 없다.`;
   if (s.effects.some((e) => e.type === 'destroy_land') && !landToDestroy(state, target))
     return `${josa(shortName(target.name), '은', '는')} 부술 땅을 쥐고 있지 않다.`;
+  const need = ownOnly(s);
+  if (need && !ownedBy(target, a)) return `${josa(s.name, '은', '는')} 자신이나 자신의 권속에게만 건다.`;
+  if (need && castTargets(state, a, s).length < need) return `${josa(s.name, '은', '는')} 대상이 ${need === 2 ? '둘' : need}이 있어야 한다 (곁의 자신과 권속).`;
   if (s.effects.some((e) => e.type === 'copy_target') && !copyable(target)) return `${josa(shortName(target.name), '은', '는')} 생물이 아니다 (플레인즈워커). 복제할 수 없다.`;
   if (s.effects.some((e) => e.type === 'destroy_relics') && !relicsHere(state, world, a.region, a.tile).length) return '여기엔 부술 마법물체도 부여마법도 없다.';
   if (s.effects.some((e) => e.type === 'demolish') && !demolishOptions(state, world, a).length) return '여기엔 부술 마법물체도 땅도 없다.';
@@ -85,7 +88,17 @@ export function castTargets(state: State, a: Actor, s: SpellDef) {
   if (s.target === 'self') return [a];
   const needsLand = s.effects.some((e) => e.type === 'destroy_land');
   const copies = s.effects.some((e) => e.type === 'copy_target');
-  return present(state, a.region, a.tile).filter((x) => (x.id !== a.id || s.target === 'any_here') && targetable(x, state.minutes, spellColors(s)) && (!needsLand || !!landToDestroy(state, x)) && (!copies || copyable(x)));
+  return present(state, a.region, a.tile).filter((x) => (x.id !== a.id || s.target === 'any_here') && targetable(x, state.minutes, spellColors(s)) && (!needsLand || !!landToDestroy(state, x)) && (!copies || copyable(x)) && (!ownOnly(s) || ownedBy(x, a)));
+}
+
+// A spell only for the caster's own ("target creatures you control", Windborne Charge), and how
+// many it needs.
+function ownOnly(s: SpellDef) {
+  return s.effects.find((e) => e.type === 'pump_own')?.count;
+}
+// The caster's own: themselves, and those who serve them (user decision 2026-10-01).
+function ownedBy(x: Actor, a: Actor) {
+  return x.id === a.id || x.master === a.id;
 }
 
 // The land "target land" falls on for one: the one they most lately bonded with, standing.
@@ -170,7 +183,7 @@ export function castSpell(state: State, world: World, a: Actor, spellId: string,
     return false;
   }
   const on = target.id === a.id ? '자신' : shortName(target.name);
-  const paid = free ? '값 없이' : kicked && s.kicker?.mana ? `${s.costText} + 킥커 ${s.kicker.manaText}` : s.costText;
+  const paid = free && ownOnly(s) ? '둘째 대상' : free ? '값 없이' : kicked && s.kicker?.mana ? `${s.costText} + 킥커 ${s.kicker.manaText}` : s.costText;
   addLog(state, {
     kind: 'event',
     text: s.target === 'self' ? `${josa(shortName(a.name), '이', '가')} ${josa(s.name, '을', '를')} 썼다 (${paid}).` : `${josa(shortName(a.name), '이', '가')} ${on}에게 ${josa(s.name, '을', '를')} 걸었다 (${paid}).`,
@@ -227,6 +240,21 @@ export function castSpell(state: State, world: World, a: Actor, spellId: string,
       }
       const kind = world.lore.find((l) => l.id === eff.creature)?.name ?? eff.creature;
       addLog(state, { kind: 'event', text: eff.until_midnight ? `${josa(shortName(a.name), '이', '가')} ${josa(kind, '을', '를')} 불러냈다 (${ptOf(born[0]).join('/')}${eff.abilities?.length ? `, ${eff.abilities.map((x) => ABILITY_LABELS[x]).join('·')}` : ''}, 권속, 자정에 사라진다).` : `${kind} ${n}명이 나타나 ${shortName(a.name)}에게 서약했다 (${eff.pt.join('/')}, 권속).`, regions: [a.region], actors: [a.id, ...born.map((b) => b.id)] });
+    } else if (eff.type === 'pump_own') {
+      const until = untapTime(t);
+      target.pumps = [...(target.pumps ?? []), { pt: [...eff.pt], until }];
+      // What they have of their own stays theirs past midnight: only what they lacked is granted.
+      for (const ability of eff.abilities) {
+        if (target.abilities.includes(ability) && !target.granted?.some((g) => g.ability === ability)) continue;
+        target.granted = [...(target.granted ?? []).filter((g) => g.ability !== ability), { ability, until }];
+        if (!target.abilities.includes(ability)) target.abilities = [...target.abilities, ability];
+      }
+      addLog(state, { kind: 'effect', text: `${josa(shortName(target.name), '이', '가')} 자정까지 +${eff.pt[0]}/+${eff.pt[1]}${eff.abilities.length ? `, ${eff.abilities.map((x) => ABILITY_LABELS[x]).join('·')}` : ''}을 얻었다 (${ptOf(target).join('/')}).`, regions: [target.region], actors: [target.id], t });
+      // The other target(s): the caster's pick after the hour, one they must make.
+      if (!free && eff.count > 1) {
+        const others = castTargets(state, a, s).filter((x) => x.id !== target.id).map((x) => x.id);
+        if (others.length) (state.choices ??= []).push({ by: a.id, land: a.region, effect: { type: 'cast', spell: s.id, free: true, second: true }, candidates: others, optional: false, t });
+      }
     } else if (eff.type === 'copy_target') {
       replicate(state, world, a, target, kicked && eff.kicked_count ? eff.kicked_count : eff.count, t, s.name);
     } else if (eff.type === 'aura') {

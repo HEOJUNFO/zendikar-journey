@@ -2968,6 +2968,61 @@ test('the real Summoner\'s Bane is taught on Jwar Isle and leaves a 2/2 blue Ill
   assert.deepEqual(s.effects[1], { type: 'create_retainers', creature: 'cre-illusion', count: 1, pt: [2, 2], colors: ['U'] });
 });
 
+test('Windborne Charge: two of the caster\'s own (themselves too) get +2/+2 and flying until midnight; it needs two', async () => {
+  const charge: RawEntity = { id: 'spl-wc', kind: 'spell', name: '바람 실은 돌격', status: 'canon', sim: { cost: '{W}', learn_at: 'loc-a', target: 'any_here', effects: [{ type: 'pump_own', count: 2, pt: [2, 2], abilities: ['fly'] }] } };
+  const world = fixture([charge, npc('chr-c', { ...npcSim('loc-a'), mana: { W: 4 } }), npc('chr-r', npcSim('loc-a')), npc('chr-x', npcSim('loc-a'))]);
+  const state = newState(world, { seed: 1, mode: 'observer' });
+  const [c, r, x] = [state.actors['chr-c'], state.actors['chr-r'], state.actors['chr-x']];
+  for (const a of [r, x]) a.tile = c.tile;
+  c.spells = ['spl-wc'];
+  // Alone, no retainer: not two of their own.
+  assert.match(castBlocked(state, world, c, 'spl-wc', c.id, false, state.minutes) ?? '', /둘이 있어야/);
+  bindRetainer(state, world, r, c, state.minutes, '설득');
+  // Not someone else's.
+  assert.match(castBlocked(state, world, c, 'spl-wc', x.id, false, state.minutes) ?? '', /자신이나 자신의 권속/);
+  assert.deepEqual(castTargets(state, c, world.spells.find((s) => s.id === 'spl-wc')!).map((a) => a.id).sort(), [c.id, r.id].sort());
+  assert.equal(castBlocked(state, world, c, 'spl-wc', c.id, false, state.minutes), null);
+  castSpell(state, world, c, 'spl-wc', c.id, false, state.minutes);
+  assert.deepEqual(ptOf(c), [3, 3]);
+  assert.ok(hasAbility(c, 'fly', state.minutes));
+  // The second: theirs to name after the hour, and one must be named.
+  const owed = state.choices!.find((x) => x.effect.type === 'cast')!;
+  assert.deepEqual(owed.candidates, [r.id]);
+  assert.equal(owed.optional, false);
+  await advance(state, world, 1, { planDay: async () => [], choose: async () => null });
+  assert.deepEqual(ptOf(r), [3, 3]);
+  assert.ok(hasAbility(r, 'fly', state.minutes));
+  assert.ok(texts(state).some((l) => l.includes('둘째 대상')));
+  // Midnight: gone.
+  await advance(state, world, 24, { planDay: async () => [] });
+  assert.deepEqual(ptOf(r), [1, 1]);
+  assert.ok(!hasAbility(r, 'fly', state.minutes));
+});
+
+test('Windborne Charge, the player: the second is a pick they owe, with no "none"', async () => {
+  const charge: RawEntity = { id: 'spl-wc', kind: 'spell', name: '바람 실은 돌격', status: 'canon', sim: { cost: '{0}', learn_at: 'loc-a', target: 'any_here', effects: [{ type: 'pump_own', count: 2, pt: [2, 2], abilities: ['fly'] }] } };
+  const world = fixture([charge, npc('chr-r', npcSim('loc-a'))]);
+  const state = character(world, 'loc-a');
+  const [p, r] = [state.actors[PLAYER_ID], state.actors['chr-r']];
+  r.tile = p.tile;
+  p.spells = ['spl-wc'];
+  bindRetainer(state, world, r, p, state.minutes, '설득');
+  castSpell(state, world, p, 'spl-wc', p.id, false, state.minutes);
+  await advance(state, world, 1, { planDay: async () => [] });
+  const ask = state.asks?.[0];
+  assert.equal(ask?.effect.type, 'cast');
+  assert.deepEqual(askOptions(state, world, ask!).map((o) => o.pick), [r.id]);
+  await act(state, world, { type: 'choose', pick: r.id }, { planDay: async () => [] });
+  assert.deepEqual(ptOf(r), [3, 3]);
+});
+
+test('the real Windborne Charge is taught in Emeria', () => {
+  const world = loadWorld();
+  const s = world.spells.find((x) => x.id === 'spl-windborne-charge')!;
+  assert.equal(s.learnAt, 'loc-emeria');
+  assert.deepEqual(s.effects[0], { type: 'pump_own', count: 2, pt: [2, 2], abilities: ['fly'] });
+});
+
 test('the real Conqueror\'s Pledge is taught in Ondu: six Kor Soldiers, twelve kicked for {6}', () => {
   const world = loadWorld();
   const s = world.spells.find((x) => x.id === 'spl-conquerors-pledge')!;

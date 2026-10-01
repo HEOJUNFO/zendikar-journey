@@ -608,6 +608,11 @@ export const SpellSimSchema = z.strictObject({
         // "Create a token that's a copy of target creature" (kicked: `kicked_count` instead,
         // Rite of Replication): copies of the target, born the caster's retainers; planeswalkers
         // can't be copied (sim/replicate.ts).
+        // "N target creatures you control each get +P/+T and gain <abilities> until end of turn"
+        // (Windborne Charge): the caster's own on their tile (themselves and their retainers,
+        // user decision 2026-10-01), until midnight; it needs N of them. The caster picks the
+        // first as they cast, the rest after (a pick they owe, sim/spells.ts).
+        z.strictObject({ type: z.literal('pump_own'), count: z.number().int().positive(), pt: PtBonusSchema, abilities: z.array(z.enum(ABILITIES)).default([]) }),
         // "Counter target creature spell" (Summoner's Bane): cast only in answer to someone
         // joining another on the caster's tile; the joining comes to nothing (sim/counter.ts).
         z.strictObject({ type: z.literal('counter_creature') }),

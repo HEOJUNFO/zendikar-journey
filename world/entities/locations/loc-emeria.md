@@ -5,7 +5,7 @@ name: 에메리아
 name_en: Emeria, the Sky Ruin
 summary: 타짐 하늘에 떠 있는 고대 석조 폐허. 금빛 하늘 아래 부서진 탑과 바위 조각이 떠다니고, 코르는 밧줄로 절벽을 타고 오른다
 status: canon
-sources: [ZEN-213, ZEN-13, ZEN-6, ZEN-199, ZEN-34, ZEN-66, ZEN-9, ZEN-11]
+sources: [ZEN-213, ZEN-13, ZEN-6, ZEN-199, ZEN-34, ZEN-66, ZEN-9, ZEN-11, ZEN-38]
 tags: [하늘, 폐허, 천사, 백색]
 links:
   - { to: cre-emeria-angel, rel: 새 떼를 거느린 천사 }
@@ -17,6 +17,7 @@ links:
   - { to: law-retainers, rel: 죽은 권속을 되돌림 }
   - { to: chr-iona, rel: 지키는 천사 }
   - { to: spl-celestial-mantle, rel: 가르치는 주문 }
+  - { to: spl-windborne-charge, rel: 배우는 주문 }
 map: { in: loc-tazeem, terrain: sky, pos: [0.4, -0.35], tiles: 18 }
 sim:
   nonbasic: true                          # 이름 있는 대지: 평원이 아니다
@@ -44,6 +45,7 @@ sim:
 - 길 잃은 자의 목자(`cre-shepherd-of-the-lost`, ZEN-34)가 이오나와 함께 산다. 광야에서 쓰러진 이의 부름에 답하는 천사다.
 
 - 심판의 날(`spl-day-of-judgment`, ZEN-9)을 여기서 배운다 (4시간, [결정] 2026-10-01). 같은 칸의 모두(시전자도)를 파괴하는 백색 주문이다.
+- 바람 실은 돌격(`spl-windborne-charge`, ZEN-38)을 여기서 배운다 (4시간, [결정] 2026-10-01: 하늘 여신 에메리아·캄사의 축복). 자신과 권속 둘이 자정까지 +2/+2, 비행.
 
 - 에메리아 천사(`cre-emeria-angel`, ZEN-11)가 새 떼를 거느리고 산다 ([결정] 2026-10-01). 땅과 유대를 맺을 때마다 1/1 비행 새가 하나씩 곁에 난다. 이오나를 섬긴다.
 

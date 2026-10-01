@@ -692,7 +692,7 @@ async function choices(state: State, world: World, llm: Llm) {
     if (!by || by.dead || !npc || !land || !candidates.length) continue;
     if (c.effect.type === 'pledge' || c.effect.type === 'evade') continue; // the player's alone
     if (c.effect.type === 'cast') {
-      await castChoice(state, world, llm, by, npc, c.effect.spell, candidates, !!c.effect.free);
+      await castChoice(state, world, llm, by, npc, c.effect.spell, candidates, !!c.effect.free, !!c.effect.second);
       continue;
     }
     if (c.effect.type === 'follow') {
@@ -796,9 +796,25 @@ async function choices(state: State, world: World, llm: Llm) {
 // character, or no one (they hold it back and keep their mana). The kicker is paid when they
 // can ([가공]: it only ever helps them).
 // `free`: a copy it gives (a kicked Gigantiform's second), paid for already.
-async function castChoice(state: State, world: World, llm: Llm, by: Actor, npc: Speaker, spellId: string, candidates: Actor[], free = false) {
+async function castChoice(state: State, world: World, llm: Llm, by: Actor, npc: Speaker, spellId: string, candidates: Actor[], free = false, second = false) {
   const s = spellDef(world, spellId);
-  if (!s || !llm.choose) return;
+  if (!s) return;
+  // The second target of a spell that needs two (Windborne Charge): one must be named; with no
+  // usable answer, the first there.
+  if (second) {
+    let pick: string | null = null;
+    if (llm.choose) {
+      try {
+        pick = await llm.choose({ world, state, npc, candidates, what: `${s.name}의 둘째 대상을 고른다: ${s.summary}. 당신 자신이나 곁의 권속 가운데 하나` });
+      } catch (e) {
+        console.warn(`choose (cast, second) for ${by.id} failed:`, e);
+      }
+    }
+    const target = candidates.find((x) => x.id === pick && together(x, by)) ?? candidates.find((x) => together(x, by));
+    if (target) castSpell(state, world, by, s.id, target.id, false, state.minutes, true);
+    return;
+  }
+  if (!llm.choose) return;
   let pick: string | null = null;
   try {
     const what = free

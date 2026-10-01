@@ -35,6 +35,7 @@ export function askText(state: State, world: World, c: Choice) {
     const pump = x && npcDef(state, world, x.id)?.pump;
     return `${shortName(x?.name ?? '')}의 싸움이 이어진다. 마나 ${pump?.costText ?? ''}를 낼 때마다 자정까지 +${pump?.pt[0]}/+${pump?.pt[1]}. 얼마나 부을까?`;
   }
+  if (c.effect.type === 'cast' && c.effect.second) return `${world.spells.find((s) => s.id === (c.effect as { spell: string }).spell)?.name ?? ''}의 둘째 대상: 자신이나 곁의 권속 가운데 누구에게?`;
   if (c.effect.type === 'cast') return `${world.spells.find((s) => s.id === (c.effect as { spell: string }).spell)?.name ?? ''}을(를) 하나 더, 값 없이 걸 수 있다. 누구에게?`;
   if (c.effect.type === 'sacrifice') return `${state.items?.[c.effect.item]?.name ?? c.effect.item}이(가) 오늘의 제물을 요구한다. 부리는 이 가운데 누구를 바칠까? (바친 이는 죽는다)`;
   if (c.effect.type === 'demolish') return `${c.effect.spell}: 이 자리의 마법물체 하나나 땅 하나를 부순다 (땅은 7일 동안 누구에게도 아무것도 내주지 않는다). 무엇을?`;
@@ -91,6 +92,8 @@ export function askOptions(state: State, world: World, c: Choice): { pick: strin
   if (c.effect.type === 'sacrifice') return c.candidates.map((id) => ({ pick: id, label: shortName(state.actors[id]?.name ?? id) }));
   if (c.effect.type === 'pledge') return [{ pick: c.effect.from, label: '따른다' }, { pick: null, label: '거절한다' }];
   if (c.effect.type === 'evade') return [{ pick: c.effect.from, label: '날아올라 피한다' }, { pick: null, label: '맞선다' }];
+  // The second target of a spell that needs two: no "none".
+  if (c.effect.type === 'cast' && c.effect.second) return c.candidates.map((id) => ({ pick: id, label: shortName(state.actors[id]?.name ?? id) }));
   return [...c.candidates.map((id) => ({ pick: id, label: shortName(state.actors[id]?.name ?? id) })), { pick: null, label: '하지 않는다' }];
 }
 
@@ -120,7 +123,8 @@ export function answerAsk(state: State, world: World, pick: string | null, t: nu
     const x = living.find((y) => y.id === pick) ?? living[0];
     if (x) sacrifice(state, world, x, c.effect.item, t);
   } else if (c.effect.type === 'cast' && c.effect.free) {
-    const target = pick && c.candidates.includes(pick) ? state.actors[pick] : undefined;
+    // A second target must be named: an answer that isn't one goes to the first there.
+    const target = pick && c.candidates.includes(pick) ? state.actors[pick] : c.effect.second ? c.candidates.map((id) => state.actors[id]).find((x) => x && !x.dead && together(x, p)) : undefined;
     if (target && !target.dead && together(target, p)) castSpell(state, world, p, c.effect.spell, target.id, false, t, true);
   } else if (c.effect.type === 'discard') {
     // One they must give up: an answer that isn't one of theirs gives up the first.
