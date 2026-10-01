@@ -15,7 +15,7 @@ import { crushOwed, demolishOptions, demolishOwed, relicsHere } from './relics.t
 import { remember } from './relations.ts';
 import { copyable, replicate } from './replicate.ts';
 import { reactionSpell } from './counter.ts';
-import { creatureOf, retainersOf } from './retainers.ts';
+import { controlledCreatures, creatureOf, retainersOf } from './retainers.ts';
 import { addLog, npcDef, present, ptOf, targetable, untargetableText } from './state.ts';
 import type { Actor, State } from './state.ts';
 import { sealedBy, sealText } from './seal.ts';
@@ -52,7 +52,7 @@ export function learnSpell(state: State, world: World, a: Actor, spellId: string
 // `a`'s retainers of creature `kind` who could be tapped now (a kicker's "tap an untapped …
 // you control").
 export function tappable(state: State, world: World, a: Actor, kind: string) {
-  return retainersOf(state, a.id).filter((x) => x.boundUntil === undefined && creatureOf(state, world, x.id) === kind);
+  return controlledCreatures(state, world, a).filter((x) => x.boundUntil === undefined && creatureOf(state, world, x.id) === kind);
 }
 
 export function castBlocked(state: State, world: World, a: Actor, spellId: string, targetId: string, kick: boolean, t: number): string | null {

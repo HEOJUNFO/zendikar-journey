@@ -9,6 +9,7 @@
 // doesn't serve them, user decision 2026-10-01; winning it over is theirs to do then). A
 // trap or what is to come today stays a secret (there is nothing to have). Had for real, it is
 // no draw (a replaced draw); what stays a secret is.
+import { controlledCreatures } from './retainers.ts';
 import { gameDay } from './clock.ts';
 import { itemDef, itemOwner, takeItem } from './items.ts';
 import { onEnter } from './abilities.ts';
@@ -40,6 +41,27 @@ export function upkeepQuest(state: State, world: World, t: number) {
       text: `${shortName(owner.name)}의 ${x.name}에 탐색 카운터가 하나 쌓였다 (${s.counters}/${q.counters})${s.counters === q.counters ? '. 이제 알게 될 것을 실제로 손에 넣는다' : ''}.`,
       regions: [owner.region],
       actors: [owner.id],
+      t,
+    });
+  }
+}
+
+// Beastmaster Ascension: one its owner controls (themselves, or one serving them) falls on
+// someone for the first time today: a quest counter (always: a boon).
+export function attackQuest(state: State, world: World, a: Actor, t: number) {
+  for (const x of world.items) {
+    if (!x.effects.some((e) => e.type === 'attack_quest')) continue;
+    const s = state.items?.[x.id];
+    const owner = s?.owner ? state.actors[s.owner] : undefined;
+    if (!s || s.gone || !owner || owner.dead || !controlledCreatures(state, world, owner).some((c) => c.id === a.id)) continue;
+    s.counters += 1;
+    const need = x.effects.find((e) => e.type === 'anthem' && e.counters);
+    const goal = need?.type === 'anthem' ? need.counters : undefined;
+    addLog(state, {
+      kind: 'effect',
+      text: `${josa(shortName(a.name), '이', '가')} 덤벼들자 ${shortName(owner.name)}의 ${x.name}에 탐색 카운터가 쌓였다 (${s.counters}${goal ? `/${goal}` : ''})${goal && s.counters === goal ? `. 이제 ${josa(shortName(owner.name), '이', '가')} 부리는 생물 모두가 +${need!.type === 'anthem' ? need!.pt.join('/+') : ''}` : ''}.`,
+      regions: [a.region],
+      actors: [a.id, owner.id],
       t,
     });
   }

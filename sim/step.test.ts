@@ -10,7 +10,8 @@ import { startAction } from './actions.ts';
 import type { World } from './world.ts';
 import { addFoe, attackBlocked, caughtAsleep, clash, dealDamage, destroy, die, foesOf, hostileNpcs, intimidated, knockedOut, landwalked, unblockable, woundsOf } from './combat.ts';
 import { landSealed, powersSealed, sealedBy, sealToday, setSeal } from './seal.ts';
-import { castBlocked, castSpell, castTargets, learnBlocked, npcCastBlocked, readyCast } from './spells.ts';
+import { castBlocked, castSpell, castTargets, learnBlocked, npcCastBlocked, readyCast, tappable } from './spells.ts';
+import { anthemHour } from './monument.ts';
 import { answerCounter, counterHolders, reactionSpell, summon } from './counter.ts';
 import { actorColors, COLORS, formatMana, manaAvailable, manaCapacity, parseManaCost, planPayment } from './mana.ts';
 import { MAX_TALKS_PER_DAY, usableAbilities, volleyShares, burnTargets } from './run.ts';
@@ -31,7 +32,7 @@ import { claimBlocked, claimItem, itemOwner, itemsAt, itemWhere } from './items.
 import { spendBlocked, storeBlocked } from './eons.ts';
 import { applyEnterDestroy, bondBlocked, enterDestroy, onEnter, bondLand, bondTargets, callForth, fetchTargets, fireTargets, firesOnBond, growBlocked, spawnWild, summonLibrary, useAbility } from './abilities.ts';
 import { DEPLETED_LABEL, DESTROYED_DAYS, TRAVEL_UNITS_PER_HOUR } from './rules.ts';
-import { bindRetainer, releaseRetainer, retainersOf, swayBlocked } from './retainers.ts';
+import { bindRetainer, controlledCreatures, releaseRetainer, retainersOf, swayBlocked } from './retainers.ts';
 import { joinedToday } from './bounce.ts';
 import { centroid, eventTile, fixedTile, nearestTile, ownsTile, sameTile, TILE, tileCenter, tilesOf, tileSteps, tooSmall } from './tiles.ts';
 import { applyQuell, upkeepQuell } from './quell.ts';
@@ -3128,15 +3129,23 @@ test('an Eldrazi Monument: its owner\'s creatures (themselves too, a creature ca
   assert.deepEqual(ptOf(o), [2, 2]);
 });
 
-test('an Eldrazi Monument whose owner has nothing to give crumbles away; the player picks from theirs', async () => {
-  const world = fixture([monument, npc('chr-r', npcSim('loc-a'))]);
+test('an Eldrazi Monument whose owner has nothing to give crumbles away; the player picks from theirs, themselves too', async () => {
+  const world = fixture([monument, walker, npc('chr-r', npcSim('loc-a'))]);
+  // A planeswalker is no creature: with no retainer, nothing to give.
+  const s0 = newState(world, { seed: 1, mode: 'observer' });
+  s0.items = { 'itm-mon': { name: '기념비', owner: 'chr-w', counters: 0 } };
+  s0.minutes = 1440 - 60;
+  await advance(s0, world, 2, { planDay: async () => [] });
+  assert.equal(s0.items['itm-mon'].gone, true);
+  assert.match(claimBlocked(s0, world, s0.actors['chr-w'], 'itm-mon', s0.minutes)!, /그런 것은 없다/);
+  // The player alone: they are a creature they control (user decision 2026-10-01), so they give themselves.
   const state = character(world, 'loc-a');
-  const p = state.actors[PLAYER_ID];
   state.items = { 'itm-mon': { name: '기념비', owner: PLAYER_ID, counters: 0 } };
   state.minutes = 1440 - 60;
   await act(state, world, { type: 'wait', hours: 2 });
-  assert.equal(state.items['itm-mon'].gone, true); // the player is no creature, and has no retainer
-  assert.match(claimBlocked(state, world, p, 'itm-mon', state.minutes)!, /그런 것은 없다/);
+  assert.deepEqual(state.asks?.[0]?.candidates, [PLAYER_ID]);
+  await act(state, world, { type: 'choose', pick: PLAYER_ID });
+  assert.ok(state.actors[PLAYER_ID].dead && state.over);
   // With a retainer: the player gives it.
   const s2 = character(world, 'loc-a');
   s2.actors['chr-r'].master = PLAYER_ID;
@@ -5055,6 +5064,48 @@ test('the real Archmage Ascension stands in Sea Gate', () => {
   assert.equal(x.at, 'loc-sea-gate');
   assert.equal(x.cardType, 'enchantment');
   assert.deepEqual(x.effects, [{ type: 'quest', draws: 2, counters: 6 }]);
+});
+
+test('Beastmaster Ascension: a counter for each creature its owner controls (themselves too) first falling on someone a day; with seven, all of them +5/+5', () => {
+  const asc: RawEntity = { id: 'itm-ba', kind: 'item', name: '야수조련사의 승천', status: 'canon', sim: { card_type: 'enchantment', cost: '{0}', at: 'loc-a', effects: [{ type: 'attack_quest' }, { type: 'anthem', pt: [5, 5], counters: 7 }] } };
+  const world = fixture([asc, npc('chr-r', npcSim('loc-a')), npc('chr-x', npcSim('loc-a', 'social', [0, 9])), npc('chr-y', npcSim('loc-a', 'social', [0, 9]))]);
+  const state = character(world, 'loc-a');
+  const [p, r, x, y] = [state.actors[PLAYER_ID], state.actors['chr-r'], state.actors['chr-x'], state.actors['chr-y']];
+  for (const a of [r, x, y]) a.tile = p.tile;
+  r.master = p.id;
+  claimItem(state, world, p, 'itm-ba', state.minutes);
+  clash(state, world, p, x, state.minutes); // the player is a creature they control
+  assert.equal(state.items!['itm-ba'].counters, 1);
+  clash(state, world, r, y, state.minutes);
+  assert.equal(state.items!['itm-ba'].counters, 2);
+  clash(state, world, p, y, state.minutes + 60); // once a day each
+  clash(state, world, x, p, state.minutes + 60); // struck at: no attack of theirs
+  assert.equal(state.items!['itm-ba'].counters, 2);
+  // Six: nothing yet; seven: they and theirs +5/+5, hour by hour.
+  state.items!['itm-ba'].counters = 6;
+  anthemHour(state, world);
+  assert.equal(ptOf(r)[0], 1);
+  state.items!['itm-ba'].counters = 7;
+  anthemHour(state, world);
+  assert.deepEqual(ptOf(r), [6, 6]);
+  assert.equal(ptOf(p)[0], 6);
+  assert.equal(ptOf(x)[0], 0);
+});
+
+test('the real Beastmaster Ascension stands in the Guum Wilds', () => {
+  const world = loadWorld();
+  const x = world.items.find((i) => i.id === 'itm-beastmaster-ascension')!;
+  assert.equal(x.at, 'loc-guum-wilds');
+  assert.deepEqual(x.effects, [{ type: 'attack_quest' }, { type: 'anthem', pt: [5, 5], abilities: [], counters: 7 }]);
+});
+
+test('"creatures you control" is everywhere themselves and their retainers: a kicker may tap the caster', () => {
+  const tribute: RawEntity = { id: 'spl-t', kind: 'spell', name: '공물', status: 'canon', sim: { cost: '{0}', learn_at: 'loc-a', kicker: { tap: 'cre-v' }, effects: [{ type: 'discard' }] } };
+  const world = fixture([tribute, lore('cre-v', 'creature'), npc('chr-k', { ...npcSim('loc-a'), creature: 'cre-v' }), walker]);
+  const state = newState(world, { seed: 1, mode: 'observer' });
+  const k = state.actors['chr-k'];
+  assert.deepEqual(tappable(state, world, k, 'cre-v').map((a) => a.id), [k.id]);
+  assert.deepEqual(controlledCreatures(state, world, state.actors['chr-w']), []); // a planeswalker is none
 });
 
 test('the real Oracle of Mul Daya lives in Riverroot, in the Guum Wilds of Bala Ged', () => {

@@ -10,7 +10,7 @@ import { blazeLand } from './blaze.ts';
 import { extraLandDrops, topBlocked, topLand } from './oracle.ts';
 import { gainLife, lifeOf, loseLife, setLife } from './life.ts';
 import { allyJoined } from './allies.ts';
-import { bindRetainer, masterOf, releaseRetainer, retainersOf } from './retainers.ts';
+import { bindRetainer, controlledCreatures, masterOf, releaseRetainer, retainersOf } from './retainers.ts';
 import { DEPLETED_LABEL } from './rules.ts';
 import { castSpell, spellDef } from './spells.ts';
 import { drawKnowledge } from './knowledge.ts';
@@ -432,7 +432,7 @@ export function useAbility(state: State, world: World, beingId: string, abilityI
       born.master = bs.id;
       addLog(state, { kind: 'event', text: `${name}의 부름에 ${josa(shortName(born.name), '이', '가')} 곁에 나타났다 (${eff.pt.join('/')}).`, regions: [bs.region], actors: [bs.id, born.id], t });
     } else if (eff.type === 'gain_life_per') {
-      const n = retainersOf(state, bs.id).filter((x) => !x.dead && (npcDef(state, world, x.id)?.types ?? []).includes(eff.kind)).length;
+      const n = controlledCreatures(state, world, bs).filter((x) => (npcDef(state, world, x.id)?.types ?? []).includes(eff.kind)).length;
       if (n) gainLife(state, bs, eff.amount * n, t, `${cause} (${CREATURE_TYPE_LABELS[eff.kind]} ${n})`);
       else addLog(state, { kind: 'effect', text: `${josa(name, '은', '는')} 거느린 ${CREATURE_TYPE_LABELS[eff.kind]}가 없다.`, regions: [bs.region], actors: [bs.id], t });
     } else if (eff.type === 'call_kind') {

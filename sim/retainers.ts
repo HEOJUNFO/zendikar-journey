@@ -29,6 +29,12 @@ export function retainersOf(state: State, masterId: string) {
   return Object.values(state.actors).filter((x) => !x.dead && x.master === masterId);
 }
 
+// "Creatures you control": themselves and those who serve them, the player too (user decision
+// 2026-10-01: one rule everywhere, as Windborne Charge). A planeswalker is no creature.
+export function controlledCreatures(state: State, world: World, owner: Actor) {
+  return [...(owner.loyalty === undefined && npcDef(state, world, owner.id)?.loyalty === undefined ? [owner] : []), ...retainersOf(state, owner.id)].filter((x) => !x.dead);
+}
+
 // The creature kind someone is (e.g. cre-vampire): a risen one's kind, or a creature entity.
 export function creatureOf(state: State, world: World, id: string) {
   return state.tokens?.[id]?.creature ?? npcDef(state, world, id)?.creature;

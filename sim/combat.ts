@@ -3,6 +3,7 @@
 // fighting is one exchange: both sides strike at once, except that a tapped (bound) defender
 // can't strike back. A fight with no player in it is not to the death: whoever goes down is
 // knocked out for a few hours and the fight is over.
+import { attackQuest } from './ascension.ts';
 import { formatClock, gameDay, STEP_MINUTES, untapTime } from './clock.ts';
 import { remember } from './relations.ts';
 import { masterOf, releaseRetainer, retainersOf } from './retainers.ts';
@@ -222,12 +223,20 @@ export function refreshEmptyHand(state: State, world: World, a: Actor, t: number
 // not destroyed (user decision 2026-10-01: a turn is a day, it attacks once a day).
 export function attackPump(state: State, world: World, a: Actor, t: number) {
   const ap = npcDef(state, world, a.id)?.attackPump;
-  if (!ap || a.attackPumped === gameDay(t) || powersSealed(state, world, a, t)) return;
-  a.attackPumped = gameDay(t);
+  if (!ap || powersSealed(state, world, a, t)) return;
   const n = landsOfType(state, world, masterOf(state, a) ?? a, ap.land).length;
   if (n <= 0) return;
   a.pumps = [...(a.pumps ?? []), { pt: [ap.pt[0] * n, ap.pt[1] * n], until: untapTime(t) }];
   addLog(state, { kind: 'effect', text: `${josa(shortName(a.name), '이', '가')} 덤벼들며 부풀었다: ${LAND_TYPE_LABELS[ap.land]} ${n}곳의 힘으로 자정까지 +${ap.pt[0] * n}/+${ap.pt[1] * n} (${ptOf(a).join('/')}).`, regions: [a.region], actors: [a.id], t });
+}
+
+// "Whenever this (a creature you control) attacks": the first time each day one falls on
+// someone (a turn is a day, user decision 2026-10-01).
+function onAttack(state: State, world: World, a: Actor, t: number) {
+  if (a.attackDay === gameDay(t)) return;
+  a.attackDay = gameDay(t);
+  attackPump(state, world, a, t);
+  attackQuest(state, world, a, t);
 }
 
 export function clash(state: State, world: World, attacker: Actor, defender: Actor, t: number, unblocked: string | null = null) {
@@ -239,7 +248,7 @@ export function clash(state: State, world: World, attacker: Actor, defender: Act
   addFoe(attacker, defender.id, t);
   refreshEmptyHand(state, world, attacker, t);
   refreshEmptyHand(state, world, defender, t);
-  attackPump(state, world, attacker, t);
+  onAttack(state, world, attacker, t);
   // Protection from a color: no damage from one of that color.
   const shielded = (from: Actor, to: Actor) => protectedFrom(to, actorColors(state, world, from), t);
   let [ap] = shielded(attacker, defender) ? [0] : ptOf(attacker);

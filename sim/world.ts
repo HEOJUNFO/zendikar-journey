@@ -647,7 +647,8 @@ export const ItemSimSchema = z.strictObject({
         // its owner bonds with a land, if that raises their life.
         z.strictObject({ type: z.literal('landfall_set_life') }),
         // "Creatures you control get +P/+T and have <abilities>" (sim/monument.ts).
-        z.strictObject({ type: z.literal('anthem'), pt: z.tuple([z.number().int(), z.number().int()]), abilities: z.array(z.enum(ABILITIES)).default([]) }),
+        // `counters`: only while it has that many quest counters (Beastmaster Ascension: seven).
+        z.strictObject({ type: z.literal('anthem'), pt: z.tuple([z.number().int(), z.number().int()]), abilities: z.array(z.enum(ABILITIES)).default([]), counters: z.number().int().positive().optional() }),
         // "At the beginning of your upkeep, sacrifice a creature. If you can't, sacrifice this."
         z.strictObject({ type: z.literal('upkeep_sacrifice') }),
         // "{T}: Add N mana of any one color": its owner draws on N more of any color each turn
@@ -662,6 +663,10 @@ export const ItemSimSchema = z.strictObject({
         // Ascension): a counter at midnight for an owner who came to know N secrets that day;
         // with M, what they would come to know they have for real instead (sim/ascension.ts).
         z.strictObject({ type: z.literal('quest'), draws: z.number().int().positive(), counters: z.number().int().positive() }),
+        // "Whenever a creature you control attacks, you may put a quest counter on this"
+        // (Beastmaster Ascension): each creature its owner controls, the first time a day it
+        // falls on someone, puts one on it (sim/ascension.ts `attackQuest`).
+        z.strictObject({ type: z.literal('attack_quest') }),
       ]),
     )
     .default([]),
