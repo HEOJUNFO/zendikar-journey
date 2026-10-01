@@ -27,8 +27,10 @@ export function woundsOf(a: Actor, t: number) {
 
 // Returns whether it killed them. Nonlethal damage knocks out instead of killing. A
 // planeswalker's damage comes off their loyalty; at 0 they leave the plane. `by`: who dealt it,
-// if anyone (where one with no master goes when they die: `die`).
-export function dealDamage(state: State, a: Actor, amount: number, t: number, cause: string, nonlethal = false, by?: Actor) {
+// if anyone (where one with no master goes when they die: `die`). `dealer`: the creature the
+// damage comes from itself (a blow, a bite, its own power), not a spell or land of theirs:
+// deathtouch is its.
+export function dealDamage(state: State, a: Actor, amount: number, t: number, cause: string, nonlethal = false, by?: Actor, dealer?: Actor) {
   if (a.dead || amount <= 0) return false;
   if (a.loyalty !== undefined) {
     a.loyalty = Math.max(nonlethal ? 1 : 0, a.loyalty - amount);
@@ -37,7 +39,11 @@ export function dealDamage(state: State, a: Actor, amount: number, t: number, ca
     return false;
   }
   const toughness = ptOf(a)[1];
-  const total = woundsOf(a, t) + amount;
+  // Deathtouch (Giant Scorpion): any damage from it is enough, as wounds reaching toughness
+  // (between NPCs, a knockout all the same; user decision 2026-10-01).
+  const touched = !!dealer && hasAbility(dealer, 'deathtouch', t) && woundsOf(a, t) + amount < toughness;
+  const total = touched ? Math.max(woundsOf(a, t) + amount, toughness) : woundsOf(a, t) + amount;
+  if (touched) addLog(state, { kind: 'combat', text: `${shortName(dealer.name)}의 죽음의 손길이 ${josa(shortName(a.name), '을', '를')} 스쳤다.`, regions: [a.region], actors: [dealer.id, a.id] });
   // Indestructible: lethal damage leaves them standing (life loss and sacrifice still end them).
   if (total >= toughness && hasAbility(a, 'indestructible', t)) {
     a.wounds = { day: gameDay(t), amount: total };
@@ -282,8 +288,10 @@ export function clash(state: State, world: World, attacker: Actor, defender: Act
   // To the death only if the player is in it.
   const lethal = (x: Actor, y: Actor) => x.kind === 'player' || y.kind === 'player';
   // Trample: what the blow has beyond what kills goes on to someone else standing there.
+  // With deathtouch, 1 is all it takes (MTG: lethal damage for a deathtouch source is 1).
   const spill = (from: Actor, to: Actor, power: number) => {
-    const excess = power - (ptOf(to)[1] - woundsOf(to, t));
+    const needed = Math.max(0, ptOf(to)[1] - woundsOf(to, t));
+    const excess = power - (hasAbility(from, 'deathtouch', t) ? Math.min(1, needed) : needed);
     if (!(from.boost?.trample || hasAbility(from, 'trample', t)) || excess <= 0) return null;
     const others = present(state, from.region, from.tile).filter((x) => x.id !== from.id && x.id !== to.id && !down(x));
     return others.length ? { who: others[Math.floor(random(state) * others.length)], excess } : null;
@@ -299,7 +307,7 @@ export function clash(state: State, world: World, attacker: Actor, defender: Act
   const hit = (to: Actor, n: number, by: string) => {
     const from = to === defender ? attacker : defender;
     hurt(to, from, n, t);
-    return dealDamage(state, to, n, t, `${josa(by, '과', '와')}의 싸움`, !lethal(attacker, defender), from);
+    return dealDamage(state, to, n, t, `${josa(by, '과', '와')}의 싸움`, !lethal(attacker, defender), from, from);
   };
   let [dealtA, dealtD] = [0, 0];
   if (!aFirst && !dFirst) {
@@ -357,7 +365,7 @@ export function clash(state: State, world: World, attacker: Actor, defender: Act
       actors: [s.who.id],
     });
     hurt(s.who, from, s.excess, t);
-    dealDamage(state, s.who, s.excess, t, `${by}의 돌진`, !lethal(from, s.who), from);
+    dealDamage(state, s.who, s.excess, t, `${by}의 돌진`, !lethal(from, s.who), from, from);
     lifelink(state, from, s.excess, t);
   }
 }

@@ -3511,6 +3511,47 @@ test('double strike: a first-strike blow, then a regular one if both stand', () 
   assert.equal(woundsOf(d, state.minutes), 3);
 });
 
+test('deathtouch: any damage from it fells (a knockout between NPCs, death with the player); not its spells; the indestructible stand; tramples on past 1', () => {
+  const world = fixture([
+    npc('chr-s', { ...npcSim('loc-a', 'work', [1, 3]), abilities: ['deathtouch'] }),
+    npc('chr-x', npcSim('loc-a', 'work', [2, 5])),
+    npc('chr-i', { ...npcSim('loc-a', 'work', [0, 5]), abilities: ['indestructible'] }),
+    npc('chr-y', npcSim('loc-a', 'work', [1, 9])),
+  ]);
+  const state = character(world, 'loc-a');
+  const [sc, x, i, y, p] = [state.actors['chr-s'], state.actors['chr-x'], state.actors['chr-i'], state.actors['chr-y'], state.actors[PLAYER_ID]];
+  const t = state.minutes;
+  clash(state, world, sc, x, t);
+  assert.ok(knockedOut(x) && !x.dead);
+  assert.equal(woundsOf(sc, t), 2);
+  assert.ok(texts(state).some((l) => l.includes('죽음의 손길')));
+  clash(state, world, sc, i, t);
+  assert.ok(!knockedOut(i) && !i.dead);
+  // Damage by a spell or land of theirs is not the creature's own.
+  dealDamage(state, y, 1, t, '주문', false, sc);
+  assert.equal(woundsOf(y, t), 1);
+  assert.ok(!knockedOut(y));
+  // With the player: death.
+  dealDamage(state, p, 1, t, '침', false, sc, sc);
+  assert.ok(p.dead);
+});
+
+test('deathtouch with trample: 1 is lethal for the one struck, the rest goes on', () => {
+  const world = fixture([
+    npc('chr-s', { ...npcSim('loc-a', 'work', [3, 9]), abilities: ['deathtouch', 'trample'] }),
+    npc('chr-x', npcSim('loc-a', 'work', [0, 5])),
+    npc('chr-z', npcSim('loc-a', 'work', [0, 9])),
+  ]);
+  const state = newState(world, { seed: 1, mode: 'observer' });
+  const [sc, x, z] = [state.actors['chr-s'], state.actors['chr-x'], state.actors['chr-z']];
+  x.tile = sc.tile;
+  z.tile = sc.tile;
+  clash(state, world, sc, x, state.minutes);
+  assert.ok(knockedOut(x));
+  assert.ok(knockedOut(z));
+  assert.ok(texts(state).some((l) => l.includes('돌진이')));
+});
+
 const hook: RawEntity = { id: 'itm-h', kind: 'item', name: '갈고리', status: 'canon', sim: { cost: '{1}', at: 'loc-a', equip: { cost: '{1}', abilities: ['double_strike'], lure: true } } };
 
 test('equipment: tamed, it goes where its owner goes; equipped, its bearer double strikes and a flyer it falls on cannot fly off; dropped where its owner falls', async () => {
@@ -5186,6 +5227,15 @@ test('the real Windrider Eel swims the winds of Makindi: a flying, hungry beast,
   assert.ok(def.beast && hasAbility(e, 'fly', state.minutes));
   assert.deepEqual(def.landfall, { pt: [2, 2], trample: false });
   assert.deepEqual(ptOf(e), [2, 2]);
+});
+
+test('the real Giant Scorpion crawls the roots of Guul Draz: a hungry beast with deathtouch', () => {
+  const world = loadWorld();
+  const state = newState(world, { seed: 1, mode: 'observer' });
+  const sc = state.actors['cre-giant-scorpion'];
+  assert.equal(sc?.region, 'loc-guul-draz');
+  assert.ok(npcDef(state, world, sc.id)!.beast && hasAbility(sc, 'deathtouch', state.minutes));
+  assert.deepEqual(ptOf(sc), [1, 3]);
 });
 
 test('Archmage Ascension: a quest counter at midnight for two secrets a day; with six, what would be known is had for real', async () => {

@@ -64,6 +64,6 @@ export function applyStrike(state: State, world: World, owner: Actor, eff: { ite
   }
   const n = Math.max(0, ptOf(c)[0]);
   const nonlethal = owner.kind !== 'player' && c.kind !== 'player' && target.kind !== 'player';
-  if (n > 0) dealDamage(state, target, n, t, `${shortName(c.name)}의 번개`, nonlethal, c);
+  if (n > 0) dealDamage(state, target, n, t, `${shortName(c.name)}의 번개`, nonlethal, c, c);
   return true;
 }
