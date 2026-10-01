@@ -43,7 +43,7 @@ import type { HarrowEffect } from './harrow.ts';
 import { COLOR_LABELS, COLORS } from './mana.ts';
 import type { Color } from './mana.ts';
 import { abilityBlocked, applyBondEffect, applyDrainGrow, applyEnterDestroy, applySearch, enteredToday, fetchBlocked, fetchSource, fetchTargets, growBlocked, growLand, callForth } from './abilities.ts';
-import { bindRetainer, courtTargets, followsMaster, refuse, seize, swayBlocked } from './retainers.ts';
+import { bindRetainer, courtTargets, followBlocked, followsMaster, refuse, seize, swayBlocked } from './retainers.ts';
 import { josa, shortName } from './text.ts';
 import type { ScheduleBlock } from './types.ts';
 import { ABILITY_LABELS, canStay, CREATURE_TYPE_LABELS, LAND_TYPE_LABELS, landTypes, placeName, region } from './world.ts';
@@ -978,7 +978,7 @@ async function followChoice(state: State, world: World, llm: Llm, by: Actor, npc
   } catch (e) {
     console.warn(`choose (follow) for ${by.id} failed:`, e);
   }
-  if (pick !== suitor.id || suitor.dead || suitor.master || !together(suitor, by) || swayBlocked(state, world, by)) {
+  if (pick !== suitor.id || suitor.dead || suitor.master || !together(suitor, by) || followBlocked(state, world, by, suitor)) {
     addLog(state, { kind: 'status', text: `${josa(shortName(by.name), '은', '는')} ${shortName(suitor.name)}에게 곁을 내주지 않았다.`, regions: [by.region], actors: [by.id, suitor.id] });
     refuse(state, suitor, state.minutes);
     return;
@@ -1124,7 +1124,11 @@ function applyReply(state: State, world: World, me: Actor, p: Actor, reply: Repl
   const name = shortName(me.name);
   if (reply.impression) remember(me, p, reply.impression, state.minutes);
   if (reply.refused && !reply.follow) refuse(state, p, state.minutes);
-  if (reply.follow && !reply.attack && !swayBlocked(state, world, me)) summon(state, world, me, p, state.minutes, '설득');
+  const unwilling = reply.follow && !reply.attack && !swayBlocked(state, world, me) ? followBlocked(state, world, me, p) : null;
+  if (unwilling) {
+    addLog(state, { kind: 'status', text: unwilling, regions: [p.region], actors: [me.id, p.id] });
+    refuse(state, p, state.minutes);
+  } else if (reply.follow && !reply.attack && !swayBlocked(state, world, me)) summon(state, world, me, p, state.minutes, '설득');
   else if (reply.recruit && !reply.attack && canServe(p, me))
     (state.asks ??= []).push({ by: p.id, land: p.region, effect: { type: 'pledge', from: me.id }, candidates: [me.id], t: state.minutes });
   if (reply.attack) {
@@ -1359,7 +1363,7 @@ function peopleInput(state: State, world: World, a: Actor): PlanDayInput['people
 // Whether `a` may pledge to serve `master` in a talk: free to (not bound to anyone, not one
 // with powers), and not to one who serves them.
 export function canPledge(state: State, world: World, a: Actor, master: Actor) {
-  return !swayBlocked(state, world, a) && !master.dead && master.master !== a.id;
+  return !followBlocked(state, world, a, master) && !master.dead && master.master !== a.id;
 }
 
 // Lands they could seek out with the fetch lands they hold, for their plan.

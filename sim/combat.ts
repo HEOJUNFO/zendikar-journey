@@ -6,7 +6,7 @@
 import { attackQuest } from './ascension.ts';
 import { formatClock, gameDay, STEP_MINUTES, untapTime } from './clock.ts';
 import { remember } from './relations.ts';
-import { masterOf, releaseRetainer, retainersOf } from './retainers.ts';
+import { controlsKind, masterOf, releaseRetainer, retainersOf } from './retainers.ts';
 import { releaseItems } from './items.ts';
 import { owesDiscard } from './discard.ts';
 import { hooks } from './equipment.ts';
@@ -456,8 +456,12 @@ export function hostileNpcs(state: State, world: World, t: number) {
     // Their own foes, and (a retainer) whoever their master is fighting right here.
     // "Can't block" (Hagra Crocodile): not one who fell on their master first; they only join the
     // fights their master started (user decision 2026-10-01).
+    // "Can't block unless you control a Vampire" (Mindless Null): so only while its master's
+    // creatures (the master too) hold one.
     const m = masterOf(state, a);
-    const guards = m && together(m, a) ? foesOf(m, t).filter((id) => (defender ? !!m.foes?.struck?.includes(id) : !hasAbility(a, 'cant_block', t) || !m.foes?.struck?.includes(id))) : [];
+    const unless = npcDef(state, world, a.id)?.cantBlockUnless;
+    const cantBlock = hasAbility(a, 'cant_block', t) || (!!unless && !!m && !controlsKind(state, world, m, unless));
+    const guards = m && together(m, a) ? foesOf(m, t).filter((id) => (defender ? !!m.foes?.struck?.includes(id) : !cantBlock || !m.foes?.struck?.includes(id))) : [];
     const theirs = defender ? guards : [...foesOf(a, t), ...guards];
     let foe = present(state, a.region, a.tile).find((b) => theirs.includes(b.id) && b.id !== a.master && !down(b) && (evasion(a, b, t) !== 'evade' || !!unblockable(state, world, a, b, t, true)));
     const hunted = !foe && !defender && prey(state, world, a, t);

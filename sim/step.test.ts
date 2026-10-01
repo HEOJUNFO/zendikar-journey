@@ -17,7 +17,7 @@ import { applyExile, banishOptions } from './banish.ts';
 import { engulfTargets } from './engulf.ts';
 import { upkeepScorch } from './scorch.ts';
 import { actorColors, COLORS, formatMana, manaAvailable, manaCapacity, parseManaCost, planPayment } from './mana.ts';
-import { MAX_TALKS_PER_DAY, usableAbilities, volleyShares, burnTargets } from './run.ts';
+import { MAX_TALKS_PER_DAY, canPledge, usableAbilities, volleyShares, burnTargets } from './run.ts';
 import { destroyLand, eligibleGmEvents, moveHours, startTravel, travelBlocked } from './step.ts';
 import { gainLife, lifeOf } from './life.ts';
 import { awayText, buriedToday, hasAbility, here, needsOf, newState, npcDef, outOfTime, PLAYER_ID, present, protectedFrom, ptOf, syncWorld, targetable, together } from './state.ts';
@@ -35,7 +35,7 @@ import { claimBlocked, claimItem, itemOwner, itemsAt, itemWhere } from './items.
 import { spendBlocked, storeBlocked } from './eons.ts';
 import { applyEnterDestroy, bondBlocked, enterDestroy, onEnter, bondLand, bondTargets, callForth, fetchTargets, fireTargets, firesOnBond, growBlocked, spawnWild, summonLibrary, useAbility } from './abilities.ts';
 import { DEPLETED_LABEL, DESTROYED_DAYS, TRAVEL_UNITS_PER_HOUR } from './rules.ts';
-import { bindRetainer, controlledCreatures, releaseRetainer, retainersOf, swayBlocked, upkeepPossessions } from './retainers.ts';
+import { bindRetainer, controlledCreatures, controlsKind, courtBlocked, courtTargets, creatureOf, followBlocked, refusedToday, releaseRetainer, retainersOf, swayBlocked, upkeepPossessions } from './retainers.ts';
 import { joinedToday } from './bounce.ts';
 import { centroid, eventTile, fixedTile, nearestTile, ownsTile, sameTile, TILE, tileCenter, tilesOf, tileSteps, tooSmall } from './tiles.ts';
 import { applyQuell, upkeepQuell } from './quell.ts';
@@ -5968,4 +5968,79 @@ test('the real Oracle of Mul Daya lives in Riverroot, in the Guum Wilds of Bala 
   const def = npcDef(state, world, o.id)!;
   assert.equal(def.extraLands, 1);
   assert.ok(def.revealTop);
+});
+
+const vampireKind = (): RawEntity => ({ id: 'cre-v', kind: 'creature', name: '흡혈귀', status: 'canon' }) as RawEntity;
+const mindlessNull = (): RawEntity => planned({
+  id: 'cre-n',
+  kind: 'creature',
+  name: '공허자',
+  status: 'canon',
+  sim: { name: '공허자', pt: [2, 2], role: 'r', home: 'loc-a', persona: 'p', goal: 'g', needs: ['energy', 'hunger'], beast: true, tamable: true, follows_only: 'cre-v', cant_block_unless: 'cre-v' },
+});
+
+test('Mindless Null: a beast that follows only a vampire or one who keeps one; no one else may court it or talk it round', async () => {
+  const world = fixture([vampireKind(), mindlessNull(), npc('chr-v', { ...npcSim('loc-a'), creature: 'cre-v' }), npc('chr-m', npcSim('loc-a')), npc('chr-o', npcSim('loc-a'))]);
+  const state = newState(world, { seed: 1, mode: 'observer' });
+  const [n, v, m, o] = ['cre-n', 'chr-v', 'chr-m', 'chr-o'].map((id) => state.actors[id]);
+  for (const a of [v, m, o]) a.tile = n.tile;
+  assert.equal(creatureOf(state, world, v.id), 'cre-v');
+  // A vampire may court it; one with none may not.
+  assert.ok(courtTargets(state, world, v).some((x) => x.id === 'cre-n'));
+  assert.ok(!courtTargets(state, world, o).some((x) => x.id === 'cre-n'));
+  assert.ok(courtBlocked(state, world, o, 'cre-n')?.includes('흡혈귀 곁이 아니면 따르지 않는다'));
+  // One who keeps a vampire may.
+  v.master = 'chr-m';
+  assert.ok(controlsKind(state, world, m, 'cre-v'));
+  assert.equal(followBlocked(state, world, n, m), null);
+  assert.ok(courtTargets(state, world, m).some((x) => x.id === 'cre-n'));
+  assert.ok(!canPledge(state, world, n, o) && canPledge(state, world, n, m));
+});
+
+test('Mindless Null: the player with no vampire talks to it; it would follow, but turns away', async () => {
+  const world = fixture([vampireKind(), mindlessNull()]);
+  const state = character(world, 'loc-a');
+  const p = state.actors[PLAYER_ID];
+  state.actors['cre-n'].tile = p.tile;
+  await act(state, world, { type: 'talk', to: 'cre-n', say: '따라와' }, { reply: async () => ({ say: '공허자가 사슬을 끌며 다가온다.', attack: false, follow: true }) });
+  assert.equal(state.actors['cre-n'].master, undefined);
+  assert.ok(texts(state).some((t) => t.includes('흡혈귀 곁이 아니면 따르지 않는다')));
+  assert.ok(refusedToday(p, state.minutes));
+});
+
+test('Mindless Null: it can\'t block unless its master\'s creatures hold a vampire; then it stands by its master', () => {
+  const world = fixture([vampireKind(), mindlessNull(), npc('chr-v', { ...npcSim('loc-a', 'work', [1, 20]), creature: 'cre-v' }), npc('chr-m', npcSim('loc-a', 'work', [1, 20])), npc('chr-y', npcSim('loc-a', 'work', [1, 20])), npc('chr-z', npcSim('loc-a', 'work', [1, 20]))]);
+  const state = newState(world, { seed: 1, mode: 'observer' });
+  const [n, v, m, y, z] = ['cre-n', 'chr-v', 'chr-m', 'chr-y', 'chr-z'].map((id) => state.actors[id]);
+  for (const a of [n, y, z]) a.tile = m.tile;
+  n.master = 'chr-m';
+  n.stats.hunger = 0;
+  const struckBy = (id: string, foe: string) => state.log.some((e) => e.kind === 'combat' && e.actors[0] === id && e.actors[1] === foe);
+  let t = state.minutes;
+  // No vampire: y falls on the master and the null stays out of it.
+  clash(state, world, y, m, t);
+  hostileNpcs(state, world, t + 60);
+  assert.ok(!struckBy('cre-n', 'chr-y'));
+  // A vampire serves the master too (anywhere: "you control"): now it blocks.
+  v.master = 'chr-m';
+  y.region = 'loc-b';
+  t += 120;
+  clash(state, world, z, m, t);
+  hostileNpcs(state, world, t + 60);
+  assert.ok(struckBy('cre-n', 'chr-z'));
+});
+
+test('the real Mindless Null drags its chains in the Ghet estate, following only a vampire; Kalitas counts as one', () => {
+  const world = loadWorld();
+  const state = newState(world, { seed: 1, mode: 'observer' });
+  const n = state.actors['cre-mindless-null'];
+  assert.equal(n?.region, 'loc-ghet-estate');
+  const def = npcDef(state, world, n.id)!;
+  assert.ok(def.beast && def.tamable && def.needs.includes('hunger'));
+  assert.equal(def.followsOnly, 'cre-vampire');
+  assert.equal(def.cantBlockUnless, 'cre-vampire');
+  const k = state.actors['chr-kalitas'];
+  assert.equal(creatureOf(state, world, k.id), 'cre-vampire');
+  assert.ok(controlsKind(state, world, k, 'cre-vampire'));
+  assert.equal(followBlocked(state, world, n, k), null);
 });
