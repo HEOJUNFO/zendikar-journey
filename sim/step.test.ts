@@ -1870,17 +1870,19 @@ const runeflare: RawEntity = {
 };
 const spell = (id: string): RawEntity => ({ ...bolt, id, name: id });
 
-test('a drew trap burns, once a day, each one here who drew three, for what they hold in mind', async () => {
+test('a drew trap burns, once a day, each one here who drew three, for the spells they hold', async () => {
   const world = fixture([walker, bolt, spell('spl-2'), spell('spl-3'), runeflare, npc('chr-x', npcSim('loc-a', 'social', [1, 5])), npc('chr-y', npcSim('loc-b', 'social', [1, 5]))]);
   const state = newState(world, { seed: 1, mode: 'observer' });
   const x = state.actors['chr-x'];
   const w = state.actors['chr-w'];
   assert.equal(useAbility(state, world, 'chr-w', 'wheel', '', state.minutes), null);
   assert.deepEqual(x.drawn, { day: 0, count: 3, sprung: undefined });
+  x.spells = ['spl-2', 'spl-3'];
+  const held = w.spells?.length ?? 0;
   await advance(state, world, 1);
   assert.ok(texts(state).some((t) => t.includes('룬이 불길을 뿜었다')));
-  assert.equal(woundsOf(x, state.minutes), 3);
-  assert.equal(w.left, true); // loyalty 5 − 2, then 3 of fire
+  assert.equal(woundsOf(x, state.minutes), 2); // the spells held, not the secrets known
+  assert.equal(w.loyalty, 3 - held); // loyalty 5 − 2, then fire for its spells
   assert.equal(state.actors['chr-y'].drawn, undefined); // elsewhere: untouched
   const fired = state.log.filter((e) => e.text.includes('룬이 불길을')).length;
   await advance(state, world, 1);
@@ -3793,7 +3795,7 @@ test('drawing is coming to know secrets of the world: traps and what sets them o
   assert.match(secretsOf(state, world, state.minutes).find((s) => s.id === 'trap:evt-rune')!.text, /비밀을 3가지 이상 알게 된 이가/);
   const got = drawKnowledge(state, world, x, 5, state.minutes, '시험');
   assert.equal(got.length, 3); // no more than there is (not their own whereabouts)
-  assert.equal(handSize(x, state.minutes), 3);
+  assert.equal(handSize(x), 0); // secrets are no hand
   assert.deepEqual(drawKnowledge(state, world, x, 1, state.minutes, '시험'), []);
   assert.ok(texts(state).some((t) => t.includes('더 알아낼 것이 없었다')));
   // A secret of the day passes with it.

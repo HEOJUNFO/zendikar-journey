@@ -148,7 +148,8 @@ export function knowledgeText(a: Actor, t: number): string[] {
   return knownSecrets(a, t).map((k) => k.text);
 }
 
-// Their hand ("cards in hand"): the spells they hold and the secrets they know.
-export function handSize(a: Actor, t: number) {
-  return (a.spells?.length ?? 0) + knownSecrets(a, t).length;
+// Their hand ("cards in hand"): the spells they hold, not the secrets they know (user decision
+// 2026-10-01). Drawing brings secrets; discarding lets spells go.
+export function handSize(a: Actor) {
+  return a.spells?.length ?? 0;
 }
