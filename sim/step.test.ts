@@ -18,7 +18,7 @@ import { engulfTargets } from './engulf.ts';
 import { upkeepScorch } from './scorch.ts';
 import { actorColors, COLORS, formatMana, manaAvailable, manaCapacity, parseManaCost, planPayment } from './mana.ts';
 import { MAX_TALKS_PER_DAY, canPledge, usableAbilities, volleyShares, burnTargets } from './run.ts';
-import { destroyLand, eligibleGmEvents, moveHours, startTravel, travelBlocked } from './step.ts';
+import { destroyLand, eligibleGmEvents, moveHours, startTravel, step, travelBlocked } from './step.ts';
 import { gainLife, lifeOf } from './life.ts';
 import { awayText, buriedToday, hasAbility, here, needsOf, newState, npcDef, outOfTime, PLAYER_ID, present, protectedFrom, ptOf, syncWorld, targetable, together } from './state.ts';
 import { foresightText } from './foresight.ts';
@@ -6292,4 +6292,56 @@ test('the real Paralyzing Grasp is taught at Sea Gate: an aura that keeps one bo
   const s = world.spells.find((x) => x.id === 'spl-paralyzing-grasp')!;
   assert.equal(s.learnAt, 'loc-sea-gate');
   assert.deepEqual(s.effects.map((e) => e.type === 'aura' && e.no_untap), [true]);
+});
+
+const pitfall: RawEntity = { id: 'evt-pit', kind: 'event', name: '구덩이 함정', status: 'canon', sim: { region: 'loc-b', pos: [0, 0], trigger: 'attacked', attackers: 1, exactly: true, on_tile: true, text: '발밑이 꺼졌다.', effects: [{ type: 'destroy_attackers', no_fly: true }] } };
+
+test('Pitfall Trap: exactly one who falls on someone on its tile, and can\'t fly, is destroyed; not two at once, not elsewhere, not a flyer', () => {
+  const world = fixture([pitfall, npc('chr-x', npcSim('loc-b', 'work', [3, 3])), npc('chr-y', npcSim('loc-b', 'work', [1, 20])), npc('chr-z', npcSim('loc-b', 'work', [3, 3])), npc('chr-f', { ...npcSim('loc-b', 'work', [3, 3]), abilities: ['fly'] })]);
+  const pit = eventTile(world, world.events.find((e) => e.id === 'evt-pit')!)!;
+  const away = tilesOf(world, 'loc-b').find((t) => !sameTile(t, pit))!;
+  const setup = () => {
+    const state = newState(world, { seed: 1, mode: 'observer' });
+    for (const a of Object.values(state.actors)) Object.assign(a, { region: 'loc-b', tile: pit });
+    return state;
+  };
+  // One alone: destroyed.
+  let state = setup();
+  let [x, y, z, f] = ['chr-x', 'chr-y', 'chr-z', 'chr-f'].map((id) => state.actors[id]);
+  let t = state.minutes;
+  clash(state, world, x, y, t);
+  step(state, world);
+  assert.ok(x.dead);
+  assert.ok(texts(state).some((l) => l.includes('발밑이 꺼졌다')));
+  // Two at once: nothing.
+  state = setup();
+  [x, y, z, f] = ['chr-x', 'chr-y', 'chr-z', 'chr-f'].map((id) => state.actors[id]);
+  t = state.minutes;
+  clash(state, world, x, y, t);
+  clash(state, world, z, y, t);
+  step(state, world);
+  assert.ok(!x.dead && !z.dead);
+  // Another tile: nothing.
+  state = setup();
+  [x, y] = ['chr-x', 'chr-y'].map((id) => state.actors[id]);
+  for (const a of [x, y]) a.tile = away;
+  clash(state, world, x, y, state.minutes);
+  step(state, world);
+  assert.ok(!x.dead);
+  // A flyer floats over it.
+  state = setup();
+  [f, y] = ['chr-f', 'chr-y'].map((id) => state.actors[id]);
+  clash(state, world, f, y, state.minutes);
+  step(state, world);
+  assert.ok(!f.dead);
+  assert.ok(texts(state).some((l) => l.includes('구덩이 위로 떠올랐다')));
+});
+
+test('the real Pitfall Trap lies on one tile of the Guum Wilds: one attacker alone, without flying', () => {
+  const world = loadWorld();
+  const ev = world.events.find((e) => e.id === 'evt-pitfall-trap')!;
+  assert.equal(ev.region, 'loc-guum-wilds');
+  assert.equal(ev.trigger, 'attacked');
+  assert.ok(ev.exactly && ev.on_tile && ev.attackers === 1);
+  assert.ok(eventTile(world, ev));
 });

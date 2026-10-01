@@ -530,6 +530,9 @@ const EffectSchema = z.discriminatedUnion('type', [
   // "Attacking creatures get +P/+T until end of turn" (Lethargy Trap: -3/-0): each attacker who
   // set it off, until midnight. Only for `attacked` events.
   z.strictObject({ type: z.literal('pump_attackers'), pt: z.tuple([z.number().int(), z.number().int()]) }),
+  // "Destroy target attacking creature without flying" (Pitfall Trap): each who struck as an
+  // attacker and can't fly (with `exactly: 1`, the one) is destroyed.
+  z.strictObject({ type: z.literal('destroy_attackers'), no_fly: z.boolean().default(false) }),
   // "N damage to target creature", a trap set off by one beset (Inferno Trap): N damage to one of
   // those who hurt them, still standing with them; the LLM, as the trap, picks after the hour.
   // `color`: the trap's (protection from it shields). Only for `hurt` events.
@@ -796,8 +799,10 @@ export const EventSimSchema = z.discriminatedUnion('trigger', [
   // turn ("if an opponent drew three or more cards this turn"): once a day for each.
   z.strictObject({ ...EventBase, ...EventCost, trigger: z.literal('drew'), cards: z.number().int().min(1) }),
   // Goes off when `attackers` or more strike as attackers in `region` in the same hour ("if four
-  // or more creatures are attacking", Arrow Volley Trap): those attackers set it off.
-  z.strictObject({ ...EventBase, ...EventCost, trigger: z.literal('attacked'), attackers: z.number().int().min(1) }),
+  // or more creatures are attacking", Arrow Volley Trap): those attackers set it off. `exactly`:
+  // that many and no more ("if exactly one creature is attacking", Pitfall Trap); `on_tile`: only
+  // on the one tile it lies hidden in (`pos`), as a trap underfoot.
+  z.strictObject({ ...EventBase, ...EventCost, trigger: z.literal('attacked'), attackers: z.number().int().min(1), exactly: z.boolean().default(false), on_tile: z.boolean().default(false) }),
   // Goes off for anyone in `region` (or its areas) dealt combat damage by `creatures` or more
   // this turn ("if you've been dealt damage by two or more creatures this turn", Inferno Trap):
   // in the hour it happens, once a day for each.
@@ -979,6 +984,8 @@ export type EventDef = {
   buried?: number; // enter
   cards?: number; // drew
   attackers?: number; // attacked
+  exactly?: boolean; // attacked
+  on_tile?: boolean; // attacked
   creatures?: number; // hurt
   spells?: number; // cast
   cooldownHours: number;
@@ -1161,7 +1168,7 @@ export function buildWorld(entities: RawEntity[]): { world: World; errors: strin
         continue;
       }
       const { cooldown_hours, effects, cost, ...rest } = sim.data;
-      if (rest.trigger !== 'attacked' && effects.some((x) => x.type === 'pump_attackers')) err(e.id, 'pump_attackers 는 trigger: attacked 사건에만 쓸 수 있음 (덤빈 이들에게)');
+      if (rest.trigger !== 'attacked' && effects.some((x) => x.type === 'pump_attackers' || x.type === 'destroy_attackers')) err(e.id, 'pump_attackers, destroy_attackers 는 trigger: attacked 사건에만 쓸 수 있음 (덤빈 이들에게)');
       if (rest.trigger !== 'cast' && effects.some((x) => x.type === 'counter_spell')) err(e.id, 'counter_spell 은 trigger: cast 사건에만 쓸 수 있음 (막을 주문이 있어야 함)');
       if (rest.trigger !== 'hurt' && effects.some((x) => x.type === 'burn')) err(e.id, 'burn 은 trigger: hurt 사건에만 쓸 수 있음 (누가 누구에게 다쳤는지 알아야 함)');
       if (rest.trigger !== 'landfall' && effects.some((x) => x.type === 'destroy_lands'))

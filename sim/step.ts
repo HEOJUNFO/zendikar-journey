@@ -30,8 +30,8 @@ import { recall, RECALL_HOURS, recallBlocked } from './loremaster.ts';
 import { shield, SHIELD_HOURS, shieldBlocked } from './vestige.ts';
 import { bite, BITE_HOURS, biteBlocked } from './bite.ts';
 import { eraseFromWorld } from './erase.ts';
-import { addLog, alive, buriedToday, here, landUnusable, needsOf, npcDef, outOfTime, present, ptOf, random, together } from './state.ts';
-import { addFoe, attackBlocked, dealDamage, foesOf, hostileNpcs } from './combat.ts';
+import { addLog, alive, buriedToday, hasAbility, here, landUnusable, needsOf, npcDef, outOfTime, present, ptOf, random, together } from './state.ts';
+import { addFoe, attackBlocked, dealDamage, destroy, foesOf, hostileNpcs } from './combat.ts';
 import { bondBlocked, bondLand, expireGranted, upkeepFleeting, onEnter, FETCH_HOURS, fetchLand, fetchSource, growBlocked, HAND, growEntered, growLand, spawnWild, summonLibrary, TOP, upkeepRevive, useAbility } from './abilities.ts';
 import { CLAIM_HOURS, claimBlocked, claimItem, itemsAt, itemWhere } from './items.ts';
 import { EQUIP_HOURS, equipBlocked, equipItem, equipmentOf, syncEquipment } from './equipment.ts';
@@ -229,12 +229,14 @@ function enterEvents(state: State, world: World, at: number) {
 }
 
 // Those who struck as attackers this hour, where an `attacked` event lies: enough of them set
-// it off (Arrow Volley Trap).
+// it off (Arrow Volley Trap); exactly that many (Pitfall Trap); on its one tile if it lies hidden
+// in one (`on_tile`).
 function attackEvents(state: State, world: World, t: number) {
   for (const ev of world.events) {
     if (ev.trigger !== 'attacked' || onCooldown(state, ev, t)) continue;
-    const by = alive(state).filter((a) => a.region === ev.region && a.attackedAt === t);
-    if (by.length >= ev.attackers!) trigger(state, world, ev, t, { by: by.map((a) => a.id), lands: [] });
+    const tile = ev.on_tile ? eventTile(world, ev) : undefined;
+    const by = alive(state).filter((a) => a.region === ev.region && a.attackedAt === t && (!tile || sameTile(a.tile, tile)));
+    if (ev.exactly ? by.length === ev.attackers : by.length >= ev.attackers!) trigger(state, world, ev, t, { by: by.map((a) => a.id), lands: [] });
   }
 }
 
@@ -400,6 +402,17 @@ function fire(state: State, world: World, ev: EventDef, t: number, omened: boole
         if (!a || a.dead) continue;
         (a.pumps ??= []).push({ pt: eff.pt, until: untapTime(t) });
         addLog(state, { kind: 'effect', text: `${josa(shortName(a.name), '은', '는')} 힘이 빠졌다 (${eff.pt.map((n) => (n >= 0 ? `+${n}` : `${n}`)).join('/')}, ${ptOf(a).join('/')}).`, regions: [a.region], actors: [a.id], t });
+      }
+    } else if (eff.type === 'destroy_attackers') {
+      // Each who struck as an attacker, but for one who can fly over it.
+      for (const id of cause.by ?? []) {
+        const a = state.actors[id];
+        if (!a || a.dead) continue;
+        if (eff.no_fly && hasAbility(a, 'fly', t)) {
+          addLog(state, { kind: 'effect', text: `${josa(shortName(a.name), '은', '는')} 날개를 펴 구덩이 위로 떠올랐다.`, regions: [a.region], actors: [a.id], t });
+          continue;
+        }
+        destroy(state, a, t, ev.name);
       }
     } else if (eff.type === 'burn') {
       // Which of those who hurt them it falls on is the trap's, asked after the hour.

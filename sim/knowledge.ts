@@ -40,7 +40,7 @@ function triggerText(ev: EventDef) {
     case 'drew':
       return `그날 비밀을 ${ev.cards}가지 이상 알게 된 이가 이 땅에 있을 때 터진다`;
     case 'attacked':
-      return `같은 시간에 ${ev.attackers} 이상이 이 땅에서 덤빌 때 터진다`;
+      return `같은 시간에 ${ev.attackers}${ev.exactly ? '만' : ' 이상이'} ${ev.on_tile ? '그 자리에서' : '이 땅에서'} 덤빌 때 터진다`;
     case 'cast':
       return `그날 주문을 ${ev.spells}번째로 쓰는 이가 이 땅에 있을 때 그 주문에 터진다`;
     case 'hurt':
@@ -54,7 +54,7 @@ function triggerText(ev: EventDef) {
 export function secretsOf(state: State, world: World, t: number): Secret[] {
   // A trap that springs underfoot lies on one tile of its land: where, too.
   const spot = (ev: EventDef) => {
-    const tile = ev.trigger === 'enter' ? eventTile(world, ev) : undefined;
+    const tile = ev.trigger === 'enter' || ev.on_tile ? eventTile(world, ev) : undefined;
     return tile ? `${placeName(world, region(world, ev.region))}(${tileLabel(world, ev.region, tile)})` : placeName(world, region(world, ev.region));
   };
   const traps = world.events.map((ev) => ({ id: `trap:${ev.id}`, text: `${spot(ev)}의 ${ev.name}: ${ev.summary}. ${triggerText(ev)}.` }));
