@@ -33,7 +33,7 @@ import { drawKnowledge, handSize, huntKnowledge, knownSecrets, secretsOf } from 
 import { letGo, revealHand } from './discard.ts';
 import { claimBlocked, claimItem, itemOwner, itemsAt, itemWhere } from './items.ts';
 import { spendBlocked, storeBlocked } from './eons.ts';
-import { applyEnterDestroy, bondBlocked, enterDestroy, onEnter, bondLand, bondTargets, callForth, fetchTargets, fireTargets, firesOnBond, growBlocked, spawnWild, summonLibrary, useAbility } from './abilities.ts';
+import { applyEnterDestroy, applyLure, bondBlocked, enterDestroy, onEnter, bondLand, bondTargets, callForth, fetchTargets, fireTargets, firesOnBond, growBlocked, spawnWild, summonLibrary, useAbility } from './abilities.ts';
 import { DEPLETED_LABEL, DESTROYED_DAYS, TRAVEL_UNITS_PER_HOUR } from './rules.ts';
 import { bindRetainer, controlledCreatures, controlsKind, courtBlocked, courtTargets, creatureOf, followBlocked, refusedToday, releaseRetainer, retainersOf, swayBlocked, upkeepPossessions } from './retainers.ts';
 import { joinedToday } from './bounce.ts';
@@ -6621,4 +6621,30 @@ test('the real Torch Slinger roams the dark woods of Ora Ondar: a talking goblin
   assert.equal(def.enterDamage?.amount, 2);
   assert.equal(def.enterDamage?.kickerText, '{1}{R}');
   assert.equal(swayBlocked(state, world, s), null);
+});
+
+test('Turntimber Basilisk: bonding, its controller may catch one there in its gaze: foes today, and no flying away', () => {
+  const lisk = { ...npcSim('loc-a', 'work', [2, 1]), needs: ['energy', 'hunger'], beast: true, abilities: ['deathtouch'], landfall_lure: true };
+  const world = fixture([npc('chr-b', lisk), npc('chr-f', { ...npcSim('loc-a', 'work', [3, 3]), abilities: ['fly'] }), npc('chr-pw', { ...npcSim('loc-a'), loyalty: 3 })]);
+  const state = newState(world, { seed: 1, mode: 'observer' });
+  const [b, f, pw] = ['chr-b', 'chr-f', 'chr-pw'].map((id) => state.actors[id]);
+  for (const a of [f, pw]) a.tile = b.tile;
+  bondLand(state, world, b, state.minutes, 'loc-a');
+  const c = state.choices!.find((x) => x.effect.type === 'lure')!;
+  assert.equal(c.by, 'chr-b');
+  assert.deepEqual(c.candidates, ['chr-f']);
+  applyLure(state, world, b, f, state.minutes);
+  assert.ok(foesOf(b, state.minutes).includes('chr-f') && foesOf(f, state.minutes).includes('chr-b'));
+  assert.ok(f.evasions?.some((e) => e.from === 'chr-b' && !e.evade));
+  assert.ok(texts(state).some((l) => l.includes('번득이는 눈에 사로잡혔다')));
+});
+
+test('the real Turntimber Basilisk lurks deep in the Turntimber Grove: deathtouch, and a luring gaze on landfall', () => {
+  const world = loadWorld();
+  const state = newState(world, { seed: 1, mode: 'observer' });
+  const b = state.actors['cre-turntimber-basilisk'];
+  assert.equal(b?.region, 'loc-turntimber-grove');
+  assert.ok(hasAbility(b, 'deathtouch', state.minutes));
+  const def = npcDef(state, world, b.id)!;
+  assert.ok(def.beast && def.landfallLure && def.needs.includes('hunger'));
 });

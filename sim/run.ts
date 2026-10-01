@@ -48,7 +48,7 @@ import { applyHook } from './hook.ts';
 import type { HarrowEffect } from './harrow.ts';
 import { COLOR_LABELS, COLORS } from './mana.ts';
 import type { Color } from './mana.ts';
-import { abilityBlocked, applyBondEffect, applyDrainGrow, applyEnterDestroy, applySearch, enteredToday, fetchBlocked, fetchSource, fetchTargets, growBlocked, growLand, callForth } from './abilities.ts';
+import { abilityBlocked, applyBondEffect, applyDrainGrow, applyEnterDestroy, applyLure, applySearch, enteredToday, fetchBlocked, fetchSource, fetchTargets, growBlocked, growLand, callForth } from './abilities.ts';
 import { bindRetainer, courtTargets, followBlocked, followsMaster, refuse, seize, swayBlocked } from './retainers.ts';
 import { josa, shortName } from './text.ts';
 import type { ScheduleBlock } from './types.ts';
@@ -865,6 +865,20 @@ async function choices(state: State, world: World, llm: Llm) {
       const x = pick === item ? undefined : (candidates.find((y) => y.id === pick) ?? sacrificeDefault(state, by, candidates));
       if (x) sacrifice(state, world, x, item, state.minutes);
       else crumble(state, world, by, item, state.minutes, `${josa(shortName(by.name), '이', '가')} 제물 대신 내놓아`);
+      continue;
+    }
+    // Turntimber Basilisk, bonding: whom (if anyone) its gaze catches.
+    if (c.effect.type === 'lure') {
+      const source = state.actors[c.effect.source];
+      if (!source || !llm.choose) continue;
+      let pick: string | null = null;
+      try {
+        pick = await llm.choose({ world, state, npc, candidates, optional: true, what: `${land.name}: ${source.id === by.id ? '당신' : shortName(source.name)}이(가) 이 땅과 유대를 맺자 그 눈이 번득인다. 여기 있는 이 하나를 사로잡아 오늘 그와 맞서게 할 수 있다 (서로 적이 되고, 날아 피하지 못한다. 그의 손길은 닿기만 해도 쓰러뜨린다). 아무도 고르지 않을 수도 있다` });
+      } catch (e) {
+        console.warn(`choose (lure) for ${c.by} failed:`, e);
+      }
+      const target = candidates.find((x) => x.id === pick);
+      if (target) applyLure(state, world, source, target, state.minutes);
       continue;
     }
     // Ob Nixilis, bonding: whom (if anyone) he drains, growing for it.

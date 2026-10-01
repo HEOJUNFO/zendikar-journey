@@ -6,7 +6,7 @@ import { applyStrike } from './electro.ts';
 import { applyExile, banishOptions } from './banish.ts';
 import { answerCounter, answerCounterCast, answerName, summon } from './counter.ts';
 import { untapTime } from './clock.ts';
-import { applyDrainGrow, applyEnterDestroy, applySearch } from './abilities.ts';
+import { applyDrainGrow, applyEnterDestroy, applyLure, applySearch } from './abilities.ts';
 import { crushOwed, crushRelic, demolish, demolishOptions, relicsHere } from './relics.ts';
 import { applyEscape, escapeOptions } from './escape.ts';
 import { applyTorch } from './torch.ts';
@@ -53,6 +53,7 @@ export function askText(state: State, world: World, c: Choice) {
   if (c.effect.type === 'escape') return `${c.effect.spell}: 조종하는 것 하나를 거두어들인다 (자신·권속은 몸에 붙은 힘을 잃고 싸움에서 벗어나 다른 곳으로 달아나고, 땅은 다시 맺을 수 있고, 오라는 다시 걸 수 있다). 무엇을?`;
   if (c.effect.type === 'harrow') return c.effect.given ? `${c.effect.spell}: 아직 이어지지 않은 기본 땅 하나와 멀리서 유대를 맺는다 (남은 수 ${c.effect.left}). 어디와?` : `${c.effect.spell}: ${c.effect.left > 0 ? '먼저 ' : ''}유대를 맺은 땅 하나를 내어 준다 (다시 맺을 수 있다). 어느 땅을?`;
   if (c.effect.type === 'crush') return `${c.effect.spell}: 이 자리의 마법물체나 부여마법을 ${c.effect.first ? '부순다. 무엇을?' : '하나 더 부술 수 있다. 무엇을?'}`;
+  if (c.effect.type === 'lure') return `${shortName(state.actors[c.effect.source]?.name ?? '')}의 눈이 번득인다. 여기 있는 이 하나를 사로잡아 오늘 그와 맞서게 한다 (서로 적이 되고, 날아 피하지 못한다). 누구를?`;
   if (c.effect.type === 'drain_grow') return `땅의 타락한 마나가 흐른다. 누구에게서 생명 ${c.effect.life}을 빼앗아 +1/+1 카운터 ${c.effect.counters}을 얻을까?`;
   if (c.effect.type === 'quell') {
     const s = shortName(state.actors[c.effect.source]?.name ?? '');
@@ -248,6 +249,10 @@ export function answerAsk(state: State, world: World, pick: string | null, t: nu
     const source = state.actors[c.effect.source];
     const owned = permanentsOf(state, world, p, c.effect.kind);
     if (source && owned.length) quellGive(state, world, p, owned.find((x) => x.id === pick)?.id ?? owned[0].id, source, t);
+  } else if (c.effect.type === 'lure') {
+    const source = state.actors[c.effect.source];
+    const target = pick && c.candidates.includes(pick) ? state.actors[pick] : undefined;
+    if (source && target) applyLure(state, world, source, target, t);
   } else if (c.effect.type === 'drain_grow') {
     const target = pick && c.candidates.includes(pick) ? state.actors[pick] : undefined;
     if (target) applyDrainGrow(state, world, p, target, c.effect, t);

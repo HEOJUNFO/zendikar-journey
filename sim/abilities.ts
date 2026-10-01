@@ -2,6 +2,7 @@
 import { enterExile } from './banish.ts';
 import { enterTap } from './hook.ts';
 import { enterDamage } from './torch.ts';
+import { remember } from './relations.ts';
 import { gameDay, untapTime } from './clock.ts';
 import { addFoe, dealDamage, destroy, leavePlane } from './combat.ts';
 import { creatureColors, manaAvailable, payMana, planPayment } from './mana.ts';
@@ -74,7 +75,7 @@ export function bondTargets(state: State, world: World, a: Actor, regionId: stri
 }
 
 // The effect falls on `target`, if they are still there.
-export function applyBondEffect(state: State, world: World, a: Actor, regionId: string, eff: Exclude<ChoiceEffect, { type: 'cast' | 'follow' | 'rally' | 'seize' | 'pledge' | 'evade' | 'discard' | 'pilfer' | 'pour' | 'demolish' | 'escape' | 'torch' | 'sacrament' | 'sacrifice' | 'destroy' | 'drain_grow' | 'crush' | 'quell' | 'quelled' | 'return_lands' | 'search' | 'tide' | 'bind' | 'engulf' | 'harrow' | 'ward' | 'hook' | 'shatter' | 'counter' | 'counter_cast' | 'exile' | 'strike' }>, targetId: string | undefined, t: number) {
+export function applyBondEffect(state: State, world: World, a: Actor, regionId: string, eff: Exclude<ChoiceEffect, { type: 'cast' | 'follow' | 'rally' | 'seize' | 'pledge' | 'evade' | 'discard' | 'pilfer' | 'pour' | 'demolish' | 'escape' | 'torch' | 'lure' | 'sacrament' | 'sacrifice' | 'destroy' | 'drain_grow' | 'crush' | 'quell' | 'quelled' | 'return_lands' | 'search' | 'tide' | 'bind' | 'engulf' | 'harrow' | 'ward' | 'hook' | 'shatter' | 'counter' | 'counter_cast' | 'exile' | 'strike' }>, targetId: string | undefined, t: number) {
   const r = region(world, regionId);
   if (eff.type === 'damage') return mountainFire(state, world, a, r, eff.amount, targetId, t);
   const target = targetId ? bondTargets(state, world, a, regionId, eff).find((x) => x.id === targetId) : undefined;
@@ -210,6 +211,12 @@ export function bondLand(state: State, world: World, a: Actor, t: number, region
     const colors = creatureColors(def);
     const candidates = present(state, a.region, a.tile).filter((x) => x.id !== a.id && targetable(x, t, colors)).map((x) => x.id);
     if (candidates.length) (state.choices ??= []).push({ by: a.id, land: a.region, effect: { type: 'drain_grow', ...lf.landfallDrain }, candidates, optional: true, t });
+  }
+  // "Landfall — you may have target creature block this this turn if able" (Turntimber Basilisk):
+  // whom its gaze catches (if anyone) is its controller's pick, after the hour.
+  if (lf?.landfallLure && !a.dead) {
+    const candidates = present(state, a.region, a.tile).filter((x) => x.id !== a.id && x.loyalty === undefined && targetable(x, t, creatureColors(def))).map((x) => x.id);
+    if (candidates.length) (state.choices ??= []).push({ by: (masterOf(state, a) ?? a).id, land: a.region, effect: { type: 'lure', source: a.id }, candidates, optional: true, t });
   }
   // "Landfall — create a token": one more of their kind, born at their side and theirs.
   if (lf?.landfallToken) {
@@ -668,6 +675,17 @@ export function callForth(state: State, world: World, id: string, regionId: stri
 }
 
 // Ob Nixilis's pick lands: the one picked, still there, loses the life; he grows for good.
+// The basilisk's gaze lands: the two are foes today, and that one can't fly from it (as Grappling
+// Hook's lure). It comes on to fight it.
+export function applyLure(state: State, world: World, source: Actor, target: Actor, t: number) {
+  if (source.dead || target.dead || !together(target, source) || !targetable(target, t, creatureColors(npcDef(state, world, source.id)))) return;
+  addFoe(source, target.id, t);
+  addFoe(target, source.id, t);
+  target.evasions = [...(target.evasions ?? []).filter((e) => e.until > t && e.from !== source.id), { from: source.id, evade: false, until: untapTime(t) }];
+  addLog(state, { kind: 'combat', text: `${josa(shortName(target.name), '이', '가')} ${shortName(source.name)}의 번득이는 눈에 사로잡혔다. 오늘은 그와 맞서야 한다 (날아 피하지 못한다).`, regions: [source.region], actors: [source.id, target.id], t });
+  remember(target, source, '나를 눈빛으로 사로잡았다', t);
+}
+
 export function applyDrainGrow(state: State, world: World, a: Actor, target: Actor, eff: { life: number; counters: number }, t: number) {
   if (a.dead || target.dead || !together(target, a) || !targetable(target, t, creatureColors(npcDef(state, world, a.id)))) return;
   addLog(state, {
