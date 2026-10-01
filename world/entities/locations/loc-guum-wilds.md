@@ -5,9 +5,10 @@ name: 굼 밀림
 name_en: Guum Wilds
 summary: 발라 게드의 대부분을 덮은 습한 우림. 거목 꼭대기에 멀 다야 엘프의 마을들이 걸려 있고, 그 깊은 곳에 거목 마을 리버루트가, 가운데에 묻힌 유적이, 땅속에 칼니 심장이, 동쪽 가장자리에 우멍 강 어귀의 보주카 만이 있다
 status: canon
-sources: [ZEN-172, ZEN-159]
+sources: [ZEN-172, ZEN-159, ZEN-98]
 tags: [우림, 밀림, 엘프, 멀 다야, 녹색]
 links:
+  - { to: spl-hideous-end, rel: 묻힌 유적의 우상에서 배우는 주문 (흉측한 최후) }
   - { to: loc-bala-ged, rel: 바깥 지역 }
   - { to: loc-riverroot, rel: 안의 구역 (멀 다야의 마을) }
   - { to: loc-bojuka-bay, rel: 안의 구역 (가장자리의 만) }

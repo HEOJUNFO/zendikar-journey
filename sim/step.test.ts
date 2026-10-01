@@ -4269,6 +4269,41 @@ test('the real Harrow is taught in Tazeem', () => {
   assert.deepEqual(s.effects, [{ type: 'harrow', count: 2 }]);
 });
 
+const hideousEnd: RawEntity = { id: 'spl-he', kind: 'spell', name: '흉측한 최후', status: 'canon', sim: { cost: '{1}', learn_at: 'loc-a', effects: [{ type: 'destroy_target', not_color: 'B', lose_life: 2 }] } };
+
+test('hideous end: one there not black is destroyed (between NPCs too) and whoever controls them loses 2 life; the black, planeswalkers and the indestructible are spared', () => {
+  const world = fixture([
+    hideousEnd,
+    npc('chr-c', { ...npcSim('loc-a', 'work'), mana: { B: 3 } }),
+    npc('chr-x', { ...npcSim('loc-a', 'work', [3, 3]), mana: { G: 2 } }),
+    npc('chr-m', { ...npcSim('loc-a', 'work'), mana: { W: 1 } }),
+    npc('chr-v', { ...npcSim('loc-a', 'work'), mana: { B: 2 } }),
+    npc('chr-i', { ...npcSim('loc-a', 'work'), mana: { G: 1 }, abilities: ['indestructible'] }),
+  ]);
+  const state = newState(world, { seed: 1, mode: 'observer' });
+  const [c, x, m, v, i] = ['chr-c', 'chr-x', 'chr-m', 'chr-v', 'chr-i'].map((id) => state.actors[id]);
+  for (const a of [x, m, v, i]) a.tile = c.tile;
+  c.spells = ['spl-he'];
+  x.master = m.id;
+  assert.match(castBlocked(state, world, c, 'spl-he', v.id, false, state.minutes) ?? '', /흑색이라/);
+  assert.deepEqual(castTargets(state, c, world.spells[0], world).map((a) => a.id).sort(), ['chr-i', 'chr-m', 'chr-x']);
+  assert.equal(castSpell(state, world, c, 'spl-he', x.id, false, state.minutes), true);
+  assert.ok(x.dead);
+  assert.equal(lifeOf(m), 18); // its master
+  c.used = {};
+  castSpell(state, world, c, 'spl-he', i.id, false, state.minutes);
+  assert.ok(!i.dead);
+  assert.equal(lifeOf(i), 18); // stands, but loses the life
+  assert.ok(foesOf(i, state.minutes).includes('chr-c'));
+});
+
+test('the real Hideous End is taught in the Guum Wilds', () => {
+  const world = loadWorld();
+  const s = world.spells.find((x) => x.id === 'spl-hideous-end')!;
+  assert.equal(s.learnAt, 'loc-guum-wilds');
+  assert.deepEqual(s.effects, [{ type: 'destroy_target', not_color: 'B', lose_life: 2 }]);
+});
+
 test('the real Demolish is taught in Oran-Rief', () => {
   const world = loadWorld();
   const s = world.spells.find((x) => x.id === 'spl-demolish')!;

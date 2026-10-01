@@ -596,6 +596,11 @@ export const SpellSimSchema = z.strictObject({
         // "Destroy target artifact or land" (Demolish): after casting, the caster picks an artifact
         // on their tile, the land they stand in, or a land someone there holds (sim/relics.ts).
         z.strictObject({ type: z.literal('demolish') }),
+        // "Destroy target non<color> creature. Its controller loses N life" (Hideous End): one on
+        // the caster's tile not of that color (a card's; one with none, their lands'), no
+        // planeswalker; whoever controls them (their master, or they themselves) loses the life
+        // whether or not they fall.
+        z.strictObject({ type: z.literal('destroy_target'), not_color: z.enum(COLORS).optional(), lose_life: z.number().int().positive().optional() }),
         // "As an additional cost, sacrifice a land. Search your library for up to N basic land
         // cards, put them onto the battlefield" (Harrow): the caster gives up a land they hold,
         // then bonds from afar with up to N basic lands of the world (sim/harrow.ts).

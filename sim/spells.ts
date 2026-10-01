@@ -7,7 +7,7 @@ import { huntKnowledge } from './knowledge.ts';
 import { formatClock, untapTime } from './clock.ts';
 import { addFoe, dealDamage, destroy } from './combat.ts';
 import { gainLife, lifeOf, loseLife } from './life.ts';
-import { addCosts, formatMana, manaAvailable, manaCapacity, payMana, planPayment } from './mana.ts';
+import { actorColors, addCosts, COLOR_LABELS, formatMana, manaAvailable, manaCapacity, payMana, planPayment } from './mana.ts';
 import { spawnWild } from './abilities.ts';
 import { castEvents, destroyLand } from './step.ts';
 import { owesDiscard } from './discard.ts';
@@ -16,7 +16,7 @@ import { harrowGive, harrowOwed } from './harrow.ts';
 import { remember } from './relations.ts';
 import { copyable, replicate } from './replicate.ts';
 import { holdCast, reactionSpell } from './counter.ts';
-import { controlledCreatures, creatureOf, retainersOf } from './retainers.ts';
+import { controlledCreatures, creatureOf, masterOf, retainersOf } from './retainers.ts';
 import { addLog, buryCount, npcDef, present, ptOf, targetable, together, untargetableText } from './state.ts';
 import type { Actor, State } from './state.ts';
 import { sealedBy, sealText } from './seal.ts';
@@ -88,6 +88,8 @@ export function castBlocked(state: State, world: World, a: Actor, spellId: strin
   const need = ownOnly(s);
   if (need && !ownedBy(target, a)) return `${josa(s.name, '은', '는')} 자신이나 자신의 권속에게만 건다.`;
   if (need && castTargets(state, a, s).length < need) return `${josa(s.name, '은', '는')} 대상이 ${need === 2 ? '둘' : need}이 있어야 한다 (곁의 자신과 권속).`;
+  const doom = destroyBarred(world, state, s, target);
+  if (doom) return doom;
   if (s.effects.some((e) => e.type === 'copy_target') && !copyable(target)) return `${josa(shortName(target.name), '은', '는')} 생물이 아니다 (플레인즈워커). 복제할 수 없다.`;
   if (s.effects.some((e) => e.type === 'destroy_relics') && !relicsHere(state, world, a.region, a.tile).length) return '여기엔 부술 마법물체도 부여마법도 없다.';
   if (s.effects.some((e) => e.type === 'demolish') && !demolishOptions(state, world, a).length) return '여기엔 부술 마법물체도 땅도 없다.';
@@ -103,11 +105,28 @@ export function castBlocked(state: State, world: World, a: Actor, spellId: strin
 }
 
 // Whom `a` could cast `s` on where they stand: anyone else there, or themselves too.
-export function castTargets(state: State, a: Actor, s: SpellDef) {
+export function castTargets(state: State, a: Actor, s: SpellDef, world?: World) {
   if (s.target === 'self') return [a];
   const needsLand = s.effects.some((e) => e.type === 'destroy_land');
   const copies = s.effects.some((e) => e.type === 'copy_target');
-  return present(state, a.region, a.tile).filter((x) => (x.id !== a.id || s.target === 'any_here') && targetable(x, state.minutes, spellColors(s)) && (!needsLand || !!landToDestroy(state, x)) && (!copies || copyable(x)) && (!ownOnly(s) || ownedBy(x, a)));
+  return present(state, a.region, a.tile).filter(
+    (x) =>
+      (x.id !== a.id || s.target === 'any_here') &&
+      targetable(x, state.minutes, spellColors(s)) &&
+      (!needsLand || !!landToDestroy(state, x)) &&
+      (!copies || copyable(x)) &&
+      (!ownOnly(s) || ownedBy(x, a)) &&
+      (!world || !destroyBarred(world, state, s, x)),
+  );
+}
+
+// "Destroy target non<color> creature": why `x` can't be it, or null.
+function destroyBarred(world: World, state: State, s: SpellDef, x: Actor) {
+  const eff = s.effects.find((e) => e.type === 'destroy_target');
+  if (eff?.type !== 'destroy_target') return null;
+  if (x.loyalty !== undefined) return `${josa(shortName(x.name), '은', '는')} 생물이 아니다 (플레인즈워커).`;
+  if (eff.not_color && actorColors(state, world, x).includes(eff.not_color)) return `${josa(shortName(x.name), '은', '는')} ${COLOR_LABELS[eff.not_color]}색이라 고를 수 없다.`;
+  return null;
 }
 
 // A spell only for the caster's own ("target creatures you control", Windborne Charge), and how
@@ -146,7 +165,7 @@ export function readyCast(state: State, world: World, a: Actor, spellId: string,
   if (!s || npcCastBlocked(state, world, a, s.id, t)) return;
   // Their own (no target): cast as they finish, kicked if they can pay it.
   if (s.target === 'self') return castSpell(state, world, a, s.id, a.id, !!s.kicker && !castBlocked(state, world, a, s.id, a.id, true, t), t);
-  const candidates = castTargets(state, a, s).map((x) => x.id);
+  const candidates = castTargets(state, a, s, world).map((x) => x.id);
   if (!candidates.length) return;
   (state.choices ??= []).push({ by: a.id, land: a.region, effect: { type: 'cast', spell: s.id }, candidates, optional: true, t });
 }
@@ -171,7 +190,7 @@ export function castableSpells(state: State, world: World, a: Actor, t: number) 
 
 // Whether a spell does harm (the target takes it as an attack).
 export function harmful(s: SpellDef) {
-  return s.effects.some((e) => e.type === 'lose_half_life' || e.type === 'destroy_land' || e.type === 'discard' || e.type === 'discard_per_land' || e.type === 'damage_per_land');
+  return s.effects.some((e) => e.type === 'lose_half_life' || e.type === 'destroy_target' || e.type === 'destroy_land' || e.type === 'discard' || e.type === 'discard_per_land' || e.type === 'damage_per_land');
 }
 
 // Pays and resolves. A harmful spell's target (if an NPC) takes it as an attack. Returns whether
@@ -248,7 +267,7 @@ export function resolveSpell(state: State, world: World, a: Actor, spellId: stri
       gainLife(state, a, lost, t, s.name);
     } else if (eff.type === 'copy_if_kicked' && kicked && !free) {
       // One more, free, on someone else here: the caster's pick after the hour.
-      const others = castTargets(state, a, s).filter((x) => x.id !== target.id).map((x) => x.id);
+      const others = castTargets(state, a, s, world).filter((x) => x.id !== target.id).map((x) => x.id);
       if (others.length) (state.choices ??= []).push({ by: a.id, land: a.region, effect: { type: 'cast', spell: s.id, free: true }, candidates: others, optional: true, t });
     } else if (eff.type === 'destroy_land') {
       const land = landToDestroy(state, target);
@@ -258,6 +277,11 @@ export function resolveSpell(state: State, world: World, a: Actor, spellId: stri
     } else if (eff.type === 'demolish') {
       const owed = demolishOwed(state, world, a, s.name, t);
       if (owed) (state.choices ??= []).push(owed);
+    } else if (eff.type === 'destroy_target') {
+      // Whose it is, as it falls (a master lets go of the dead).
+      const controller = masterOf(state, target) ?? target;
+      destroy(state, target, t, s.name, a);
+      if (eff.lose_life && !controller.dead) loseLife(state, controller, eff.lose_life, t, s.name, a);
     } else if (eff.type === 'harrow') {
       const owed = harrowOwed(state, world, a, { type: 'harrow', spell: s.name, left: eff.count, given: false }, t);
       if (owed) (state.choices ??= []).push(owed);
@@ -294,7 +318,7 @@ export function resolveSpell(state: State, world: World, a: Actor, spellId: stri
       boostTillMidnight(state, target, eff.pt, eff.abilities, t);
       // The other target(s): the caster's pick after the hour, one they must make.
       if (!free && eff.count > 1) {
-        const others = castTargets(state, a, s).filter((x) => x.id !== target.id).map((x) => x.id);
+        const others = castTargets(state, a, s, world).filter((x) => x.id !== target.id).map((x) => x.id);
         if (others.length) (state.choices ??= []).push({ by: a.id, land: a.region, effect: { type: 'cast', spell: s.id, free: true, second: true }, candidates: others, optional: false, t });
       }
     } else if (eff.type === 'pump_controlled') {
