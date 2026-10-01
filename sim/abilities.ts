@@ -195,6 +195,8 @@ export function bondLand(state: State, world: World, a: Actor, t: number, region
   }
   // "Landfall — this gains flying until end of turn".
   for (const ability of lf?.landfallGrant ?? []) grantAbility(state, a, ability, untapTime(t), '땅에서 솟구친 열기', t);
+  // "Landfall — you may gain N life": its controller gains it.
+  if (lf?.landfallLife) gainLife(state, masterOf(state, a) ?? a, lf.landfallLife, t, `${shortName(a.name)}의 상륙`);
   // "Landfall — gain control of target creature": whom (if anyone) is theirs to pick, after the hour.
   if (lf?.landfallSeize) {
     const candidates = present(state, a.region, a.tile).filter((x) => x.id !== a.id && x.master !== a.id && targetable(x, t, creatureColors(def))).map((x) => x.id);

@@ -5008,6 +5008,29 @@ test('the real Gomazoa drifts over Tazeem: a 0/3 flying defender that drags off 
   assert.deepEqual(ptOf(g), [0, 3]);
 });
 
+test('Grazing Gladehart: each time it bonds with a land, its controller gains 2 life (itself, with no master)', () => {
+  const world = fixture([npc('chr-h', { ...npcSim('loc-a', 'work', [2, 2]), needs: ['energy'], beast: true, landfall_life: 2 }), npc('chr-m', npcSim('loc-a', 'work'))]);
+  const state = newState(world, { seed: 1, mode: 'observer' });
+  const [h, m] = [state.actors['chr-h'], state.actors['chr-m']];
+  bondLand(state, world, h, state.minutes, 'loc-a');
+  assert.equal(lifeOf(h), 22);
+  h.master = m.id;
+  bondLand(state, world, h, state.minutes, 'loc-b');
+  assert.equal(lifeOf(m), 22);
+  assert.equal(lifeOf(h), 22);
+  assert.equal(m.lifeGained, gameDay(state.minutes));
+});
+
+test('the real Grazing Gladehart grazes in Oran-Rief: a gentle beast, 2 life to its controller on landfall', () => {
+  const world = loadWorld();
+  const state = newState(world, { seed: 1, mode: 'observer' });
+  const h = state.actors['cre-grazing-gladehart'];
+  assert.equal(h?.region, 'loc-oran-rief');
+  const def = npcDef(state, world, h.id)!;
+  assert.ok(def.beast && !def.needs.includes('hunger'));
+  assert.equal(def.landfallLife, 2);
+});
+
 test('the real Merfolk Seastalkers lurk in Bojuka Bay, a basic island on the edge of the Guum Wilds in Bala Ged: islandwalk', () => {
   const world = loadWorld();
   const state = newState(world, { seed: 1, mode: 'observer' });

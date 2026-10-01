@@ -5,9 +5,10 @@ name: 오란리프, 광대숲
 name_en: Oran-Rief, the Vastwood
 summary: 타짐의 끝없이 자라는 산호 바위 숲. 거목의 뿌리가 바위 위로 아치를 이루고, 그 위 이끼 낀 턱에 엘프들이 산다. 이곳의 기운은 새로 태어난 것들을 북돋운다
 status: canon
-sources: [ZEN-221, ZEN-192, ZEN-162, ZEN-121, ZEN-189]
+sources: [ZEN-221, ZEN-192, ZEN-162, ZEN-121, ZEN-189, ZEN-163]
 tags: [숲, 거목, 산호바위, 엘프, 녹색]
 links:
+  - { to: cre-grazing-gladehart, rel: 남서쪽 빈터에서 풀을 뜯는 영양 }
   - { to: spl-demolish, rel: 생존주의자들이 아는 주문 }
   - { to: spl-gigantiform, rel: 배우는 주문 }
   - { to: loc-tazeem, rel: 바깥 지역 }

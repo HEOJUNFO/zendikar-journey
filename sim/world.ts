@@ -388,6 +388,9 @@ export const CharacterSimSchema = z.strictObject({
   landfall_lose: z.array(z.enum(ABILITIES)).default([]),
   // "Landfall — this gains <ability> until end of turn" (Geyser Glider: flying).
   landfall_grant: z.array(z.enum(ABILITIES)).default([]),
+  // "Landfall — you may gain N life" (Grazing Gladehart): its controller (master, or itself) gains
+  // it (always: a boon).
+  landfall_life: z.number().int().positive().optional(),
   // "{T}: Draw a card for each Ally you control" (Sea Gate Loremaster): a power of whoever
   // controls them (sim/loremaster.ts).
   tap_draw_allies: z.boolean().default(false),
@@ -838,6 +841,7 @@ export type NpcDef = {
   landfallSeize?: boolean;
   landfallLose?: Ability[];
   landfallGrant?: Ability[];
+  landfallLife?: number;
   landfallDrain?: { life: number; counters: number };
   tapDrawAllies?: boolean;
   types?: CreatureType[];
@@ -1039,7 +1043,7 @@ export function buildWorld(entities: RawEntity[]): { world: World; errors: strin
         err(e.id, `sim 오류: ${issues(sim.error)}`);
         continue;
       }
-      const { knows_colors, activated, wins_at_life, extra_combat, pump, empty_hand_pump, attack_pump, discard_on_hit, landfall_token, landfall_seize, landfall_lose, landfall_grant, landfall_drain, enter_destroy, enter_drain, enter_draw, enter_search, enter_shatter, enter_exile, upkeep_return_land, extra_lands, reveal_top, tap_foe, tap_draw_allies, engulf, name, home_pos, ...rest } = sim.data;
+      const { knows_colors, activated, wins_at_life, extra_combat, pump, empty_hand_pump, attack_pump, discard_on_hit, landfall_token, landfall_seize, landfall_lose, landfall_grant, landfall_life, landfall_drain, enter_destroy, enter_drain, enter_draw, enter_search, enter_shatter, enter_exile, upkeep_return_land, extra_lands, reveal_top, tap_foe, tap_draw_allies, engulf, name, home_pos, ...rest } = sim.data;
 
       world.npcs.push({
         id: e.id,
@@ -1053,6 +1057,7 @@ export function buildWorld(entities: RawEntity[]): { world: World; errors: strin
         ...(landfall_seize ? { landfallSeize: true } : {}),
         ...(landfall_lose.length ? { landfallLose: landfall_lose } : {}),
         ...(landfall_grant.length ? { landfallGrant: landfall_grant } : {}),
+        ...(landfall_life ? { landfallLife: landfall_life } : {}),
         ...(enter_destroy
           ? { enterDestroy: typeof enter_destroy === 'string' ? { kind: enter_destroy } : { kind: enter_destroy.kind, ...(enter_destroy.kicker ? { kicker: parseManaCost(enter_destroy.kicker)!, kickerText: enter_destroy.kicker } : {}) } }
           : {}),

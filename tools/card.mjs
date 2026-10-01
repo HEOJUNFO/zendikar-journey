@@ -125,8 +125,14 @@ function placeCheck(card) {
     .filter((f) => f.endsWith('.md'))
     .map((f) => readFileSync(join(dir, f), 'utf8'))
     .map((s) => ({ en: /^name_en:\s*(.+)$/m.exec(s)?.[1].trim(), ko: /^name:\s*(.+)$/m.exec(s)?.[1].trim() }))
-    // The whole name, or its first word (Hagra Swamp → Hagra): a false match only says too much.
-    .filter((p) => p.en && [p.en, p.en.split(' ').length > 1 ? p.en.split(' ')[0] : ''].some((w) => w.length >= 4 && new RegExp(`\\b${w.toLowerCase()}\\b`).test(text)));
+    // The whole name, the part before a comma (Oran-Rief, the Vastwood → Oran-Rief), or its first
+    // word (Hagra Swamp → Hagra): a false match only says too much.
+    .filter((p) => {
+      if (!p.en) return false;
+      const head = p.en.split(',')[0].trim();
+      const words = [p.en, head, head.split(' ').length > 1 ? head.split(' ')[0] : ''];
+      return words.some((w) => w.length >= 4 && new RegExp(`\\b${w.toLowerCase().replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\b`).test(text));
+    });
   console.log(`세계에 있는 지명: ${known.length ? known.map((p) => `${p.ko} (${p.en})`).join(', ') : '없음'}`);
   console.log('확인: 이름·플레이버의 지명, 이름에 든 부족·종족의 본거지가 세계에 없으면 [새 지역 후보]로 짚고 묻는다 (CLAUDE.md)');
 }
