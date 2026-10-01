@@ -128,7 +128,7 @@ export function foesOf(a: Actor, t: number) {
 // Landwalk ("can't be blocked as long as defending player controls a Swamp/Forest"): one bonded
 // with a land of that type can't strike back at the landwalker, nor fly from it. The type it
 // walks, or null.
-const LANDWALK: Partial<Record<Ability, LandType>> = { swampwalk: 'swamp', forestwalk: 'forest' };
+const LANDWALK: Partial<Record<Ability, LandType>> = { swampwalk: 'swamp', forestwalk: 'forest', islandwalk: 'island' };
 export function landwalked(world: World, attacker: Actor, defender: Actor, t: number): LandType | null {
   for (const [ability, type] of Object.entries(LANDWALK) as [Ability, LandType][]) {
     if (!hasAbility(attacker, ability, t)) continue;

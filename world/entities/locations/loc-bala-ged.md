@@ -5,7 +5,7 @@ name: 발라 게드
 name_en: Bala Ged
 summary: 굴 드라즈 동쪽에 붙은 밀림 대륙. 짙은 나무 그늘이 늪 가장자리까지 내려오고, 두 대륙이 겹친 땅 밑에 푸른 지하묘지가 있다
 status: canon
-sources: [ZEN-229, ZEN-178, ZEN-184, ZEN-156, ZEN-107, ZEN-179, ZEN-194, ZEN-79, ZEN-166]
+sources: [ZEN-229, ZEN-178, ZEN-184, ZEN-156, ZEN-107, ZEN-179, ZEN-194, ZEN-79, ZEN-166, ZEN-55]
 tags: [대륙, 숲, 밀림, 녹색]
 links:
   - { to: spl-relic-crush, rel: 배우는 주문 }
@@ -18,6 +18,7 @@ links:
   - { to: cre-zendikar-farguide, rel: 밀림을 헤치며 걷는 정령 }
   - { to: chr-bala-ged-thief, rel: 묻힌 유적을 터는 도적 }
   - { to: loc-tangled-vale, rel: 안의 구역 (조라가의 본거지) }
+  - { to: loc-bojuka-bay, rel: 안의 구역 (우멍 강 어귀의 만) }
   - { to: evt-summoning-trap, rel: 밀림에 묻힌 유적의 함정 }
   - { to: evt-baloth-cage-trap, rel: 밀림 바닥의 발로스 우리 }
 map: { x: 1072, y: 1614, terrain: forest, size: continent, tiles: 120 }
@@ -39,6 +40,7 @@ map: { x: 1072, y: 1614, terrain: forest, size: continent, tiles: 120 }
 - 발로스(`cre-baloth`, ZEN-157)가 여기서 산다 ([결정] 2026-09-30 다시 놓기). 먹성이 끝이 없어 사냥감을 바닥내면 다른 땅으로 옮겨 간다.
 - 숲의 정령 젠디카르 길잡이(`cre-zendikar-farguide`, ZEN-194)가 밀림 남동쪽 깊은 곳을 헤치며 걷는다 ([결정] 2026-10-01). 지나간 자리에 길이 트인다. 숲걷기: 숲과 유대를 맺은 이는 그를 막아내지 못한다 (발라 게드도 숲이다).
 - 남쪽 언덕 사이의 밀림 골짜기에 구역 탱글드 베일(`loc-tangled-vale`, 기본 숲 10칸)이 있다 ([결정] 2026-10-01, [배경]). 조라가 엘프 부족의 본거지이고, 조라가 음유시인(`chr-joraga-bard`, ZEN-166)이 산다.
+- 남쪽 해안, 우멍 강이 바다로 나는 어귀에 구역 보주카 만(`loc-bojuka-bay`, 기본 섬 10칸)이 있다 ([결정] 2026-10-01, [배경]). 인어 바다추적자(`chr-merfolk-seastalkers`, ZEN-55)가 얕은 물에 숨어 산다.
 
 ## 미정/질문
 

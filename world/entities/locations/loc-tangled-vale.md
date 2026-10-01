@@ -10,6 +10,7 @@ tags: [골짜기, 밀림, 엘프, 조라가, 녹색]
 links:
   - { to: loc-bala-ged, rel: 바깥 지역 }
   - { to: chr-joraga-bard, rel: 사는 조라가 음유시인 }
+  - { to: loc-bojuka-bay, rel: 가까운 바다 만 }
 map: { in: loc-bala-ged, terrain: forest, pos: [-0.1, 0.75], tiles: 10 }   # 기본 숲: 녹 마나 [결정] 2026-10-01. 남쪽은 [배경], 동서는 [가공]
 ---
 

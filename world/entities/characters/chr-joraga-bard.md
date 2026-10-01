@@ -12,6 +12,7 @@ links:
   - { to: law-retainers, rel: 고용되어 섬김 }
   - { to: law-mana-colors, rel: 녹색의 존재 }
   - { to: loc-tangled-vale, rel: 사는 곳 (조라가의 본거지) }
+  - { to: chr-merfolk-seastalkers, rel: 노래로 읊는 인어 무리 }
 sim:
   home: loc-tangled-vale   # [배경] 조라가 부족의 본거지 ([결정] 2026-10-01)
   role: 서사시를 읊으며 원정대를 따라다니는 조라가 엘프 음유시인

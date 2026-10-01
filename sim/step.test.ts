@@ -22,6 +22,7 @@ import { nodeAt } from '../web/view.ts';
 import { crushRelic, relicsHere } from './relics.ts';
 import { recallBlocked, recallCount } from './loremaster.ts';
 import { pumpMax, pumpsDue } from './pump.ts';
+import { bindTargets } from './bind.ts';
 import { drawKnowledge, handSize, huntKnowledge, knownSecrets, secretsOf } from './knowledge.ts';
 import { revealHand } from './discard.ts';
 import { claimBlocked, claimItem, itemOwner, itemsAt, itemWhere } from './items.ts';
@@ -4295,4 +4296,54 @@ test('the real Living Tsunami rises off the Silundi Coast', () => {
   assert.ok(hasAbility(w, 'fly', state.minutes));
   const def = npcDef(state, world, w.id)!;
   assert.ok(def.upkeepReturnLand && def.tamable && def.beast);
+});
+
+test('seastalkers in a fight: before the hour its controller may pay {2}{U} to bind a foe there who can\'t fly, until midnight', async () => {
+  const stalkers = { ...npcSim('loc-a', 'work', [2, 3]), mana: { U: 4 }, tap_foe: { cost: '{2}{U}', no_fly: true } };
+  const flyer = { ...npcSim('loc-a', 'work', [1, 9]), abilities: ['fly'] };
+  const world = fixture([npc('chr-s', stalkers), npc('chr-x', npcSim('loc-a', 'work', [1, 9])), npc('chr-f', flyer)]);
+  const state = newState(world, { seed: 1, mode: 'observer' });
+  const [s, x, f] = ['chr-s', 'chr-x', 'chr-f'].map((id) => state.actors[id]);
+  for (const a of [x, f]) a.tile = s.tile;
+  addFoe(s, 'chr-x', state.minutes);
+  addFoe(s, 'chr-f', state.minutes);
+  assert.deepEqual(bindTargets(state, world, s, state.minutes).map((a) => a.id), ['chr-x']); // not the flyer
+  const offered: string[][] = [];
+  await advance(state, world, 1, { pick: async ({ options }) => (offered.push(options.map((o) => o.id)), options.some((o) => o.id === 'chr-x') ? 'chr-x' : null) });
+  assert.ok(offered.some((o) => o.includes('chr-x')));
+  assert.equal(x.boundUntil, 1440);
+  assert.ok(texts(state).some((l) => l.includes('물살로 휘감아 묶었다')));
+  assert.equal(manaAvailable(state, world, s, state.minutes).U, 1);
+  // Bound: no more to bind there (and it can't pay twice anyway).
+  assert.deepEqual(bindTargets(state, world, s, state.minutes), []);
+});
+
+test('seastalkers serving the player: theirs to pick whom to bind, or none', async () => {
+  const stalkers = { ...npcSim('loc-a', 'work', [2, 3]), mana: { U: 4 }, tap_foe: { cost: '{2}{U}', no_fly: true } };
+  const world = fixture([npc('chr-s', stalkers), npc('chr-x', npcSim('loc-a', 'work', [1, 9]))]);
+  const state = character(world, 'loc-a');
+  const [p, s, x] = [state.actors[PLAYER_ID], state.actors['chr-s'], state.actors['chr-x']];
+  s.master = PLAYER_ID;
+  s.tile = x.tile = p.tile;
+  addFoe(p, 'chr-x', state.minutes);
+  await act(state, world, { type: 'wait', hours: 1 });
+  const ask = state.asks?.find((c) => c.effect.type === 'bind');
+  assert.ok(ask);
+  assert.deepEqual(ask!.candidates, ['chr-x']);
+  await act(state, world, { type: 'choose', pick: 'chr-x' });
+  assert.ok(x.boundUntil !== undefined);
+});
+
+test('the real Merfolk Seastalkers lurk in Bojuka Bay, a basic island on the south shore of Bala Ged: islandwalk', () => {
+  const world = loadWorld();
+  const state = newState(world, { seed: 1, mode: 'observer' });
+  const s = state.actors['chr-merfolk-seastalkers'];
+  assert.equal(s?.region, 'loc-bojuka-bay');
+  assert.equal(region(world, 'loc-bojuka-bay').parent, 'loc-bala-ged');
+  assert.deepEqual(landTypes(region(world, 'loc-bojuka-bay')), ['island']);
+  assert.ok(hasAbility(s, 'islandwalk', state.minutes));
+  assert.equal(npcDef(state, world, s.id)?.tapFoe?.costText, '{2}{U}');
+  const d = state.actors[Object.keys(state.actors).find((id) => id !== s.id && !npcDef(state, world, id)?.loyalty)!];
+  d.bonds = ['loc-sea-gate'];
+  assert.equal(landwalked(world, s, d, state.minutes), 'island');
 });

@@ -30,6 +30,7 @@ import { eonLand, eonsIn, spendBlocked, storeBlocked } from './eons.ts';
 import { castableSpells, castBlocked, castSpell, harmful, learnableSpells, spellDef } from './spells.ts';
 import { opponentsOf, sealsDue, setSeal } from './seal.ts';
 import { applyPump, pumpController, pumpMax, pumpsDue } from './pump.ts';
+import { applyBind, bindsDue, bindTargets } from './bind.ts';
 import { COLORS } from './mana.ts';
 import type { Color } from './mana.ts';
 import { abilityBlocked, applyBondEffect, applyDrainGrow, applyEnterDestroy, applySearch, enteredToday, fetchBlocked, fetchTargets, growBlocked, growLand, callForth } from './abilities.ts';
@@ -565,8 +566,8 @@ async function choices(state: State, world: World, llm: Llm) {
       }
       continue;
     }
-    // Pours are asked before the hour (`pumps`), not after.
-    if (c.effect.type === 'pour') continue;
+    // Pours and binds are asked before the hour (`pumps`, `binds`), not after.
+    if (c.effect.type === 'pour' || c.effect.type === 'bind') continue;
     // What a thief turned up of someone's hand (candidates are spells and secrets).
     if (c.effect.type === 'pilfer') {
       if (by && !by.dead && npc) await pilferChoice(state, world, llm, by, npc, c as Choice & { effect: { type: 'pilfer' } });
@@ -850,6 +851,32 @@ async function pumps(state: State, world: World, llm: Llm) {
   }
 }
 
+// Merfolk Seastalkers and their like (sim/bind.ts): before an hour of fighting, whether its
+// controller pays to bind a foe there, and whom. An NPC's by the LLM (with no usable answer:
+// none); the player's, a pick they owe.
+async function binds(state: State, world: World, llm: Llm) {
+  for (const a of bindsDue(state, world, state.minutes)) {
+    const targets = bindTargets(state, world, a, state.minutes);
+    const by = pumpController(state, a);
+    const tap = npcDef(state, world, a.id)!.tapFoe!;
+    if (by.kind === 'player') {
+      if (!state.asks?.some((c) => c.effect.type === 'bind' && c.effect.source === a.id)) (state.asks ??= []).push({ by: by.id, land: a.region, effect: { type: 'bind', source: a.id }, candidates: targets.map((x) => x.id), optional: true, t: state.minutes });
+      continue;
+    }
+    const npc = speakerDef(state, world, by.id);
+    if (!npc || !llm.pick) continue;
+    let pick: string | null = null;
+    try {
+      const what = `${by.id === a.id ? '당신' : shortName(a.name)}의 싸움이 이어진다. 마나 ${tap.costText}를 내면 날지 못하는 적 하나를 자정까지 묶을 수 있다 (묶인 이는 맞받아치지도 움직이지도 못한다). 누구를 묶을지, 아니면 묶지 않을지 고른다`;
+      pick = await llm.pick({ world, state, npc, what, options: targets.map((x) => ({ id: x.id, label: `${shortName(x.name)} (${ptOf(x).join('/')})` })), optional: true });
+    } catch (e) {
+      console.warn(`pick (bind) for ${by.id} failed:`, e);
+    }
+    const target = targets.find((x) => x.id === pick);
+    if (target) applyBind(state, world, a, target, state.minutes);
+  }
+}
+
 function busy(state: State, p: Actor) {
   return !!(p.task || p.travel || p.forced || p.boundUntil !== undefined || outOfTime(state, p));
 }
@@ -1023,6 +1050,7 @@ async function prepare(state: State, world: World, llm: Llm): Promise<string | n
   const missing = unplanned.filter((a) => a.schedule?.day !== day);
   if (!missing.length) {
     await pumps(state, world, llm);
+    await binds(state, world, llm);
     return null;
   }
   return `LLM이 ${missing.map((a) => shortName(a.name)).join(', ')}의 하루를 짜지 못해 세계가 멈췄다. 다시 진행하면 이어서 짠다.`;

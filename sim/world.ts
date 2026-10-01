@@ -14,9 +14,9 @@ export const MAP_WIDTH = 2880;
 export const MAP_HEIGHT = 2160;
 
 // fly: can reach sky islands. aquatic: lives in the sea, and only there.
-export const ABILITIES = ['fly', 'aquatic', 'lifelink', 'vigilance', 'haste', 'trample', 'defender', 'shroud', 'swampwalk', 'forestwalk', 'indestructible', 'intimidate', 'first_strike', 'double_strike', 'cant_block'] as const;
+export const ABILITIES = ['fly', 'aquatic', 'lifelink', 'vigilance', 'haste', 'trample', 'defender', 'shroud', 'swampwalk', 'forestwalk', 'islandwalk', 'indestructible', 'intimidate', 'first_strike', 'double_strike', 'cant_block'] as const;
 export type Ability = (typeof ABILITIES)[number];
-export const ABILITY_LABELS: Record<Ability, string> = { fly: '비행', aquatic: '물에 삶', lifelink: '생명연결', vigilance: '경계', haste: '속공', trample: '돌진', defender: '수비대', shroud: '방어막', swampwalk: '늪걷기', forestwalk: '숲걷기', indestructible: '파괴불가', intimidate: '위협', first_strike: '선제공격', double_strike: '이중 타격', cant_block: '막지 못함' };
+export const ABILITY_LABELS: Record<Ability, string> = { fly: '비행', aquatic: '물에 삶', lifelink: '생명연결', vigilance: '경계', haste: '속공', trample: '돌진', defender: '수비대', shroud: '방어막', swampwalk: '늪걷기', forestwalk: '숲걷기', islandwalk: '섬걷기', indestructible: '파괴불가', intimidate: '위협', first_strike: '선제공격', double_strike: '이중 타격', cant_block: '막지 못함' };
 // Creature types a card may name ("destroy target Angel"), and `artifact` for an artifact
 // creature (마법물체 생물: it may block an intimidating one).
 export const CREATURE_TYPES = ['angel', 'demon', 'artifact'] as const;
@@ -300,6 +300,10 @@ export const CharacterSimSchema = z.strictObject({
   // "At the beginning of your upkeep, sacrifice this creature unless you return a land you
   // control to its owner's hand" (Living Tsunami): while it serves someone (sim/tide.ts).
   upkeep_return_land: z.boolean().default(false),
+  // "{2}{U}: Tap target creature without flying" (Merfolk Seastalkers): in a fight, its
+  // controller may pay to bind a foe there until midnight (`no_fly`: not one who flies,
+  // sim/bind.ts).
+  tap_foe: z.strictObject({ cost: CostSchema, no_fly: z.boolean().default(false) }).optional(),
   // "At the beginning of your upkeep, if you have N or more life, you win the game": its
   // controller (its master; a beast alone is no player) wins at 00:00 (sim/win.ts).
   wins_at_life: z.number().int().min(1).optional(),
@@ -723,6 +727,7 @@ export type NpcDef = {
   beast?: boolean;
   tamable?: boolean;
   upkeepReturnLand?: boolean;
+  tapFoe?: { cost: ManaCost; costText: string; noFly: boolean };
   winsAtLife?: number;
   extraCombat?: { cost: ManaCost; costText: string };
   pump?: { cost: ManaCost; costText: string; pt: [number, number] };
@@ -929,7 +934,7 @@ export function buildWorld(entities: RawEntity[]): { world: World; errors: strin
         err(e.id, `sim 오류: ${issues(sim.error)}`);
         continue;
       }
-      const { knows_colors, activated, wins_at_life, extra_combat, pump, empty_hand_pump, discard_on_hit, landfall_token, landfall_seize, landfall_lose, landfall_grant, landfall_drain, enter_destroy, enter_drain, enter_draw, enter_search, upkeep_return_land, tap_draw_allies, name, home_pos, ...rest } = sim.data;
+      const { knows_colors, activated, wins_at_life, extra_combat, pump, empty_hand_pump, discard_on_hit, landfall_token, landfall_seize, landfall_lose, landfall_grant, landfall_drain, enter_destroy, enter_drain, enter_draw, enter_search, upkeep_return_land, tap_foe, tap_draw_allies, name, home_pos, ...rest } = sim.data;
 
       world.npcs.push({
         id: e.id,
@@ -949,6 +954,7 @@ export function buildWorld(entities: RawEntity[]): { world: World; errors: strin
         ...(enter_drain ? { enterDrain: enter_drain } : {}),
         ...(enter_search ? { enterSearch: enter_search } : {}),
         ...(upkeep_return_land ? { upkeepReturnLand: true } : {}),
+        ...(tap_foe ? { tapFoe: { cost: parseManaCost(tap_foe.cost)!, costText: tap_foe.cost, noFly: tap_foe.no_fly } } : {}),
         ...(home_pos ? { homePos: home_pos } : {}),
         ...(enter_draw ? { enterDraw: { count: enter_draw.count, discard: enter_draw.discard, ...(enter_draw.kicker ? { kicker: parseManaCost(enter_draw.kicker)!, kickerText: enter_draw.kicker } : {}) } } : {}),
         ...(landfall_drain ? { landfallDrain: landfall_drain } : {}),
