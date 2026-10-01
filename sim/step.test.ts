@@ -5217,6 +5217,46 @@ test('the real Kabira Evangel preaches at Kabira Crossroads: an Ally for 30 coin
   assert.equal(hirePrice(def), 30);
 });
 
+test('Kor Hookmaster arriving: its controller must bind one there not of its side, past the next midnight until the one after', async () => {
+  const world = fixture([npc('chr-k', { ...npcSim('loc-a', 'work', [2, 2]), mana: { W: 3 }, enter_tap: true }), npc('chr-m', npcSim('loc-a', 'work')), npc('chr-x', npcSim('loc-a', 'work')), npc('chr-r', npcSim('loc-a', 'work'))]);
+  const state = newState(world, { seed: 1, mode: 'observer' });
+  const [k, m, x, r] = ['chr-k', 'chr-m', 'chr-x', 'chr-r'].map((id) => state.actors[id]);
+  for (const a of [m, x, r]) a.tile = k.tile;
+  k.master = m.id;
+  r.master = m.id;
+  onEnter(state, world, k, state.minutes);
+  const c = state.choices!.find((y) => y.effect.type === 'hook')!;
+  assert.equal(c.by, 'chr-m');
+  assert.deepEqual(c.candidates, ['chr-x']); // not its side
+  assert.ok(!c.optional);
+  await advance(state, world, 1, { choose: async () => null }); // no answer: one all the same
+  assert.equal(x.boundUntil, 2 * 1440);
+  assert.ok(foesOf(x, state.minutes).includes('chr-k'));
+});
+
+test('Kor Hookmaster serving the player: whom to bind is theirs to pick', async () => {
+  const world = fixture([npc('chr-k', { ...npcSim('loc-a', 'work', [2, 2]), mana: { W: 3 }, enter_tap: true }), npc('chr-x', npcSim('loc-a', 'work'))]);
+  const state = character(world, 'loc-a');
+  const [p, k, x] = [state.actors[PLAYER_ID], state.actors['chr-k'], state.actors['chr-x']];
+  k.master = p.id;
+  k.tile = x.tile = p.tile;
+  onEnter(state, world, k, state.minutes);
+  await act(state, world, { type: 'wait', hours: 1 });
+  const ask = state.asks?.find((c) => c.effect.type === 'hook');
+  assert.deepEqual(ask?.candidates, ['chr-x']);
+  await act(state, world, { type: 'choose', pick: 'chr-x' });
+  assert.equal(x.boundUntil, 2 * 1440);
+});
+
+test('the real Kor Hookmaster lives in Makindi: a speaking kor soldier who binds one on arriving', () => {
+  const world = loadWorld();
+  const state = newState(world, { seed: 1, mode: 'observer' });
+  const k = state.actors['chr-kor-hookmaster'];
+  assert.equal(k?.region, 'loc-makindi');
+  const def = npcDef(state, world, k.id)!;
+  assert.ok(def.enterTap && !def.beast);
+});
+
 test('the real Merfolk Seastalkers lurk in Bojuka Bay, a basic island on the edge of the Guum Wilds in Bala Ged: islandwalk', () => {
   const world = loadWorld();
   const state = newState(world, { seed: 1, mode: 'observer' });

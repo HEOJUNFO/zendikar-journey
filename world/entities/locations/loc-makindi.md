@@ -5,9 +5,10 @@ name: 마킨디 협곡
 name_en: Makindi Trenches
 summary: 온두 본토를 가로지르는 높은 벽의 협곡 미로. 옛 코르 제국의 수도가 무너진 자리이고, 마나 섞인 바람이 협곡을 울리며, 코르가 벼랑에 밧줄을 걸고 산다
 status: canon
-sources: [ZEN-124, ZEN-203, ZEN-18, ZEN-78]
+sources: [ZEN-124, ZEN-203, ZEN-18, ZEN-78, ZEN-20]
 tags: [협곡, 코르, 폐허, 바람, 백색]
 links:
+  - { to: chr-kor-hookmaster, rel: 절벽 길목의 코르 갈고리술사 }
   - { to: itm-grappling-hook, rel: 놓여 있는 코르의 갈고리 }
   - { to: loc-ondu, rel: 바깥 지역 }
   - { to: loc-teetering-peaks, rel: 안의 구역 (흔들리는 바위 기둥들) }

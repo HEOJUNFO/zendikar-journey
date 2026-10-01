@@ -38,6 +38,7 @@ import { applyPump, pumpController, pumpMax, pumpsDue } from './pump.ts';
 import { applyBind, bindsDue, bindTargets } from './bind.ts';
 import { applyEngulf, engulfsDue, engulfTargets, ENGULF_HOURS } from './engulf.ts';
 import { applyHarrow, harrowOptions } from './harrow.ts';
+import { applyHook } from './hook.ts';
 import type { HarrowEffect } from './harrow.ts';
 import { COLOR_LABELS, COLORS } from './mana.ts';
 import type { Color } from './mana.ts';
@@ -835,6 +836,23 @@ async function choices(state: State, world: World, llm: Llm) {
       }
       const target = candidates.find((x) => x.id === pick);
       if (target) applyDrainGrow(state, world, by, target, c.effect, state.minutes);
+      continue;
+    }
+    // Kor Hookmaster, arriving: whom its controller binds in its ropes (one must be; with no usable
+    // answer, one at random).
+    if (c.effect.type === 'hook') {
+      const source = state.actors[c.effect.source];
+      if (!source) continue;
+      let pick: string | null = null;
+      if (llm.choose) {
+        try {
+          pick = await llm.choose({ world, state, npc, candidates, optional: false, what: `${land.name}: ${source.id === by.id ? '당신' : shortName(source.name)}이(가) 이곳에 들어섰다. 여기 있는 이 가운데 하나를 갈고리 밧줄로 묶는다 (다음 날 자정이 지나 그다음 자정까지 움직이지도 맞받아치지도 못한다). 누구를?` });
+        } catch (e) {
+          console.warn(`choose (hook) for ${c.by} failed:`, e);
+        }
+      }
+      const target = candidates.find((x) => x.id === pick) ?? candidates[Math.floor(random(state) * candidates.length)];
+      if (target) applyHook(state, world, source, target, state.minutes);
       continue;
     }
     // Halo Hunter, arriving: which one of the kind he hunts (if any) he destroys.

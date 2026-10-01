@@ -25,6 +25,7 @@ import { answerTide } from './tide.ts';
 import { applyBind } from './bind.ts';
 import { applyEngulf, ENGULF_HOURS } from './engulf.ts';
 import { applyHarrow, harrowOptions } from './harrow.ts';
+import { applyHook } from './hook.ts';
 import type { World } from './world.ts';
 
 // What the pick is about, for them.
@@ -70,6 +71,7 @@ export function askText(state: State, world: World, c: Choice) {
   if (c.effect.type === 'search') return `${shortName(state.actors[c.effect.source]?.name ?? '')}이(가) 잊힌 길을 안다. 아직 유대가 없는 땅 하나와 멀리서 유대를 맺을 수 있다 (하루 한 땅에 들지 않고, 오늘은 마나를 내지 않는다). 어느 땅과?`;
   if (c.effect.type === 'return_lands') return `${state.items?.[c.effect.item]?.name ?? c.effect.item}: 유대를 맺은 땅 ${c.effect.left}곳을 내어 주어야 한다 (다시 맺을 수 있다). 먼저 어느 땅을?`;
   if (c.effect.type === 'quelled') return `${shortName(state.actors[c.effect.source]?.name ?? '')} 앞에서 제 ${QUELL_LABELS[c.effect.kind]} 하나를 내놓아야 한다. 무엇을?`;
+  if (c.effect.type === 'hook') return `${shortName(state.actors[c.effect.source]?.name ?? '')}이(가) 이곳에 들어섰다. 여기 있는 이 하나를 갈고리 밧줄로 묶는다 (다음 날 자정이 지나 그다음 자정까지). 누구를?`;
   if (c.effect.type === 'destroy') return `이곳에 들어서며 ${c.effect.kind ? `${CREATURE_TYPE_LABELS[c.effect.kind]} ` : ''}하나를 ${c.effect.kicker ? `힘(${c.effect.kicker})을 더 들여 ` : ''}파괴할 수 있다. 누구를? (파괴된 이는 죽는다)`;
   return '';
 }
@@ -230,6 +232,11 @@ export function answerAsk(state: State, world: World, pick: string | null, t: nu
   } else if (c.effect.type === 'drain_grow') {
     const target = pick && c.candidates.includes(pick) ? state.actors[pick] : undefined;
     if (target) applyDrainGrow(state, world, p, target, c.effect, t);
+  } else if (c.effect.type === 'hook') {
+    // One must be: an answer that isn't one goes to the first.
+    const source = state.actors[c.effect.source];
+    const target = state.actors[pick && c.candidates.includes(pick) ? pick : c.candidates[0]];
+    if (source && target) applyHook(state, world, source, target, t);
   } else if (c.effect.type === 'destroy') {
     const target = pick && c.candidates.includes(pick) ? state.actors[pick] : undefined;
     if (target) applyEnterDestroy(state, world, p, target, t);
