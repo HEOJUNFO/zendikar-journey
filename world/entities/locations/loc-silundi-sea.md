@@ -11,7 +11,7 @@ links:
   - { to: cre-shoal-serpent, rel: 여울에 숨은 뱀 }
   - { to: loc-ondu, rel: 북동쪽 해안 }
   - { to: loc-silundi-coast, rel: 마주한 온두의 연안 }
-map: { x: 1285, y: 1473, terrain: deepsea, tiles: 120 }   # 온두의 남서쪽, 아게딤·즈와르 섬 쪽 [결정] 2026-09-30 설정대로 (예전엔 타짐 동쪽, 잠시 온두 북동쪽)
+map: { x: 769.4, y: 1191, terrain: deepsea, tiles: 120 }   # 온두의 남서쪽, 아게딤·즈와르 섬 쪽 [결정] 2026-09-30 설정대로 (예전엔 타짐 동쪽, 잠시 온두 북동쪽)
 sim:
   land_type: island                       # 기본 섬으로 친다 [결정] 2026-09-30
 ---

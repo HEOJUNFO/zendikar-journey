@@ -11,10 +11,11 @@ links:
   - { to: law-allies, rel: 동료 }
   - { to: law-retainers, rel: 고용되어 섬김 }
   - { to: law-mana-colors, rel: 적색의 존재 }
-  - { to: loc-akoum, rel: 사는 곳 }
+  - { to: loc-teeth-of-akoum, rel: 사는 곳 }
   - { to: spl-spire-barrage, rel: 고블린의 산악에서 전해지는 주문 }
 sim:
-  home: loc-akoum          # [결정] 2026-10-01
+  home: loc-teeth-of-akoum # [결정] 2026-10-01 설정대로: 산비탈에 매단 고블린 둥지 [배경, 약함] (예전엔 아쿰)
+  home_pos: [0.6, 0.2]     # [가공] 산맥 동쪽 기슭
   role: 돈을 받고 원정대에 끼는 투크투크 부족의 고블린 전사 무리
   persona: >-
     활과 굽은 칼을 든 투크투크 부족의 고블린 전사 셋. 뾰족한 귀에 날랜 몸으로 몸을 낮추고 달린다.
@@ -38,7 +39,7 @@ sim:
 
 ## 게임에서의 역할
 
-- 사는 곳: 아쿰(`loc-akoum`) ([결정] 2026-10-01, 고블린의 산악).
+- 사는 곳: 아쿰의 북쪽 산맥 아쿰의 이빨(`loc-teeth-of-akoum`), 동쪽 기슭 (`home_pos`) ([결정] 2026-10-01, 고블린의 산악. 같은 날 산맥이 구역으로 생겨 옮김: 고블린 둥지가 산비탈에 매달린다 [배경, 약함]).
 - 2/2, 마나 적 5. 말하는 인물이다.
 - **속공** (`haste`, [카드]): 이동 시간이 절반이다.
 - **동료(Ally)** (`law-allies`): 여섯 번째 동료.

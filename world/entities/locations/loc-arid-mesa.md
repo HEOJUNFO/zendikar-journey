@@ -12,7 +12,7 @@ links:
   - { to: loc-ondu, rel: 바깥 지역 }
   - { to: loc-akoum, rel: 동쪽의 산 }
   - { to: law-life, rel: 길을 여는 값 }
-map: { in: loc-ondu, terrain: rocky, pos: [-0.45, -0.1], tiles: 10 }
+map: { in: loc-ondu, terrain: rocky, pos: [-0.7, -0.25], tiles: 10 }
 sim:
   nonbasic: true                          # 이름 있는 대지: 산이 아니다
   no_mana: true                           # [카드] 마나 능력이 없다

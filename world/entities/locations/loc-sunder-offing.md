@@ -11,7 +11,7 @@ links:
   - { to: loc-thunder-bay, rel: 안쪽의 만 }
   - { to: loc-murasa, rel: 남동쪽 해안 }
   - { to: chr-lorthos, rel: 주인 }
-map: { x: 535, y: 577, terrain: deepsea, tiles: 20 }   # 선더만 방향, 무라사 북서쪽 먼 바다 [결정] 2026-09-30
+map: { x: 1241.3, y: 1649.8, terrain: deepsea, tiles: 20 }   # 선더만 방향, 무라사 북서쪽 먼 바다 [결정] 2026-09-30
 sim:
   one_land_with: loc-thunder-bay           # 선더만과 한 땅(섬 하나) [결정] 2026-09-30
 ---

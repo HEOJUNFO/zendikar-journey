@@ -9,8 +9,8 @@ sources: [ZEN-228]
 tags: [섬, 화산, 산맥, 적색]
 links:
   - { to: loc-ondu, rel: 딸린 대륙 }
-  - { to: loc-valakut, rel: 탈리브의 왕관 최고봉 }
-map: { x: 1790, y: 1267, terrain: volcanic, size: island, of: loc-ondu, tiles: 20 }   # 기본 산: 적 마나 [결정] 2026-09-30. 방향은 [가공]
+  - { to: loc-crown-of-talib, rel: 안의 구역 (산맥, 그 안에 발라쿠트) }
+map: { x: 1274.4, y: 985, terrain: volcanic, size: island, of: loc-ondu, tiles: 20 }   # 기본 산: 적 마나 [결정] 2026-09-30. 방향은 [가공]
 ---
 
 ## 설정
@@ -21,4 +21,4 @@ map: { x: 1790, y: 1267, terrain: volcanic, size: island, of: loc-ondu, tiles: 2
 
 - 온두에 딸린 섬이다 (`map.of: loc-ondu`) ([결정] 2026-09-30: 사용자가 발라쿠트를 설정대로 온두 쪽으로 옮기기로 함). 설정에 방향이 없어 온두의 동쪽에 둔다 ([가공]).
 - **기본 산**이다 ([결정] 2026-09-30, 지형 `volcanic`): 유대를 맺으면 적 마나 1을 내고, 산 종류라 발라쿠트의 산으로 세고 페치로 찾을 수 있다.
-- 안의 구역 발라쿠트(`loc-valakut`).
+- 안의 구역 탈리브의 왕관(`loc-crown-of-talib`, 기본 산 15칸)이 섬의 대부분을 덮고, 그 안에 다시 구역 발라쿠트(`loc-valakut`)가 있다 ([배경], [결정] 2026-10-01 구역 안의 구역: 베이엔 › 탈리브의 왕관 › 발라쿠트).

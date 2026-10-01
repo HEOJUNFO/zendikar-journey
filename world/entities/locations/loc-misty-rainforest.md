@@ -8,7 +8,6 @@ status: canon
 sources: [ZEN-220, ZEN-229, ZEN-188]
 tags: [우림, 길, 페치]
 links:
-  - { to: chr-territorial-baloth, rel: 안개 속에 도사린 발로스 }
   - { to: loc-murasa, rel: 바깥 지역 }
   - { to: loc-tazeem, rel: 길이 닿는 물가 }
   - { to: law-life, rel: 길을 여는 값 }

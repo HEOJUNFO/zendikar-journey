@@ -11,7 +11,7 @@ links:
   - { to: loc-guul-draz, rel: 겹친 늪 대륙 }
   - { to: loc-bala-ged, rel: 겹친 밀림 대륙 }
   - { to: law-life, rel: 길을 여는 값 }
-map: { x: 954, y: 1696, terrain: ruins, tiles: 12 }
+map: { x: 1870, y: 955, terrain: ruins, tiles: 12 }
 sim:
   nonbasic: true                          # 이름 있는 대지
   no_mana: true                           # [카드] 마나 능력이 없다

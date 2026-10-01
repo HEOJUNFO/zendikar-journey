@@ -1432,10 +1432,10 @@ test('the real Malakir: one who gained life today walks in and the needlebite tr
   assert.equal(p.life, 16); // 20 + 1 - 5
 });
 
-test('the real baloth starts out in the jungle of Murasa', () => {
+test('the real baloth starts out in Turntimber, the apex predator there (as the lore has it)', () => {
   const world = loadWorld();
   const state = newState(world, { seed: 1, mode: 'observer' });
-  assert.equal(state.actors['cre-baloth']?.region, 'loc-murasa');
+  assert.equal(state.actors['cre-baloth']?.region, 'loc-turntimber-grove');
 });
 
 test('an NPC learns a spell by a learn block where it is taught, then casts it by a cast block on the one the LLM picks', async () => {
@@ -1485,10 +1485,11 @@ test('the real Emeria teaches the celestial mantle, and Iona, who lives there, i
   assert.ok(offered?.some((s) => s.id === 'spl-celestial-mantle' && s.at === 'loc-emeria'));
 });
 
-test('the real Chandra wanders Akoum', () => {
+test('the real Chandra wanders the Teeth of Akoum, over the Eye of Ugin', () => {
   const world = loadWorld();
   const state = newState(world, { seed: 1, mode: 'observer' });
-  assert.equal(state.actors['chr-chandra']?.region, 'loc-akoum');
+  assert.equal(state.actors['chr-chandra']?.region, 'loc-teeth-of-akoum');
+  assert.equal(region(world, 'loc-teeth-of-akoum').parent, 'loc-akoum');
   assert.equal(state.actors['chr-chandra']?.loyalty, 5);
 });
 
@@ -1671,12 +1672,12 @@ test('a hellkite that strikes and can pay strikes once more that hour; without t
   assert.ok(!texts(poor).some((t) => t.includes('한 번 더 싸운다')));
 });
 
-test('the real Hellkite Charger flies over Akoum, with haste', () => {
+test('the real Hellkite Charger flies over the Teeth of Akoum, with haste', () => {
   const world = loadWorld();
   const state = newState(world, { seed: 1, mode: 'observer' });
   const h = state.actors['cre-hellkite'];
   assert.equal(h?.name, '헬카이트 돌격대');
-  assert.equal(h.region, 'loc-akoum');
+  assert.equal(h.region, 'loc-teeth-of-akoum');
   assert.deepEqual(h.abilities, ['fly', 'haste']);
   assert.equal(world.npcs.find((x) => x.id === 'cre-hellkite')?.extraCombat?.costText, '{5}{R}{R}');
 });
@@ -1988,11 +1989,12 @@ test('Sorin: +2 strikes and drinks, −3 sets a life to 10, −7 takes someone\'
   assert.ok(texts(state).some((t) => t.includes('지배가 끝남')));
 });
 
-test('the real Sorin Markov walks Ondu by Graypelt; Chandra has life too', () => {
+test('the real Sorin Markov stays at Graypelt, on the edge of Turntimber in Ondu; Chandra has life too', () => {
   const world = loadWorld();
   const state = newState(world, { seed: 1, mode: 'observer' });
   const so = state.actors['chr-sorin-markov'];
-  assert.equal(so?.region, 'loc-ondu');
+  assert.equal(so?.region, 'loc-graypelt-refuge');
+  assert.equal(region(world, 'loc-graypelt-refuge').top, 'loc-ondu');
   assert.equal(so.loyalty, 4);
   assert.equal(lifeOf(so), 20);
   assert.equal(lifeOf(state.actors['chr-chandra']), 20);
@@ -2189,11 +2191,11 @@ test('tiles: every land holds as many tiles as the lore gives it, at least 100 a
     assert.equal(owners.filter((o) => o === r.id).length, n, r.id); // one land to a tile
   }
   assert.deepEqual(tooSmall(world), []);
-  assert.equal(tilesOf(world, 'loc-makindi').length, 50);
-  assert.equal(tilesOf(world, 'loc-oran-rief').length, 80);
+  assert.equal(tilesOf(world, 'loc-makindi').length, 60); // 70 with Teetering Peaks in it
+  assert.equal(tilesOf(world, 'loc-oran-rief').length, 100);
   assert.equal(tilesOf(world, 'loc-silundi-sea').length, 120);
   // A continent: its open ground and its areas.
-  const ondu = ['loc-ondu', ...world.regions.filter((x) => x.parent === 'loc-ondu').map((x) => x.id)];
+  const ondu = ['loc-ondu', ...descendantsOf(world, 'loc-ondu').map((x) => x.id)];
   assert.equal(ondu.reduce((n, id) => n + tilesOf(world, id).length, 0), 200);
 });
 
@@ -2369,16 +2371,16 @@ test('the real Whiplash Trap lies in Tazeem: two joined today, two flung', () =>
   assert.deepEqual(ev.effects, [{ type: 'bounce', count: 2 }]);
 });
 
-test('the real Summoning Trap lies in Bala Ged and may draw any creature card there, the Shoal Serpent too', () => {
+test('the real Summoning Trap lies in the Guum Wilds of Bala Ged and may draw any creature card there, the Shoal Serpent too', () => {
   const world = loadWorld();
   const ev = world.events.find((e) => e.id === 'evt-summoning-trap');
-  assert.equal(ev?.region, 'loc-bala-ged');
+  assert.equal(ev?.region, 'loc-guum-wilds');
   assert.equal(ev?.refused, true);
   const state = newState(world, { seed: 1, mode: 'observer' });
-  const lib = summonLibrary(state, world, 'loc-bala-ged');
+  const lib = summonLibrary(state, world, 'loc-guum-wilds');
   // Creature cards anywhere, the sea's too; not planeswalkers, not those already there.
-  assert.ok(lib.includes('cre-shoal-serpent') && lib.includes('chr-iona') && lib.includes('cre-sphinx'));
-  assert.ok(!lib.includes('chr-sorin-markov') && !lib.includes('chr-chandra') && !lib.includes('chr-rampaging-baloths'));
+  assert.ok(lib.includes('cre-shoal-serpent') && lib.includes('chr-iona') && lib.includes('cre-sphinx') && lib.includes('chr-rampaging-baloths'));
+  assert.ok(!lib.includes('chr-sorin-markov') && !lib.includes('chr-chandra') && !lib.includes('cre-zendikar-farguide'));
 });
 
 test('one of the sea on land dries out, 1 toughness every 3 hours, unless it crawls back to the water', async () => {
@@ -2602,11 +2604,11 @@ test('forestwalk: one bonded with a forest can\'t strike back at it; a swamp is 
   assert.ok(texts(state).some((t) => t.includes('숲을 걷는 적에게 맞서지 못한다')));
 });
 
-test('the real Zendikar Farguide walks Bala Ged, forestwalking', () => {
+test('the real Zendikar Farguide walks the Guum Wilds of Bala Ged, forestwalking', () => {
   const world = loadWorld();
   const state = newState(world, { seed: 1, mode: 'observer' });
   const g = state.actors['cre-zendikar-farguide'];
-  assert.equal(g?.region, 'loc-bala-ged');
+  assert.equal(g?.region, 'loc-guum-wilds');
   assert.ok(hasAbility(g, 'forestwalk', state.minutes));
   assert.ok(!npcDef(state, world, g.id)?.needs.includes('hunger'));
 });
@@ -2989,11 +2991,11 @@ test('intimidate: one who shares none of its colors can\'t strike back at it, bu
   assert.equal(intimidated(state, world, d, x, state.minutes), false);
 });
 
-test('the real Bladetusk Boar hunts the snowy canyons of Akoum, intimidating', () => {
+test('the real Bladetusk Boar hunts the snowy canyons of the Teeth of Akoum, intimidating', () => {
   const world = loadWorld();
   const state = newState(world, { seed: 1, mode: 'observer' });
   const b = state.actors['cre-bladetusk-boar'];
-  assert.equal(b?.region, 'loc-akoum');
+  assert.equal(b?.region, 'loc-teeth-of-akoum');
   assert.ok(hasAbility(b, 'intimidate', state.minutes));
   assert.deepEqual(actorColors(state, world, b), ['R']);
   assert.ok(npcDef(state, world, b.id)?.beast);
@@ -3332,10 +3334,10 @@ test('goblins grow with the crowd: each Ally joining puts a +1/+1 counter on the
   assert.ok(texts(state).some((t) => t.includes('더 사나워졌다')));
 });
 
-test('the real Tuktuk Grunts roam Akoum, hasty goblin Allies for 50 coin', () => {
+test('the real Tuktuk Grunts roam the Teeth of Akoum, hasty goblin Allies for 50 coin', () => {
   const world = loadWorld();
   const state = newState(world, { seed: 1, mode: 'observer' });
-  assert.equal(state.actors['chr-tuktuk-grunts']?.region, 'loc-akoum');
+  assert.equal(state.actors['chr-tuktuk-grunts']?.region, 'loc-teeth-of-akoum');
   const def = world.npcs.find((x) => x.id === 'chr-tuktuk-grunts')!;
   assert.equal(hirePrice(def), 50);
   assert.ok(def.ally && def.abilities.includes('haste'));
@@ -3423,11 +3425,11 @@ test('an NPC thief\'s master picks the hand to rifle and the card, by the LLM', 
   assert.deepEqual(x.graveyard, ['spl-a']);
 });
 
-test('the real Bala Ged Thief lurks by the buried ruins of Bala Ged, an Ally for 40 coin', () => {
+test('the real Bala Ged Thief lurks by the buried ruins in the Guum Wilds, an Ally for 40 coin', () => {
   const world = loadWorld();
   const state = newState(world, { seed: 1, mode: 'observer' });
   const t = state.actors['chr-bala-ged-thief'];
-  assert.equal(t?.region, 'loc-bala-ged');
+  assert.equal(t?.region, 'loc-guum-wilds');
   const def = world.npcs.find((x) => x.id === 'chr-bala-ged-thief')!;
   assert.equal(hirePrice(def), 40);
   assert.deepEqual(def.rally, [{ type: 'reveal_discard' }]);
@@ -3583,11 +3585,11 @@ test('the real Mind Sludge is taught at the Ghet estate: a discard per swamp', (
   assert.deepEqual(s.effects, [{ type: 'discard_per_land', land: 'swamp' }]);
 });
 
-test('the real Territorial Baloth lurks in the Misty Rainforest: a 4/4 baloth, +2/+2 on landfall', () => {
+test('the real Territorial Baloth lurks in Turntimber: a 4/4 baloth, +2/+2 on landfall', () => {
   const world = loadWorld();
   const state = newState(world, { seed: 1, mode: 'observer' });
   const b = state.actors['chr-territorial-baloth'];
-  assert.equal(b.region, 'loc-misty-rainforest');
+  assert.equal(b.region, 'loc-turntimber-grove');
   const def = npcDef(state, world, b.id)!;
   assert.equal(def.creature, 'cre-baloth');
   assert.ok(def.beast);
@@ -3641,11 +3643,11 @@ test('landfall drain: as he bonds, one there he picks loses 3 life and he grows 
   assert.equal(o.plusCounters, 3);
 });
 
-test('the real Ob Nixilis, the Fallen walks Bala Ged, a flightless Demon', () => {
+test('the real Ob Nixilis, the Fallen walks the Guum Wilds of Bala Ged (by the Khalni Heart), a flightless Demon', () => {
   const world = loadWorld();
   const state = newState(world, { seed: 1, mode: 'observer' });
   const o = state.actors['chr-ob-nixilis'];
-  assert.equal(o.region, 'loc-bala-ged');
+  assert.equal(o.region, 'loc-guum-wilds');
   assert.equal(hasAbility(o, 'fly', state.minutes), false);
   assert.deepEqual(npcDef(state, world, o.id)?.landfallDrain, { life: 3, counters: 3 });
   assert.deepEqual(npcDef(state, world, o.id)?.types, ['demon']);
@@ -3900,15 +3902,52 @@ test('the real Seascape Aerialist lives on the Silundi Coast, a shore of Ondu', 
   assert.deepEqual(world.npcs.find((x) => x.id === 'chr-seascape-aerialist')?.rally, [{ type: 'grant_allies', ability: 'fly' }]);
 });
 
-test('Valakut stands on Beyeen, an island of Ondu: its fire reaches Ondu, its areas and its islands, not Akoum', () => {
+test('Valakut stands in the Crown of Talib on Beyeen, an island of Ondu: its fire reaches Ondu, its areas and its islands, not Akoum', () => {
   const world = loadWorld();
-  assert.equal(region(world, 'loc-valakut').parent, 'loc-beyeen');
+  assert.equal(region(world, 'loc-valakut').parent, 'loc-crown-of-talib');
+  assert.equal(region(world, 'loc-crown-of-talib').parent, 'loc-beyeen');
   assert.equal(region(world, 'loc-beyeen').of, 'loc-ondu');
   assert.deepEqual(landTypes(region(world, 'loc-beyeen')), ['mountain']);
-  assert.equal(region(world, 'loc-teetering-peaks').parent, 'loc-ondu');
+  assert.equal(region(world, 'loc-teetering-peaks').parent, 'loc-makindi');
   const realm = realmOf(world, 'loc-valakut');
-  for (const id of ['loc-ondu', 'loc-makindi', 'loc-beyeen', 'loc-valakut', 'loc-jwar-isle', 'loc-agadeem', 'loc-agadeem-crypt']) assert.ok(realm.includes(id), id);
+  for (const id of ['loc-ondu', 'loc-makindi', 'loc-teetering-peaks', 'loc-graypelt-refuge', 'loc-beyeen', 'loc-crown-of-talib', 'loc-valakut', 'loc-jwar-isle', 'loc-agadeem', 'loc-agadeem-crypt']) assert.ok(realm.includes(id), id);
   assert.equal(realm.includes('loc-akoum'), false);
+});
+
+test('the world as the lore lays it out: areas in areas, and the continents where the lore\'s compass puts them', () => {
+  const world = loadWorld();
+  // Areas in areas (each in the place the lore puts it in).
+  for (const [id, parent] of [
+    ['loc-ghet-estate', 'loc-malakir'],
+    ['loc-piranha-marsh', 'loc-hagra'],
+    ['loc-teetering-peaks', 'loc-makindi'],
+    ['loc-graypelt-refuge', 'loc-turntimber-grove'],
+    ['loc-riverroot', 'loc-guum-wilds'],
+    ['loc-bojuka-bay', 'loc-guum-wilds'],
+    ['loc-magosi', 'loc-umara-gorge'],
+    ['loc-kazandu-refuge', 'loc-kazandu'],
+    ['loc-valakut', 'loc-crown-of-talib'],
+  ]) assert.equal(region(world, id).parent, parent, id);
+  assert.equal(region(world, 'loc-teeth-of-akoum').parent, 'loc-akoum');
+  // The Guum Wilds covers most of Bala Ged; Oran-Rief most of Tazeem.
+  const all = (id: string) => [id, ...descendantsOf(world, id).map((x) => x.id)].reduce((n, x) => n + tilesOf(world, x).length, 0);
+  assert.ok(all('loc-guum-wilds') > all('loc-bala-ged') / 2);
+  assert.ok(all('loc-oran-rief') >= all('loc-tazeem') / 2);
+  // Ondu southwest of Akoum, Sejiri north of it, Bala Ged east of it; Guul Draz south of Bala
+  // Ged, and Tazeem west of Guul Draz across narrow waters.
+  const at = (id: string) => region(world, id);
+  assert.ok(at('loc-ondu').x < at('loc-akoum').x && at('loc-ondu').y > at('loc-akoum').y);
+  assert.ok(at('loc-sejiri').y < at('loc-akoum').y);
+  assert.ok(at('loc-bala-ged').x > at('loc-akoum').x);
+  assert.ok(at('loc-guul-draz').y > at('loc-bala-ged').y);
+  assert.ok(at('loc-tazeem').x < at('loc-guul-draz').x);
+  const coast = (a: string, b: string) => {
+    const ts = (id: string) => [id, ...descendantsOf(world, id).map((x) => x.id)].flatMap((x) => tilesOf(world, x));
+    return Math.min(...ts(a).flatMap((x) => ts(b).map((y) => tileSteps(x, y))));
+  };
+  assert.ok(coast('loc-tazeem', 'loc-guul-draz') <= 6); // narrow waters
+  assert.ok(coast('loc-bala-ged', 'loc-guul-draz') <= 1); // the marsh between
+  assert.ok(coast('loc-ondu', 'loc-akoum') <= 10); // a small sea
 });
 
 test('areas are drawn where the lore puts them (map.pos), inside their region', () => {
@@ -4335,12 +4374,13 @@ test('seastalkers serving the player: theirs to pick whom to bind, or none', asy
   assert.ok(x.boundUntil !== undefined);
 });
 
-test('the real Merfolk Seastalkers lurk in Bojuka Bay, a basic island on the south shore of Bala Ged: islandwalk', () => {
+test('the real Merfolk Seastalkers lurk in Bojuka Bay, a basic island on the edge of the Guum Wilds in Bala Ged: islandwalk', () => {
   const world = loadWorld();
   const state = newState(world, { seed: 1, mode: 'observer' });
   const s = state.actors['chr-merfolk-seastalkers'];
   assert.equal(s?.region, 'loc-bojuka-bay');
-  assert.equal(region(world, 'loc-bojuka-bay').parent, 'loc-bala-ged');
+  assert.equal(region(world, 'loc-bojuka-bay').parent, 'loc-guum-wilds');
+  assert.equal(region(world, 'loc-bojuka-bay').top, 'loc-bala-ged');
   assert.deepEqual(landTypes(region(world, 'loc-bojuka-bay')), ['island']);
   assert.ok(hasAbility(s, 'islandwalk', state.minutes));
   assert.equal(npcDef(state, world, s.id)?.tapFoe?.costText, '{2}{U}');

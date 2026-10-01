@@ -525,8 +525,9 @@ export function outOfTime(state: State, a: Actor, t = state.minutes) {
 
 // Living actors standing in a region (not on the road, not out of time).
 // Raised when the places people live in their homes move (sim/tiles.ts homeTile): a save
-// puts those at home on their own tile again.
-const SPREAD = 2;
+// puts those at home on their own tile again. 3: the lands laid out again by the lore
+// (2026-10-01: areas in areas, the continents moved).
+const SPREAD = 3;
 
 // Those standing on `tile` of `regionId` (null: anywhere in it), not on the way, not out of time.
 export function present(state: State, regionId: string, tile: Tile | undefined | null) {
