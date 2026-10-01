@@ -11,11 +11,12 @@
 // equip: putting equipment they hold on the block's `who` (themselves if none; sim/equipment.ts).
 // bite: having one they control bearing Predatory Urge bite the block's `who` (going to them;
 // sim/bite.ts): the biter is tapped, the two deal each other their power.
-// shield: tapping a Noble Vestige they control to ward the block's `who` (themselves if none;
-// going to them; sim/vestige.ts) against the next damage today.
+// shield / loot: tapping a Noble Vestige (ward against the next damage today) or a Reckless
+// Scholar (draw, then discard) they control for the block's `who` (themselves if none; going to
+// them; sim/tapper.ts).
 // attack: going after the block's `who` (wherever they are) and falling on them: they become
 // foes and fight from the next hour (sim/combat.ts), as the player's attack.
-export const LIFE_KINDS = ['sleep', 'eat', 'work', 'social', 'leisure', 'bond', 'claim', 'store_day', 'spend_day', 'grow', 'fetch', 'learn', 'cast', 'court', 'hire', 'attack', 'recall', 'equip', 'bite', 'shield'] as const;
+export const LIFE_KINDS = ['sleep', 'eat', 'work', 'social', 'leisure', 'bond', 'claim', 'store_day', 'spend_day', 'grow', 'fetch', 'learn', 'cast', 'court', 'hire', 'attack', 'recall', 'equip', 'bite', 'shield', 'loot'] as const;
 export type LifeKind = (typeof LIFE_KINDS)[number];
 
 // start/end are minutes of the game day, 0..1440, end exclusive.

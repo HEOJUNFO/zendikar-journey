@@ -16,7 +16,7 @@ import { itemsAt, itemOwner } from '../items.ts';
 import { equipBlocked, equipmentOf, equipTargets } from '../equipment.ts';
 import { loremastersOf, recallBlocked, recallCount } from '../loremaster.ts';
 import { biteable, readyBiter } from '../bite.ts';
-import { readyWarden, wardable } from '../vestige.ts';
+import { readyTapper, TAP_POWERS, tapAmount, tapTargetable } from '../tapper.ts';
 import { enteredToday, fetchTargets, fireTargets, growBlocked, growLand, landDropBlocked, targetedBondEffect } from '../abilities.ts';
 import { topBlocked, topLand } from '../oracle.ts';
 import { eonLand, spendBlocked, storeBlocked } from '../eons.ts';
@@ -76,12 +76,13 @@ export async function interpret({ world, state, text }: InterpretInput): Promise
   if (!recallBlocked(state, world, p, state.minutes)) {
     days.push(`- {"type":"recall"}  (tap ${shortName(loremastersOf(state, world, p)[0].name)}: come to know ${recallCount(state, world, p)} hidden secret(s) of the world, one per Ally of their party; 1 hour)`);
   }
-  // A Noble Vestige they control: ward one standing with it against the next damage today.
-  const warden = readyWarden(state, world, p, state.minutes);
-  if (warden) {
-    const near = Object.values(state.actors).filter((x) => (x.id === warden.id || together(warden, x)) && wardable(state, x, state.minutes));
-    if (near.length)
-      days.push(`- {"type":"shield","to":"<person id>"}  (tap ${shortName(warden.name)}: the next ${npcDef(state, world, warden.id)!.tapShield} damage that one would take today is prevented; leave "to" out for themselves; once a day; 1 hour. Who: ${near.map((x) => `${x.id} (${shortName(x.name)})`).join(', ')})`);
+  // A Noble Vestige or a Reckless Scholar they control: its power on one standing with it.
+  for (const power of TAP_POWERS) {
+    const w = readyTapper(state, world, p, power, state.minutes);
+    if (!w) continue;
+    const near = Object.values(state.actors).filter((x) => (x.id === w.id || together(w, x)) && tapTargetable(state, world, w, x, state.minutes));
+    const what = power === 'shield' ? `the next ${tapAmount(state, world, w, power)} damage that one would take today is prevented` : 'that one comes to know a hidden secret, then forgets a spell they hold';
+    if (near.length) days.push(`- {"type":"${power}","to":"<person id>"}  (tap ${shortName(w.name)}: ${what}; leave "to" out for themselves; once a day; 1 hour. Who: ${near.map((x) => `${x.id} (${shortName(x.name)})`).join(', ')})`);
   }
   // One they control bearing Predatory Urge: bite someone standing with them.
   const biter = readyBiter(state, p, state.minutes);

@@ -10,7 +10,7 @@ import { controlsKind, masterOf, releaseRetainer, retainersOf } from './retainer
 import { releaseItems } from './items.ts';
 import { owesDiscard } from './discard.ts';
 import { hooks } from './equipment.ts';
-import { shielded } from './vestige.ts';
+import { shielded } from './tapper.ts';
 import { doubleLife, gainLife, lifeOf } from './life.ts';
 import { actorColors, COLOR_LABELS, manaAvailable, payMana, planPayment } from './mana.ts';
 import { HUNT_HUNGER, KILL_FEED, KO_ACTIVITY, KO_HOURS } from './rules.ts';

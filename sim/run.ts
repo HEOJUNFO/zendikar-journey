@@ -23,7 +23,8 @@ import { applyShatter, crushRelic, demolish, demolishOptions, relicsHere, shatte
 import { applyEscape, escapeOptions } from './escape.ts';
 import { loremastersOf, recallBlocked, recallCount } from './loremaster.ts';
 import { biteable, readyBiter } from './bite.ts';
-import { readyWarden, wardable } from './vestige.ts';
+import { readyTapper, tapAmount, tapTargetable } from './tapper.ts';
+import type { TapPower } from './tapper.ts';
 import { crumble, sacrifice, sacrificeDefault } from './monument.ts';
 import { answerTide } from './tide.ts';
 import { topLand } from './oracle.ts';
@@ -1261,7 +1262,8 @@ async function prepare(state: State, world: World, llm: Llm): Promise<string | n
           grow: growInput(state, world, a),
           recall: recallInput(state, world, a),
           bite: biteInput(state, a),
-          shield: shieldInput(state, world, a),
+          shield: tapInput(state, world, a, 'shield'),
+          loot: tapInput(state, world, a, 'loot'),
           fetch: fetchInput(state, world, a),
           court: courtInput(state, world, a),
           hire: hireInput(state, world, a),
@@ -1310,10 +1312,11 @@ function equipInput(state: State, world: World, a: Actor): PlanDayInput['equip']
   };
 }
 
-// A Noble Vestige they control that could ward someone today, for their plan.
-function shieldInput(state: State, world: World, a: Actor): PlanDayInput['shield'] {
-  const w = readyWarden(state, world, a, state.minutes);
-  return w && { who: w.id === a.id ? 'they themselves' : shortName(w.name), amount: npcDef(state, world, w.id)!.tapShield! };
+// A creature they control with a tap power on someone (Noble Vestige, Reckless Scholar) that they
+// could use today, for their plan.
+function tapInput(state: State, world: World, a: Actor, power: TapPower) {
+  const w = readyTapper(state, world, a, power, state.minutes);
+  return w && { who: w.id === a.id ? 'they themselves' : shortName(w.name), amount: tapAmount(state, world, w, power) };
 }
 
 // One they control bearing Predatory Urge who could bite today, for their plan.
@@ -1367,7 +1370,8 @@ function hireInput(state: State, world: World, a: Actor): PlanDayInput['hire'] {
 function peopleInput(state: State, world: World, a: Actor): PlanDayInput['people'] {
   const canAttack = !hasAbility(a, 'defender', state.minutes);
   const biter = readyBiter(state, a, state.minutes);
-  const warden = readyWarden(state, world, a, state.minutes);
+  const warden = readyTapper(state, world, a, 'shield', state.minutes);
+  const scholar = readyTapper(state, world, a, 'loot', state.minutes);
   const out = Object.values(state.actors)
     .filter((x) => !x.dead && x.id !== a.id && !outOfTime(state, x))
     .map((x) => {
@@ -1379,7 +1383,8 @@ function peopleInput(state: State, world: World, a: Actor): PlanDayInput['people
         talk: !def?.beast,
         attack: canAttack && !(a.seized && a.master === x.id),
         bite: !!biter && biteable(state, world, biter, x, state.minutes),
-        shield: !!warden && wardable(state, x, state.minutes),
+        shield: !!warden && tapTargetable(state, world, warden, x, state.minutes),
+        loot: !!scholar && tapTargetable(state, world, scholar, x, state.minutes),
       };
     });
   return out.length ? out : undefined;

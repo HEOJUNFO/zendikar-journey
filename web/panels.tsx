@@ -10,7 +10,14 @@ import { woundsOf } from '../sim/combat.ts';
 import { COLOR_LABELS, formatMana, manaAvailable, manaCapacity, manaLabel } from '../sim/mana.ts';
 import { loremastersOf, recallBlocked, recallCount } from '../sim/loremaster.ts';
 import { biteBlocked, bitersOf } from '../sim/bite.ts';
-import { shieldBlocked, wardensOf } from '../sim/vestige.ts';
+import { TAP_POWERS, tapBlocked, tappersOf } from '../sim/tapper.ts';
+import type { TapPower } from '../sim/tapper.ts';
+
+// The buttons for a creature's power on someone (sim/tapper.ts).
+const TAP_UI: Record<TapPower, { emoji: string; self: string; other: string; title: string }> = {
+  shield: { emoji: '🕯️', self: '자신에게 가호', other: '가호', title: '오늘 받을 다음 피해를 막는다 (영혼은 자정까지 묶임)' },
+  loot: { emoji: '🧭', self: '학자의 이야기 듣기', other: '학자의 이야기', title: '숨은 것 하나를 알게 되고 주문 하나를 잊는다 (학자는 자정까지 묶임)' },
+};
 import { bondBlocked, bondTargets, enteredToday, fetchTargets, landDropBlocked, fireTargets, firesOnBond, growBlocked, growLand, targetedBondEffect } from '../sim/abilities.ts';
 import { BOND_HOURS } from '../sim/actions.ts';
 import { CLAIM_HOURS, claimBlocked, itemsAt, itemsOf } from '../sim/items.ts';
@@ -680,18 +687,20 @@ export function CharacterControls(props: {
           </button>
         </div>
       )}
-      {wardensOf(state, world, p).length > 0 && (
-        <div className="row">
-          <span className="muted">🕯️ {shortName(wardensOf(state, world, p)[0].name)}:</span>
+      {TAP_POWERS.filter((power) => tappersOf(state, world, p, power).length > 0).map((power) => (
+        <div className="row" key={power}>
+          <span className="muted">
+            {TAP_UI[power].emoji} {shortName(tappersOf(state, world, p, power)[0].name)}:
+          </span>
           <button
-            disabled={busy || !!stuck || !!shieldBlocked(state, world, p, p.id, state.minutes)}
-            title={shieldBlocked(state, world, p, p.id, state.minutes) ?? '오늘 받을 다음 피해를 막는다 (영혼은 자정까지 묶임)'}
-            onClick={() => onAct({ type: 'shield' })}
+            disabled={busy || !!stuck || !!tapBlocked(state, world, p, power, p.id, state.minutes)}
+            title={tapBlocked(state, world, p, power, p.id, state.minutes) ?? TAP_UI[power].title}
+            onClick={() => onAct({ type: power })}
           >
-            자신에게 가호
+            {TAP_UI[power].self}
           </button>
         </div>
-      )}
+      ))}
       {people.length > 0 && (
         <form
           className="row"
@@ -731,16 +740,18 @@ export function CharacterControls(props: {
               🦷 물어뜯기
             </button>
           )}
-          {target && wardensOf(state, world, p).length > 0 && (
-            <button
-              type="button"
-              disabled={busy || !!stuck || !!shieldBlocked(state, world, p, target.id, state.minutes)}
-              title={shieldBlocked(state, world, p, target.id, state.minutes) ?? `${shortName(target.name)}이(가) 오늘 받을 다음 피해를 막는다`}
-              onClick={() => onAct({ type: 'shield', to: target.id })}
-            >
-              🕯️ 가호
-            </button>
-          )}
+          {target &&
+            TAP_POWERS.filter((power) => tappersOf(state, world, p, power).length > 0).map((power) => (
+              <button
+                key={power}
+                type="button"
+                disabled={busy || !!stuck || !!tapBlocked(state, world, p, power, target.id, state.minutes)}
+                title={tapBlocked(state, world, p, power, target.id, state.minutes) ?? `${shortName(target.name)}: ${TAP_UI[power].title}`}
+                onClick={() => onAct({ type: power, to: target.id })}
+              >
+                {TAP_UI[power].emoji} {TAP_UI[power].other}
+              </button>
+            ))}
           {target &&
             known.filter((s) => s.target !== 'self').map((s) => {
               const kick = !!s.kicker && !castBlocked(state, world, p, s.id, target.id, true, state.minutes);

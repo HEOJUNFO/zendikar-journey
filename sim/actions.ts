@@ -10,7 +10,7 @@ import type { State, Task } from './state.ts';
 import { startTravel, travelBlocked } from './step.ts';
 import { RECALL_HOURS, recallBlocked, recallCount } from './loremaster.ts';
 import { BITE_HOURS, biteBlocked, readyBiter } from './bite.ts';
-import { readyWarden, SHIELD_HOURS, shieldBlocked } from './vestige.ts';
+import { readyTapper, TAP_HOURS, tapAmount, tapBlocked } from './tapper.ts';
 import { bondBlocked, bondTargets, FETCH_HOURS, fetchBlocked, firesOnBond, growBlocked, HAND, landDropBlocked, targetedBondEffect, TOP } from './abilities.ts';
 import { handBlocked, topBlocked } from './oracle.ts';
 import { CLAIM_HOURS, claimBlocked, itemDef } from './items.ts';
@@ -61,6 +61,9 @@ export const ActionSchema = z.discriminatedUnion('type', [
   // Have a Noble Vestige you control ward `to` (yourself if none), one standing with it: it is
   // tapped until midnight, and the next damage they would take today is prevented.
   z.object({ type: z.literal('shield'), to: z.string().optional() }),
+  // Have a Reckless Scholar you control tell `to` (yourself if none), one standing with it, what it
+  // has heard: they come to know a secret, then let go of a spell. It is tapped until midnight.
+  z.object({ type: z.literal('loot'), to: z.string().optional() }),
   // Hire a mercenary here: pay their price and they serve you for good (sim/allies.ts).
   z.object({ type: z.literal('hire'), to: z.string() }),
   // Answer the pick you owe (an Ally's rally in your party): someone's id, or null for no one.
@@ -265,14 +268,18 @@ export function startAction(state: State, world: World, action: Action): string 
       text = biter.id === p.id ? `포식 충동에 몸을 맡겨 ${josa(name, '을', '를')} 물어뜯으려 한다. 자정까지 묶인다.` : `${josa(shortName(biter.name), '이', '가')} ${josa(name, '을', '를')} 물어뜯게 한다.`;
       break;
     }
-    case 'shield': {
-      const why = shieldBlocked(state, world, p, action.to, t);
+    case 'shield':
+    case 'loot': {
+      const why = tapBlocked(state, world, p, action.type, action.to, t);
       if (why) return why;
       const b = state.actors[action.to ?? p.id];
-      const w = readyWarden(state, world, p, t, b)!;
+      const w = readyTapper(state, world, p, action.type, t, b)!;
       const name = b.id === p.id ? '자신' : shortName(b.name);
-      task = { kind: 'shield', activity: `${name}에게 가호`, emoji: '🕯️', until: until(SHIELD_HOURS), who: b.id };
-      text = `${josa(shortName(w.name), '이', '가')} ${name}에게 희망의 빛을 드리운다. 오늘 받을 다음 피해 ${npcDef(state, world, w.id)!.tapShield}를 막는다.`;
+      task = action.type === 'shield' ? { kind: 'shield', activity: `${name}에게 가호`, emoji: '🕯️', until: until(TAP_HOURS), who: b.id } : { kind: 'loot', activity: `${name}에게 학자의 이야기`, emoji: '🧭', until: until(TAP_HOURS), who: b.id };
+      text =
+        action.type === 'shield'
+          ? `${josa(shortName(w.name), '이', '가')} ${name}에게 희망의 빛을 드리운다. 오늘 받을 다음 피해 ${tapAmount(state, world, w, 'shield')}를 막는다.`
+          : `${josa(shortName(w.name), '이', '가')} ${name}에게 주워들은 것을 늘어놓는다. 숨은 것 하나를 알게 되고, 주문 하나를 잊는다.`;
       break;
     }
     case 'hire': {

@@ -106,7 +106,7 @@ export type Actor = {
   auras?: { spell: string; name: string; by: string; pt: Pt; base?: Pt; doubleLifeOnHit: boolean; added?: Ability[]; noUntap?: boolean }[];
   // Combat damage taken this turn; it wears off when the turn ends (00:00).
   wounds?: { day: number; amount: number };
-  // Damage prevented for them today, still to come (Noble Vestige's ward, sim/vestige.ts).
+  // Damage prevented for them today, still to come (Noble Vestige's ward, sim/tapper.ts).
   shield?: { day: number; amount: number };
   // Those who dealt them combat damage this turn (Inferno Trap: "dealt damage by two or more
   // creatures this turn"). `sprung`: the `hurt` events they set off today.

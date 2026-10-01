@@ -43,7 +43,7 @@ import { upkeepWins } from './win.ts';
 import { allyJoined, hireMerc, hirePrice } from './allies.ts';
 import { askOptions, askText } from './asks.ts';
 import { applyEscape, escapeOptions } from './escape.ts';
-import { shieldBlocked, shielded } from './vestige.ts';
+import { shielded, tapBlocked } from './tapper.ts';
 import type { Actor, State } from './state.ts';
 import { affectedRegions, buildWorld, descendantsOf, distance, landTypes, placeName, realmOf, region, travelHours, within } from './world.ts';
 import type { RawEntity } from './world.ts';
@@ -6168,12 +6168,12 @@ test('Noble Vestige: the player taps the spirit they keep to ward themselves; th
   const state = character(world, 'loc-a');
   const [p, v] = [state.actors[PLAYER_ID], state.actors['chr-v']];
   v.tile = p.tile;
-  assert.ok(shieldBlocked(state, world, p, undefined, state.minutes)?.includes('영혼이 없다'));
+  assert.ok(tapBlocked(state, world, p, 'shield', undefined, state.minutes)?.includes('영혼이 없다'));
   v.master = p.id;
   await act(state, world, { type: 'shield' });
   assert.ok(v.boundUntil !== undefined);
   assert.deepEqual(p.shield?.amount, 1);
-  assert.ok(shieldBlocked(state, world, p, undefined, state.minutes)?.includes('지금 쓸 수 없다'));
+  assert.ok(tapBlocked(state, world, p, 'shield', undefined, state.minutes)?.includes('지금 쓸 수 없다'));
   dealDamage(state, p, 3, state.minutes, '시험');
   assert.equal(woundsOf(p, state.minutes), 2);
   assert.equal(p.shield, undefined);
@@ -6344,4 +6344,55 @@ test('the real Pitfall Trap lies on one tile of the Guum Wilds: one attacker alo
   assert.equal(ev.trigger, 'attacked');
   assert.ok(ev.exactly && ev.on_tile && ev.attackers === 1);
   assert.ok(eventTile(world, ev));
+});
+
+const scholar = (plan?: unknown[][]) => npc('chr-s', { ...npcSim('loc-a', 'work', [2, 1]), mana: { U: 3 }, tap_loot: true, ...(plan ? { plan } : {}) });
+
+test('Reckless Scholar: the player has the scholar they keep tell them what it heard: a secret known, then a spell let go', async () => {
+  const world = fixture([scholar(), demolishSpell, escapeSpell]);
+  const state = character(world, 'loc-a');
+  const [p, s] = [state.actors[PLAYER_ID], state.actors['chr-s']];
+  s.tile = p.tile;
+  s.master = p.id;
+  p.spells = ['spl-dm', 'spl-ne'];
+  const known = p.knowledge?.length ?? 0;
+  await act(state, world, { type: 'loot' });
+  assert.ok(s.boundUntil !== undefined);
+  assert.equal(p.knowledge?.length, known + 1);
+  const ask = state.asks?.find((x) => x.effect.type === 'discard');
+  assert.ok(ask, 'a spell to let go');
+  await act(state, world, { type: 'choose', pick: 'spl-dm' });
+  assert.deepEqual(p.spells, ['spl-ne']);
+  assert.ok(tapBlocked(state, world, p, 'loot', undefined, state.minutes)?.includes('지금 쓸 수 없다'));
+});
+
+test('Reckless Scholar: on its own, it plans a loot block on someone; they learn a secret and forget their only spell', async () => {
+  const plan = [
+    ['00:00', '06:00', 'loc-a', 'sleep', '잠', '😴'],
+    ['06:00', '07:00', 'loc-a', 'loot', '이야기', '🧭', undefined, undefined, 'chr-x'],
+    ['07:00', '24:00', 'loc-a', 'work', '일', '🔨'],
+  ];
+  const world = fixture([scholar(plan), demolishSpell, npc('chr-x', npcSim('loc-a'))]);
+  const state = newState(world, { seed: 1, mode: 'observer' });
+  const [s, x] = [state.actors['chr-s'], state.actors['chr-x']];
+  x.tile = s.tile;
+  x.spells = ['spl-dm'];
+  let offered: PlanDayInput | undefined;
+  await advance(state, world, 1, { planDay: async (input) => (input.id === 'chr-s' && (offered = input), planDay!(input)) });
+  assert.deepEqual(offered?.loot, { who: 'they themselves', amount: 1 });
+  assert.ok(offered?.people?.find((y) => y.id === 'chr-x')?.loot);
+  assert.equal(x.knowledge?.length, 1);
+  assert.deepEqual(x.spells, []);
+  assert.ok(s.boundUntil !== undefined);
+});
+
+test('the real Reckless Scholar haunts the docks of Sea Gate: talked round, tells one a secret for a spell', () => {
+  const world = loadWorld();
+  const state = newState(world, { seed: 1, mode: 'observer' });
+  const s = state.actors['chr-reckless-scholar'];
+  assert.equal(s?.region, 'loc-sea-gate');
+  const def = npcDef(state, world, s.id)!;
+  assert.ok(def.tapLoot && !def.beast && !def.hireable);
+  assert.deepEqual(ptOf(s), [2, 1]);
+  assert.equal(swayBlocked(state, world, s), null);
 });
