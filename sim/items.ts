@@ -5,7 +5,7 @@ import { placeTile, sameTile, tileLabel } from './tiles.ts';
 import { gainLife, lifeOf } from './life.ts';
 import { formatMana, manaAvailable, payMana, planPayment } from './mana.ts';
 import { addLog, npcDef } from './state.ts';
-import type { Actor, State } from './state.ts';
+import type { Actor, Choice, State } from './state.ts';
 import type { Tile } from './tiles.ts';
 import { josa, shortName } from './text.ts';
 import { canStay, placeName, region } from './world.ts';
@@ -99,6 +99,41 @@ export function claimItem(state: State, world: World, a: Actor, itemId: string, 
     actors: [a.id],
     t,
   });
+  // "When this enters, return N lands you control to their owner's hand" (Khalni Gem).
+  for (const e of x.effects) {
+    if (e.type !== 'return_lands') continue;
+    const owed = returnLandsOwed(state, world, a, x.id, e.count, t);
+    if (owed) (a.kind === 'player' ? (state.asks ??= []) : (state.choices ??= [])).push(owed);
+  }
+}
+
+// Lands `a` still owes back to the item: with no more bonds than that, all of them go at once;
+// else the pick they owe (the player at once, an NPC by the LLM after the hour), one at a time.
+export function returnLandsOwed(state: State, world: World, a: Actor, itemId: string, left: number, t: number): Choice | undefined {
+  const bonds = a.bonds ?? [];
+  if (left <= 0 || !bonds.length) return undefined;
+  if (bonds.length <= left) {
+    for (const id of [...bonds]) returnLand(state, world, a, id, itemId, t);
+    return undefined;
+  }
+  return { by: a.id, land: a.region, effect: { type: 'return_lands', item: itemId, left }, candidates: [...bonds], t };
+}
+
+// The pick lands: that bond (or, an answer that isn't one of theirs, the first) breaks. The
+// next pick owed, if any.
+export function answerReturnLand(state: State, world: World, a: Actor, pick: string | null, eff: { item: string; left: number }, t: number) {
+  const bonds = a.bonds ?? [];
+  const id = pick && bonds.includes(pick) ? pick : bonds[0];
+  if (!id) return undefined;
+  returnLand(state, world, a, id, eff.item, t);
+  return returnLandsOwed(state, world, a, eff.item, eff.left - 1, t);
+}
+
+// "Return to hand": the bond breaks; they may bond with it again (one land a day).
+function returnLand(state: State, world: World, a: Actor, landId: string, itemId: string, t: number) {
+  a.bonds = (a.bonds ?? []).filter((b) => b !== landId);
+  const name = itemDef(world, itemId)?.name ?? itemId;
+  addLog(state, { kind: 'effect', text: `${josa(shortName(a.name), '이', '가')} ${region(world, landId).name}과의 유대를 ${name}에 내어 주었다 (다시 맺을 수 있다).`, regions: [a.region], actors: [a.id], t });
 }
 
 // Landfall for the items `a` holds: "you may have your life total become the number of charge

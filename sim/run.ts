@@ -9,7 +9,7 @@ import type { Actor, Choice, GmPlan, LogEntry, State } from './state.ts';
 import { eligibleGmEvents, ruinsUntil, step } from './step.ts';
 import { addFoe, clash, dealDamage, unblockable } from './combat.ts';
 import { relationsText, remember } from './relations.ts';
-import { claimableItems, itemWhere } from './items.ts';
+import { answerReturnLand, claimableItems, itemWhere } from './items.ts';
 import { equipBlocked, equipmentOf, equipTargets } from './equipment.ts';
 import { lifeOf } from './life.ts';
 import { foresightText } from './foresight.ts';
@@ -35,7 +35,7 @@ import { abilityBlocked, applyBondEffect, applyDrainGrow, applyEnterDestroy, ent
 import { bindRetainer, courtTargets, followsMaster, refuse, seize, swayBlocked } from './retainers.ts';
 import { josa, shortName } from './text.ts';
 import type { ScheduleBlock } from './types.ts';
-import { ABILITY_LABELS, canStay, CREATURE_TYPE_LABELS, LAND_TYPE_LABELS, landTypes, placeName } from './world.ts';
+import { ABILITY_LABELS, canStay, CREATURE_TYPE_LABELS, LAND_TYPE_LABELS, landTypes, placeName, region } from './world.ts';
 import type { ActivatedAbility, EventDef, NpcDef, Region, Speaker, SpellDef, World } from './world.ts';
 import type { PlanDayInput } from './llm/planner.ts';
 
@@ -591,6 +591,25 @@ async function choices(state: State, world: World, llm: Llm) {
     // Relics to destroy (candidates are things, not people).
     if (c.effect.type === 'crush') {
       if (by && !by.dead && npc) await crushChoice(state, world, llm, by, npc, c.effect);
+      continue;
+    }
+    // Khalni Gem: which land they give back (one must go; with no usable answer, the first).
+    if (c.effect.type === 'return_lands') {
+      // One at a time, all now.
+      let owed: Choice | undefined = c;
+      while (owed?.effect.type === 'return_lands' && by && !by.dead && npc) {
+        const eff = owed.effect;
+        const options = (by.bonds ?? []).map((id) => ({ id, label: region(world, id).name }));
+        let pick: string | null = null;
+        if (llm.pick && options.length) {
+          try {
+            pick = await llm.pick({ world, state, npc, what: `${state.items?.[eff.item]?.name ?? ''}을(를) 길들인 값으로 유대를 맺은 땅 하나를 내어 주어야 한다 (다시 맺을 수 있다, 하루 한 땅)`, options });
+          } catch (e) {
+            console.warn(`pick (return_lands) for ${by.id} failed:`, e);
+          }
+        }
+        owed = answerReturnLand(state, world, by, pick, eff, state.minutes);
+      }
       continue;
     }
     // World Queller: a type to name (or none), then what each there gives up.

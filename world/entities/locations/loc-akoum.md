@@ -5,11 +5,12 @@ name: 아쿰
 name_en: Akoum
 summary: 젠디카르 동쪽의 험한 화산 대륙. 검붉은 바위 협곡이 이어지고, 뒤틀린 땅에서 떨어져 나온 바위 조각들이 하늘에 떠 있다
 status: canon
-sources: [ZEN-210, ZEN-223, ZEN-120, ZEN-131, ZEN-146, ZEN-5, ZEN-150, ZEN-152, ZEN-118, ZEN-123, ZEN-133]
+sources: [ZEN-210, ZEN-223, ZEN-120, ZEN-131, ZEN-146, ZEN-5, ZEN-150, ZEN-152, ZEN-118, ZEN-123, ZEN-133, ZEN-205]
 tags: [대륙, 화산, 협곡, 적색]
 links:
   - { to: spl-elemental-appeal, rel: 배우는 주문 }
   - { to: evt-inferno-trap, rel: 산속 화산 동굴에 깃든 함정 }
+  - { to: loc-ora-ondar, rel: 안의 구역 (불가능한 정원) }
   - { to: cre-bladetusk-boar, rel: 눈 덮인 협곡을 내달리는 멧돼지 }
   - { to: chr-tuktuk-grunts, rel: 사는 고블린 용병 }
   - { to: spl-spire-barrage, rel: 가르치는 주문 }
@@ -38,6 +39,7 @@ map: { x: 2236.4, y: 1105.2, terrain: volcanic, size: continent, tiles: 180 }
 - 붉은 용 헬카이트 돌격대(`cre-hellkite`, ZEN-131)가 아쿰의 하늘을 날며 사냥한다 ([배경] 아쿰의 용, [결정] 2026-09-30).
 - 룬 새긴 헤드론 폐허에 룬불꽃 함정(`evt-runeflare-trap`, ZEN-146)이 깃들어 있다. 그날 셋 이상 뽑은(비밀을 알게 된) 이가 아쿰(구역 포함)에 있으면 불길을 뿜는다 ([결정] 2026-09-30).
 - 산속 화산 동굴에 지옥불 함정(`evt-inferno-trap`, ZEN-133)이 깃들어 있다. 아쿰(구역 포함)에서 누군가 그날 서로 다른 둘 이상에게 싸움 피해를 입으면, 그를 다치게 한 이 하나에게 불길을 뿜는다 ([결정] 2026-10-01).
+- 북쪽 수정 분지에 다섯 층의 숲 오라 온다르(`loc-ora-ondar`, 기본 숲 15칸, '불가능한 정원')가 솟아 있다 ([결정] 2026-10-01, [배경]). 숲의 한가운데에 칼니 보석(`itm-khalni-gem`, ZEN-205)이 숨어 있다.
 - 칼엄니 멧돼지(`cre-bladetusk-boar`, ZEN-118)가 북서쪽 눈 덮인 높은 협곡을 내달리며 사냥한다 ([결정] 2026-10-01). 위협: 적색 기운이 없는 이는 맞받아치지 못한다. 길을 막는 고블린은 내던져진다.
 - 후광 사냥꾼(ZEN-96)은 처음 여기 산속 굴에 두었다가 2026-10-01 에메리아 가까이 타짐의 절벽으로 옮겼다.
 

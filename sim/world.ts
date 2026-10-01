@@ -589,6 +589,12 @@ export const ItemSimSchema = z.strictObject({
         z.strictObject({ type: z.literal('anthem'), pt: z.tuple([z.number().int(), z.number().int()]), abilities: z.array(z.enum(ABILITIES)).default([]) }),
         // "At the beginning of your upkeep, sacrifice a creature. If you can't, sacrifice this."
         z.strictObject({ type: z.literal('upkeep_sacrifice') }),
+        // "{T}: Add N mana of any one color": its owner draws on N more of any color each turn
+        // (sim/mana.ts `manaCapacity`).
+        z.strictObject({ type: z.literal('mana'), amount: z.number().int().positive() }),
+        // "When this enters, return N lands you control to their owner's hand": when tamed, the
+        // tamer's bonds with N lands break (they may bond with them again).
+        z.strictObject({ type: z.literal('return_lands'), count: z.number().int().positive() }),
       ]),
     )
     .default([]),

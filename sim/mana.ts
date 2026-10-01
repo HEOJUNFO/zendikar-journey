@@ -11,13 +11,16 @@ export const COLORS = ['W', 'U', 'B', 'R', 'G'] as const;
 export type Color = (typeof COLORS)[number];
 // One of two colors, chosen when spent ({T}: Add {B} or {R}).
 export type Hybrid = `${Color}/${Color}`;
+// Any color, chosen when spent (Khalni Gem: "two mana of any one color").
+export const ANY_COLOR = 'W/U/B/R/G' as const;
 // C: colorless mana (from a colorless land). Pays generic costs only.
-export type ManaSymbol = Color | 'C' | Hybrid;
+export type ManaSymbol = Color | 'C' | Hybrid | typeof ANY_COLOR;
 export type Mana = Partial<Record<ManaSymbol, number>>;
 export const COLOR_LABELS: Record<Color | 'C', string> = { W: '백', U: '청', B: '흑', R: '적', G: '녹', C: '무색' };
 
 // '흑', '무색', '흑/적'
 export function manaLabel(sym: ManaSymbol) {
+  if (sym === ANY_COLOR) return '아무 색';
   return sym.split('/').map((c) => COLOR_LABELS[c as Color | 'C']).join('/');
 }
 
@@ -103,6 +106,11 @@ export function manaCapacity(state: State, world: World, a: Holder, t?: number):
     }
     const sym: ManaSymbol = r.color ?? 'C';
     out[sym] = (out[sym] ?? 0) + 1;
+  }
+  // Their items that give mana ("{T}: Add two mana of any one color", Khalni Gem).
+  for (const x of world.items) {
+    if (state.items?.[x.id]?.owner !== a.id || state.items[x.id].gone) continue;
+    for (const e of x.effects) if (e.type === 'mana') out[ANY_COLOR] = (out[ANY_COLOR] ?? 0) + e.amount;
   }
   return out;
 }

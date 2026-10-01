@@ -15,7 +15,8 @@ import { addLog, npcDef, player, together } from './state.ts';
 import { applyPump } from './pump.ts';
 import type { Actor, Choice, State } from './state.ts';
 import { josa, shortName } from './text.ts';
-import { CREATURE_TYPE_LABELS } from './world.ts';
+import { CREATURE_TYPE_LABELS, region } from './world.ts';
+import { answerReturnLand } from './items.ts';
 import type { World } from './world.ts';
 
 // What the pick is about, for them.
@@ -40,6 +41,7 @@ export function askText(state: State, world: World, c: Choice) {
     const s = shortName(state.actors[c.effect.source]?.name ?? '');
     return `${s}의 새벽: 유형 하나를 부르면 ${s} 곁의 모두(당신도)가 그 유형의 제 것 하나를 내놓는다 (땅: 유대 하나, 생물: 부리는 생물 하나, 마법물체: 아이템 하나, 부여마법: 오라 하나). 무엇을?`;
   }
+  if (c.effect.type === 'return_lands') return `${state.items?.[c.effect.item]?.name ?? c.effect.item}: 유대를 맺은 땅 ${c.effect.left}곳을 내어 주어야 한다 (다시 맺을 수 있다). 먼저 어느 땅을?`;
   if (c.effect.type === 'quelled') return `${shortName(state.actors[c.effect.source]?.name ?? '')} 앞에서 제 ${QUELL_LABELS[c.effect.kind]} 하나를 내놓아야 한다. 무엇을?`;
   if (c.effect.type === 'destroy') return `이곳에 들어서며 ${c.effect.kind ? `${CREATURE_TYPE_LABELS[c.effect.kind]} ` : ''}하나를 ${c.effect.kicker ? `힘(${c.effect.kicker})을 더 들여 ` : ''}파괴할 수 있다. 누구를? (파괴된 이는 죽는다)`;
   return '';
@@ -63,6 +65,10 @@ export function askOptions(state: State, world: World, c: Choice): { pick: strin
     return c.effect.first ? opts : [...opts, { pick: null, label: '그만둔다' }];
   }
   if (c.effect.type === 'quell') return [...QUELL_KINDS.map((k) => ({ pick: k as string | null, label: QUELL_LABELS[k] })), { pick: null, label: '부르지 않는다' }];
+  if (c.effect.type === 'return_lands') {
+    const p = state.actors[c.by];
+    return (p?.bonds ?? []).map((id) => ({ pick: id as string | null, label: region(world, id).name }));
+  }
   if (c.effect.type === 'quelled') {
     const p = state.actors[c.by];
     const owned = p ? permanentsOf(state, world, p, c.effect.kind) : [];
@@ -138,6 +144,9 @@ export function answerAsk(state: State, world: World, pick: string | null, t: nu
     const source = state.actors[c.effect.source];
     const kind = QUELL_KINDS.find((k) => k === pick);
     if (source && kind) applyQuell(state, world, source, kind, t);
+  } else if (c.effect.type === 'return_lands') {
+    const next = answerReturnLand(state, world, p, pick, c.effect, t);
+    if (next) (state.asks ??= []).unshift(next);
   } else if (c.effect.type === 'quelled') {
     // One must be given: an answer that isn't one of theirs gives the first.
     const source = state.actors[c.effect.source];

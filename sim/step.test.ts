@@ -24,7 +24,7 @@ import { recallBlocked, recallCount } from './loremaster.ts';
 import { pumpMax, pumpsDue } from './pump.ts';
 import { drawKnowledge, handSize, huntKnowledge, knownSecrets, secretsOf } from './knowledge.ts';
 import { revealHand } from './discard.ts';
-import { claimBlocked, itemOwner, itemsAt, itemWhere } from './items.ts';
+import { claimBlocked, claimItem, itemOwner, itemsAt, itemWhere } from './items.ts';
 import { spendBlocked, storeBlocked } from './eons.ts';
 import { applyEnterDestroy, bondBlocked, enterDestroy, onEnter, bondLand, bondTargets, callForth, fetchTargets, fireTargets, firesOnBond, growBlocked, spawnWild, summonLibrary, useAbility } from './abilities.ts';
 import { DEPLETED_LABEL, DESTROYED_DAYS, TRAVEL_UNITS_PER_HOUR } from './rules.ts';
@@ -4121,4 +4121,61 @@ test('the real Joraga Bard lives in the Tangled Vale, a basic forest in the sout
   const def = world.npcs.find((x) => x.id === 'chr-joraga-bard')!;
   assert.deepEqual(def.rally, [{ type: 'grant_allies', ability: 'vigilance' }]);
   assert.equal(hirePrice(def), 40);
+});
+
+const gem: RawEntity = {
+  id: 'itm-gem',
+  kind: 'item',
+  name: '보석',
+  status: 'canon',
+  sim: { cost: '{0}', at: 'loc-a', effects: [{ type: 'return_lands', count: 2 }, { type: 'mana', amount: 2 }] },
+};
+
+test('a Khalni Gem: tamed, the player gives back two bonds of their pick, one at a time; it gives two mana of any color a day', async () => {
+  const world = fixture([gem]);
+  const state = character(world, 'loc-a');
+  const p = state.actors[PLAYER_ID];
+  p.tile = itemWhere(state, world, world.items[0])!.tile;
+  p.bonds = ['loc-a', 'loc-b', 'loc-c'];
+  await act(state, world, { type: 'claim', item: 'itm-gem' });
+  assert.equal(itemOwner(state, 'itm-gem'), PLAYER_ID);
+  assert.deepEqual(state.asks?.[0]?.effect, { type: 'return_lands', item: 'itm-gem', left: 2 });
+  await act(state, world, { type: 'choose', pick: 'loc-b' });
+  assert.deepEqual(state.asks?.[0]?.candidates, ['loc-a', 'loc-c']);
+  await act(state, world, { type: 'choose', pick: 'loc-c' });
+  assert.deepEqual(p.bonds, ['loc-a']);
+  assert.equal(state.asks?.length ?? 0, 0);
+  assert.ok(texts(state).some((l) => l.includes('유대를 보석에 내어 주었다')));
+  // Two of any color, red twice over.
+  const cap = manaCapacity(state, world, p, state.minutes);
+  assert.equal(cap['W/U/B/R/G'], 2);
+  assert.ok(planPayment(manaAvailable(state, world, p, state.minutes), parseManaCost('{R}{R}')!));
+});
+
+test('a Khalni Gem tamed by an NPC: two bonds or fewer all go at once; more, the LLM picks', async () => {
+  const world = fixture([gem, npc('chr-n', npcSim('loc-a', 'work')), npc('chr-m', npcSim('loc-a', 'work'))]);
+  const state = newState(world, { seed: 1, mode: 'observer' });
+  const [n, m] = [state.actors['chr-n'], state.actors['chr-m']];
+  const tile = itemWhere(state, world, world.items[0])!.tile;
+  n.tile = m.tile = tile;
+  n.bonds = ['loc-a', 'loc-b'];
+  claimItem(state, world, n, 'itm-gem', state.minutes);
+  assert.deepEqual(n.bonds, []);
+  // Another with three: the LLM gives back the forest, then one more.
+  state.items = {};
+  m.bonds = ['loc-a', 'loc-b', 'loc-c'];
+  claimItem(state, world, m, 'itm-gem', state.minutes);
+  const picks: string[][] = [];
+  await advance(state, world, 1, { pick: async ({ options }) => (picks.push(options.map((o) => o.id)), options.some((o) => o.id === 'loc-b') ? 'loc-b' : 'loc-a') });
+  assert.deepEqual(picks, [['loc-a', 'loc-b', 'loc-c'], ['loc-a', 'loc-c']]);
+  assert.deepEqual(m.bonds, ['loc-c']);
+});
+
+test('the real Khalni Gem lies at the heart of Ora Ondar, a basic forest in the north of Akoum', () => {
+  const world = loadWorld();
+  const x = world.items.find((i) => i.id === 'itm-khalni-gem')!;
+  assert.equal(x.at, 'loc-ora-ondar');
+  assert.equal(region(world, 'loc-ora-ondar').parent, 'loc-akoum');
+  assert.deepEqual(landTypes(region(world, 'loc-ora-ondar')), ['forest']);
+  assert.deepEqual(x.effects, [{ type: 'return_lands', count: 2 }, { type: 'mana', amount: 2 }]);
 });
