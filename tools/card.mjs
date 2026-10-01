@@ -4,7 +4,7 @@
 //   npm run card:next   write the next card not yet in world/cards/ and print it. Nonbasic
 //                       lands come first (the world's places are laid before anything stands
 //                       on them), then the rest in order.
-import { existsSync, readFileSync, writeFileSync } from 'node:fs';
+import { existsSync, readdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -107,6 +107,7 @@ ${quote(card.flavor_text)}
   if (card.oracle_text) console.log(card.oracle_text);
   if (card.flavor_text) console.log(`"${card.flavor_text}"`);
   console.log(`이미지: ${card.image}`);
+  placeCheck(card);
   console.log(`파일: world/cards/${card.id}.md (진행 ${done}/${queue.length})`);
 }
 
@@ -114,3 +115,18 @@ const command = process.argv[2];
 if (command === 'sync') await sync();
 else if (command === 'next') next();
 else console.log('usage: node tools/card.mjs sync|next');
+
+// The places of the world the card's text names, and a reminder to look for those it names (or
+// whose people it names: Joraga → the Tangled Vale) that the world doesn't have yet.
+function placeCheck(card) {
+  const dir = join(repo, 'world', 'entities', 'locations');
+  const text = [card.name_en, card.type_line, card.oracle_text, card.flavor_text].filter(Boolean).join(' ').toLowerCase();
+  const known = readdirSync(dir)
+    .filter((f) => f.endsWith('.md'))
+    .map((f) => readFileSync(join(dir, f), 'utf8'))
+    .map((s) => ({ en: /^name_en:\s*(.+)$/m.exec(s)?.[1].trim(), ko: /^name:\s*(.+)$/m.exec(s)?.[1].trim() }))
+    // The whole name, or its first word (Hagra Swamp → Hagra): a false match only says too much.
+    .filter((p) => p.en && [p.en, p.en.split(' ').length > 1 ? p.en.split(' ')[0] : ''].some((w) => w.length >= 4 && new RegExp(`\\b${w.toLowerCase()}\\b`).test(text)));
+  console.log(`세계에 있는 지명: ${known.length ? known.map((p) => `${p.ko} (${p.en})`).join(', ') : '없음'}`);
+  console.log('확인: 이름·플레이버의 지명, 이름에 든 부족·종족의 본거지가 세계에 없으면 [새 지역 후보]로 짚고 묻는다 (CLAUDE.md)');
+}

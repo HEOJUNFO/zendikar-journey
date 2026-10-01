@@ -8,7 +8,7 @@ import type { PlanDayInput } from './llm/planner.ts';
 import type { Action } from './actions.ts';
 import { startAction } from './actions.ts';
 import type { World } from './world.ts';
-import { addFoe, attackBlocked, clash, die, foesOf, hostileNpcs, intimidated, knockedOut, landwalked, unblockable, woundsOf } from './combat.ts';
+import { addFoe, attackBlocked, caughtAsleep, clash, die, foesOf, hostileNpcs, intimidated, knockedOut, landwalked, unblockable, woundsOf } from './combat.ts';
 import { landSealed, powersSealed, sealedBy, sealToday, setSeal } from './seal.ts';
 import { castBlocked, castSpell, castTargets, readyCast } from './spells.ts';
 import { actorColors, COLORS, formatMana, manaAvailable, manaCapacity, parseManaCost, planPayment } from './mana.ts';
@@ -4092,4 +4092,33 @@ test('the real Inferno Trap lies in Akoum', () => {
   assert.equal(ev?.region, 'loc-akoum');
   assert.equal(ev?.trigger, 'hurt');
   assert.equal(ev?.creatures, 2);
+});
+
+test('a bard\'s song: each Ally joining keeps every Ally of the party awake to danger (vigilance) until midnight', async () => {
+  const bard = { ...npcSim('loc-a', 'work', [1, 4]), mana: { G: 4 }, ally: true, hireable: true, rally: [{ type: 'grant_allies', ability: 'vigilance' }] };
+  const ogre = { ...npcSim('loc-a', 'work', [3, 2]), mana: { B: 5 }, ally: true, hireable: true };
+  const world = fixture([npc('chr-b', bard), npc('chr-o', ogre), npc('chr-y', npcSim('loc-a', 'work', [2, 2]))]);
+  const state = character(world, 'loc-a');
+  const [p, b, o, y] = [state.actors[PLAYER_ID], state.actors['chr-b'], state.actors['chr-o'], state.actors['chr-y']];
+  p.stats.coin = 200;
+  await act(state, world, { type: 'hire', to: 'chr-b' });
+  await act(state, world, { type: 'hire', to: 'chr-o' });
+  assert.ok(hasAbility(b, 'vigilance', state.minutes));
+  assert.ok(hasAbility(o, 'vigilance', state.minutes));
+  assert.equal(hasAbility(p, 'vigilance', state.minutes), false);
+  // Asleep, the ogre is not caught unawares.
+  o.task = { kind: 'sleep', activity: '잠', emoji: '😴', until: state.minutes + 360 } as typeof o.task;
+  assert.equal(caughtAsleep(y, o, state.minutes), false);
+});
+
+test('the real Joraga Bard lives in the Tangled Vale, a basic forest in the south of Bala Ged', () => {
+  const world = loadWorld();
+  const state = newState(world, { seed: 1, mode: 'observer' });
+  const b = state.actors['chr-joraga-bard'];
+  assert.equal(b?.region, 'loc-tangled-vale');
+  assert.equal(region(world, 'loc-tangled-vale').parent, 'loc-bala-ged');
+  assert.deepEqual(landTypes(region(world, 'loc-tangled-vale')), ['forest']);
+  const def = world.npcs.find((x) => x.id === 'chr-joraga-bard')!;
+  assert.deepEqual(def.rally, [{ type: 'grant_allies', ability: 'vigilance' }]);
+  assert.equal(hirePrice(def), 40);
 });
