@@ -7044,3 +7044,15 @@ test('the real Grim Discovery is taught in the Guum Wilds', () => {
   assert.equal(s.learnAt, 'loc-guum-wilds');
   assert.deepEqual(s.effects.map((e) => e.type), ['grim_discovery']);
 });
+
+test('the real Hedron Scrabbler crawls the hedron fields of Akoum: a colorless artifact construct, +1/+1 on landfall', () => {
+  const world = loadWorld();
+  const state = newState(world, { seed: 1, mode: 'observer' });
+  const h = state.actors['cre-hedron-scrabbler'];
+  assert.equal(h?.region, 'loc-akoum');
+  const def = npcDef(state, world, h.id)!;
+  assert.ok(def.beast && def.types?.includes('artifact') && !def.needs.includes('hunger'));
+  assert.deepEqual(actorColors(state, world, h), []);
+  bondLand(state, world, h, state.minutes, 'loc-akoum');
+  assert.deepEqual(ptOf(h), [2, 2]);
+});
