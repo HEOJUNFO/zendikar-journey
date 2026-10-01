@@ -92,6 +92,7 @@ export function castBlocked(state: State, world: World, a: Actor, spellId: strin
   if (need && castTargets(state, a, s).length < need) return `${josa(s.name, '은', '는')} 대상이 ${need === 2 ? '둘' : need}이 있어야 한다 (곁의 자신과 권속).`;
   const doom = destroyBarred(world, state, s, target);
   if (doom) return doom;
+  if (s.effects.some((e) => e.type === 'pump_target') && target.loyalty !== undefined) return `${josa(shortName(target.name), '은', '는')} 생물이 아니다 (플레인즈워커).`;
   if (s.effects.some((e) => e.type === 'copy_target') && !copyable(target)) return `${josa(shortName(target.name), '은', '는')} 생물이 아니다 (플레인즈워커). 복제할 수 없다.`;
   if (s.effects.some((e) => e.type === 'destroy_relics') && !relicsHere(state, world, a.region, a.tile).length) return '여기엔 부술 마법물체도 부여마법도 없다.';
   if (s.effects.some((e) => e.type === 'demolish') && !demolishOptions(state, world, a).length) return '여기엔 부술 마법물체도 땅도 없다.';
@@ -344,6 +345,9 @@ export function resolveSpell(state: State, world: World, a: Actor, spellId: stri
         const others = castTargets(state, a, s, world).filter((x) => x.id !== target.id).map((x) => x.id);
         if (others.length) (state.choices ??= []).push({ by: a.id, land: a.region, effect: { type: 'cast', spell: s.id, free: true, second: true }, candidates: others, optional: false, t });
       }
+    } else if (eff.type === 'pump_target') {
+      boostTillMidnight(state, target, eff.pt, eff.abilities, t);
+      addLog(state, { kind: 'status', text: `${josa(shortName(target.name), '이', '가')} 자정까지 +${eff.pt[0]}/+${eff.pt[1]}${eff.abilities.length ? `, ${eff.abilities.map((x) => ABILITY_LABELS[x]).join('·')}` : ''} (${ptOf(target).join('/')}).`, regions: [target.region], actors: [target.id], t });
     } else if (eff.type === 'pump_controlled') {
       const { pt, abilities } = kicked && eff.kicked ? eff.kicked : eff;
       for (const x of controlledCreatures(state, world, a).filter((y) => together(y, a))) boostTillMidnight(state, x, pt, abilities, t);

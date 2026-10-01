@@ -6524,3 +6524,29 @@ test('the real Savage Silhouette is taught in the Tangled Vale: +2/+2 and regene
   const e = s.effects[0];
   assert.ok(e.type === 'aura' && e.regenerate === '{1}{G}' && e.pt[0] === 2 && e.pt[1] === 2);
 });
+
+const slaughterCry: RawEntity = { id: 'spl-cry', kind: 'spell', name: '살육의 함성', status: 'canon', sim: { cost: '{0}', speed: 'instant', learn_at: 'loc-a', target: 'any_here', effects: [{ type: 'pump_target', pt: [3, 0], abilities: ['first_strike'] }] } };
+
+test('Slaughter Cry: one creature there gets +3/+0 and first strike until midnight; no planeswalker', async () => {
+  const world = fixture([slaughterCry, npc('chr-c', npcSim('loc-a', 'work', [1, 2])), npc('chr-pw', { ...npcSim('loc-a'), loyalty: 3 })]);
+  const state = newState(world, { seed: 1, mode: 'observer' });
+  const [c, pw] = [state.actors['chr-c'], state.actors['chr-pw']];
+  pw.tile = c.tile;
+  c.spells = ['spl-cry'];
+  assert.ok(castBlocked(state, world, c, 'spl-cry', 'chr-pw', false, state.minutes)?.includes('플레인즈워커'));
+  castSpell(state, world, c, 'spl-cry', 'chr-c', false, state.minutes);
+  assert.deepEqual(ptOf(c), [4, 2]);
+  assert.ok(hasAbility(c, 'first_strike', state.minutes));
+  await advance(state, world, 24);
+  assert.deepEqual(ptOf(c), [1, 2]);
+  assert.ok(!hasAbility(c, 'first_strike', state.minutes));
+});
+
+test('the real Slaughter Cry is taught in the Tangled Vale: +3/+0 and first strike', () => {
+  const world = loadWorld();
+  const s = world.spells.find((x) => x.id === 'spl-slaughter-cry')!;
+  assert.equal(s.learnAt, 'loc-tangled-vale');
+  assert.equal(s.speed, 'instant');
+  const e = s.effects[0];
+  assert.ok(e.type === 'pump_target' && e.pt[0] === 3 && e.abilities.includes('first_strike'));
+});
