@@ -401,13 +401,14 @@ function fire(state: State, world: World, ev: EventDef, t: number, omened: boole
         if (!a || a.dead) continue;
         const spells = (a.graveyard ?? []).map((x) => spellDef(world, x)?.name ?? x);
         const fallen = (a.fallen ?? []).map((x) => shortName(state.actors[x]?.name ?? state.tokens?.[x]?.name ?? x));
+        a.exiled = [...new Set([...(a.exiled ?? []), ...(a.graveyard ?? [])])];
         a.graveyard = [];
         a.fallen = [];
         const gone = [...spells, ...fallen];
         addLog(state, {
           kind: 'effect',
           text: gone.length
-            ? `${josa(shortName(a.name), '이', '가')} 무덤에 둔 것들이 아가리 속으로 사라졌다: ${gone.join(', ')} (다시는 꺼내지도 되살리지도 못한다).`
+            ? `${josa(shortName(a.name), '이', '가')} 무덤에 둔 것들이 아가리 속으로 사라졌다: ${gone.join(', ')} (그 주문은 영영 다시 쓰지도 익히지도 못하고, 죽은 이는 되살리지 못한다).`
             : `${josa(shortName(a.name), '은', '는')} 무덤에 둔 것이 없어 삼켜질 것도 없었다.`,
           regions: [a.region],
           actors: [a.id],

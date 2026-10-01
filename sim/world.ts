@@ -474,8 +474,9 @@ const EffectSchema = z.discriminatedUnion('type', [
   // morning (gm) events.
   z.strictObject({ type: z.literal('forget'), count: z.number().int().positive() }),
   // "Exile all cards from target player's graveyard" (Ravenous Trap): whoever set it off loses
-  // their graveyard for good: the spells they let go of (no casting them from there again) and
-  // the retainers who died serving them (none to raise, none to count). Not for morning events.
+  // their graveyard for good: the spells they let go of (exiled: theirs never again, not even
+  // learned anew, `Actor.exiled`) and the retainers who died serving them (none to raise, none
+  // to count). Not for morning events.
   z.strictObject({ type: z.literal('exile_graveyard') }),
   // "N damage divided as you choose among any number of target attacking creatures" (Arrow
   // Volley Trap): N damage among those who set it off; the LLM, as the trap, divides it after

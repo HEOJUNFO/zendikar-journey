@@ -154,6 +154,9 @@ export type Actor = {
   spells?: string[];
   // Spells they let go of (discarded): their graveyard.
   graveyard?: string[];
+  // Spells exiled from their graveyard (Ravenous Trap): theirs to use never again, not even by
+  // learning them anew (user decision 2026-10-01). The graveyard is had-it-and-may-again.
+  exiled?: string[];
   // How many went into their graveyard today (spells let go of, retainers who died serving them):
   // Ravenous Trap's "three or more cards put into their graveyard this turn".
   buried?: { day: number; count: number };
@@ -463,7 +466,7 @@ export function settleTile(world: World, a: Actor) {
 function refreshHand(state: State, world: World, npc: NpcDef) {
   const a = state.actors[npc.id];
   if (npc.loyalty !== undefined && a.loyalty === undefined) a.loyalty = npc.loyalty;
-  const held = new Set([...(a.spells ?? []), ...(a.graveyard ?? [])]);
+  const held = new Set([...(a.spells ?? []), ...(a.graveyard ?? []), ...(a.exiled ?? [])]);
   for (const s of world.spells)
     if (!held.has(s.id) && spellColors(s).some((c) => npc.knowsColors?.includes(c))) a.spells = [...(a.spells ?? []), s.id];
 }

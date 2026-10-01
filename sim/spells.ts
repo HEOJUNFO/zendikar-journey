@@ -35,13 +35,14 @@ export function learnBlocked(world: World, a: Actor, spellId: string): string | 
   const s = spellDef(world, spellId);
   if (!s) return '그런 주문은 없다.';
   if (a.spells?.includes(s.id)) return `이미 ${josa(s.name, '을', '를')} 안다.`;
+  if (a.exiled?.includes(s.id)) return `${josa(s.name, '은', '는')} 추방되어 영영 다시 익힐 수 없다.`;
   if (a.region !== s.learnAt) return `${josa(s.name, '은', '는')} ${placeName(world, region(world, s.learnAt))}에서 배울 수 있다.`;
   return null;
 }
 
 export function learnSpell(state: State, world: World, a: Actor, spellId: string, t: number) {
   const s = spellDef(world, spellId);
-  if (!s || a.spells?.includes(s.id)) return;
+  if (!s || a.spells?.includes(s.id) || a.exiled?.includes(s.id)) return;
   a.spells = [...(a.spells ?? []), s.id];
   addLog(state, { kind: 'status', text: `${josa(shortName(a.name), '이', '가')} ${josa(s.name, '을', '를')} 익혔다.`, regions: [a.region], actors: [a.id], t });
 }
@@ -111,7 +112,7 @@ export function readyCast(state: State, world: World, a: Actor, spellId: string,
 
 // Spells an NPC could learn: those taught somewhere they don't know yet.
 export function learnableSpells(world: World, a: Actor) {
-  return world.spells.filter((s) => !a.spells?.includes(s.id));
+  return world.spells.filter((s) => !a.spells?.includes(s.id) && !a.exiled?.includes(s.id));
 }
 
 // The lands of `type` they hold ("each Plains you control"): bonded with, not destroyed.

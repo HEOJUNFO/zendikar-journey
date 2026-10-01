@@ -10,7 +10,7 @@ import { startAction } from './actions.ts';
 import type { World } from './world.ts';
 import { addFoe, attackBlocked, caughtAsleep, clash, die, foesOf, hostileNpcs, intimidated, knockedOut, landwalked, unblockable, woundsOf } from './combat.ts';
 import { landSealed, powersSealed, sealedBy, sealToday, setSeal } from './seal.ts';
-import { castBlocked, castSpell, castTargets, readyCast } from './spells.ts';
+import { castBlocked, castSpell, castTargets, learnBlocked, readyCast } from './spells.ts';
 import { actorColors, COLORS, formatMana, manaAvailable, manaCapacity, parseManaCost, planPayment } from './mana.ts';
 import { MAX_TALKS_PER_DAY, usableAbilities, volleyShares, burnTargets } from './run.ts';
 import { destroyLand, eligibleGmEvents, moveHours, startTravel, travelBlocked } from './step.ts';
@@ -2493,6 +2493,26 @@ test('a ravenous trap: one who sent three or more to their graveyard today (spel
   assert.equal(y.graveyard?.length, 2);
   assert.ok(texts(state).some((t) => t.includes('아가리 속으로 사라졌다')));
   assert.equal(buriedToday(x, state.minutes + 1440), 0); // a new day counts anew
+  // Exiled, a spell is theirs never again: not learned anew (a graveyard's may be).
+  assert.deepEqual(x.exiled?.sort(), [bolt.id, mantle.id].sort());
+  x.region = 'loc-a';
+  assert.match(learnBlocked(world, x, mantle.id)!, /추방되어/);
+  y.region = 'loc-a';
+  assert.equal(learnBlocked(world, y, mantle.id), null); // only in the graveyard: may learn again
+});
+
+test('a ravenous trap on one who holds every spell of a color (Chandra): the exiled spell never comes back to their hand', () => {
+  const world = fixture([bolt, walker]);
+  const state = newState(world, { seed: 1, mode: 'observer' });
+  const w = state.actors['chr-w'];
+  assert.ok(w.spells?.includes(bolt.id)); // every red spell of the world
+  letGo(state, world, w, bolt.id, state.minutes);
+  syncWorld(state, world);
+  assert.ok(!w.spells?.includes(bolt.id)); // in the graveyard: had it
+  w.exiled = [...(w.graveyard ?? [])];
+  w.graveyard = [];
+  syncWorld(state, world);
+  assert.ok(!w.spells?.includes(bolt.id)); // exiled: not back
 });
 
 test('the real Ravenous Trap lies in the Crypt of Agadeem, for those who buried three or more', () => {
