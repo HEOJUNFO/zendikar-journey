@@ -31,7 +31,7 @@ import { opponentsOf, sealsDue, setSeal } from './seal.ts';
 import { applyPump, pumpController, pumpMax, pumpsDue } from './pump.ts';
 import { COLORS } from './mana.ts';
 import type { Color } from './mana.ts';
-import { abilityBlocked, applyBondEffect, applyDrainGrow, applyEnterDestroy, enteredToday, fetchBlocked, fetchTargets, growBlocked, growLand, callForth } from './abilities.ts';
+import { abilityBlocked, applyBondEffect, applyDrainGrow, applyEnterDestroy, applySearch, enteredToday, fetchBlocked, fetchTargets, growBlocked, growLand, callForth } from './abilities.ts';
 import { bindRetainer, courtTargets, followsMaster, refuse, seize, swayBlocked } from './retainers.ts';
 import { josa, shortName } from './text.ts';
 import type { ScheduleBlock } from './types.ts';
@@ -609,6 +609,22 @@ async function choices(state: State, world: World, llm: Llm) {
           }
         }
         owed = answerReturnLand(state, world, by, pick, eff, state.minutes);
+      }
+      continue;
+    }
+    // Kor Cartographer, arriving: which land of that type its controller seeks out (or none).
+    if (c.effect.type === 'search') {
+      if (by && !by.dead && npc) {
+        const options = c.candidates.map((id) => ({ id, label: region(world, id).name }));
+        let pick: string | null = null;
+        if (llm.pick) {
+          try {
+            pick = await llm.pick({ world, state, npc, what: `${shortName(state.actors[c.effect.source]?.name ?? '')}이(가) 잊힌 길을 안다. 아직 유대가 없는 땅 하나와 멀리서 유대를 맺을 수 있다 (하루 한 땅에 들지 않고, 오늘은 마나를 내지 않는다). 맺지 않을 수도 있다`, options, optional: true });
+          } catch (e) {
+            console.warn(`pick (search) for ${by.id} failed:`, e);
+          }
+        }
+        if (pick && c.candidates.includes(pick)) applySearch(state, world, by, pick, c.effect.source, state.minutes);
       }
       continue;
     }

@@ -16,10 +16,10 @@ import { landSealed, powersSealed, sealText } from './seal.ts';
 import { addLog, hasAbility, npcDef, outOfTime, present, ptOf, random, targetable, together, untargetableText } from './state.ts';
 import { nearestTile } from './tiles.ts';
 import type { Tile } from './tiles.ts';
-import type { Actor, ChoiceEffect, State } from './state.ts';
+import type { Actor, Choice, ChoiceEffect, State } from './state.ts';
 import { josa, shortName, toward } from './text.ts';
 import { ABILITY_LABELS, LAND_TYPE_LABELS, landIdOf, landTypes, realmOf, region, spellColors } from './world.ts';
-import type { Ability, ActivatedAbility, BondEffect, Region, World } from './world.ts';
+import type { Ability, ActivatedAbility, BondEffect, LandType, Region, World } from './world.ts';
 
 // Why `a` can't bond with the land they stand on now, or null. One land per turn, as one
 // land drop per turn in MTG.
@@ -59,7 +59,7 @@ export function bondTargets(state: State, world: World, a: Actor, regionId: stri
 }
 
 // The effect falls on `target`, if they are still there.
-export function applyBondEffect(state: State, world: World, a: Actor, regionId: string, eff: Exclude<ChoiceEffect, { type: 'cast' | 'follow' | 'rally' | 'seize' | 'pledge' | 'evade' | 'discard' | 'pilfer' | 'pour' | 'demolish' | 'sacrifice' | 'destroy' | 'drain_grow' | 'crush' | 'quell' | 'quelled' | 'return_lands' }>, targetId: string | undefined, t: number) {
+export function applyBondEffect(state: State, world: World, a: Actor, regionId: string, eff: Exclude<ChoiceEffect, { type: 'cast' | 'follow' | 'rally' | 'seize' | 'pledge' | 'evade' | 'discard' | 'pilfer' | 'pour' | 'demolish' | 'sacrifice' | 'destroy' | 'drain_grow' | 'crush' | 'quell' | 'quelled' | 'return_lands' | 'search' }>, targetId: string | undefined, t: number) {
   const r = region(world, regionId);
   if (eff.type === 'damage') return mountainFire(state, world, a, r, eff.amount, targetId, t);
   const target = targetId ? bondTargets(state, world, a, regionId, eff).find((x) => x.id === targetId) : undefined;
@@ -609,12 +609,54 @@ export function applyDrainGrow(state: State, world: World, a: Actor, target: Act
 // once a day for balance (user decision 2026-09-30).
 export function onEnter(state: State, world: World, a: Actor, t: number) {
   const def = npcDef(state, world, a.id);
-  if (!def?.enterDestroy && !def?.enterDrain && !def?.enterDraw) return;
+  if (!def?.enterDestroy && !def?.enterDrain && !def?.enterDraw && !def?.enterSearch) return;
   if (a.dead || a.enteredDay === gameDay(t)) return;
   a.enteredDay = gameDay(t);
   enterDestroy(state, world, a, t);
   enterDrain(state, world, a, t);
   enterDraw(state, world, a, t);
+  enterSearch(state, world, a, t);
+}
+
+// "When this enters, you may search your library for a <type> card, put it onto the
+// battlefield tapped" (Kor Cartographer): their controller (master, or themselves) may pick a
+// land of that type they don't hold yet (the player at once, an NPC by the LLM after the hour).
+export function enterSearch(state: State, world: World, a: Actor, t: number) {
+  const search = npcDef(state, world, a.id)?.enterSearch;
+  if (!search || a.dead || powersSealed(state, world, a, t)) return;
+  const controller = masterOf(state, a) ?? a;
+  const candidates = searchTargets(state, world, controller, search.types).map((r) => r.id);
+  if (!candidates.length) return;
+  const owed: Choice = { by: controller.id, land: controller.region, effect: { type: 'search', source: a.id }, candidates, optional: true, t };
+  (controller.kind === 'player' ? (state.asks ??= []) : (state.choices ??= [])).push(owed);
+}
+
+// Lands of these types `a` doesn't hold yet, that can be sought (as fetchTargets).
+export function searchTargets(state: State, world: World, a: Actor, types: readonly LandType[]) {
+  return world.regions.filter((r) => !r.oneLandWith && !r.notLand && !a.bonds?.includes(r.id) && !state.regions[r.id]?.destroyed && landTypes(r).some((x) => types.includes(x)));
+}
+
+// The pick lands: they bond with it from afar, a landfall of its own (not their land for the
+// day); tapped, it gives no mana today.
+export function applySearch(state: State, world: World, a: Actor, landId: string, sourceId: string, t: number) {
+  const source = state.actors[sourceId];
+  const search = source && npcDef(state, world, source.id)?.enterSearch;
+  if (!search || !searchTargets(state, world, a, search.types).some((r) => r.id === landId)) return;
+  addLog(state, {
+    kind: 'status',
+    text: `${josa(shortName(source.name), '이', '가')} 잊힌 길을 더듬어 ${josa(shortName(a.name), '을', '를')} ${toward(region(world, landId).name)} 이었다.`,
+    regions: [a.region, landId],
+    actors: [a.id, source.id],
+    t,
+  });
+  a.fetched = [...(a.fetched ?? []), landId];
+  a.searched = gameDay(t);
+  bondLand(state, world, a, t, landId);
+  if (search.tapped) {
+    const day = gameDay(t);
+    if (a.landsTapped?.day !== day) a.landsTapped = { day, ids: [] };
+    a.landsTapped.ids.push(landId);
+  }
 }
 
 // "Kicker {1}{U}. When this enters, draw three cards. Then if it wasn't kicked, discard three

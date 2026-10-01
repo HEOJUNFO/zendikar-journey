@@ -5,13 +5,14 @@ name: 마킨디 협곡
 name_en: Makindi Trenches
 summary: 온두 본토를 가로지르는 높은 벽의 협곡 미로. 옛 코르 제국의 수도가 무너진 자리이고, 마나 섞인 바람이 협곡을 울리며, 코르가 벼랑에 밧줄을 걸고 산다
 status: canon
-sources: [ZEN-124, ZEN-203]
+sources: [ZEN-124, ZEN-203, ZEN-18]
 tags: [협곡, 코르, 폐허, 바람, 백색]
 links:
   - { to: itm-grappling-hook, rel: 놓여 있는 코르의 갈고리 }
   - { to: loc-ondu, rel: 바깥 지역 }
   - { to: cre-geyser-glider, rel: 뜨거운 바람을 타는 짐승 }
   - { to: cre-kor-soldier, rel: 벼랑에 사는 코르 }
+  - { to: chr-kor-cartographer, rel: 잊힌 길을 아는 코르 정찰병 }
 map: { in: loc-ondu, terrain: grassland, pos: [-0.05, 0.05], tiles: 50 }   # 기본 평원: 백 마나 [결정] 2026-09-30
 ---
 
@@ -30,6 +31,7 @@ map: { in: loc-ondu, terrain: grassland, pos: [-0.05, 0.05], tiles: 50 }   # 기
 - 간헐천 활공자(`cre-geyser-glider`)가 협곡의 뜨거운 바람을 타며 사냥한다.
 
 - 코르의 갈고리(`itm-grappling-hook`, ZEN-203)가 놓여 있다 ([결정] 2026-10-01). 주워 지니고 다니는 첫 아이템(장비)이다. 매면 이중 타격, 걸린 적은 날아 달아나지 못한다.
+- 코르 지도 제작자(`chr-kor-cartographer`, ZEN-18)가 산다 ([결정] 2026-10-01). 그날 처음 어느 땅에 들어설 때 그를 조종하는 이를 아직 유대 없는 평원 하나와 멀리서 이어 준다.
 
 ## 미정/질문
 

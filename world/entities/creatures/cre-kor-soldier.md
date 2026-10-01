@@ -12,6 +12,7 @@ links:
   - { to: law-retainers, rel: 서약한 이를 따르는 권속 }
   - { to: spl-conquerors-pledge, rel: 불러내는 주문 }
   - { to: loc-makindi, rel: 코르가 벼랑에 사는 협곡 }
+  - { to: chr-kor-cartographer, rel: 같은 코르 }
 ---
 
 ## 설정

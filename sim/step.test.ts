@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { formatClock, parseTimeOfDay } from './clock.ts';
+import { formatClock, gameDay, parseTimeOfDay } from './clock.ts';
 import { loadWorld } from './load.ts';
 import { act as runAct, advance as runAdvance } from './run.ts';
 import type { Llm } from './run.ts';
@@ -4178,4 +4178,38 @@ test('the real Khalni Gem lies at the heart of Ora Ondar, a basic forest in the 
   assert.equal(region(world, 'loc-ora-ondar').parent, 'loc-akoum');
   assert.deepEqual(landTypes(region(world, 'loc-ora-ondar')), ['forest']);
   assert.deepEqual(x.effects, [{ type: 'return_lands', count: 2 }, { type: 'mana', amount: 2 }]);
+});
+
+test('a Kor Cartographer arriving: its controller may bond from afar with a plains they lack, tapped today (an NPC by the LLM, the player by a pick)', async () => {
+  const cart = { ...npcSim('loc-b', 'work', [2, 2]), mana: { W: 4 }, enter_search: { types: ['plains'], tapped: true } };
+  const world = fixture([npc('chr-k', cart)]);
+  const state = newState(world, { seed: 1, mode: 'observer' });
+  const k = state.actors['chr-k'];
+  onEnter(state, world, k, state.minutes);
+  assert.deepEqual(state.choices?.[0]?.effect, { type: 'search', source: 'chr-k' });
+  assert.deepEqual(state.choices?.[0]?.candidates, ['loc-a']);
+  const offered: string[][] = [];
+  await advance(state, world, 1, { pick: async ({ options }) => (offered.push(options.map((o) => o.id)), 'loc-a') });
+  assert.deepEqual(offered, [['loc-a']]);
+  assert.ok(k.bonds?.includes('loc-a'));
+  assert.equal(k.searched, gameDay(state.minutes));
+  assert.equal(manaCapacity(state, world, k, state.minutes).W, 4); // the plains gives nothing today
+  assert.ok(texts(state).some((l) => l.includes('잊힌 길을 더듬어')));
+  // Its master is the player: theirs to pick, or not.
+  const s2 = character(world, 'loc-b');
+  const p = s2.actors[PLAYER_ID];
+  s2.actors['chr-k'].master = PLAYER_ID;
+  onEnter(s2, world, s2.actors['chr-k'], s2.minutes);
+  assert.equal(s2.asks?.[0]?.effect.type, 'search');
+  await act(s2, world, { type: 'choose', pick: 'loc-a' });
+  assert.ok(p.bonds?.includes('loc-a'));
+  assert.equal(s2.actors['chr-k'].bonds?.includes('loc-a') ?? false, false);
+});
+
+test('the real Kor Cartographer walks the Makindi Trenches', () => {
+  const world = loadWorld();
+  const state = newState(world, { seed: 1, mode: 'observer' });
+  const k = state.actors['chr-kor-cartographer'];
+  assert.equal(k?.region, 'loc-makindi');
+  assert.deepEqual(npcDef(state, world, k.id)?.enterSearch, { types: ['plains'], tapped: true });
 });

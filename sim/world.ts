@@ -275,6 +275,11 @@ export const CharacterSimSchema = z.strictObject({
   // (Sphinx of Lost Truths): on their first arrival of the day their controller learns N
   // secrets (sim/knowledge.ts); they pay the kicker from their own mana if they can, and if not
   // (or with no kicker) the controller lets go of M spells (sim/abilities.ts `enterDraw`).
+  // "When this enters, you may search your library for a <type> card, put it onto the
+  // battlefield tapped" (Kor Cartographer): their controller (master, or themselves) may bond,
+  // from afar, with a land of that type they don't hold yet, as a fetch does; `tapped`: it
+  // gives no mana that day (sim/abilities.ts `enterSearch`).
+  enter_search: z.strictObject({ types: z.array(z.enum(LAND_TYPES)).min(1), tapped: z.boolean().default(false) }).optional(),
   enter_draw: z.strictObject({ count: z.number().int().min(1), discard: z.number().int().min(1).optional(), kicker: CostSchema.optional() }).optional(),
   // "Protection from <color>" (Malakir Bloodwitch: white): nothing of that color damages them,
   // blocks them (strikes back, flies from them), or picks them (spells, abilities, lands).
@@ -730,6 +735,7 @@ export type NpcDef = {
   types?: CreatureType[];
   enterDestroy?: { kind?: CreatureType; kicker?: ManaCost; kickerText?: string };
   enterDrain?: { per: string };
+  enterSearch?: { types: LandType[]; tapped: boolean };
   enterDraw?: { count: number; discard?: number; kicker?: ManaCost; kickerText?: string };
   protection?: Color[];
   // The creature kind they are (e.g. cre-vampire), for "a Vampire you control".
@@ -916,7 +922,7 @@ export function buildWorld(entities: RawEntity[]): { world: World; errors: strin
         err(e.id, `sim 오류: ${issues(sim.error)}`);
         continue;
       }
-      const { knows_colors, activated, wins_at_life, extra_combat, pump, empty_hand_pump, discard_on_hit, landfall_token, landfall_seize, landfall_lose, landfall_grant, landfall_drain, enter_destroy, enter_drain, enter_draw, tap_draw_allies, name, home_pos, ...rest } = sim.data;
+      const { knows_colors, activated, wins_at_life, extra_combat, pump, empty_hand_pump, discard_on_hit, landfall_token, landfall_seize, landfall_lose, landfall_grant, landfall_drain, enter_destroy, enter_drain, enter_draw, enter_search, tap_draw_allies, name, home_pos, ...rest } = sim.data;
 
       world.npcs.push({
         id: e.id,
@@ -934,6 +940,7 @@ export function buildWorld(entities: RawEntity[]): { world: World; errors: strin
           ? { enterDestroy: typeof enter_destroy === 'string' ? { kind: enter_destroy } : { kind: enter_destroy.kind, ...(enter_destroy.kicker ? { kicker: parseManaCost(enter_destroy.kicker)!, kickerText: enter_destroy.kicker } : {}) } }
           : {}),
         ...(enter_drain ? { enterDrain: enter_drain } : {}),
+        ...(enter_search ? { enterSearch: enter_search } : {}),
         ...(home_pos ? { homePos: home_pos } : {}),
         ...(enter_draw ? { enterDraw: { count: enter_draw.count, discard: enter_draw.discard, ...(enter_draw.kicker ? { kicker: parseManaCost(enter_draw.kicker)!, kickerText: enter_draw.kicker } : {}) } } : {}),
         ...(landfall_drain ? { landfallDrain: landfall_drain } : {}),
