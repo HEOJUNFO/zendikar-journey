@@ -39,6 +39,8 @@ function triggerText(ev: EventDef) {
       return `그날 비밀을 ${ev.cards}가지 이상 알게 된 이가 이 땅에 있을 때 터진다`;
     case 'attacked':
       return `같은 시간에 ${ev.attackers} 이상이 이 땅에서 덤빌 때 터진다`;
+    case 'cast':
+      return `그날 주문을 ${ev.spells}번째로 쓰는 이가 이 땅에 있을 때 그 주문에 터진다`;
     case 'hurt':
       return `그날 서로 다른 ${ev.creatures} 이상에게 싸움 피해를 입은 이가 이 땅에 있을 때 터진다 (그를 다치게 한 이 하나에게)`;
     default:

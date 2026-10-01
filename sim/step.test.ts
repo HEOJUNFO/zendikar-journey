@@ -4347,3 +4347,34 @@ test('the real Merfolk Seastalkers lurk in Bojuka Bay, a basic island on the sou
   d.bonds = ['loc-sea-gate'];
   assert.equal(landwalked(world, s, d, state.minutes), 'island');
 });
+
+test('a mindbreak trap: one casting their third spell of the day there sees it break, and forgets it; free casts don\'t count', () => {
+  const mind: RawEntity = { id: 'evt-mind', kind: 'event', name: '정신파괴 함정', status: 'canon', sim: { region: 'loc-a', trigger: 'cast', spells: 3, text: '주문이 부서졌다.', effects: [{ type: 'counter_spell' }] } };
+  const heal: RawEntity = { id: 'spl-h', kind: 'spell', name: '치유', status: 'canon', sim: { cost: '{0}', learn_at: 'loc-a', target: 'self', effects: [{ type: 'aura', pt: [1, 1] }] } };
+  const world = fixture([mind, heal, npc('chr-c', npcSim('loc-a', 'work')), npc('chr-far', npcSim('loc-b', 'work'))]);
+  const state = newState(world, { seed: 1, mode: 'observer' });
+  const [c, far] = [state.actors['chr-c'], state.actors['chr-far']];
+  c.spells = ['spl-h'];
+  far.spells = ['spl-h'];
+  const t = state.minutes;
+  castSpell(state, world, c, 'spl-h', c.id, false, t);
+  castSpell(state, world, c, 'spl-h', c.id, false, t, true); // free: not counted
+  castSpell(state, world, c, 'spl-h', c.id, false, t);
+  assert.equal(c.auras?.length, 3);
+  castSpell(state, world, c, 'spl-h', c.id, false, t); // the third counted: broken
+  assert.equal(c.auras?.length, 3);
+  assert.deepEqual(c.spells, []);
+  assert.ok(texts(state).some((l) => l.includes('허공에서 부서져 사라졌다')));
+  // Elsewhere, no trap.
+  for (let i = 0; i < 3; i++) castSpell(state, world, far, 'spl-h', far.id, false, t);
+  assert.equal(far.auras?.length, 3);
+  assert.deepEqual(far.spells, ['spl-h']);
+});
+
+test('the real Mindbreak Trap lies in Tazeem', () => {
+  const world = loadWorld();
+  const ev = world.events.find((e) => e.id === 'evt-mindbreak-trap');
+  assert.equal(ev?.region, 'loc-tazeem');
+  assert.equal(ev?.trigger, 'cast');
+  assert.equal(ev?.spells, 3);
+});

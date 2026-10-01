@@ -222,6 +222,25 @@ function attackEvents(state: State, world: World, t: number) {
   }
 }
 
+// `a` casts a spell (not for free): their count for today rises, and a `cast` event of their land
+// (or the land their area lies in) whose count they reach goes off, once a day for them. Whether
+// one that counters it went off (sim/spells.ts `castSpell` then voids the spell).
+export function castEvents(state: State, world: World, a: Actor, t: number) {
+  const day = gameDay(t);
+  if (a.cast?.day !== day) a.cast = { day, count: 0 };
+  a.cast.count++;
+  let countered = false;
+  const land = region(world, a.region);
+  for (const ev of world.events) {
+    if (ev.trigger !== 'cast' || onCooldown(state, ev, t) || a.cast.count < ev.spells! || a.cast.sprung?.includes(ev.id)) continue;
+    if (ev.region !== a.region && ev.region !== land.parent) continue;
+    a.cast.sprung = [...(a.cast.sprung ?? []), ev.id];
+    trigger(state, world, ev, t, { by: [a.id], lands: [] });
+    if (ev.effects.some((e) => e.type === 'counter_spell')) countered = true;
+  }
+  return countered;
+}
+
 // Those in a `hurt` event's land (or its areas) dealt combat damage by enough beings today set it
 // off, in the hour it comes to pass (Inferno Trap), each once a day.
 function hurtEvents(state: State, world: World, t: number) {
@@ -406,6 +425,8 @@ function fire(state: State, world: World, ev: EventDef, t: number, omened: boole
       // Which of the creatures looked at is drawn here (if any) is the trap's, asked after the hour.
       const creatures = summonLibrary(state, world, ev.region, cause.by ?? []).slice(0, eff.look);
       if (creatures.length) (state.summons ??= []).push({ event: ev.id, creatures, by: cause.by ?? [], region: ev.region, t });
+    } else if (eff.type === 'counter_spell') {
+      // The spell itself is voided where it is cast (sim/spells.ts `castSpell`).
     } else {
       for (const id of regions) {
         state.regions[id] ??= { conditions: [] };

@@ -57,6 +57,9 @@ export type Actor = {
   // Spells they drew (came to hold at random) this turn, and the events that already answered
   // it ("if an opponent drew three or more cards this turn").
   drawn?: { day: number; count: number; sprung?: string[] };
+  // Spells they cast this turn (not those cast for free), and the events that already answered
+  // it ("if an opponent cast three or more spells this turn", Mindbreak Trap).
+  cast?: { day: number; count: number; sprung?: string[] };
   // Secrets of the world they came to know by drawing (sim/knowledge.ts); `day`: true only then.
   knowledge?: { id: string; text: string; day?: number }[];
   // Life total (sim/life.ts), apart from energy; START_LIFE until something changes it.

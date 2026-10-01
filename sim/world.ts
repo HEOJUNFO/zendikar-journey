@@ -462,6 +462,10 @@ const EffectSchema = z.discriminatedUnion('type', [
   // "N damage to target creature", a trap set off by one beset (Inferno Trap): N damage to one of
   // those who hurt them, still standing with them; the LLM, as the trap, picks after the hour.
   // `color`: the trap's (protection from it shields). Only for `hurt` events.
+  // "Exile any number of target spells" (Mindbreak Trap): the spell that set it off has no
+  // effect, and its caster forgets it (not to their graveyard; they may learn it again). Only
+  // for `cast` events (sim/spells.ts `castSpell`).
+  z.strictObject({ type: z.literal('counter_spell') }),
   z.strictObject({ type: z.literal('burn'), amount: z.number().int().positive(), color: z.enum(COLORS).optional() }),
   // "Return N target creatures to their owners' hands" (Whiplash Trap): the LLM, as the trap,
   // picks up to N creatures there after the hour; each is flung (sim/bounce.ts). Not for
@@ -657,6 +661,10 @@ export const EventSimSchema = z.discriminatedUnion('trigger', [
   // this turn ("if you've been dealt damage by two or more creatures this turn", Inferno Trap):
   // in the hour it happens, once a day for each.
   z.strictObject({ ...EventBase, ...EventCost, trigger: z.literal('hurt'), creatures: z.number().int().min(1) }),
+  // Goes off as anyone in `region` (or its areas) casts their `spells`-th spell this turn ("if
+  // an opponent cast three or more spells this turn", Mindbreak Trap), before it resolves:
+  // once a day for each.
+  z.strictObject({ ...EventBase, ...EventCost, trigger: z.literal('cast'), spells: z.number().int().min(1) }),
 ]);
 
 // --- built world -----------------------------------------------------------------------
@@ -801,7 +809,7 @@ export type EventDef = {
   summary: string;
   region: string;
   range: number;
-  trigger: 'gm' | 'landfall' | 'enter' | 'destroyed' | 'drew' | 'attacked' | 'hurt';
+  trigger: 'gm' | 'landfall' | 'enter' | 'destroyed' | 'drew' | 'attacked' | 'hurt' | 'cast';
   chance?: number; // gm
   landfalls?: number; // landfall
   gained_life?: boolean; // enter
@@ -812,6 +820,7 @@ export type EventDef = {
   cards?: number; // drew
   attackers?: number; // attacked
   creatures?: number; // hurt
+  spells?: number; // cast
   cooldownHours: number;
   scope: 'region' | 'world';
   omen?: string;
@@ -973,6 +982,7 @@ export function buildWorld(entities: RawEntity[]): { world: World; errors: strin
       }
       const { cooldown_hours, effects, cost, ...rest } = sim.data;
       if (rest.trigger !== 'attacked' && effects.some((x) => x.type === 'pump_attackers')) err(e.id, 'pump_attackers 는 trigger: attacked 사건에만 쓸 수 있음 (덤빈 이들에게)');
+      if (rest.trigger !== 'cast' && effects.some((x) => x.type === 'counter_spell')) err(e.id, 'counter_spell 은 trigger: cast 사건에만 쓸 수 있음 (막을 주문이 있어야 함)');
       if (rest.trigger !== 'hurt' && effects.some((x) => x.type === 'burn')) err(e.id, 'burn 은 trigger: hurt 사건에만 쓸 수 있음 (누가 누구에게 다쳤는지 알아야 함)');
       if (rest.trigger !== 'landfall' && effects.some((x) => x.type === 'destroy_lands'))
         err(e.id, 'destroy_lands 는 trigger: landfall 사건에만 쓸 수 있음 (누가 상륙한 땅인지 알아야 함)');

@@ -9,7 +9,7 @@ import { addFoe, dealDamage, destroy } from './combat.ts';
 import { gainLife, lifeOf, loseLife } from './life.ts';
 import { addCosts, formatMana, manaAvailable, manaCapacity, payMana, planPayment } from './mana.ts';
 import { spawnWild } from './abilities.ts';
-import { destroyLand } from './step.ts';
+import { castEvents, destroyLand } from './step.ts';
 import { owesDiscard } from './discard.ts';
 import { crushOwed, demolishOptions, demolishOwed, relicsHere } from './relics.ts';
 import { remember } from './relations.ts';
@@ -152,6 +152,13 @@ export function castSpell(state: State, world: World, a: Actor, spellId: string,
       kicked = true;
       addLog(state, { kind: 'effect', text: `${josa(shortName(tapped.name), '이', '가')} 주문에 힘을 보태느라 묶였다.`, regions: [tapped.region], actors: [tapped.id] });
     }
+  }
+  // A trap answering the count of spells cast today (Mindbreak Trap): the spell comes to nothing,
+  // and they forget it.
+  if (!free && castEvents(state, world, a, t)) {
+    a.spells = (a.spells ?? []).filter((x) => x !== s.id);
+    addLog(state, { kind: 'effect', text: `${josa(shortName(a.name), '이', '가')} 쓰던 ${josa(s.name, '은', '는')} 허공에서 부서져 사라졌다. 그 주문을 잊었다.`, regions: [a.region], actors: [a.id], t });
+    return;
   }
   const on = target.id === a.id ? '자신' : shortName(target.name);
   const paid = free ? '값 없이' : kicked && s.kicker?.mana ? `${s.costText} + 킥커 ${s.kicker.manaText}` : s.costText;
