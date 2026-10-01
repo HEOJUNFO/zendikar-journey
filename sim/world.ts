@@ -597,6 +597,9 @@ export const SpellSimSchema = z.strictObject({
           base_pt: z.tuple([z.number().int().min(0), z.number().int().min(1)]).optional(),
           abilities: z.array(z.enum(ABILITIES)).default([]),
           double_life_on_hit: z.boolean().default(false),
+          // "Enchanted creature doesn't untap during its controller's untap step" (Paralyzing
+          // Grasp): once bound (tapped), they stay bound at 00:00 while it is on them.
+          no_untap: z.boolean().default(false),
         }),
         // "If it was kicked, you may search your library for another <this> and put it onto the
         // battlefield": the caster may cast it once more, free, on someone else there (their pick

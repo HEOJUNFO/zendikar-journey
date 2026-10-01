@@ -594,6 +594,14 @@ function actorHour(state: State, world: World, a: Actor, t: number) {
       applyEffect(a.stats, KIND_EFFECTS.leisure, 60, needsOf(a));
       return;
     }
+    // "Doesn't untap during its controller's untap step" (Paralyzing Grasp): held on, to the next.
+    const grasp = a.auras?.find((x) => x.noUntap);
+    if (grasp) {
+      a.boundUntil = untapTime(t);
+      applyEffect(a.stats, KIND_EFFECTS.leisure, 60, needsOf(a));
+      addLog(state, { kind: 'status', text: `${josa(name, '은', '는')} ${grasp.name}에 붙들려 풀려나지 못한다.`, regions: [a.region], actors: [a.id] });
+      return;
+    }
     delete a.boundUntil;
     // One tapped by their own power just untaps; others were held and are let go.
     if (!hasPowers(npcDef(state, world, a.id))) addLog(state, { kind: 'status', text: `${josa(name, '이', '가')} 풀려났다.`, regions: [a.region], actors: [a.id] });

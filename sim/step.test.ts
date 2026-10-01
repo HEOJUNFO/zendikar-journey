@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { formatClock, gameDay, parseTimeOfDay } from './clock.ts';
+import { formatClock, gameDay, parseTimeOfDay, untapTime } from './clock.ts';
 import { loadWorld } from './load.ts';
 import { act as runAct, advance as runAdvance } from './run.ts';
 import type { Llm } from './run.ts';
@@ -6263,4 +6263,33 @@ test('the real Oran-Rief Recluse lurks in the canopy of Oran-Rief: reach, and a 
   assert.ok(def.beast && def.needs.includes('hunger'));
   assert.equal(def.enterDestroy?.flying, true);
   assert.equal(def.enterDestroy?.kickerText, '{2}{G}');
+});
+
+const graspSpell: RawEntity = { id: 'spl-pg', kind: 'spell', name: '마비시키는 손아귀', status: 'canon', sim: { cost: '{0}', learn_at: 'loc-a', target: 'other_here', effects: [{ type: 'aura', no_untap: true }] } };
+
+test('Paralyzing Grasp: nothing at once; once bound, the one it is on stays bound at midnight, until it is gone', async () => {
+  const world = fixture([graspSpell, npc('chr-c', npcSim('loc-a')), npc('chr-x', npcSim('loc-a'))]);
+  const state = newState(world, { seed: 1, mode: 'observer' });
+  const [c, x] = [state.actors['chr-c'], state.actors['chr-x']];
+  x.tile = c.tile;
+  castSpell(state, world, c, 'spl-pg', 'chr-x', false, state.minutes);
+  assert.equal(x.auras?.[0]?.noUntap, true);
+  assert.equal(x.boundUntil, undefined);
+  assert.ok(foesOf(x, state.minutes).includes('chr-c')); // a harmful spell
+  // Bound (tapped) today: at midnight it holds on.
+  x.boundUntil = untapTime(state.minutes);
+  await advance(state, world, 19); // 06:00 → 01:00 of day 2
+  assert.equal(x.boundUntil, untapTime(state.minutes));
+  assert.ok(texts(state).some((l) => l.includes('마비시키는 손아귀에 붙들려 풀려나지 못한다')));
+  // The aura gone, the next midnight lets them go.
+  delete x.auras;
+  await advance(state, world, 24);
+  assert.equal(x.boundUntil, undefined);
+});
+
+test('the real Paralyzing Grasp is taught at Sea Gate: an aura that keeps one bound from untapping', () => {
+  const world = loadWorld();
+  const s = world.spells.find((x) => x.id === 'spl-paralyzing-grasp')!;
+  assert.equal(s.learnAt, 'loc-sea-gate');
+  assert.deepEqual(s.effects.map((e) => e.type === 'aura' && e.no_untap), [true]);
 });
