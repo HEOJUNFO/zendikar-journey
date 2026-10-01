@@ -16,6 +16,7 @@ import { castSpell, spellDef } from './spells.ts';
 import { drawKnowledge } from './knowledge.ts';
 import { owesDiscard } from './discard.ts';
 import { landSealed, powersSealed, sealText } from './seal.ts';
+import { eraseFromWorld } from './erase.ts';
 import { addLog, buryCount, hasAbility, npcDef, outOfTime, present, ptOf, random, targetable, together, untargetableText } from './state.ts';
 import { nearestTile } from './tiles.ts';
 import type { Tile } from './tiles.ts';
@@ -606,6 +607,8 @@ export function upkeepFleeting(state: State, t: number) {
     a.forced = undefined;
     a.travel = undefined;
     addLog(state, { kind: 'event', text: `${josa(shortName(a.name), '이', '가')} 흩어져 사라졌다.`, regions: [a.region], actors: [a.id], t });
+    // "Exile it": erased from the world (sim/erase.ts, user decision 2026-10-01).
+    eraseFromWorld(state, id);
   }
 }
 

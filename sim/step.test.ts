@@ -2831,6 +2831,9 @@ test('Elemental Appeal: a 7/1 trampling, hasty elemental serves the caster until
   await advance(state, world, 19, { planDay: async () => [] });
   assert.ok(e.dead && e.left && unkicked.dead);
   assert.deepEqual(retainersOf(state, c.id), []);
+  // "Exile it": erased from the world, not a body left behind.
+  assert.equal(state.actors[e.id], undefined);
+  assert.equal(state.tokens?.[e.id], undefined);
   assert.ok(texts(state).some((l) => l.includes('흩어져 사라졌다')));
 });
 
@@ -4577,6 +4580,9 @@ test('a mindbreak trap: one casting their third spell of the day there sees it b
   assert.equal(c.auras?.length, 3);
   assert.deepEqual(c.spells, []);
   assert.ok(texts(state).some((l) => l.includes('허공에서 부서져 사라졌다')));
+  // Exiled: theirs never again, not even learned anew.
+  assert.deepEqual(c.exiled, ['spl-h']);
+  assert.match(learnBlocked(world, c, 'spl-h')!, /추방되어/);
   // Elsewhere, no trap.
   for (let i = 0; i < 3; i++) castSpell(state, world, far, 'spl-h', far.id, false, t);
   assert.equal(far.auras?.length, 3);

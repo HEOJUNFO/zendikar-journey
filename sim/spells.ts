@@ -155,10 +155,11 @@ export function castSpell(state: State, world: World, a: Actor, spellId: string,
     }
   }
   // A trap answering the count of spells cast today (Mindbreak Trap): the spell comes to nothing,
-  // and they forget it.
+  // exiled: theirs never again, not even learned anew (user decision 2026-10-01, `Actor.exiled`).
   if (!free && castEvents(state, world, a, t)) {
     a.spells = (a.spells ?? []).filter((x) => x !== s.id);
-    addLog(state, { kind: 'effect', text: `${josa(shortName(a.name), '이', '가')} 쓰던 ${josa(s.name, '은', '는')} 허공에서 부서져 사라졌다. 그 주문을 잊었다.`, regions: [a.region], actors: [a.id], t });
+    a.exiled = [...new Set([...(a.exiled ?? []), s.id])];
+    addLog(state, { kind: 'effect', text: `${josa(shortName(a.name), '이', '가')} 쓰던 ${josa(s.name, '은', '는')} 허공에서 부서져 사라졌다. 그 주문은 영영 다시 쓰지도 익히지도 못한다.`, regions: [a.region], actors: [a.id], t });
     return;
   }
   const on = target.id === a.id ? '자신' : shortName(target.name);
