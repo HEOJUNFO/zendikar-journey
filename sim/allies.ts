@@ -154,7 +154,7 @@ export function applyRally(state: State, world: World, sourceId: string, targetI
       actors: [x.id, target.id],
       t,
     });
-    if (!dealDamage(state, target, n, t, `${shortName(x.name)}의 불길`)) addFoe(target, x.id, t);
+    if (!dealDamage(state, target, n, t, `${shortName(x.name)}의 불길`, false, x)) addFoe(target, x.id, t);
   }
 }
 

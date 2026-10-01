@@ -201,7 +201,7 @@ export function castSpell(state: State, world: World, a: Actor, spellId: string,
       else addLog(state, { kind: 'status', text: `${josa(shortName(a.name), '은', '는')} ${josa(LAND_TYPE_LABELS[eff.land], '과', '와')} 이어져 있지 않아 아무 일도 없었다.`, regions: [a.region], actors: [a.id], t });
     } else if (eff.type === 'damage_per_land') {
       const n = landsOfType(state, world, a, eff.land).length;
-      if (n > 0) dealDamage(state, target, n, t, s.name);
+      if (n > 0) dealDamage(state, target, n, t, s.name, false, a);
       else addLog(state, { kind: 'status', text: `${josa(shortName(a.name), '은', '는')} ${josa(LAND_TYPE_LABELS[eff.land], '과', '와')} 이어져 있지 않아 아무 일도 없었다.`, regions: [a.region], actors: [a.id], t });
     } else if (eff.type === 'hunt_creatures') {
       huntKnowledge(state, world, target, eff.count, t, s.name);
@@ -243,5 +243,5 @@ export function castSpell(state: State, world: World, a: Actor, spellId: string,
 function judgment(state: State, world: World, a: Actor, name: string, t: number) {
   const all = present(state, a.region, a.tile).filter((x) => npcDef(state, world, x.id)?.loyalty === undefined);
   addLog(state, { kind: 'event', text: `${name}: 눈부신 빛이 ${shortName(a.name)}의 곁을 덮쳤다.`, regions: [a.region], actors: all.map((x) => x.id), t });
-  for (const x of [...all.filter((y) => y.id !== a.id), ...all.filter((y) => y.id === a.id)]) if (!x.dead) destroy(state, x, t, name);
+  for (const x of [...all.filter((y) => y.id !== a.id), ...all.filter((y) => y.id === a.id)]) if (!x.dead) destroy(state, x, t, name, a);
 }

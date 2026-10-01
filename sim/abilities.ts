@@ -150,7 +150,7 @@ function mountainFire(state: State, world: World, a: Actor, land: Region, amount
     actors: [a.id, target.id],
     t,
   });
-  dealDamage(state, target, amount, t, land.name);
+  dealDamage(state, target, amount, t, land.name, false, a);
 }
 
 // `target`: whom the player picked for a land's targeted effect, or (a mountain, with Valakut
@@ -407,16 +407,16 @@ export function useAbility(state: State, world: World, beingId: string, abilityI
   let died = false;
   for (const eff of ability.effects) {
     if (eff.type === 'destroy' && target) {
-      if (destroy(state, target, t, cause)) died = true;
+      if (destroy(state, target, t, cause, bs)) died = true;
     } else if (eff.type === 'raise' && died && target) {
       raiseToken(state, world, target, eff.creature, eff.faction, eff.colors, being.id);
     } else if (eff.type === 'discard_spell') {
       const gone = discardSpell(state, world, bs, t);
-      if (gone && spellColors(gone).includes(eff.if_color) && target) dealDamage(state, target, eff.damage, t, cause);
+      if (gone && spellColors(gone).includes(eff.if_color) && target) dealDamage(state, target, eff.damage, t, cause, false, bs);
     } else if (eff.type === 'wheel') {
       for (const x of present(state, bs.region, bs.tile)) wheel(state, world, x, eff.draw, t, cause);
     } else if (eff.type === 'damage' && target) {
-      if (dealDamage(state, target, eff.amount, t, cause)) died = true;
+      if (dealDamage(state, target, eff.amount, t, cause, false, bs)) died = true;
     } else if (eff.type === 'gain_life') {
       gainLife(state, bs, eff.amount, t, cause);
     } else if (eff.type === 'set_life' && target) {
@@ -808,7 +808,7 @@ export function applyEnterDestroy(state: State, world: World, a: Actor, target: 
     actors: [a.id, target.id],
     t,
   });
-  destroy(state, target, t, `${shortName(a.name)}의 사냥`);
+  destroy(state, target, t, `${shortName(a.name)}의 사냥`, a);
 }
 
 // --- Oran-Rief: "{T}: Put a +1/+1 counter on each green creature that entered this turn" ---

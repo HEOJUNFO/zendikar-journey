@@ -24,8 +24,9 @@ export function woundsOf(a: Actor, t: number) {
 }
 
 // Returns whether it killed them. Nonlethal damage knocks out instead of killing. A
-// planeswalker's damage comes off their loyalty; at 0 they leave the plane.
-export function dealDamage(state: State, a: Actor, amount: number, t: number, cause: string, nonlethal = false) {
+// planeswalker's damage comes off their loyalty; at 0 they leave the plane. `by`: who dealt it,
+// if anyone (where one with no master goes when they die: `die`).
+export function dealDamage(state: State, a: Actor, amount: number, t: number, cause: string, nonlethal = false, by?: Actor) {
   if (a.dead || amount <= 0) return false;
   if (a.loyalty !== undefined) {
     a.loyalty = Math.max(nonlethal ? 1 : 0, a.loyalty - amount);
@@ -47,7 +48,7 @@ export function dealDamage(state: State, a: Actor, amount: number, t: number, ca
   }
   a.wounds = { day: gameDay(t), amount: total };
   if (total >= toughness) {
-    die(state, a, t, cause);
+    die(state, a, t, cause, by);
     return true;
   }
   addLog(state, {
@@ -59,11 +60,15 @@ export function dealDamage(state: State, a: Actor, amount: number, t: number, ca
   return false;
 }
 
-export function die(state: State, a: Actor, t: number, cause: string) {
+// `by`: whose doing it was, if anyone's.
+export function die(state: State, a: Actor, t: number, cause: string, by?: Actor) {
   a.dead = { at: t, cause };
-  // A retainer who dies goes to their master's graveyard.
-  const m = a.master ? state.actors[a.master] : undefined;
-  if (m) {
+  // Into a graveyard (`fallen`, user decision 2026-10-01): a retainer's master's; one serving no
+  // one, their killer's side (the killer's master, or the killer). Not a token (it ceases to be,
+  // as in MTG), nor the player.
+  const killer = by && (masterOf(state, by) ?? by);
+  const m = a.master ? state.actors[a.master] : killer;
+  if (m && a.kind !== 'player' && !state.tokens?.[a.id]) {
     m.fallen = [...(m.fallen ?? []), a.id];
     buryCount(m, 1, t);
   }
@@ -188,13 +193,13 @@ export function unblockable(state: State, world: World, attacker: Actor, defende
   return null;
 }
 
-// "Destroy": they die, unless indestructible. Returns whether they died.
-export function destroy(state: State, target: Actor, t: number, cause: string) {
+// "Destroy": they die, unless indestructible. Returns whether they died. `by`: whose doing it is.
+export function destroy(state: State, target: Actor, t: number, cause: string, by?: Actor) {
   if (hasAbility(target, 'indestructible', t)) {
     addLog(state, { kind: 'effect', text: `${josa(shortName(target.name), '은', '는')} 파괴되지 않는다 (파괴불가).`, regions: [target.region], actors: [target.id], t });
     return false;
   }
-  die(state, target, t, cause);
+  die(state, target, t, cause, by);
   return true;
 }
 
@@ -267,8 +272,9 @@ export function clash(state: State, world: World, attacker: Actor, defender: Act
   const aFirst = aDouble || hasAbility(attacker, 'first_strike', t);
   const dFirst = !tapped && (dDouble || hasAbility(defender, 'first_strike', t));
   const hit = (to: Actor, n: number, by: string) => {
-    hurt(to, to === defender ? attacker : defender, n, t);
-    return dealDamage(state, to, n, t, `${josa(by, '과', '와')}의 싸움`, !lethal(attacker, defender));
+    const from = to === defender ? attacker : defender;
+    hurt(to, from, n, t);
+    return dealDamage(state, to, n, t, `${josa(by, '과', '와')}의 싸움`, !lethal(attacker, defender), from);
   };
   let [dealtA, dealtD] = [0, 0];
   if (!aFirst && !dFirst) {
@@ -326,7 +332,7 @@ export function clash(state: State, world: World, attacker: Actor, defender: Act
       actors: [s.who.id],
     });
     hurt(s.who, from, s.excess, t);
-    dealDamage(state, s.who, s.excess, t, `${by}의 돌진`, !lethal(from, s.who));
+    dealDamage(state, s.who, s.excess, t, `${by}의 돌진`, !lethal(from, s.who), from);
     lifelink(state, from, s.excess, t);
   }
 }

@@ -90,7 +90,7 @@ export function bite(state: State, world: World, a: Actor, whoId: string, t: num
   for (const [from, to, n] of [[biter, b, toB], [b, biter, toBiter]] as const) {
     if (n <= 0) continue;
     hurt(to, from, n, t);
-    dealDamage(state, to, n, t, `${josa(shortName(from.name), '과', '와')}의 물어뜯기`, nonlethal);
+    dealDamage(state, to, n, t, `${josa(shortName(from.name), '과', '와')}의 물어뜯기`, nonlethal, from);
     lifelink(state, from, n, t);
   }
   // Someone went down: the fight is over.

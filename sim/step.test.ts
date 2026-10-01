@@ -8,7 +8,7 @@ import type { PlanDayInput } from './llm/planner.ts';
 import type { Action } from './actions.ts';
 import { startAction } from './actions.ts';
 import type { World } from './world.ts';
-import { addFoe, attackBlocked, caughtAsleep, clash, die, foesOf, hostileNpcs, intimidated, knockedOut, landwalked, unblockable, woundsOf } from './combat.ts';
+import { addFoe, attackBlocked, caughtAsleep, clash, dealDamage, die, foesOf, hostileNpcs, intimidated, knockedOut, landwalked, unblockable, woundsOf } from './combat.ts';
 import { landSealed, powersSealed, sealedBy, sealToday, setSeal } from './seal.ts';
 import { castBlocked, castSpell, castTargets, learnBlocked, readyCast } from './spells.ts';
 import { actorColors, COLORS, formatMana, manaAvailable, manaCapacity, parseManaCost, planPayment } from './mana.ts';
@@ -2513,6 +2513,31 @@ test('a ravenous trap on one who holds every spell of a color (Chandra): the exi
   w.graveyard = [];
   syncWorld(state, world);
   assert.ok(!w.spells?.includes(bolt.id)); // exiled: not back
+});
+
+test('graveyards: a retainer goes to their master\'s, one serving no one to their killer\'s side (the killer\'s master if they serve), a token to none, a trap\'s dead to none', () => {
+  const world = fixture([npc('chr-x', npcSim('loc-a')), npc('chr-y', npcSim('loc-a')), npc('chr-r', npcSim('loc-a')), npc('chr-k', npcSim('loc-a')), npc('chr-z', npcSim('loc-a'))]);
+  const state = character(world, 'loc-a');
+  const t = state.minutes;
+  const [p, x, y, r, k, z] = [PLAYER_ID, 'chr-x', 'chr-y', 'chr-r', 'chr-k', 'chr-z'].map((id) => state.actors[id]);
+  // The player kills x, who serves no one: into the player's graveyard.
+  dealDamage(state, x, 9, t, '시험', false, p);
+  assert.deepEqual(p.fallen, ['chr-x']);
+  // r serves the player and kills y: the player's too.
+  r.master = PLAYER_ID;
+  dealDamage(state, y, 9, t, '시험', false, r);
+  assert.deepEqual(p.fallen, ['chr-x', 'chr-y']);
+  // A token who serves k dies: no graveyard (it ceases to be).
+  (state.tokens ??= {})['chr-z'] = {} as never;
+  z.master = 'chr-k';
+  dealDamage(state, z, 9, t, '시험', false, p);
+  assert.equal(k.fallen, undefined);
+  assert.deepEqual(p.fallen, ['chr-x', 'chr-y']);
+  // k dies of a trap: no one's doing, no graveyard.
+  dealDamage(state, k, 9, t, '함정');
+  assert.ok(k.dead);
+  assert.deepEqual(p.fallen, ['chr-x', 'chr-y']);
+  assert.equal(buriedToday(p, t), 2);
 });
 
 test('the real Ravenous Trap lies in the Crypt of Agadeem, for those who buried three or more', () => {

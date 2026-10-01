@@ -42,7 +42,7 @@ export function loseLife(state: State, a: Actor, amount: number, t: number, caus
   if (by && by.id !== a.id && by.kind === 'npc' && a.kind === 'npc') {
     a.life = 1;
     knockOut(state, a, t, cause, false);
-  } else die(state, a, t, `${cause}에 생명이 다함`);
+  } else die(state, a, t, `${cause}에 생명이 다함`, by);
 }
 
 export function gainLife(state: State, a: Actor, amount: number, t: number, cause: string) {
