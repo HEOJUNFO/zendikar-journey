@@ -6044,3 +6044,44 @@ test('the real Mindless Null drags its chains in the Ghet estate, following only
   assert.ok(controlsKind(state, world, k, 'cre-vampire'));
   assert.equal(followBlocked(state, world, n, k), null);
 });
+
+test('Molten Ravager: {R} poured is +1/+0; at 0/4 it hits only with fire poured in', async () => {
+  const ravager = { ...npcSim('loc-a', 'work', [0, 4]), mana: { R: 3 }, needs: ['energy'], beast: true, pump: { cost: '{R}', pt: [1, 0] } };
+  const world = fixture([npc('chr-r', ravager), npc('chr-x', npcSim('loc-a', 'work', [0, 9]))]);
+  const state = newState(world, { seed: 1, mode: 'observer' });
+  const [r, x] = [state.actors['chr-r'], state.actors['chr-x']];
+  x.tile = r.tile;
+  addFoe(r, 'chr-x', state.minutes);
+  await advance(state, world, 1, { pick: async () => '2' });
+  assert.deepEqual(ptOf(r), [2, 4]);
+  assert.equal(woundsOf(x, state.minutes), 2);
+  assert.ok(texts(state).some((l) => l.includes('부풀었다 (자정까지 +2/+0)')));
+});
+
+test('follows_only a character: a beast only that one, or one who keeps them, may court or talk round', () => {
+  const beast = { ...npcSim('loc-a', 'work', [0, 4]), needs: ['energy'], beast: true, tamable: true, follows_only: 'chr-l' };
+  const world = fixture([npc('chr-r', beast), npc('chr-l', npcSim('loc-a')), npc('chr-m', npcSim('loc-a')), npc('chr-o', npcSim('loc-a'))]);
+  const state = newState(world, { seed: 1, mode: 'observer' });
+  const [r, l, m, o] = ['chr-r', 'chr-l', 'chr-m', 'chr-o'].map((id) => state.actors[id]);
+  for (const a of [l, m, o]) a.tile = r.tile;
+  assert.ok(courtTargets(state, world, l).some((x) => x.id === 'chr-r'));
+  assert.ok(!courtTargets(state, world, m).some((x) => x.id === 'chr-r'));
+  assert.ok(followBlocked(state, world, r, o)?.includes('chr-l 곁이 아니면'));
+  l.master = 'chr-m';
+  assert.ok(courtTargets(state, world, m).some((x) => x.id === 'chr-r'));
+  assert.ok(!courtTargets(state, world, o).some((x) => x.id === 'chr-r'));
+});
+
+test('the real Molten Ravager rages on the Teeth of Akoum; only the Lullmage Mentor, or one who keeps her, may calm it', () => {
+  const world = loadWorld();
+  const state = newState(world, { seed: 1, mode: 'observer' });
+  const r = state.actors['cre-molten-ravager'];
+  assert.equal(r?.region, 'loc-teeth-of-akoum');
+  const def = npcDef(state, world, r.id)!;
+  assert.ok(def.beast && def.tamable && !def.needs.includes('hunger'));
+  assert.deepEqual(def.pump?.pt, [1, 0]);
+  assert.deepEqual(ptOf(r), [0, 4]);
+  const l = state.actors['chr-lullmage-mentor'];
+  assert.equal(followBlocked(state, world, r, l), null);
+  assert.ok(followBlocked(state, world, r, state.actors['chr-kalitas'])?.includes('잠재움술사 스승 곁이 아니면'));
+});

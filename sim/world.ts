@@ -323,8 +323,8 @@ export const CharacterSimSchema = z.strictObject({
   // player by talking to it, an NPC by a "court" block. The LLM decides, as the beast.
   tamable: z.boolean().default(false),
   // A beast that follows only one who controls a creature of this kind (a creature entity, e.g.
-  // cre-vampire: Mindless Null follows a vampire's side, user decision 2026-10-01): no one else
-  // may court or sway it.
+  // cre-vampire: Mindless Null follows a vampire's side) or that one character (Molten Ravager:
+  // the Lullmage Mentor), user decision 2026-10-01: no one else may court or sway it.
   follows_only: z.string().optional(),
   // "This creature can't block unless you control a Vampire" (Mindless Null, a creature entity):
   // it stands against one who fell on its master first only while its master's creatures (the
@@ -366,7 +366,8 @@ export const CharacterSimSchema = z.strictObject({
   extra_combat: z.strictObject({ cost: CostSchema }).optional(),
   // "{B}: This creature gets +1/+1 until end of turn" (Crypt Ripper): before each hour it fights,
   // its controller pours in what they will, each `cost` +`pt` until midnight (sim/pump.ts).
-  pump: z.strictObject({ cost: CostSchema, pt: PtSchema }).optional(),
+  // +N/+0 too (Molten Ravager: {R}: +1/+0).
+  pump: z.strictObject({ cost: CostSchema, pt: z.tuple([z.number().int().min(0), z.number().int().min(0)]) }).optional(),
   // "Gets +P/+T as long as an opponent has no cards in hand" (Guul Draz Specter): while a foe of
   // today standing with them holds no spell (user decision 2026-10-01).
   empty_hand_pump: z.tuple([z.number().int().min(0), z.number().int().min(0)]).optional(),

@@ -41,9 +41,10 @@ export function creatureOf(state: State, world: World, id: string) {
 }
 
 // Whether `owner` controls a creature of `kind` (a creature entity: "if you control a Vampire" is
-// cre-vampire): themselves or one who serves them.
+// cre-vampire), or that very one (a character: the Lullmage Mentor), themselves or one who serves
+// them.
 export function controlsKind(state: State, world: World, owner: Actor, kind: string) {
-  return controlledCreatures(state, world, owner).some((x) => creatureOf(state, world, x.id) === kind);
+  return controlledCreatures(state, world, owner).some((x) => x.id === kind || creatureOf(state, world, x.id) === kind);
 }
 
 // Why `a` can't be won over as a retainer, or null.
@@ -58,12 +59,12 @@ export function swayBlocked(state: State, world: World, a: Actor): string | null
 
 // Why `a` won't follow `master` (talked round, courted, pledging in a talk), or null: one who can't
 // be won over at all, or a beast that follows only one who controls its kind (Mindless Null: a
-// vampire's side, user decision 2026-10-01).
+// vampire's side; Molten Ravager: a lullmage's, user decision 2026-10-01).
 export function followBlocked(state: State, world: World, a: Actor, master: Actor): string | null {
   const why = swayBlocked(state, world, a);
   if (why) return why;
   const kind = npcDef(state, world, a.id)?.followsOnly;
-  if (kind && !controlsKind(state, world, master, kind)) return `${josa(shortName(a.name), '은', '는')} ${world.lore.find((l) => l.id === kind)?.name ?? kind} 곁이 아니면 따르지 않는다.`;
+  if (kind && !controlsKind(state, world, master, kind)) return `${josa(shortName(a.name), '은', '는')} ${shortName(world.lore.find((l) => l.id === kind)?.name ?? kind)} 곁이 아니면 따르지 않는다.`;
   return null;
 }
 

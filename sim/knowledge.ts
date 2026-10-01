@@ -88,7 +88,7 @@ export function creatureSecrets(state: State, world: World, t: number): Secret[]
         n.beast ? '말을 하지 않는 짐승' : '말을 하는 이',
         n.needs.includes('hunger') ? '먹는다' : '먹지 않는다',
         n.hireable && `${hirePrice(n)}코인에 고용할 수 있다`,
-        n.tamable && (n.followsOnly ? `${world.lore.find((l) => l.id === n.followsOnly)?.name ?? n.followsOnly} 곁만 따른다` : '따를 이를 스스로 고른다'),
+        n.tamable && (n.followsOnly ? `${shortName(world.lore.find((l) => l.id === n.followsOnly)?.name ?? n.followsOnly)} 곁만 따른다` : '따를 이를 스스로 고른다'),
         a.master && `지금은 ${shortName(state.actors[a.master]?.name ?? a.master)}의 권속`,
       ].filter(Boolean);
       return { id: `creature:${n.id}:${day}`, text: `오늘 ${josa(shortName(a.name), '이', '가')} ${where}에 있다: ${n.role ?? ''} (${ways.join(', ')}).`, day };
