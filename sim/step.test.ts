@@ -3050,6 +3050,70 @@ test('the real Bold Defense is taught at Kabira Crossroads', () => {
   assert.equal(s.kicker?.manaText, '{3}{W}');
 });
 
+test('Cancel: a spell cast where one holds it waits an hour; answered, it scatters (mana spent, still known); left alone, it takes hold', async () => {
+  const cancel: RawEntity = { id: 'spl-cn', kind: 'spell', name: '취소', status: 'canon', sim: { cost: '{U}', speed: 'instant', learn_at: 'loc-a', effects: [{ type: 'counter_spell' }] } };
+  const drain: RawEntity = { id: 'spl-dr', kind: 'spell', name: '흡수', status: 'canon', sim: { cost: '{B}', learn_at: 'loc-a', effects: [{ type: 'lose_half_life' }] } };
+  const world = fixture([cancel, drain, npc('chr-c', { ...npcSim('loc-a'), mana: { B: 2 } }), npc('chr-h', { ...npcSim('loc-a'), mana: { U: 2 } }), npc('chr-x', npcSim('loc-a'))]);
+  const state = newState(world, { seed: 1, mode: 'observer' });
+  const [c, h, x] = [state.actors['chr-c'], state.actors['chr-h'], state.actors['chr-x']];
+  h.tile = x.tile = c.tile;
+  c.spells = ['spl-dr'];
+  h.spells = ['spl-cn'];
+  assert.match(castBlocked(state, world, h, 'spl-cn', c.id, false, state.minutes) ?? '', /막으려고만/);
+  assert.equal(castSpell(state, world, c, 'spl-dr', x.id, false, state.minutes), 'held');
+  assert.equal(lifeOf(x), 20); // not yet
+  const asked: string[] = [];
+  await advance(state, world, 1, { planDay: async () => [], pick: async ({ what, options }) => (asked.push(what), options[0].id) });
+  assert.match(asked[0], /무효화/);
+  assert.equal(lifeOf(x), 20);
+  assert.ok(c.spells.includes('spl-dr'));
+  assert.ok(texts(state).some((l) => l.includes('허공에서 흩어졌다')));
+  // Left alone: it takes hold an hour on.
+  const s2 = newState(world, { seed: 1, mode: 'observer' });
+  const [c2, h2, x2] = [s2.actors['chr-c'], s2.actors['chr-h'], s2.actors['chr-x']];
+  h2.tile = x2.tile = c2.tile;
+  c2.spells = ['spl-dr'];
+  h2.spells = ['spl-cn'];
+  castSpell(s2, world, c2, 'spl-dr', x2.id, false, s2.minutes);
+  await advance(s2, world, 1, { planDay: async () => [], pick: async () => null });
+  assert.equal(lifeOf(x2), 10);
+  // A joining (a creature spell) too, with no Illusion left.
+  const s3 = newState(world, { seed: 1, mode: 'observer' });
+  const [c3, h3, x3] = [s3.actors['chr-c'], s3.actors['chr-h'], s3.actors['chr-x']];
+  h3.tile = x3.tile = c3.tile;
+  h3.spells = ['spl-cn'];
+  summon(s3, world, x3, c3, s3.minutes, '설득');
+  const owed = s3.choices!.find((y) => y.effect.type === 'counter')!;
+  answerCounter(s3, world, h3, owed.effect as never, true, s3.minutes);
+  assert.equal(x3.master, undefined);
+  assert.deepEqual(retainersOf(s3, h3.id), []);
+});
+
+test('Cancel held by the player: a pick to answer, or let be', async () => {
+  const cancel: RawEntity = { id: 'spl-cn', kind: 'spell', name: '취소', status: 'canon', sim: { cost: '{0}', speed: 'instant', learn_at: 'loc-a', effects: [{ type: 'counter_spell' }] } };
+  const drain: RawEntity = { id: 'spl-dr', kind: 'spell', name: '흡수', status: 'canon', sim: { cost: '{0}', learn_at: 'loc-a', effects: [{ type: 'lose_half_life' }] } };
+  const world = fixture([cancel, drain, npc('chr-c', npcSim('loc-a'))]);
+  const state = character(world, 'loc-a');
+  const [p, c] = [state.actors[PLAYER_ID], state.actors['chr-c']];
+  c.tile = p.tile;
+  c.spells = ['spl-dr'];
+  p.spells = ['spl-cn'];
+  castSpell(state, world, c, 'spl-dr', p.id, false, state.minutes);
+  await advance(state, world, 1, { planDay: async () => [] });
+  const ask = state.asks?.[0];
+  assert.equal(ask?.effect.type, 'counter_cast');
+  assert.deepEqual(askOptions(state, world, ask!).map((o) => o.pick), [c.id, null]);
+  await act(state, world, { type: 'choose', pick: c.id }, { planDay: async () => [] });
+  assert.equal(lifeOf(p), 20);
+});
+
+test('the real Cancel is taught in Tazeem', () => {
+  const world = loadWorld();
+  const s = world.spells.find((x) => x.id === 'spl-cancel')!;
+  assert.equal(s.learnAt, 'loc-tazeem');
+  assert.ok(reactionSpell(s));
+});
+
 test('the real Conqueror\'s Pledge is taught in Ondu: six Kor Soldiers, twelve kicked for {6}', () => {
   const world = loadWorld();
   const s = world.spells.find((x) => x.id === 'spl-conquerors-pledge')!;

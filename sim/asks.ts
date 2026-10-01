@@ -2,7 +2,7 @@
 // What an NPC decides by the LLM, the player decides here: whom an Ally's rally in their party
 // falls on (sim/allies.ts), whether to serve one who asks it of them, and whether to take to
 // the air when one who can't fly sets on them.
-import { answerCounter, summon } from './counter.ts';
+import { answerCounter, answerCounterCast, summon } from './counter.ts';
 import { untapTime } from './clock.ts';
 import { applyDrainGrow, applyEnterDestroy, applySearch } from './abilities.ts';
 import { crushOwed, crushRelic, demolish, demolishOptions, relicsHere } from './relics.ts';
@@ -50,6 +50,12 @@ export function askText(state: State, world: World, c: Choice) {
     const s = world.spells.find((x) => x.id === (c.effect as { spell: string }).spell);
     return `${shortName(state.actors[c.effect.joiner]?.name ?? '')}이(가) ${shortName(state.actors[c.effect.master]?.name ?? '')}의 곁에 들려 한다 (${c.effect.how}). ${s?.name ?? ''}(${s?.costText ?? ''})로 무산시키면 그는 들지 못하고 당신 곁에 ${s?.summary ?? ''}. 어떻게?`;
   }
+  if (c.effect.type === 'counter_cast') {
+    const e = c.effect;
+    const [cast, s, target] = [world.spells.find((x) => x.id === e.cast), world.spells.find((x) => x.id === e.spell), state.actors[e.target]];
+    const on = !target || target.id === e.caster ? '' : ` ${shortName(target.name)}에게`;
+    return `${shortName(state.actors[e.caster]?.name ?? '')}이(가)${on} ${cast?.name ?? ''}을(를) 걸려 한다 (${cast?.summary ?? ''}). ${s?.name ?? ''}(${s?.costText ?? ''})로 무효화할까?`;
+  }
   if (c.effect.type === 'tide') return `나를 섬기는 ${shortName(state.actors[c.effect.source]?.name ?? '')}이(가) 썰물에 무너지려 한다. 유대를 맺은 땅 하나를 내어 주면(다시 맺을 수 있다) 남는다. 어느 땅을?`;
   if (c.effect.type === 'search') return `${shortName(state.actors[c.effect.source]?.name ?? '')}이(가) 잊힌 길을 안다. 아직 유대가 없는 땅 하나와 멀리서 유대를 맺을 수 있다 (하루 한 땅에 들지 않고, 오늘은 마나를 내지 않는다). 어느 땅과?`;
   if (c.effect.type === 'return_lands') return `${state.items?.[c.effect.item]?.name ?? c.effect.item}: 유대를 맺은 땅 ${c.effect.left}곳을 내어 주어야 한다 (다시 맺을 수 있다). 먼저 어느 땅을?`;
@@ -77,6 +83,7 @@ export function askOptions(state: State, world: World, c: Choice): { pick: strin
   }
   if (c.effect.type === 'quell') return [...QUELL_KINDS.map((k) => ({ pick: k as string | null, label: QUELL_LABELS[k] })), { pick: null, label: '부르지 않는다' }];
   if (c.effect.type === 'counter') return [{ pick: c.effect.joiner, label: `무산시킨다 (${world.spells.find((x) => x.id === (c.effect as { spell: string }).spell)?.costText ?? ''})` }, { pick: null, label: '두고 본다' }];
+  if (c.effect.type === 'counter_cast') return [{ pick: c.effect.caster, label: `무효화한다 (${world.spells.find((x) => x.id === (c.effect as { spell: string }).spell)?.costText ?? ''})` }, { pick: null, label: '두고 본다' }];
   if (c.effect.type === 'tide') return [...c.candidates.map((id) => ({ pick: id as string | null, label: region(world, id).name })), { pick: null, label: '내어 주지 않는다 (흩어진다)' }];
   if (c.effect.type === 'search') return [...c.candidates.map((id) => ({ pick: id as string | null, label: region(world, id).name })), { pick: null, label: '맺지 않는다' }];
   if (c.effect.type === 'return_lands') {
@@ -166,6 +173,8 @@ export function answerAsk(state: State, world: World, pick: string | null, t: nu
     const x = state.actors[c.effect.source];
     const target = pick && c.candidates.includes(pick) ? state.actors[pick] : undefined;
     if (x && target) applyBind(state, world, x, target, t);
+  } else if (c.effect.type === 'counter_cast') {
+    answerCounterCast(state, world, p, c.effect, pick === c.effect.caster, t);
   } else if (c.effect.type === 'counter') {
     answerCounter(state, world, p, c.effect, pick === c.effect.joiner, t);
   } else if (c.effect.type === 'tide') {

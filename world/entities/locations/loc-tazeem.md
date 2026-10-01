@@ -5,7 +5,7 @@ name: 타짐
 name_en: Tazeem
 summary: 젠디카르 남쪽 가운데의 물가 대륙. 깎아지른 절벽과 해안이 이어지고, 하늘에는 에메리아의 폐허가 떠 있으며, 우마라 강에는 거대한 폭포 마고시가 쏟아지고, 오란리프의 숲이 끝없이 자란다
 status: canon
-sources: [ZEN-213, ZEN-218, ZEN-220, ZEN-221, ZEN-225, ZEN-62, ZEN-63, ZEN-77, ZEN-96, ZEN-57]
+sources: [ZEN-213, ZEN-218, ZEN-220, ZEN-221, ZEN-225, ZEN-62, ZEN-63, ZEN-77, ZEN-96, ZEN-57, ZEN-44]
 tags: [대륙, 해안, 절벽, 청색]
 links:
   - { to: cre-halo-hunter, rel: 에메리아 아래 절벽 굴의 악마 }
@@ -18,6 +18,7 @@ links:
   - { to: loc-guul-draz, rel: 좁은 바다 건너 동쪽의 대륙 }
   - { to: loc-oran-rief, rel: 산호 바위 숲 }
   - { to: loc-soaring-seacliff, rel: 해안의 바다절벽 }
+  - { to: spl-cancel, rel: 배우는 주문 }
 map: { x: 1450, y: 1260, terrain: beach, size: continent, tiles: 200 }
 ---
 
@@ -35,6 +36,7 @@ map: { x: 1450, y: 1260, terrain: beach, size: continent, tiles: 200 }
 - 안에 구역 에메리아(`loc-emeria`, 비행하지 못하는 이도 밧줄로 오를 수 있다)와 대륙을 남북으로 가르는 우마라 강 협곡(`loc-umara-gorge`, 기본 섬 20칸, 2026-10-01 설정대로 더함) 안의 마고시(`loc-magosi`, 하루를 맡기고 되찾는 폭포: 구역 안의 구역), 오란리프(`loc-oran-rief`, 새로 난 녹색 생물을 북돋우는 숲), 솟아오른 바다절벽(`loc-soaring-seacliff`, 유대를 맺을 때 곁의 하나에게 하루 날개)이 있다.
 - 뒤틀림이 모습을 얻은 뒤틀림 정령(`cre-roil-elemental`, ZEN-62)이 타짐을 떠돈다 ([결정] 2026-09-30).
 - 석상 얼굴이 늘어선 돌 미로에 정신파괴 함정(`evt-mindbreak-trap`, ZEN-57)이 깃들어 있다 ([결정] 2026-10-01). 타짐(구역 포함)에서 그날 셋째 주문을 쓰는 이가 있으면 그 주문을 부수고 잊게 한다.
+- 취소(`spl-cancel`, ZEN-44)를 배운다 ([결정] 2026-10-01): 곁에서 쓰는 주문이나 권속 들이기를 무효화하는 반응 주문.
 
 ## 미정/질문
 

@@ -1,7 +1,7 @@
 // Turn driver. Time only moves here: the observer advances N hours, the player acts and the
 // world runs until the action is done. The game passes every LLM hook (sim/llm/index.ts);
 // tests pass fakes or none.
-import { answerCounter, summon } from './counter.ts';
+import { answerCounter, answerCounterCast, summon } from './counter.ts';
 import { formatClock, gameDay, untapTime } from './clock.ts';
 import { startAction } from './actions.ts';
 import type { Action } from './actions.ts';
@@ -558,6 +558,7 @@ async function choices(state: State, world: World, llm: Llm) {
       if (!by.dead) (state.asks ??= []).push(c);
       // A joining that waited on them goes through.
       else if (c.effect.type === 'counter') answerCounter(state, world, by, c.effect, false, state.minutes);
+      else if (c.effect.type === 'counter_cast') answerCounterCast(state, world, by, c.effect, false, state.minutes);
       continue;
     }
     const npc = speakerDef(state, world, c.by);
@@ -648,6 +649,23 @@ async function choices(state: State, world: World, llm: Llm) {
         }
       }
       answerCounter(state, world, by, eff, pick === eff.joiner, state.minutes);
+      continue;
+    }
+    // Cancel: whether they answer a spell cast where they stand (sim/counter.ts). The spell waits
+    // on this; with no answer, it takes hold.
+    if (c.effect.type === 'counter_cast') {
+      const eff = c.effect;
+      let pick: string | null = null;
+      const [caster, cast, s, target] = [state.actors[eff.caster], spellDef(world, eff.cast), spellDef(world, eff.spell), state.actors[eff.target]];
+      if (by && !by.dead && npc && llm.pick && caster && cast && s) {
+        try {
+          const on = !target || target.id === caster.id ? '' : ` ${shortName(target.name)}에게`;
+          pick = await llm.pick({ world, state, npc, what: `${josa(shortName(caster.name), '이', '가')}${on} ${josa(cast.name, '을', '를')} 걸려 한다: ${cast.summary}. 당신이 쥔 ${s.name}(${s.costText})로 무효화할 수 있다 (그 주문은 허공에서 흩어지고, 치른 마나는 돌아오지 않는다). 두고 볼 수도 있다`, options: [{ id: caster.id, label: '무효화한다' }], optional: true });
+        } catch (e) {
+          console.warn(`pick (counter_cast) for ${c.by} failed:`, e);
+        }
+      }
+      answerCounterCast(state, world, by, eff, pick === eff.caster, state.minutes);
       continue;
     }
     // Living Tsunami at midnight: which land its master gives back to keep it (or none: it goes).

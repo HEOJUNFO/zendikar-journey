@@ -14,7 +14,7 @@ import { owesDiscard } from './discard.ts';
 import { crushOwed, demolishOptions, demolishOwed, relicsHere } from './relics.ts';
 import { remember } from './relations.ts';
 import { copyable, replicate } from './replicate.ts';
-import { reactionSpell } from './counter.ts';
+import { holdCast, reactionSpell } from './counter.ts';
 import { controlledCreatures, creatureOf, retainersOf } from './retainers.ts';
 import { addLog, npcDef, present, ptOf, targetable, together, untargetableText } from './state.ts';
 import type { Actor, State } from './state.ts';
@@ -153,10 +153,10 @@ export function harmful(s: SpellDef) {
 }
 
 // Pays and resolves. A harmful spell's target (if an NPC) takes it as an attack. Returns whether
-// it resolved (not sealed off, not broken by a trap).
-export function castSpell(state: State, world: World, a: Actor, spellId: string, targetId: string, kick: boolean, t: number, free = false) {
+// it resolved (not sealed off, not broken by a trap), or 'held': a counterspell there may answer
+// it, and it resolves (or not) an hour on (Cancel, sim/counter.ts).
+export function castSpell(state: State, world: World, a: Actor, spellId: string, targetId: string, kick: boolean, t: number, free = false): boolean | 'held' {
   const s = spellDef(world, spellId)!;
-  const target = state.actors[targetId];
   const by = sealedBy(state, a, s, t);
   if (by) {
     addLog(state, { kind: 'status', text: `${josa(shortName(a.name), '은', '는')} ${josa(s.name, '을', '를')} 쓰지 못했다: ${sealText(by, t)}`, regions: [a.region], actors: [a.id, by.id], t });
@@ -180,6 +180,20 @@ export function castSpell(state: State, world: World, a: Actor, spellId: string,
     a.spells = (a.spells ?? []).filter((x) => x !== s.id);
     a.exiled = [...new Set([...(a.exiled ?? []), s.id])];
     addLog(state, { kind: 'effect', text: `${josa(shortName(a.name), '이', '가')} 쓰던 ${josa(s.name, '은', '는')} 허공에서 부서져 사라졌다. 그 주문은 영영 다시 쓰지도 익히지도 못한다.`, regions: [a.region], actors: [a.id], t });
+    return false;
+  }
+  // Someone there holding a counterspell (Cancel) may answer it: it waits an hour. Not what comes
+  // free with a spell already resolved, nor a counterspell itself (no wars of them).
+  if (!free && !reactionSpell(s) && holdCast(state, world, a, s, targetId, kicked, t)) return 'held';
+  return resolveSpell(state, world, a, s.id, targetId, kicked, t, free);
+}
+
+// The spell takes hold: what it does, on whom.
+export function resolveSpell(state: State, world: World, a: Actor, spellId: string, targetId: string, kicked: boolean, t: number, free = false) {
+  const s = spellDef(world, spellId)!;
+  const target = state.actors[targetId];
+  if (!target || target.dead) {
+    addLog(state, { kind: 'status', text: `${josa(shortName(a.name), '이', '가')} 쓴 ${josa(s.name, '은', '는')} 걸 이가 사라져 흩어졌다.`, regions: [a.region], actors: [a.id], t });
     return false;
   }
   const on = target.id === a.id ? '자신' : shortName(target.name);
