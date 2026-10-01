@@ -12,7 +12,7 @@ import { addFoe, attackBlocked, clash, die, foesOf, hostileNpcs, intimidated, kn
 import { landSealed, powersSealed, sealedBy, sealToday, setSeal } from './seal.ts';
 import { castBlocked, castSpell, castTargets, readyCast } from './spells.ts';
 import { actorColors, COLORS, formatMana, manaAvailable, manaCapacity, parseManaCost, planPayment } from './mana.ts';
-import { MAX_TALKS_PER_DAY, usableAbilities, volleyShares } from './run.ts';
+import { MAX_TALKS_PER_DAY, usableAbilities, volleyShares, burnTargets } from './run.ts';
 import { eligibleGmEvents, moveHours, startTravel, travelBlocked } from './step.ts';
 import { gainLife, lifeOf } from './life.ts';
 import { awayText, hasAbility, here, needsOf, newState, npcDef, outOfTime, PLAYER_ID, present, ptOf, syncWorld, targetable, together } from './state.ts';
@@ -4040,4 +4040,56 @@ test('the real Heartstabber Mosquito flies over the Piranha Marsh', () => {
   assert.ok(hasAbility(m, 'fly', state.minutes));
   assert.equal(npcDef(state, world, m.id)?.enterDestroy?.kickerText, '{2}{B}');
   assert.equal(npcDef(state, world, m.id)?.enterDestroy?.kind, undefined);
+});
+
+const infernoTrap: RawEntity = {
+  id: 'evt-inf',
+  kind: 'event',
+  name: '지옥불 함정',
+  status: 'canon',
+  sim: { region: 'loc-a', trigger: 'hurt', creatures: 2, text: '불길이 뿜어 나왔다.', effects: [{ type: 'burn', amount: 4, color: 'R' }] },
+};
+
+test('an inferno trap: one hurt by two or more today there, the trap burns one who hurt them (once a day for them)', async () => {
+  const world = fixture([infernoTrap, npc('chr-t', npcSim('loc-a', 'work', [0, 30])), npc('chr-a1', npcSim('loc-a', 'work', [1, 9])), npc('chr-a2', npcSim('loc-a', 'work', [2, 9]))]);
+  const state = newState(world, { seed: 1, mode: 'observer' });
+  const [v, a1, a2] = ['chr-t', 'chr-a1', 'chr-a2'].map((id) => state.actors[id]);
+  for (const a of [a1, a2]) a.tile = v.tile;
+  // One alone: nothing.
+  addFoe(a1, 'chr-t', state.minutes);
+  const asked: string[][] = [];
+  const aim: Llm['aim'] = async ({ targets, beset }) => (asked.push([...beset.map((a) => a.id), ...targets.map((a) => a.id).sort()]), 'chr-a2');
+  await advance(state, world, 1, { aim });
+  assert.deepEqual(asked, []);
+  assert.deepEqual(v.hurtBy?.ids, ['chr-a1']);
+  // A second joins in: the trap wakes and burns the one it picks.
+  addFoe(a2, 'chr-t', state.minutes);
+  await advance(state, world, 1, { aim });
+  assert.deepEqual(asked, [['chr-t', 'chr-a1', 'chr-a2']]);
+  assert.equal(woundsOf(a2, state.minutes), 4);
+  assert.equal(woundsOf(a1, state.minutes), 0);
+  assert.ok(texts(state).some((l) => l.includes('지옥불 함정: 불길이')));
+  // Set off once a day for them.
+  await advance(state, world, 1, { aim });
+  assert.equal(asked.length, 1);
+});
+
+test('an inferno trap with no usable pick burns the strongest; protection from red shields', () => {
+  const world = fixture([npc('chr-t', npcSim('loc-a', 'work', [0, 30])), npc('chr-a1', npcSim('loc-a', 'work', [1, 9])), npc('chr-a2', npcSim('loc-a', 'work', [2, 9]))]);
+  const state = newState(world, { seed: 1, mode: 'observer' });
+  const [v, a1, a2] = ['chr-t', 'chr-a1', 'chr-a2'].map((id) => state.actors[id]);
+  for (const a of [a1, a2]) a.tile = v.tile;
+  clash(state, world, a1, v, state.minutes);
+  clash(state, world, a2, v, state.minutes);
+  assert.deepEqual(burnTargets(state, [v], 'R', state.minutes).map((a) => a.id).sort(), ['chr-a1', 'chr-a2']);
+  a2.protection = ['R'];
+  assert.deepEqual(burnTargets(state, [v], 'R', state.minutes).map((a) => a.id), ['chr-a1']);
+});
+
+test('the real Inferno Trap lies in Akoum', () => {
+  const world = loadWorld();
+  const ev = world.events.find((e) => e.id === 'evt-inferno-trap');
+  assert.equal(ev?.region, 'loc-akoum');
+  assert.equal(ev?.trigger, 'hurt');
+  assert.equal(ev?.creatures, 2);
 });

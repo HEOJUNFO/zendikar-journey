@@ -95,6 +95,7 @@ export function step(state: State, placed: World) {
   enterEvents(state, world, t + STEP_MINUTES);
   for (const a of alive(state)) if (a.arrivedAt === t + STEP_MINUTES) onEnter(state, world, a, t + STEP_MINUTES);
   attackEvents(state, world, t);
+  hurtEvents(state, world, t);
   meetings(state, world);
   state.minutes = t + STEP_MINUTES;
 }
@@ -219,6 +220,21 @@ function attackEvents(state: State, world: World, t: number) {
   }
 }
 
+// Those in a `hurt` event's land (or its areas) dealt combat damage by enough beings today set it
+// off, in the hour it comes to pass (Inferno Trap), each once a day.
+function hurtEvents(state: State, world: World, t: number) {
+  for (const ev of world.events) {
+    if (ev.trigger !== 'hurt' || onCooldown(state, ev, t)) continue;
+    const here = new Set([ev.region, ...world.regions.filter((r) => r.parent === ev.region).map((r) => r.id)]);
+    const day = gameDay(t);
+    const by = alive(state).filter(
+      (a) => here.has(a.region) && !a.travel && !outOfTime(state, a, t) && a.hurtBy?.day === day && a.hurtBy.ids.length >= ev.creatures! && !a.hurtBy.sprung?.includes(ev.id),
+    );
+    for (const a of by) a.hurtBy!.sprung = [...(a.hurtBy!.sprung ?? []), ev.id];
+    if (by.length) trigger(state, world, ev, t, { by: by.map((a) => a.id), lands: [] });
+  }
+}
+
 // Land destruction: the land is destroyed for everyone for DESTROYED_DAYS (bonds with it are
 // kept and give mana again when it comes back). `by`: whose doing (its `destroyed` events
 // answer, e.g. the Cobra Trap).
@@ -339,6 +355,9 @@ function fire(state: State, world: World, ev: EventDef, t: number, omened: boole
     } else if (eff.type === 'volley') {
       // How it falls among them is the trap's, asked after the hour.
       if (cause.by?.length) (state.volleys ??= []).push({ event: ev.id, amount: eff.amount, by: cause.by, region: ev.region, t });
+    } else if (eff.type === 'burn') {
+      // Which of those who hurt them it falls on is the trap's, asked after the hour.
+      if (cause.by?.length) (state.burns ??= []).push({ event: ev.id, amount: eff.amount, ...(eff.color ? { color: eff.color } : {}), by: cause.by, region: ev.region, t });
     } else if (eff.type === 'forget') {
       for (const id of cause.by ?? []) {
         const a = state.actors[id];

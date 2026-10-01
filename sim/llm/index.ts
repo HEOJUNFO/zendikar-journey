@@ -7,9 +7,9 @@ import { narrate } from './narrate.ts';
 import { planDay } from './planner.ts';
 import { converse } from './converse.ts';
 import { evade, reply } from './reply.ts';
-import { choose, chooseColor, chooseDiscard, choosePick, chooseStop, chooseSummon, chooseBounce, divideVolley } from './choose.ts';
+import { choose, chooseColor, chooseDiscard, choosePick, chooseStop, chooseSummon, chooseBounce, divideVolley, aimTrap } from './choose.ts';
 
 export function createLlm(): Required<Llm> {
   getHostedChat(); // fail early on a missing key
-  return { planDay, gmDay, narrate, interpret, reply, evade, converse, choose, chooseColor, summon: chooseSummon, bounce: chooseBounce, volley: divideVolley, wander: chooseStop, discard: chooseDiscard, pick: choosePick };
+  return { planDay, gmDay, narrate, interpret, reply, evade, converse, choose, chooseColor, summon: chooseSummon, bounce: chooseBounce, volley: divideVolley, aim: aimTrap, wander: chooseStop, discard: chooseDiscard, pick: choosePick };
 }

@@ -4,7 +4,7 @@
 import { formatClock, gameDay, untapTime } from './clock.ts';
 import { startAction } from './actions.ts';
 import type { Action } from './actions.ts';
-import { addLog, hasAbility, npcDef, outOfTime, player, ptOf, random, speakerDef, together } from './state.ts';
+import { addLog, hasAbility, npcDef, outOfTime, player, ptOf, random, speakerDef, targetable, together } from './state.ts';
 import type { Actor, Choice, GmPlan, LogEntry, State } from './state.ts';
 import { eligibleGmEvents, ruinsUntil, step } from './step.ts';
 import { addFoe, clash, dealDamage, unblockable } from './combat.ts';
@@ -79,6 +79,8 @@ export type PickInput = { world: World; state: State; npc: Speaker; what: string
 export type WanderInput = { world: World; state: State; place: Region; at?: string; stops: string[] };
 // A trap (`trap`) divides `amount` damage among `targets`, the attackers who set it off.
 export type VolleyInput = { world: World; state: State; trap: EventDef; targets: Actor[]; amount: number };
+// A trap (`trap`) set off by `beset` (those dealt damage by many) loosing `amount` damage on one of `targets` (who hurt them).
+export type AimInput = { world: World; state: State; trap: EventDef; beset: Actor[]; targets: Actor[]; amount: number };
 // Two NPCs' exchange: the lines, what each now thinks of the other (by id), and who, if
 // anyone, now attacks the other.
 // `follower`: one who, won over, now pledges to serve the other (as an NPC may to the player).
@@ -108,6 +110,8 @@ export type Llm = {
   wander?: (input: WanderInput) => Promise<string | null>;
   // An arrow volley (Arrow Volley Trap): how much of `amount` falls on each of `targets`, by id.
   volley?: (input: VolleyInput) => Promise<Record<string, number> | null>;
+  // A fire loosed (Inferno Trap): which of `targets` it falls on, by id.
+  aim?: (input: AimInput) => Promise<string | null>;
 };
 
 // NPC conversations written per game day at most (each is one LLM call).
@@ -453,6 +457,40 @@ async function volleys(state: State, world: World, llm: Llm) {
   }
 }
 
+// Fires loosed this hour (Inferno Trap, sim/step.ts): the LLM, as the trap, picks which of those
+// who hurt the ones beset (still alive, standing with one of them, open to its color) takes it
+// all. With no usable answer, the strongest.
+async function burns(state: State, world: World, llm: Llm) {
+  const due = state.burns ?? [];
+  state.burns = [];
+  for (const b of due) {
+    const trap = world.events.find((e) => e.id === b.event);
+    const beset = b.by.map((id) => state.actors[id]).filter((a) => a && !a.dead);
+    const targets = burnTargets(state, beset, b.color, state.minutes);
+    if (!trap || !targets.length) continue;
+    let pick: string | null = null;
+    if (llm.aim) {
+      try {
+        pick = await llm.aim({ world, state, trap, beset, targets, amount: b.amount });
+      } catch (e) {
+        console.warn(`aim for ${trap.id} failed:`, e);
+      }
+    }
+    const target = targets.find((a) => a.id === pick) ?? [...targets].sort((x, y) => ptOf(y)[0] - ptOf(x)[0] || x.id.localeCompare(y.id))[0];
+    addLog(state, { kind: 'combat', text: `${trap.name}: 불길이 ${josa(shortName(target.name), '을', '를')} 휘감았다.`, regions: [target.region], actors: [target.id] });
+    dealDamage(state, target, b.amount, state.minutes, trap.name);
+  }
+}
+
+// Those who hurt the ones beset today, alive and standing with one of them, whom a trap of
+// `color` may target.
+export function burnTargets(state: State, beset: Actor[], color: Color | undefined, t: number) {
+  const ids = new Set(beset.flatMap((a) => (a.hurtBy?.day === gameDay(t) ? a.hurtBy.ids : [])));
+  return [...ids]
+    .map((id) => state.actors[id])
+    .filter((x) => x && !x.dead && beset.some((a) => together(a, x)) && targetable(x, t, color ? [color] : []));
+}
+
 // A division of `amount` among `targets`: the one asked for if it adds up (whole, not over,
 // only to them), else one at a time around them, strongest first.
 export function volleyShares(targets: Actor[], amount: number, split: Record<string, number> | null) {
@@ -505,6 +543,7 @@ async function choices(state: State, world: World, llm: Llm) {
   await summons(state, world, llm);
   await bounces(state, world, llm);
   await volleys(state, world, llm);
+  await burns(state, world, llm);
   const due = state.choices ?? [];
   state.choices = [];
   for (const c of due) {

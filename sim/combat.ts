@@ -263,7 +263,10 @@ export function clash(state: State, world: World, attacker: Actor, defender: Act
   const dDouble = !tapped && hasAbility(defender, 'double_strike', t);
   const aFirst = aDouble || hasAbility(attacker, 'first_strike', t);
   const dFirst = !tapped && (dDouble || hasAbility(defender, 'first_strike', t));
-  const hit = (to: Actor, n: number, by: string) => dealDamage(state, to, n, t, `${josa(by, '과', '와')}의 싸움`, !lethal(attacker, defender));
+  const hit = (to: Actor, n: number, by: string) => {
+    hurt(to, to === defender ? attacker : defender, n, t);
+    return dealDamage(state, to, n, t, `${josa(by, '과', '와')}의 싸움`, !lethal(attacker, defender));
+  };
   let [dealtA, dealtD] = [0, 0];
   if (!aFirst && !dFirst) {
     // Simultaneous: both blows land before either death counts.
@@ -319,9 +322,18 @@ export function clash(state: State, world: World, attacker: Actor, defender: Act
       regions: [attacker.region],
       actors: [s.who.id],
     });
+    hurt(s.who, from, s.excess, t);
     dealDamage(state, s.who, s.excess, t, `${by}의 돌진`, !lethal(from, s.who));
     lifelink(state, from, s.excess, t);
   }
+}
+
+// Combat damage `from` dealt `to` today: who has hurt them (Inferno Trap).
+export function hurt(to: Actor, from: Actor, n: number, t: number) {
+  if (n <= 0) return;
+  const day = gameDay(t);
+  if (to.hurtBy?.day !== day) to.hurtBy = { day, ids: [] };
+  if (!to.hurtBy.ids.includes(from.id)) to.hurtBy.ids.push(from.id);
 }
 
 // Lifelink: damage they deal also gains their controller (their master, or themselves) that

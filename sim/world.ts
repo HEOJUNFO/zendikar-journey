@@ -444,6 +444,10 @@ const EffectSchema = z.discriminatedUnion('type', [
   // Volley Trap): N damage among those who set it off; the LLM, as the trap, divides it after
   // the hour. Not for morning (gm) events.
   z.strictObject({ type: z.literal('volley'), amount: z.number().int().positive() }),
+  // "N damage to target creature", a trap set off by one beset (Inferno Trap): N damage to one of
+  // those who hurt them, still standing with them; the LLM, as the trap, picks after the hour.
+  // `color`: the trap's (protection from it shields). Only for `hurt` events.
+  z.strictObject({ type: z.literal('burn'), amount: z.number().int().positive(), color: z.enum(COLORS).optional() }),
   // "Return N target creatures to their owners' hands" (Whiplash Trap): the LLM, as the trap,
   // picks up to N creatures there after the hour; each is flung (sim/bounce.ts). Not for
   // morning (gm) events.
@@ -628,6 +632,10 @@ export const EventSimSchema = z.discriminatedUnion('trigger', [
   // Goes off when `attackers` or more strike as attackers in `region` in the same hour ("if four
   // or more creatures are attacking", Arrow Volley Trap): those attackers set it off.
   z.strictObject({ ...EventBase, ...EventCost, trigger: z.literal('attacked'), attackers: z.number().int().min(1) }),
+  // Goes off for anyone in `region` (or its areas) dealt combat damage by `creatures` or more
+  // this turn ("if you've been dealt damage by two or more creatures this turn", Inferno Trap):
+  // in the hour it happens, once a day for each.
+  z.strictObject({ ...EventBase, ...EventCost, trigger: z.literal('hurt'), creatures: z.number().int().min(1) }),
 ]);
 
 // --- built world -----------------------------------------------------------------------
@@ -769,7 +777,7 @@ export type EventDef = {
   summary: string;
   region: string;
   range: number;
-  trigger: 'gm' | 'landfall' | 'enter' | 'destroyed' | 'drew' | 'attacked';
+  trigger: 'gm' | 'landfall' | 'enter' | 'destroyed' | 'drew' | 'attacked' | 'hurt';
   chance?: number; // gm
   landfalls?: number; // landfall
   gained_life?: boolean; // enter
@@ -779,6 +787,7 @@ export type EventDef = {
   joined?: number; // enter
   cards?: number; // drew
   attackers?: number; // attacked
+  creatures?: number; // hurt
   cooldownHours: number;
   scope: 'region' | 'world';
   omen?: string;
@@ -936,6 +945,7 @@ export function buildWorld(entities: RawEntity[]): { world: World; errors: strin
         continue;
       }
       const { cooldown_hours, effects, cost, ...rest } = sim.data;
+      if (rest.trigger !== 'hurt' && effects.some((x) => x.type === 'burn')) err(e.id, 'burn 은 trigger: hurt 사건에만 쓸 수 있음 (누가 누구에게 다쳤는지 알아야 함)');
       if (rest.trigger !== 'landfall' && effects.some((x) => x.type === 'destroy_lands'))
         err(e.id, 'destroy_lands 는 trigger: landfall 사건에만 쓸 수 있음 (누가 상륙한 땅인지 알아야 함)');
       if (rest.trigger === 'gm' && effects.some((x) => x.type === 'lose_life' || x.type === 'damage_hand' || x.type === 'forget' || x.type === 'summon' || x.type === 'volley' || x.type === 'bounce'))

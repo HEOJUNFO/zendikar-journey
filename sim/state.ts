@@ -90,6 +90,9 @@ export type Actor = {
   auras?: { spell: string; name: string; by: string; pt: Pt; base?: Pt; doubleLifeOnHit: boolean; added?: Ability[] }[];
   // Combat damage taken this turn; it wears off when the turn ends (00:00).
   wounds?: { day: number; amount: number };
+  // Those who dealt them combat damage this turn (Inferno Trap: "dealt damage by two or more
+  // creatures this turn"). `sprung`: the `hurt` events they set off today.
+  hurtBy?: { day: number; ids: string[]; sprung?: string[] };
   // Who they'll attack on sight this turn (they were attacked, or turned hostile).
   // `struck`: those of them who fell on them first (not yet foes when the blow fell): a fight they
   // defend, not one they started (one who can't block won't join their master's, Hagra Crocodile).
@@ -276,6 +279,9 @@ export type State = {
   // Arrow volleys loosed (sim/step.ts): how the damage falls among the attackers is the LLM's
   // division, as the trap, after the hour (sim/run.ts `volleys`).
   volleys?: { event: string; amount: number; by: string[]; region: string; t: number }[];
+  // Fires loosed (Inferno Trap, sim/step.ts): which of those who hurt `by` it falls on is the
+  // LLM's pick, as the trap, after the hour (sim/run.ts `burns`).
+  burns?: { event: string; amount: number; color?: Color; by: string[]; region: string; t: number }[];
   // Summoning traps sprung (sim/step.ts): which of the creatures looked at is drawn there is
   // the LLM's pick, as the trap, after the hour (sim/run.ts `summons`).
   summons?: { event: string; creatures: string[]; by: string[]; region: string; t: number }[];

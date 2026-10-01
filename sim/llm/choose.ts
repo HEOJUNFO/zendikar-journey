@@ -5,7 +5,7 @@ import { npcDef, ptOf } from '../state.ts';
 import { COLOR_LABELS, COLORS, creatureColors, manaCapacity } from '../mana.ts';
 import type { Color } from '../mana.ts';
 import { region, spellColors } from '../world.ts';
-import type { BounceInput, ChooseColorInput, ChooseInput, DiscardInput, PickInput, SummonInput, VolleyInput, WanderInput } from '../run.ts';
+import type { AimInput, BounceInput, ChooseColorInput, ChooseInput, DiscardInput, PickInput, SummonInput, VolleyInput, WanderInput } from '../run.ts';
 import { loreText } from './context.ts';
 import { recentNews } from '../run.ts';
 import { relationsText } from '../relations.ts';
@@ -277,6 +277,41 @@ Which do you pick?`,
   if (optional && parsed.success && parsed.data.pick === null) return null;
   if (!parsed.success || !options.some((o) => o.id === parsed.data.pick)) {
     console.warn(`Unusable pick from ${npc.id}:`, content);
+    return null;
+  }
+  return parsed.data.pick;
+}
+
+// A fire trap (Inferno Trap) set off by one beset by many: the LLM, as the trap, picks which of
+// those who hurt them takes all its damage.
+export async function aimTrap({ world, state, trap, beset, targets, amount }: AimInput): Promise<string | null> {
+  const content = await chatCompletion(
+    [
+      {
+        role: 'system',
+        content: `You are an ancient trap of the plane of Zendikar: ${trap.name}. ${trap.summary}
+One on your ground was set upon by many. Loose ${amount} damage on exactly one of those who hurt them. Damage at or over one's toughness kills. Pick as the trap would.
+Answer with JSON only: {"pick": "<id>"}.`,
+      },
+      {
+        role: 'user',
+        content: `World lore:
+${loreText(world)}
+
+Set upon:
+${beset.map((a) => `- ${shortName(a.name)}${a.kind === 'player' ? ' (the player)' : ''}`).join('\n')}
+
+Those who hurt them:
+${targets.map((c) => `- ${c.id}: ${c.name}${c.id === state.playerId ? ' (the player)' : ''}${c.master ? `, serving ${c.master === state.playerId ? 'the player' : shortName(state.actors[c.master]?.name ?? c.master)}` : ''} (power/toughness ${ptOf(c).join('/')})`).join('\n')}
+
+Whom do you burn?`,
+      },
+    ],
+    200,
+  );
+  const parsed = z.object({ pick: z.string() }).safeParse(extractJson(content));
+  if (!parsed.success || !targets.some((c) => c.id === parsed.data.pick)) {
+    console.warn(`Unusable aim from ${trap.id}:`, content);
     return null;
   }
   return parsed.data.pick;
