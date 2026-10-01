@@ -16,7 +16,7 @@ import { foresightText } from './foresight.ts';
 import { knowledgeText } from './knowledge.ts';
 import { setOff, wandersDue, withPositions } from './wander.ts';
 import { cardLabel, discardOwed, handOf, letGo } from './discard.ts';
-import { crushRelic, demolish, demolishOptions, relicsHere } from './relics.ts';
+import { applyShatter, crushRelic, demolish, demolishOptions, relicsHere, shatterOptions } from './relics.ts';
 import { loremastersOf, recallBlocked, recallCount } from './loremaster.ts';
 import { sacrifice } from './monument.ts';
 import { answerTide } from './tide.ts';
@@ -611,6 +611,20 @@ async function choices(state: State, world: World, llm: Llm) {
           }
         }
         owed = answerReturnLand(state, world, by, pick, eff, state.minutes);
+      }
+      continue;
+    }
+    // Mold Shambler, arriving: which noncreature permanent on its tile it destroys (or none).
+    if (c.effect.type === 'shatter') {
+      if (by && !by.dead && npc && llm.pick) {
+        const options = shatterOptions(state, world, by).filter((o) => c.candidates.includes(o.id));
+        let pick: string | null = null;
+        try {
+          pick = await llm.pick({ world, state, npc, what: `당신이 이곳에 들어섰다. 힘을 더 들여(${npcDef(state, world, by.id)?.enterShatter?.kickerText ?? ''}) 이 자리의 생물이 아닌 것 하나(마법물체, 부여마법, 땅: 땅은 7일 부서진다)를 무너뜨릴 수 있다. 무너뜨리지 않을 수도 있다`, options, optional: true });
+        } catch (e) {
+          console.warn(`pick (shatter) for ${by.id} failed:`, e);
+        }
+        if (pick && options.some((o) => o.id === pick)) applyShatter(state, world, by, pick, state.minutes);
       }
       continue;
     }

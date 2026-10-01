@@ -4378,3 +4378,30 @@ test('the real Mindbreak Trap lies in Tazeem', () => {
   assert.equal(ev?.trigger, 'cast');
   assert.equal(ev?.spells, 3);
 });
+
+test('a mold shambler arriving: with {1}{G} in its own mana it may break a noncreature permanent on its tile (item, aura, land), paying as it strikes', async () => {
+  const shambler = { ...npcSim('loc-a', 'work', [3, 3]), needs: ['energy'], beast: true, mana: { G: 4 }, enter_shatter: { kicker: '{1}{G}' } };
+  const relic: RawEntity = { id: 'itm-r', kind: 'item', name: '유물', status: 'canon', sim: { cost: '{0}', at: 'loc-a', effects: [{ type: 'mana', amount: 1 }] } };
+  const world = fixture([relic, npc('chr-s', shambler), npc('chr-x', npcSim('loc-a', 'work'))]);
+  const state = newState(world, { seed: 1, mode: 'observer' });
+  const [s, x] = [state.actors['chr-s'], state.actors['chr-x']];
+  s.tile = x.tile = itemWhere(state, world, world.items[0])!.tile;
+  x.bonds = ['loc-b'];
+  x.auras = [{ spell: 'spl-q', name: '축복', by: 'chr-x', pt: [1, 1], doubleLifeOnHit: false }];
+  onEnter(state, world, s, state.minutes);
+  const c = state.choices!.find((y) => y.effect.type === 'shatter')!;
+  assert.deepEqual([...c.candidates].sort(), ['aura:chr-x:0:spl-q', 'item:itm-r', 'land:loc-a', 'land:loc-b']);
+  await advance(state, world, 1, { pick: async ({ options }) => (options.some((o) => o.id === 'land:loc-b') ? 'land:loc-b' : null) });
+  assert.ok(state.regions['loc-b']?.destroyed);
+  assert.equal(manaAvailable(state, world, s, state.minutes).G, 2);
+  // Once a day: today's arrival is spent.
+  assert.equal(s.enteredDay, gameDay(state.minutes));
+});
+
+test('the real Mold Shambler roams by Kazandu Refuge', () => {
+  const world = loadWorld();
+  const state = newState(world, { seed: 1, mode: 'observer' });
+  const s = state.actors['cre-mold-shambler'];
+  assert.equal(s?.region, 'loc-kazandu-refuge');
+  assert.equal(npcDef(state, world, s.id)?.enterShatter?.kickerText, '{1}{G}');
+});

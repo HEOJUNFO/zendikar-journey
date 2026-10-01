@@ -5,6 +5,7 @@ import { creatureColors, manaAvailable, payMana, planPayment } from './mana.ts';
 import { landTapBlocked, tapLand } from './landtap.ts';
 import type { Color } from './mana.ts';
 import { itemsOnLandfall } from './items.ts';
+import { enterShatter } from './relics.ts';
 import { gainLife, lifeOf, loseLife, setLife } from './life.ts';
 import { allyJoined } from './allies.ts';
 import { masterOf, releaseRetainer, retainersOf } from './retainers.ts';
@@ -59,7 +60,7 @@ export function bondTargets(state: State, world: World, a: Actor, regionId: stri
 }
 
 // The effect falls on `target`, if they are still there.
-export function applyBondEffect(state: State, world: World, a: Actor, regionId: string, eff: Exclude<ChoiceEffect, { type: 'cast' | 'follow' | 'rally' | 'seize' | 'pledge' | 'evade' | 'discard' | 'pilfer' | 'pour' | 'demolish' | 'sacrifice' | 'destroy' | 'drain_grow' | 'crush' | 'quell' | 'quelled' | 'return_lands' | 'search' | 'tide' | 'bind' }>, targetId: string | undefined, t: number) {
+export function applyBondEffect(state: State, world: World, a: Actor, regionId: string, eff: Exclude<ChoiceEffect, { type: 'cast' | 'follow' | 'rally' | 'seize' | 'pledge' | 'evade' | 'discard' | 'pilfer' | 'pour' | 'demolish' | 'sacrifice' | 'destroy' | 'drain_grow' | 'crush' | 'quell' | 'quelled' | 'return_lands' | 'search' | 'tide' | 'bind' | 'shatter' }>, targetId: string | undefined, t: number) {
   const r = region(world, regionId);
   if (eff.type === 'damage') return mountainFire(state, world, a, r, eff.amount, targetId, t);
   const target = targetId ? bondTargets(state, world, a, regionId, eff).find((x) => x.id === targetId) : undefined;
@@ -609,13 +610,14 @@ export function applyDrainGrow(state: State, world: World, a: Actor, target: Act
 // once a day for balance (user decision 2026-09-30).
 export function onEnter(state: State, world: World, a: Actor, t: number) {
   const def = npcDef(state, world, a.id);
-  if (!def?.enterDestroy && !def?.enterDrain && !def?.enterDraw && !def?.enterSearch) return;
+  if (!def?.enterDestroy && !def?.enterDrain && !def?.enterDraw && !def?.enterSearch && !def?.enterShatter) return;
   if (a.dead || a.enteredDay === gameDay(t)) return;
   a.enteredDay = gameDay(t);
   enterDestroy(state, world, a, t);
   enterDrain(state, world, a, t);
   enterDraw(state, world, a, t);
   enterSearch(state, world, a, t);
+  enterShatter(state, world, a, t);
 }
 
 // "When this enters, you may search your library for a <type> card, put it onto the

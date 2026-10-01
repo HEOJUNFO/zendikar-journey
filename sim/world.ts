@@ -279,6 +279,9 @@ export const CharacterSimSchema = z.strictObject({
   // battlefield tapped" (Kor Cartographer): their controller (master, or themselves) may bond,
   // from afar, with a land of that type they don't hold yet, as a fetch does; `tapped`: it
   // gives no mana that day (sim/abilities.ts `enterSearch`).
+  // "Kicker …. When this enters, if it was kicked, destroy target noncreature permanent" (Mold
+  // Shambler): on its first arrival of the day, paid from its own mana (sim/relics.ts).
+  enter_shatter: z.strictObject({ kicker: CostSchema.optional() }).optional(),
   enter_search: z.strictObject({ types: z.array(z.enum(LAND_TYPES)).min(1), tapped: z.boolean().default(false) }).optional(),
   enter_draw: z.strictObject({ count: z.number().int().min(1), discard: z.number().int().min(1).optional(), kicker: CostSchema.optional() }).optional(),
   // "Protection from <color>" (Malakir Bloodwitch: white): nothing of that color damages them,
@@ -756,6 +759,7 @@ export type NpcDef = {
   enterDestroy?: { kind?: CreatureType; kicker?: ManaCost; kickerText?: string };
   enterDrain?: { per: string };
   enterSearch?: { types: LandType[]; tapped: boolean };
+  enterShatter?: { kicker?: ManaCost; kickerText?: string };
   enterDraw?: { count: number; discard?: number; kicker?: ManaCost; kickerText?: string };
   protection?: Color[];
   // The creature kind they are (e.g. cre-vampire), for "a Vampire you control".
@@ -943,7 +947,7 @@ export function buildWorld(entities: RawEntity[]): { world: World; errors: strin
         err(e.id, `sim 오류: ${issues(sim.error)}`);
         continue;
       }
-      const { knows_colors, activated, wins_at_life, extra_combat, pump, empty_hand_pump, discard_on_hit, landfall_token, landfall_seize, landfall_lose, landfall_grant, landfall_drain, enter_destroy, enter_drain, enter_draw, enter_search, upkeep_return_land, tap_foe, tap_draw_allies, name, home_pos, ...rest } = sim.data;
+      const { knows_colors, activated, wins_at_life, extra_combat, pump, empty_hand_pump, discard_on_hit, landfall_token, landfall_seize, landfall_lose, landfall_grant, landfall_drain, enter_destroy, enter_drain, enter_draw, enter_search, enter_shatter, upkeep_return_land, tap_foe, tap_draw_allies, name, home_pos, ...rest } = sim.data;
 
       world.npcs.push({
         id: e.id,
@@ -962,6 +966,7 @@ export function buildWorld(entities: RawEntity[]): { world: World; errors: strin
           : {}),
         ...(enter_drain ? { enterDrain: enter_drain } : {}),
         ...(enter_search ? { enterSearch: enter_search } : {}),
+        ...(enter_shatter ? { enterShatter: enter_shatter.kicker ? { kicker: parseManaCost(enter_shatter.kicker)!, kickerText: enter_shatter.kicker } : {} } : {}),
         ...(upkeep_return_land ? { upkeepReturnLand: true } : {}),
         ...(tap_foe ? { tapFoe: { cost: parseManaCost(tap_foe.cost)!, costText: tap_foe.cost, noFly: tap_foe.no_fly } } : {}),
         ...(home_pos ? { homePos: home_pos } : {}),

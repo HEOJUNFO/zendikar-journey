@@ -4,7 +4,9 @@
 // NPC by the LLM (`llm.pick`), the player as a pick they owe (sim/asks.ts); the first must be
 // picked, the rest may be let be ("up to one other").
 import { itemWhere, unequip } from './items.ts';
-import { addLog, present, together } from './state.ts';
+import { addLog, npcDef, present, together } from './state.ts';
+import { manaAvailable, payMana, planPayment } from './mana.ts';
+import { powersSealed } from './seal.ts';
 import { sameTile } from './tiles.ts';
 import type { Tile } from './tiles.ts';
 import type { Actor, Choice, State } from './state.ts';
@@ -93,4 +95,38 @@ export function demolish(state: State, world: World, a: Actor, pick: string, spe
   if (!demolishOptions(state, world, a).some((o) => o.id === pick)) return false;
   if (pick.startsWith('item:')) return crushRelic(state, world, pick, a, t);
   return destroyLand(state, world, pick.slice('land:'.length), [a.id], t, spell);
+}
+
+// "Kicker …. When this enters, if it was kicked, destroy target noncreature permanent" (Mold
+// Shambler, `sim.enter_shatter`): on its first arrival of the day, if it can pay the kicker from
+// its own mana, it may pick (the LLM, as it, after the hour) one of the noncreature permanents on
+// its tile: the items standing there, the auras on those there, the land it stands in, or a land
+// someone there holds. It pays as it destroys.
+export function shatterOptions(state: State, world: World, a: Actor): Relic[] {
+  const lands = demolishOptions(state, world, a).filter((o) => o.id.startsWith('land:'));
+  return [...relicsHere(state, world, a.region, a.tile), ...lands];
+}
+
+export function enterShatter(state: State, world: World, a: Actor, t: number) {
+  const sh = npcDef(state, world, a.id)?.enterShatter;
+  if (!sh || a.dead || powersSealed(state, world, a, t)) return;
+  if (sh.kicker && !planPayment(manaAvailable(state, world, a, t), sh.kicker)) return;
+  const options = shatterOptions(state, world, a);
+  if (options.length) (state.choices ??= []).push({ by: a.id, land: a.region, effect: { type: 'shatter' }, candidates: options.map((o) => o.id), optional: true, t });
+}
+
+// Its pick lands: the kicker paid, the permanent destroyed (if still there).
+export function applyShatter(state: State, world: World, a: Actor, pick: string, t: number) {
+  const sh = npcDef(state, world, a.id)?.enterShatter;
+  if (!sh || a.dead || !shatterOptions(state, world, a).some((o) => o.id === pick)) return false;
+  if (sh.kicker) {
+    if (!planPayment(manaAvailable(state, world, a, t), sh.kicker)) {
+      addLog(state, { kind: 'effect', text: `${josa(shortName(a.name), '은', '는')} 힘(${sh.kickerText})이 모자라 아무것도 무너뜨리지 못했다.`, regions: [a.region], actors: [a.id], t });
+      return false;
+    }
+    payMana(state, world, a, sh.kicker, t);
+  }
+  addLog(state, { kind: 'event', text: `${josa(shortName(a.name), '이', '가')} 힘(${sh.kickerText ?? ''})을 더 들여 곰팡이 덮인 몸으로 덮쳐누른다.`, regions: [a.region], actors: [a.id], t });
+  if (pick.startsWith('land:')) return destroyLand(state, world, pick.slice('land:'.length), [a.id], t, a.name);
+  return crushRelic(state, world, pick, a, t);
 }
