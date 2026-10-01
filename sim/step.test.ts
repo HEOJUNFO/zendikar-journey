@@ -2899,7 +2899,7 @@ test('the real Hagra Diabolist lives in the Hagra swamp of Guul Draz, for 50 coi
   assert.deepEqual(def.rally, [{ type: 'lose_life_allies' }]);
 });
 
-test('intimidate: one who shares none of its colors can\'t strike back at it, nor fly from it', async () => {
+test('intimidate: one who shares none of its colors can\'t strike back at it, but may fly from it', async () => {
   const demon = { ...npcSim('loc-a', 'work', [6, 3]), mana: { B: 5 }, needs: ['energy'], beast: true, abilities: ['intimidate'] };
   const world = fixture([loc('loc-swamp', 12, 10, 'swamp'), npc('chr-d', demon), npc('chr-x', npcSim('loc-a', 'work', [3, 9])), npc('chr-f', { ...npcSim('loc-a', 'work', [3, 9]), abilities: ['fly'] })]);
   const state = newState(world, { seed: 1, mode: 'observer' });
@@ -2912,12 +2912,13 @@ test('intimidate: one who shares none of its colors can\'t strike back at it, no
   assert.equal(woundsOf(x, state.minutes), 6);
   assert.equal(woundsOf(d, state.minutes), 0); // no blow back
   assert.ok(texts(state).some((t) => t.includes('흑의 기운이 없어 위협하는 적에게 맞서지 못한다')));
-  // A flyer with no black can't take to the air from it.
+  // A flyer with no black can't strike back, but may take to the air from it (user decision
+  // 2026-10-01).
   x.region = 'loc-b';
   addFoe(d, 'chr-f', state.minutes);
-  await advance(state, world, 1, { evade: async () => (asked++, true) });
-  assert.equal(asked, 0);
-  assert.equal(woundsOf(f, state.minutes), 6);
+  await advance(state, world, 2, { evade: async () => (asked++, true) });
+  assert.equal(asked, 1);
+  assert.equal(woundsOf(f, state.minutes), 0);
   // One bonded with a black land (a swamp) shares its color: they block.
   x.bonds = ['loc-swamp'];
   assert.deepEqual(actorColors(state, world, x), ['B']);

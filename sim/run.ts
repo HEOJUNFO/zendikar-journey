@@ -778,8 +778,8 @@ async function attack(state: State, world: World, p: Actor, npcId: string, llm: 
   const target = state.actors[npcId];
   const npc = speakerDef(state, world, npcId)!;
   const flies = (a: Actor) => hasAbility(a, 'fly', state.minutes);
-  // One who can't block the player (intimidate, asleep) can't fly from them either; a
-  // landwalker's prey may (user decision 2026-10-01).
+  // One who can't block the player (asleep, protection) can't fly from them either; prey of a
+  // landwalker or an intimidator may (user decision 2026-10-01).
   const inescapable = unblockable(state, world, p, target, state.minutes, true);
   if (!inescapable && flies(target) && !flies(p) && target.boundUntil === undefined && llm.evade) {
     let evades = false;

@@ -163,8 +163,9 @@ export function caughtAsleep(attacker: Actor, defender: Actor, t: number) {
 }
 
 // Why the defender can't block the attacker (strike back, or fly from them), or null.
-// `flight`: whether they may still fly from them. A landwalker's prey can't strike back but may
-// take to the air (user decision 2026-10-01).
+// `flight`: whether they may still fly from them. Prey of a landwalker or an intimidator can't
+// strike back but may take to the air (user decision 2026-10-01); one asleep, or of the color a
+// protected one is shielded from, may not.
 export function unblockable(state: State, world: World, attacker: Actor, defender: Actor, t: number, flight = false): string | null {
   if (caughtAsleep(attacker, defender, t)) return '잠든 채 덮쳐져';
   const walked = !flight && landwalked(world, attacker, defender, t);
@@ -172,7 +173,7 @@ export function unblockable(state: State, world: World, attacker: Actor, defende
   // Protection from a color: one of that color can't block them.
   const shield = protectedFrom(attacker, actorColors(state, world, defender), t);
   if (shield) return `${COLOR_LABELS[shield]}색이라 ${COLOR_LABELS[shield]}색으로부터 보호받는 적에게`;
-  if (intimidated(state, world, attacker, defender, t)) {
+  if (!flight && intimidated(state, world, attacker, defender, t)) {
     const colors = actorColors(state, world, attacker).map((c) => COLOR_LABELS[c]).join('·');
     return `${colors}의 기운이 없어 위협하는 적에게`;
   }
@@ -373,7 +374,8 @@ export function hostileNpcs(state: State, world: World, t: number) {
     }
     if (!foe) continue;
     // A flyer yet to answer: the blow waits for it (asked after the hour).
-    // One who can't block it (intimidate, asleep) can't fly from it either; a landwalker's prey may.
+    // One who can't block it (asleep, protection) can't fly from it either; prey of a landwalker or
+    // an intimidator may.
     const walked = unblockable(state, world, a, foe, t);
     if (!unblockable(state, world, a, foe, t, true) && evasion(a, foe, t) === 'ask') {
       const f = foe;
