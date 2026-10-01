@@ -10,9 +10,9 @@ import { startAction } from './actions.ts';
 import type { World } from './world.ts';
 import { addFoe, attackBlocked, caughtAsleep, clash, dealDamage, destroy, die, foesOf, hostileNpcs, intimidated, knockedOut, landwalked, unblockable, woundsOf } from './combat.ts';
 import { landSealed, powersSealed, sealedBy, sealToday, setSeal } from './seal.ts';
-import { castBlocked, castSpell, castTargets, learnBlocked, npcCastBlocked, readyCast, tappable } from './spells.ts';
+import { castableSpells, castBlocked, castSpell, castTargets, learnBlocked, npcCastBlocked, readyCast, tappable } from './spells.ts';
 import { anthemHour } from './monument.ts';
-import { answerCounter, counterHolders, reactionSpell, summon } from './counter.ts';
+import { answerCounter, answerCounterCast, counterHolders, reactionSpell, summon } from './counter.ts';
 import { applyExile, banishOptions } from './banish.ts';
 import { actorColors, COLORS, formatMana, manaAvailable, manaCapacity, parseManaCost, planPayment } from './mana.ts';
 import { MAX_TALKS_PER_DAY, usableAbilities, volleyShares, burnTargets } from './run.ts';
@@ -3130,6 +3130,43 @@ test('the real Cancel is taught in Tazeem', () => {
   const s = world.spells.find((x) => x.id === 'spl-cancel')!;
   assert.equal(s.learnAt, 'loc-tazeem');
   assert.ok(reactionSpell(s));
+});
+
+test('a spell cast is used: held still, but not cast again for as many hours as its mana value (a free cast too)', () => {
+  const drain: RawEntity = { id: 'spl-dr', kind: 'spell', name: '흡수', status: 'canon', sim: { cost: '{1}{B}{B}', learn_at: 'loc-a', effects: [{ type: 'lose_half_life' }] } };
+  const cancel: RawEntity = { id: 'spl-cn', kind: 'spell', name: '취소', status: 'canon', sim: { cost: '{U}', speed: 'instant', learn_at: 'loc-a', effects: [{ type: 'counter_spell' }] } };
+  const world = fixture([drain, cancel, npc('chr-c', { ...npcSim('loc-a'), mana: { B: 9 } }), npc('chr-x', npcSim('loc-a')), npc('chr-h', { ...npcSim('loc-a'), mana: { U: 9 } })]);
+  const state = newState(world, { seed: 1, mode: 'observer' });
+  const [c, x, h] = [state.actors['chr-c'], state.actors['chr-x'], state.actors['chr-h']];
+  x.tile = c.tile;
+  c.spells = ['spl-dr'];
+  const t = state.minutes;
+  castSpell(state, world, c, 'spl-dr', x.id, false, t);
+  assert.ok(c.spells.includes('spl-dr')); // still held
+  assert.match(castBlocked(state, world, c, 'spl-dr', x.id, false, t + 60) ?? '', /다시 쓸 수 없다/);
+  assert.match(npcCastBlocked(state, world, c, 'spl-dr', t + 120) ?? '', /다시 쓸 수 없다/);
+  assert.ok(!castableSpells(state, world, c, t + 120).some((s) => s.id === 'spl-dr'));
+  assert.equal(castBlocked(state, world, c, 'spl-dr', x.id, false, t + 180), null); // mana value 3: three hours
+  // A free cast: used all the same (user decision 2026-10-01).
+  const s2 = newState(world, { seed: 1, mode: 'observer' });
+  const c2 = s2.actors['chr-c'];
+  c2.spells = ['spl-dr'];
+  castSpell(s2, world, c2, 'spl-dr', s2.actors['chr-x'].id, false, s2.minutes, true);
+  assert.equal(c2.used?.['spl-dr'], s2.minutes + 180);
+  // Countered (held by a Cancel there): its mana was paid, so used all the same; the Cancel too.
+  const s3 = newState(world, { seed: 1, mode: 'observer' });
+  const [c3, x3, h3] = [s3.actors['chr-c'], s3.actors['chr-x'], s3.actors['chr-h']];
+  x3.tile = h3.tile = c3.tile;
+  c3.spells = ['spl-dr'];
+  h3.spells = ['spl-cn'];
+  assert.equal(castSpell(s3, world, c3, 'spl-dr', x3.id, false, s3.minutes), 'held');
+  assert.ok(c3.used?.['spl-dr']);
+  const owed = s3.choices!.find((y) => y.effect.type === 'counter_cast')!;
+  answerCounterCast(s3, world, h3, owed.effect as never, true, s3.minutes);
+  assert.ok(h3.used?.['spl-cn']);
+  // Used (mana value 1: an hour), a Cancel can't answer again until it is ready.
+  assert.equal(castSpell(s3, world, c3, 'spl-dr', x3.id, false, s3.minutes + 30), true);
+  void h;
 });
 
 test('the real Conqueror\'s Pledge is taught in Ondu: six Kor Soldiers, twelve kicked for {6}', () => {

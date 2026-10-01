@@ -4,7 +4,7 @@
 // hold some by color (knows_colors) to cast by their powers (Chandra). A sealed color can't
 // be cast (sim/seal.ts).
 import { huntKnowledge } from './knowledge.ts';
-import { untapTime } from './clock.ts';
+import { formatClock, untapTime } from './clock.ts';
 import { addFoe, dealDamage, destroy } from './combat.ts';
 import { gainLife, lifeOf, loseLife } from './life.ts';
 import { addCosts, formatMana, manaAvailable, manaCapacity, payMana, planPayment } from './mana.ts';
@@ -55,9 +55,26 @@ export function tappable(state: State, world: World, a: Actor, kind: string) {
   return controlledCreatures(state, world, a).filter((x) => x.boundUntil === undefined && creatureOf(state, world, x.id) === kind);
 }
 
+// A spell's mana value: all of its cost (a kicker is no part of it).
+export function manaValue(s: SpellDef) {
+  return s.cost.generic + Object.values(s.cost.colored).reduce((n, k) => n + (k ?? 0), 0);
+}
+
+// Until when `a` can't cast `s` again (used: as many hours as its mana value from its casting;
+// user decision 2026-10-01), or undefined.
+export function usedUntil(a: Actor, s: SpellDef, t: number) {
+  const until = a.used?.[s.id];
+  return until !== undefined && until > t ? until : undefined;
+}
+function usedText(s: SpellDef, until: number) {
+  return `${josa(s.name, '은', '는')} 방금 써서 ${formatClock(until)}까지 다시 쓸 수 없다.`;
+}
+
 export function castBlocked(state: State, world: World, a: Actor, spellId: string, targetId: string, kick: boolean, t: number): string | null {
   const s = spellDef(world, spellId);
   if (!s || !a.spells?.includes(s.id)) return '모르는 주문이다.';
+  const used = usedUntil(a, s, t);
+  if (used !== undefined) return usedText(s, used);
   if (reactionSpell(s)) return `${josa(s.name, '은', '는')} 곁에서 누군가 권속을 들일 때 그것을 막으려고만 쓴다.`;
   const by = sealedBy(state, a, s, t);
   if (by) return sealText(by, t);
@@ -111,6 +128,8 @@ export function npcCastBlocked(state: State, world: World, a: Actor, spellId: st
   const s = spellDef(world, spellId);
   if (!s || !a.spells?.includes(s.id)) return '모르는 주문이다.';
   if (reactionSpell(s)) return `${josa(s.name, '은', '는')} 곁에서 누군가 권속을 들일 때 그것을 막으려고만 쓴다.`;
+  const used = usedUntil(a, s, t);
+  if (used !== undefined) return usedText(s, used);
   const by = sealedBy(state, a, s, t);
   if (by) return sealText(by, t);
   if (!planPayment(manaAvailable(state, world, a, t), s.cost)) return `마나가 모자라다 (${s.costText}).`;
@@ -144,7 +163,7 @@ export function landsOfType(state: State, world: World, a: Actor, type: LandType
 
 // Spells an NPC holds and could pay for today.
 export function castableSpells(state: State, world: World, a: Actor, t: number) {
-  return world.spells.filter((s) => a.spells?.includes(s.id) && !reactionSpell(s) && planPayment(manaCapacity(state, world, a, t), s.cost));
+  return world.spells.filter((s) => a.spells?.includes(s.id) && !reactionSpell(s) && usedUntil(a, s, t) === undefined && planPayment(manaCapacity(state, world, a, t), s.cost));
 }
 
 // Whether a spell does harm (the target takes it as an attack).
@@ -165,6 +184,9 @@ export function castSpell(state: State, world: World, a: Actor, spellId: string,
   // A mana kicker is paid with the spell, if they can.
   const manaKick = kick && !!s.kicker?.mana && !free && !!planPayment(manaAvailable(state, world, a, t), addCosts(s.cost, s.kicker.mana));
   if (!free) payMana(state, world, a, manaKick ? addCosts(s.cost, s.kicker!.mana!) : s.cost, t);
+  // Cast, it is used: not to be cast again for as many hours as its mana value, whatever becomes
+  // of it (countered too), and cast free too (user decision 2026-10-01).
+  a.used = { ...(a.used ?? {}), [s.id]: t + manaValue(s) * 60 };
   let kicked = manaKick;
   if (kick && s.kicker?.tap) {
     const tapped = tappable(state, world, a, s.kicker.tap)[0];

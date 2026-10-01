@@ -60,6 +60,9 @@ export type Actor = {
   // Spells they cast this turn (not those cast for free), and the events that already answered
   // it ("if an opponent cast three or more spells this turn", Mindbreak Trap).
   cast?: { day: number; count: number; sprung?: string[] };
+  // Spells used, held still but not to be cast again until then (by spell; user decision
+  // 2026-10-01: as many hours as its mana value, from when its mana was paid). sim/spells.ts.
+  used?: Record<string, number>;
   // Secrets of the world they came to know by drawing (sim/knowledge.ts); `day`: true only then.
   knowledge?: { id: string; text: string; day?: number }[];
   // Life total (sim/life.ts), apart from energy; START_LIFE until something changes it.

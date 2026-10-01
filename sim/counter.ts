@@ -13,7 +13,7 @@ import { manaAvailable, planPayment } from './mana.ts';
 import { remember } from './relations.ts';
 import { bindRetainer, refuse } from './retainers.ts';
 import { sealedBy } from './seal.ts';
-import { castSpell, resolveSpell, spellDef } from './spells.ts';
+import { castSpell, resolveSpell, spellDef, usedUntil } from './spells.ts';
 import { addLog, outOfTime, together } from './state.ts';
 import type { Actor, State } from './state.ts';
 import { josa, shortName, toward } from './text.ts';
@@ -32,6 +32,7 @@ function counterSpell(state: State, world: World, x: Actor, t: number, kind: 'cr
     (s) =>
       s.effects.some((e) => e.type === 'counter_spell' || (kind === 'creature' && e.type === 'counter_creature')) &&
       x.spells?.includes(s.id) &&
+      usedUntil(x, s, t) === undefined &&
       !sealedBy(state, x, s, t) &&
       !!planPayment(manaAvailable(state, world, x, t), s.cost),
   );
