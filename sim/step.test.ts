@@ -3109,6 +3109,65 @@ test('Cancel: a spell cast where one holds it waits an hour; answered, it scatte
   assert.deepEqual(retainersOf(s3, h3.id), []);
 });
 
+const merfolkLore: RawEntity = { id: 'cre-mf', kind: 'creature', name: '인어', status: 'canon' };
+const mentorSim = (extra: object = {}) => ({ ...npcSim('loc-a', 'work', [2, 2]), mana: { U: 3 }, types: ['merfolk'], counter_tokens: { creature: 'cre-mf', pt: [1, 1], colors: ['U'] }, ...extra });
+
+test('Lullmage Mentor: whenever whoever controls it counters a spell, a 1/1 blue merfolk is born at their side, theirs', async () => {
+  const cancel: RawEntity = { id: 'spl-cn', kind: 'spell', name: '취소', status: 'canon', sim: { cost: '{U}', speed: 'instant', learn_at: 'loc-a', effects: [{ type: 'counter_spell' }] } };
+  const drain: RawEntity = { id: 'spl-dr', kind: 'spell', name: '흡수', status: 'canon', sim: { cost: '{B}', learn_at: 'loc-a', effects: [{ type: 'lose_half_life' }] } };
+  const world = fixture([merfolkLore, cancel, drain, npc('chr-c', { ...npcSim('loc-a'), mana: { B: 2 } }), npc('chr-l', mentorSim({ mana: { U: 3 } })), npc('chr-x', npcSim('loc-a'))]);
+  const state = newState(world, { seed: 1, mode: 'observer' });
+  const [c, l, x] = [state.actors['chr-c'], state.actors['chr-l'], state.actors['chr-x']];
+  l.tile = x.tile = c.tile;
+  c.spells = ['spl-dr'];
+  l.spells = ['spl-cn'];
+  assert.equal(castSpell(state, world, c, 'spl-dr', x.id, false, state.minutes), 'held');
+  await advance(state, world, 1, { planDay: async () => [], pick: async ({ options }) => options[0].id });
+  const born = retainersOf(state, l.id);
+  assert.equal(born.length, 1);
+  assert.deepEqual(ptOf(born[0]), [1, 1]);
+  assert.ok(npcDef(state, world, born[0].id)?.types?.includes('merfolk'));
+});
+
+test('Lullmage Mentor: seven unbound merfolk its controller holds there may answer a spell with no mana; the seven are bound till midnight', async () => {
+  const drain: RawEntity = { id: 'spl-dr', kind: 'spell', name: '흡수', status: 'canon', sim: { cost: '{B}', learn_at: 'loc-a', effects: [{ type: 'lose_half_life' }] } };
+  const world = fixture([merfolkLore, drain, npc('chr-c', { ...npcSim('loc-a'), mana: { B: 2 } }), npc('chr-l', mentorSim()), npc('chr-x', npcSim('loc-a'))]);
+  const state = character(world, 'loc-a');
+  const [p, c, l, x] = [state.actors[PLAYER_ID], state.actors['chr-c'], state.actors['chr-l'], state.actors['chr-x']];
+  l.master = p.id;
+  l.tile = x.tile = c.tile = p.tile;
+  c.spells = ['spl-dr'];
+  const fins = spawnWild(state, world, 'cre-mf', [1, 1], 5, 'loc-a', ['U'], p.tile);
+  for (const f of fins) (f.master = p.id), (state.tokens![f.id].types = ['merfolk']);
+  // Six (the mentor and five): not enough.
+  assert.equal(castSpell(state, world, c, 'spl-dr', x.id, false, state.minutes), true);
+  assert.equal(lifeOf(x), 10);
+  const [f6] = spawnWild(state, world, 'cre-mf', [1, 1], 1, 'loc-a', ['U'], p.tile);
+  f6.master = p.id;
+  state.tokens![f6.id].types = ['merfolk'];
+  c.used = {};
+  assert.equal(castSpell(state, world, c, 'spl-dr', x.id, false, state.minutes), 'held');
+  await act(state, world, { type: 'wait', hours: 1 });
+  const ask = state.asks?.find((y) => y.effect.type === 'counter_cast');
+  assert.ok(ask);
+  assert.match(askText(state, world, ask!), /잠재움의 합창/);
+  await act(state, world, { type: 'choose', pick: c.id });
+  assert.equal(lifeOf(x), 10); // not halved again
+  const merfolk = [l, ...fins, f6];
+  assert.ok(merfolk.every((y) => y.boundUntil === 1440));
+  assert.equal(retainersOf(state, p.id).length, 8); // a new one for the counter
+});
+
+test('the real Lullmage Mentor teaches in Sea Gate; the world\'s merfolk are the mentor, the seastalkers, the loremaster and the aerialist', () => {
+  const world = loadWorld();
+  const state = newState(world, { seed: 1, mode: 'observer' });
+  const l = state.actors['chr-lullmage-mentor'];
+  assert.equal(l?.region, 'loc-sea-gate');
+  assert.deepEqual(npcDef(state, world, l.id)?.counterTokens, { creature: 'cre-merfolk', pt: [1, 1], colors: ['U'] });
+  const merfolk = world.npcs.filter((x) => x.types?.includes('merfolk')).map((x) => x.id).sort();
+  assert.deepEqual(merfolk, ['chr-lullmage-mentor', 'chr-merfolk-seastalkers', 'chr-sea-gate-loremaster', 'chr-seascape-aerialist']);
+});
+
 test('Cancel held by the player: a pick to answer, or let be', async () => {
   const cancel: RawEntity = { id: 'spl-cn', kind: 'spell', name: '취소', status: 'canon', sim: { cost: '{0}', speed: 'instant', learn_at: 'loc-a', effects: [{ type: 'counter_spell' }] } };
   const drain: RawEntity = { id: 'spl-dr', kind: 'spell', name: '흡수', status: 'canon', sim: { cost: '{0}', learn_at: 'loc-a', effects: [{ type: 'lose_half_life' }] } };

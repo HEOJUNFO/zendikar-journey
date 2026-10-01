@@ -19,9 +19,9 @@ export type Ability = (typeof ABILITIES)[number];
 export const ABILITY_LABELS: Record<Ability, string> = { fly: '비행', aquatic: '물에 삶', lifelink: '생명연결', vigilance: '경계', haste: '속공', trample: '돌진', defender: '수비대', shroud: '방어막', swampwalk: '늪걷기', forestwalk: '숲걷기', islandwalk: '섬걷기', indestructible: '파괴불가', intimidate: '위협', first_strike: '선제공격', double_strike: '이중 타격', cant_block: '막지 못함', bite: '물어뜯기', deathtouch: '죽음의 손길' };
 // Creature types a card may name ("destroy target Angel"), and `artifact` for an artifact
 // creature (마법물체 생물: it may block an intimidating one).
-export const CREATURE_TYPES = ['angel', 'demon', 'artifact', 'elf'] as const;
+export const CREATURE_TYPES = ['angel', 'demon', 'artifact', 'elf', 'merfolk'] as const;
 export type CreatureType = (typeof CREATURE_TYPES)[number];
-export const CREATURE_TYPE_LABELS: Record<CreatureType, string> = { angel: '천사', demon: '악마', artifact: '마법물체', elf: '엘프' };
+export const CREATURE_TYPE_LABELS: Record<CreatureType, string> = { angel: '천사', demon: '악마', artifact: '마법물체', elf: '엘프', merfolk: '인어' };
 
 export const TERRAIN_IDS = [
   'grassland',
@@ -336,6 +336,9 @@ export const CharacterSimSchema = z.strictObject({
   // (Gomazoa): one who falls on it or its master is wrapped up and dragged with it to where it
   // lives (sim/engulf.ts).
   engulf: z.boolean().default(false),
+  // "Whenever a spell or ability you control counters a spell, you may create a <token>" and "Tap
+  // seven untapped Merfolk you control: Counter target spell" (Lullmage Mentor, sim/counter.ts).
+  counter_tokens: z.strictObject({ creature: z.string(), pt: PtSchema, colors: z.array(z.enum(COLORS)) }).optional(),
   // "At the beginning of each opponent's upkeep, if that player has N or fewer cards in hand, this
   // deals D damage to that player" (Hellfire Mongrel): at 00:00, to each on its tile but its side
   // who holds that few spells (sim/scorch.ts).
@@ -848,6 +851,7 @@ export type NpcDef = {
   revealTop?: boolean;
   tapFoe?: { cost: ManaCost; costText: string; noFly: boolean };
   engulf?: boolean;
+  counterTokens?: { creature: string; pt: Pt; colors: Color[] };
   upkeepBurn?: { damage: number; maxHand: number };
   tapMana?: Partial<Record<Color, number>>;
   winsAtLife?: number;
@@ -1068,7 +1072,7 @@ export function buildWorld(entities: RawEntity[]): { world: World; errors: strin
         err(e.id, `sim 오류: ${issues(sim.error)}`);
         continue;
       }
-      const { knows_colors, activated, wins_at_life, extra_combat, pump, empty_hand_pump, attack_pump, discard_on_hit, landfall_token, landfall_seize, landfall_lose, landfall_grant, landfall_life, landfall_drain, enter_destroy, enter_drain, enter_draw, enter_search, enter_shatter, enter_exile, enter_tap, upkeep_return_land, extra_lands, reveal_top, tap_foe, tap_draw_allies, engulf, tap_mana, upkeep_burn, name, home_pos, ...rest } = sim.data;
+      const { knows_colors, activated, wins_at_life, extra_combat, pump, empty_hand_pump, attack_pump, discard_on_hit, landfall_token, landfall_seize, landfall_lose, landfall_grant, landfall_life, landfall_drain, enter_destroy, enter_drain, enter_draw, enter_search, enter_shatter, enter_exile, enter_tap, upkeep_return_land, extra_lands, reveal_top, tap_foe, tap_draw_allies, engulf, tap_mana, upkeep_burn, counter_tokens, name, home_pos, ...rest } = sim.data;
 
       world.npcs.push({
         id: e.id,
@@ -1095,6 +1099,7 @@ export function buildWorld(entities: RawEntity[]): { world: World; errors: strin
         ...(extra_lands ? { extraLands: extra_lands } : {}),
         ...(reveal_top ? { revealTop: true } : {}),
         ...(engulf ? { engulf: true } : {}),
+        ...(counter_tokens ? { counterTokens: { creature: counter_tokens.creature, pt: [...counter_tokens.pt], colors: [...counter_tokens.colors] } } : {}),
         ...(upkeep_burn ? { upkeepBurn: { damage: upkeep_burn.damage, maxHand: upkeep_burn.max_hand } } : {}),
         ...(tap_mana ? { tapMana: tap_mana } : {}),
         ...(tap_foe ? { tapFoe: { cost: parseManaCost(tap_foe.cost)!, costText: tap_foe.cost, noFly: tap_foe.no_fly } } : {}),

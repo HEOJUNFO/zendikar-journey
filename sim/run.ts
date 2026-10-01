@@ -3,7 +3,7 @@
 // tests pass fakes or none.
 import { applyStrike, strikeTargets } from './electro.ts';
 import { applyExile, banishOptions } from './banish.ts';
-import { answerCounter, answerCounterCast, summon } from './counter.ts';
+import { answerCounter, answerCounterCast, answerName, summon } from './counter.ts';
 import { formatClock, gameDay, untapTime } from './clock.ts';
 import { startAction } from './actions.ts';
 import type { Action } from './actions.ts';
@@ -691,10 +691,11 @@ async function choices(state: State, world: World, llm: Llm) {
       const eff = c.effect;
       let pick: string | null = null;
       const [joiner, master] = [state.actors[eff.joiner], state.actors[eff.master]];
-      const s = spellDef(world, eff.spell);
-      if (by && !by.dead && npc && llm.pick && joiner && master && s) {
+      const s = answerName(world, eff.spell);
+      if (by && !by.dead && npc && llm.pick && joiner && master) {
         try {
-          pick = await llm.pick({ world, state, npc, what: `${josa(shortName(joiner.name), '이', '가')} ${shortName(master.name)}의 곁에 들려 한다 (${eff.how}). 당신이 쥔 ${s.name}(${s.costText})로 무산시킬 수 있다: 그러면 그는 들지 못하고(고용비 등 치른 것은 돌아오지 않는다), 당신 곁에 2/2 청색 환영이 나 당신을 섬긴다. 두고 볼 수도 있다`, options: [{ id: joiner.id, label: '무산시킨다' }], optional: true });
+          const rest = s.chorus ? '' : ', 당신 곁에 2/2 청색 환영이 나 당신을 섬긴다';
+          pick = await llm.pick({ world, state, npc, what: `${josa(shortName(joiner.name), '이', '가')} ${shortName(master.name)}의 곁에 들려 한다 (${eff.how}). ${s.name}(${s.costText})로 무산시킬 수 있다: 그러면 그는 들지 못하고(고용비 등 치른 것은 돌아오지 않는다)${rest}. 두고 볼 수도 있다`, options: [{ id: joiner.id, label: '무산시킨다' }], optional: true });
         } catch (e) {
           console.warn(`pick (counter) for ${c.by} failed:`, e);
         }
@@ -744,11 +745,11 @@ async function choices(state: State, world: World, llm: Llm) {
     if (c.effect.type === 'counter_cast') {
       const eff = c.effect;
       let pick: string | null = null;
-      const [caster, cast, s, target] = [state.actors[eff.caster], spellDef(world, eff.cast), spellDef(world, eff.spell), state.actors[eff.target]];
-      if (by && !by.dead && npc && llm.pick && caster && cast && s) {
+      const [caster, cast, s, target] = [state.actors[eff.caster], spellDef(world, eff.cast), answerName(world, eff.spell), state.actors[eff.target]];
+      if (by && !by.dead && npc && llm.pick && caster && cast) {
         try {
           const on = !target || target.id === caster.id ? '' : ` ${shortName(target.name)}에게`;
-          pick = await llm.pick({ world, state, npc, what: `${josa(shortName(caster.name), '이', '가')}${on} ${josa(cast.name, '을', '를')} 걸려 한다: ${cast.summary}. 당신이 쥔 ${s.name}(${s.costText})로 무효화할 수 있다 (그 주문은 허공에서 흩어지고, 치른 마나는 돌아오지 않는다). 두고 볼 수도 있다`, options: [{ id: caster.id, label: '무효화한다' }], optional: true });
+          pick = await llm.pick({ world, state, npc, what: `${josa(shortName(caster.name), '이', '가')}${on} ${josa(cast.name, '을', '를')} 걸려 한다: ${cast.summary}. ${s.name}(${s.costText})로 무효화할 수 있다 (그 주문은 허공에서 흩어지고, 치른 마나는 돌아오지 않는다). 두고 볼 수도 있다`, options: [{ id: caster.id, label: '무효화한다' }], optional: true });
         } catch (e) {
           console.warn(`pick (counter_cast) for ${c.by} failed:`, e);
         }

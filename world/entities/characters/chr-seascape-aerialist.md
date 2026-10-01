@@ -23,6 +23,7 @@ sim:
   pt: [2, 3]
   mana: { U: 5 }           # 카드 {4}{U}
   needs: [energy, hunger]
+  types: [merfolk]         # [카드] 인어 (잠재움술사 스승 ZEN-54 의 합창에 든다)
   ally: true               # 인어 마법사 동료
   hireable: true           # 마나 값 5 × 10 = 50코인
   rally:

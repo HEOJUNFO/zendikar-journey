@@ -5,9 +5,10 @@ name: 바다 관문
 name_en: Sea Gate
 summary: 타짐 해안, 할리마르 분지 어귀의 큰 항구 도시. 인어와 인간이 함께 살고, 원정대가 모이고 떠나는 곳
 status: canon
-sources: [ZEN-63, ZEN-66, ZEN-61, ZEN-42]
+sources: [ZEN-63, ZEN-66, ZEN-61, ZEN-42, ZEN-54]
 tags: [도시, 항구, 해안, 인어, 원정대, 청색]
 links:
+  - { to: chr-lullmage-mentor, rel: 돌 둑의 잠재움술사 스승 }
   - { to: cre-sky-ruin-drake, rel: 용병들이 경계하는 하늘의 드레이크 }
   - { to: loc-tazeem, rel: 바깥 지역 }
   - { to: chr-sea-gate-loremaster, rel: 도시의 전승술사 }

@@ -4,7 +4,7 @@
 // the air when one who can't fly sets on them.
 import { applyStrike } from './electro.ts';
 import { applyExile, banishOptions } from './banish.ts';
-import { answerCounter, answerCounterCast, summon } from './counter.ts';
+import { answerCounter, answerCounterCast, answerName, summon } from './counter.ts';
 import { untapTime } from './clock.ts';
 import { applyDrainGrow, applyEnterDestroy, applySearch } from './abilities.ts';
 import { crushOwed, crushRelic, demolish, demolishOptions, relicsHere } from './relics.ts';
@@ -56,16 +56,17 @@ export function askText(state: State, world: World, c: Choice) {
   if (c.effect.type === 'engulf') return `${shortName(state.actors[c.effect.source]?.name ?? '')}이(가) 덤벼든 이를 막고 있다. 촉수로 하나를 휘감아 함께 그것의 거처로 끌고 갈 수 있다 (둘 다 몸에 붙은 힘과 섬기던 이를 잃고, 끌려간 이는 ${ENGULF_HOURS}시간 묶인다). 누구를?`;
   if (c.effect.type === 'bind') return `${shortName(state.actors[c.effect.source]?.name ?? '')}의 싸움이 이어진다. 마나 ${npcDef(state, world, c.effect.source)?.tapFoe?.costText ?? ''}를 내면 날지 못하는 적 하나를 자정까지 묶을 수 있다. 누구를?`;
   if (c.effect.type === 'counter') {
-    const s = world.spells.find((x) => x.id === (c.effect as { spell: string }).spell);
-    return `${shortName(state.actors[c.effect.joiner]?.name ?? '')}이(가) ${shortName(state.actors[c.effect.master]?.name ?? '')}의 곁에 들려 한다 (${c.effect.how}). ${s?.name ?? ''}(${s?.costText ?? ''})로 무산시키면 그는 들지 못하고 당신 곁에 ${s?.summary ?? ''}. 어떻게?`;
+    const s = answerName(world, c.effect.spell);
+    const rest = s.chorus ? '' : ` 당신 곁에 ${world.spells.find((x) => x.id === (c.effect as { spell: string }).spell)?.summary ?? ''}`;
+    return `${shortName(state.actors[c.effect.joiner]?.name ?? '')}이(가) ${shortName(state.actors[c.effect.master]?.name ?? '')}의 곁에 들려 한다 (${c.effect.how}). ${s.name}(${s.costText})로 무산시키면 그는 들지 못한다.${rest} 어떻게?`;
   }
   if (c.effect.type === 'strike') return `${shortName(state.actors[c.effect.creature]?.name ?? '')}이(가) 당신을 섬기러 들었다. ${state.items?.[c.effect.item]?.name ?? ''}에 힘을 들이면 그가 곁의 하나에게 공격력만큼 번개를 내리꽂는다. 누구에게?`;
   if (c.effect.type === 'exile') return `${shortName(state.actors[c.effect.source]?.name ?? '')}의 빛이 이 자리의 지속물 하나를 추방한다 (반드시 하나: 존재는 세상에서 지워지고, 오라·아이템은 사라지고, 땅은 그 이와의 유대가 영영 끊긴다). 무엇을?`;
   if (c.effect.type === 'counter_cast') {
     const e = c.effect;
-    const [cast, s, target] = [world.spells.find((x) => x.id === e.cast), world.spells.find((x) => x.id === e.spell), state.actors[e.target]];
+    const [cast, s, target] = [world.spells.find((x) => x.id === e.cast), answerName(world, e.spell), state.actors[e.target]];
     const on = !target || target.id === e.caster ? '' : ` ${shortName(target.name)}에게`;
-    return `${shortName(state.actors[e.caster]?.name ?? '')}이(가)${on} ${cast?.name ?? ''}을(를) 걸려 한다 (${cast?.summary ?? ''}). ${s?.name ?? ''}(${s?.costText ?? ''})로 무효화할까?`;
+    return `${shortName(state.actors[e.caster]?.name ?? '')}이(가)${on} ${cast?.name ?? ''}을(를) 걸려 한다 (${cast?.summary ?? ''}). ${s.name}(${s.costText})로 무효화할까?`;
   }
   if (c.effect.type === 'tide') return `나를 섬기는 ${shortName(state.actors[c.effect.source]?.name ?? '')}이(가) 썰물에 무너지려 한다. 유대를 맺은 땅 하나를 내어 주면(다시 맺을 수 있다) 남는다. 어느 땅을?`;
   if (c.effect.type === 'search') return `${shortName(state.actors[c.effect.source]?.name ?? '')}이(가) 잊힌 길을 안다. 아직 유대가 없는 땅 하나와 멀리서 유대를 맺을 수 있다 (하루 한 땅에 들지 않고, 오늘은 마나를 내지 않는다). 어느 땅과?`;
@@ -100,13 +101,13 @@ export function askOptions(state: State, world: World, c: Choice): { pick: strin
     return c.effect.first ? opts : [...opts, { pick: null, label: '그만둔다' }];
   }
   if (c.effect.type === 'quell') return [...QUELL_KINDS.map((k) => ({ pick: k as string | null, label: QUELL_LABELS[k] })), { pick: null, label: '부르지 않는다' }];
-  if (c.effect.type === 'counter') return [{ pick: c.effect.joiner, label: `무산시킨다 (${world.spells.find((x) => x.id === (c.effect as { spell: string }).spell)?.costText ?? ''})` }, { pick: null, label: '두고 본다' }];
+  if (c.effect.type === 'counter') return [{ pick: c.effect.joiner, label: `무산시킨다 (${answerName(world, c.effect.spell).costText})` }, { pick: null, label: '두고 본다' }];
   if (c.effect.type === 'exile') {
     const source = state.actors[c.effect.source];
     const ex = source && npcDef(state, world, source.id)?.enterExile;
     return source && ex ? banishOptions(state, world, source, ex.color, state.minutes).filter((o) => c.candidates.includes(o.id)).map((o) => ({ pick: o.id as string | null, label: o.label })) : [];
   }
-  if (c.effect.type === 'counter_cast') return [{ pick: c.effect.caster, label: `무효화한다 (${world.spells.find((x) => x.id === (c.effect as { spell: string }).spell)?.costText ?? ''})` }, { pick: null, label: '두고 본다' }];
+  if (c.effect.type === 'counter_cast') return [{ pick: c.effect.caster, label: `무효화한다 (${answerName(world, c.effect.spell).costText})` }, { pick: null, label: '두고 본다' }];
   if (c.effect.type === 'tide') return [...c.candidates.map((id) => ({ pick: id as string | null, label: region(world, id).name })), { pick: null, label: '내어 주지 않는다 (흩어진다)' }];
   if (c.effect.type === 'search') return [...c.candidates.map((id) => ({ pick: id as string | null, label: region(world, id).name })), { pick: null, label: '맺지 않는다' }];
   if (c.effect.type === 'return_lands') {
