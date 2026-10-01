@@ -2480,6 +2480,7 @@ test('a ravenous trap: one who sent three or more to their graveyard today (spel
   letGo(state, world, x, mantle.id, state.minutes);
   letGo(state, world, x, bolt.id, state.minutes);
   r.master = x.id;
+  y.relations = { 'chr-r': { name: 'r', text: '옛 벗', t: 0 } };
   die(state, r, state.minutes, '시험');
   assert.equal(buriedToday(x, state.minutes), 3);
   assert.deepEqual(x.fallen, ['chr-r']);
@@ -2490,6 +2491,12 @@ test('a ravenous trap: one who sent three or more to their graveyard today (spel
   await advance(state, world, 3);
   assert.deepEqual(x.graveyard, []);
   assert.deepEqual(x.fallen, []);
+  // The dead in it are erased from the world: gone from the save and from every memory, for good.
+  assert.equal(state.actors['chr-r'], undefined);
+  assert.equal(y.relations?.['chr-r'], undefined);
+  assert.deepEqual(state.erased, ['chr-r']);
+  syncWorld(state, world);
+  assert.equal(state.actors['chr-r'], undefined); // not made anew from their card
   assert.equal(y.graveyard?.length, 2);
   assert.ok(texts(state).some((t) => t.includes('아가리 속으로 사라졌다')));
   assert.equal(buriedToday(x, state.minutes + 1440), 0); // a new day counts anew

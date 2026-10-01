@@ -307,6 +307,9 @@ export type State = {
   // "You control target player during that player's next turn" (Sorin): the target is seized by
   // `by` from `from` until `until` (their next day), at the upkeep (sim/retainers.ts).
   possessions?: { target: string; by: string; from: number; until: number }[];
+  // The dead exiled from a graveyard: erased from the world for good (sim/erase.ts), never made
+  // anew from their card.
+  erased?: string[];
   // Picks the player owes (an Ally's rally in their party): they answer with a "choose" action
   // before anything else (sim/run.ts).
   asks?: Choice[];
@@ -376,6 +379,7 @@ export function syncWorld(state: State, world: World) {
   for (const r of world.regions) state.regions[r.id] ??= { conditions: [] };
   for (const e of world.events) state.events[e.id] ??= {};
   for (const npc of world.npcs) {
+    if (state.erased?.includes(npc.id)) continue;
     const old = state.beings?.[npc.id];
     const a = (state.actors[npc.id] ??= { ...npcActor(npc), tile: homeTile(world, npc), manaSpent: old?.manaSpent, boundUntil: old?.boundUntil });
     // Saves from when some characters stayed at home without a day of their own.

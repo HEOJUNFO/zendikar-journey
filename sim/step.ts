@@ -26,6 +26,7 @@ import { markSealed } from './seal.ts';
 import { handSize } from './knowledge.ts';
 import { recall, RECALL_HOURS, recallBlocked } from './loremaster.ts';
 import { bite, BITE_HOURS, biteBlocked } from './bite.ts';
+import { eraseFromWorld } from './erase.ts';
 import { addLog, alive, buriedToday, here, landUnusable, needsOf, npcDef, outOfTime, present, ptOf, random, together } from './state.ts';
 import { addFoe, attackBlocked, dealDamage, foesOf, hostileNpcs } from './combat.ts';
 import { bondBlocked, bondLand, expireGranted, upkeepFleeting, onEnter, FETCH_HOURS, fetchLand, fetchSource, growBlocked, growEntered, growLand, spawnWild, summonLibrary, TOP, upkeepRevive, useAbility } from './abilities.ts';
@@ -403,12 +404,14 @@ function fire(state: State, world: World, ev: EventDef, t: number, omened: boole
         const fallen = (a.fallen ?? []).map((x) => shortName(state.actors[x]?.name ?? state.tokens?.[x]?.name ?? x));
         a.exiled = [...new Set([...(a.exiled ?? []), ...(a.graveyard ?? [])])];
         a.graveyard = [];
+        // The dead in it: erased from the world (sim/erase.ts).
+        for (const x of a.fallen ?? []) eraseFromWorld(state, x);
         a.fallen = [];
         const gone = [...spells, ...fallen];
         addLog(state, {
           kind: 'effect',
           text: gone.length
-            ? `${josa(shortName(a.name), '이', '가')} 무덤에 둔 것들이 아가리 속으로 사라졌다: ${gone.join(', ')} (그 주문은 영영 다시 쓰지도 익히지도 못하고, 죽은 이는 되살리지 못한다).`
+            ? `${josa(shortName(a.name), '이', '가')} 무덤에 둔 것들이 아가리 속으로 사라졌다: ${gone.join(', ')} (그 주문은 영영 다시 쓰지도 익히지도 못하고, 죽은 이들은 세계에서 지워져 누구의 기억에도 남지 않는다).`
             : `${josa(shortName(a.name), '은', '는')} 무덤에 둔 것이 없어 삼켜질 것도 없었다.`,
           regions: [a.region],
           actors: [a.id],
