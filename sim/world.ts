@@ -513,6 +513,9 @@ export const SpellSimSchema = z.strictObject({
         // enchantment" (Relic Crush): items standing where the caster is, auras on those there.
         // The caster picks after casting, the first surely, the rest if they will (sim/relics.ts).
         z.strictObject({ type: z.literal('destroy_relics'), count: z.number().int().positive() }),
+        // "Destroy all creatures" (Day of Judgment): every being on the caster's tile, the caster
+        // too (user decision 2026-10-01), not planeswalkers; the indestructible stand.
+        z.strictObject({ type: z.literal('destroy_all') }),
         // "Reveal the top N cards of your library. Put all creature cards revealed this way into
         // your hand and the rest into your graveyard" (Beast Hunt): N unknown secrets turn up; the
         // caster keeps creatures' whereabouts (sim/knowledge.ts `huntKnowledge`).

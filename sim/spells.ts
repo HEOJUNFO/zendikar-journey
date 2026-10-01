@@ -5,7 +5,7 @@
 // be cast (sim/seal.ts).
 import { huntKnowledge } from './knowledge.ts';
 import { untapTime } from './clock.ts';
-import { addFoe, dealDamage } from './combat.ts';
+import { addFoe, dealDamage, destroy } from './combat.ts';
 import { gainLife, lifeOf, loseLife } from './life.ts';
 import { addCosts, formatMana, manaAvailable, manaCapacity, payMana, planPayment } from './mana.ts';
 import { spawnWild } from './abilities.ts';
@@ -14,7 +14,7 @@ import { owesDiscard } from './discard.ts';
 import { crushOwed, relicsHere } from './relics.ts';
 import { remember } from './relations.ts';
 import { creatureOf, retainersOf } from './retainers.ts';
-import { addLog, present, ptOf, targetable, untargetableText } from './state.ts';
+import { addLog, npcDef, present, ptOf, targetable, untargetableText } from './state.ts';
 import type { Actor, State } from './state.ts';
 import { sealedBy, sealText } from './seal.ts';
 import { josa, shortName } from './text.ts';
@@ -178,6 +178,8 @@ export function castSpell(state: State, world: World, a: Actor, spellId: string,
       if (land) destroyLand(state, world, land, [a.id], t, s.id);
     } else if (eff.type === 'discard') {
       owesDiscard(state, world, target, s.name, t);
+    } else if (eff.type === 'destroy_all') {
+      judgment(state, world, a, s.name, t);
     } else if (eff.type === 'destroy_relics') {
       const owed = crushOwed(state, world, a, s.name, eff.count, true, t);
       if (owed) (state.choices ??= []).push(owed);
@@ -218,4 +220,12 @@ export function castSpell(state: State, world: World, a: Actor, spellId: string,
     addFoe(target, a.id, t);
     remember(target, a, `나에게 ${josa(s.name, '을', '를')} 걸었다`, t);
   }
+}
+
+// Day of Judgment: light falls on everyone on the caster's tile, the caster last; planeswalkers
+// are no creatures, and the indestructible stand.
+function judgment(state: State, world: World, a: Actor, name: string, t: number) {
+  const all = present(state, a.region, a.tile).filter((x) => npcDef(state, world, x.id)?.loyalty === undefined);
+  addLog(state, { kind: 'event', text: `${name}: 눈부신 빛이 ${shortName(a.name)}의 곁을 덮쳤다.`, regions: [a.region], actors: all.map((x) => x.id), t });
+  for (const x of [...all.filter((y) => y.id !== a.id), ...all.filter((y) => y.id === a.id)]) if (!x.dead) destroy(state, x, t, name);
 }

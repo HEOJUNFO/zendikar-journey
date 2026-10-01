@@ -3277,6 +3277,25 @@ test('the real Bala Ged Thief lurks by the buried ruins of Bala Ged, an Ally for
   assert.equal(tileSteps(t.tile!, ruins), 1);
 });
 
+test('Day of Judgment: everyone on the caster\'s tile dies, the caster too; a planeswalker and one elsewhere live', () => {
+  const doj: RawEntity = { id: 'spl-d', kind: 'spell', name: '심판의 날', status: 'canon', sim: { cost: '{2}{W}{W}', learn_at: 'loc-a', target: 'self', effects: [{ type: 'destroy_all' }] } };
+  const world = fixture([doj, walker, npc('chr-c', { ...npcSim('loc-a'), mana: { W: 4 } }), npc('chr-x', npcSim('loc-a')), npc('chr-far', npcSim('loc-b'))]);
+  const state = newState(world, { seed: 1, mode: 'observer' });
+  const [c, x, w, far] = ['chr-c', 'chr-x', 'chr-w', 'chr-far'].map((id) => state.actors[id]);
+  c.spells = ['spl-d'];
+  readyCast(state, world, c, 'spl-d', state.minutes);
+  assert.ok(c.dead && x.dead);
+  assert.ok(!w.dead && !far.dead);
+  assert.ok(texts(state).some((l) => l.includes('눈부신 빛')));
+});
+
+test('the real Day of Judgment is taught in Emeria', () => {
+  const world = loadWorld();
+  const s = world.spells.find((x) => x.id === 'spl-day-of-judgment')!;
+  assert.equal(s.learnAt, 'loc-emeria');
+  assert.deepEqual(s.effects, [{ type: 'destroy_all' }]);
+});
+
 test('a ritual of the land: the caster gains 2 life for each plains they hold (not a destroyed one); an NPC too', async () => {
   const ritual: RawEntity = { id: 'spl-r', kind: 'spell', name: '의식', status: 'canon', sim: { cost: '{1}', learn_at: 'loc-a', target: 'self', effects: [{ type: 'gain_life_per_land', land: 'plains', amount: 2 }] } };
   const world = fixture([ritual, loc('loc-p2', 14, 10, 'grassland'), npc('chr-c', { ...npcSim('loc-a'), mana: { W: 1 } })]);
