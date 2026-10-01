@@ -5,7 +5,7 @@ name: 발라 게드의 도둑
 name_en: Bala Ged Thief
 summary: 발라 게드 밀림의 묻힌 유적을 터는 외눈의 도적. 원정대에 끼어, 남이 품은 주문을 뒤져 하나를 잊게 만든다
 status: canon
-sources: [ZEN-79]
+sources: [ZEN-79, ZEN-92]
 tags: [동료, 용병, 인간, 도적, 흑색]
 links:
   - { to: law-allies, rel: 동료 }
