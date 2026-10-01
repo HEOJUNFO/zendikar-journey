@@ -13,6 +13,7 @@ import { landSealed, powersSealed, sealedBy, sealToday, setSeal } from './seal.t
 import { castBlocked, castSpell, castTargets, learnBlocked, npcCastBlocked, readyCast, tappable } from './spells.ts';
 import { anthemHour } from './monument.ts';
 import { answerCounter, counterHolders, reactionSpell, summon } from './counter.ts';
+import { applyExile, banishOptions } from './banish.ts';
 import { actorColors, COLORS, formatMana, manaAvailable, manaCapacity, parseManaCost, planPayment } from './mana.ts';
 import { MAX_TALKS_PER_DAY, usableAbilities, volleyShares, burnTargets } from './run.ts';
 import { destroyLand, eligibleGmEvents, moveHours, startTravel, travelBlocked } from './step.ts';
@@ -5203,6 +5204,41 @@ test('"creatures you control" is everywhere themselves and their retainers: a ki
   const k = state.actors['chr-k'];
   assert.deepEqual(tappable(state, world, k, 'cre-v').map((a) => a.id), [k.id]);
   assert.deepEqual(controlledCreatures(state, world, state.actors['chr-w']), []); // a planeswalker is none
+});
+
+test('Devout Lightcaster: arriving, one black permanent on its tile is exiled: a being erased, or a bond with a black land broken for good', async () => {
+  const lc = npc('chr-lc', { ...npcSim('loc-a'), pt: [2, 2], mana: { W: 3 }, protection: ['B'], enter_exile: { color: 'B' } });
+  const world = fixture([lc, loc('loc-sw', 70, 10, 'swamp'), npc('chr-v', { ...npcSim('loc-a'), mana: { B: 2 } }), npc('chr-w2', { ...npcSim('loc-a'), mana: { W: 1 } })]);
+  const state = character(world, 'loc-a');
+  const [l, v, w, p] = [state.actors['chr-lc'], state.actors['chr-v'], state.actors['chr-w2'], state.actors[PLAYER_ID]];
+  for (const x of [v, w, p]) x.tile = l.tile;
+  p.bonds = ['loc-sw'];
+  // What it may take: the black vampire, the player (black by their swamp), and that bond; not the white one.
+  const ids = banishOptions(state, world, l, 'B', state.minutes).map((o) => o.id).sort();
+  assert.deepEqual(ids, ['being:chr-v', `being:${PLAYER_ID}`, `land:${PLAYER_ID}:loc-sw`].sort());
+  // Its arrival: a pick for it (itself, serving no one) after the hour; it must take one.
+  onEnter(state, world, l, state.minutes);
+  assert.equal(state.choices?.at(-1)?.effect.type, 'exile');
+  await act(state, world, { type: 'wait', hours: 1 }, { planDay: async () => [], pick: async () => `land:${PLAYER_ID}:loc-sw` });
+  assert.deepEqual(p.bonds, []);
+  assert.deepEqual(p.exiledLands, ['loc-sw']);
+  p.region = 'loc-sw';
+  assert.match(bondBlocked(state, world, p, state.minutes) ?? '', /다시는/);
+  // A being: erased from the world.
+  p.region = 'loc-a';
+  assert.ok(applyExile(state, world, l, 'being:chr-v', state.minutes));
+  assert.equal(state.actors['chr-v'], undefined);
+  assert.ok(state.erased?.includes('chr-v'));
+});
+
+test('the real Devout Lightcaster walks the Arid Mesa', () => {
+  const world = loadWorld();
+  const state = newState(world, { seed: 1, mode: 'observer' });
+  const l = state.actors['chr-devout-lightcaster'];
+  assert.equal(l?.region, 'loc-arid-mesa');
+  const def = npcDef(state, world, l.id)!;
+  assert.deepEqual(def.enterExile, { color: 'B' });
+  assert.deepEqual(def.protection, ['B']);
 });
 
 test('the real Oracle of Mul Daya lives in Riverroot, in the Guum Wilds of Bala Ged', () => {

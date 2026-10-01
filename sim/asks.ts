@@ -2,6 +2,7 @@
 // What an NPC decides by the LLM, the player decides here: whom an Ally's rally in their party
 // falls on (sim/allies.ts), whether to serve one who asks it of them, and whether to take to
 // the air when one who can't fly sets on them.
+import { applyExile, banishOptions } from './banish.ts';
 import { answerCounter, answerCounterCast, summon } from './counter.ts';
 import { untapTime } from './clock.ts';
 import { applyDrainGrow, applyEnterDestroy, applySearch } from './abilities.ts';
@@ -50,6 +51,7 @@ export function askText(state: State, world: World, c: Choice) {
     const s = world.spells.find((x) => x.id === (c.effect as { spell: string }).spell);
     return `${shortName(state.actors[c.effect.joiner]?.name ?? '')}이(가) ${shortName(state.actors[c.effect.master]?.name ?? '')}의 곁에 들려 한다 (${c.effect.how}). ${s?.name ?? ''}(${s?.costText ?? ''})로 무산시키면 그는 들지 못하고 당신 곁에 ${s?.summary ?? ''}. 어떻게?`;
   }
+  if (c.effect.type === 'exile') return `${shortName(state.actors[c.effect.source]?.name ?? '')}의 빛이 이 자리의 지속물 하나를 추방한다 (반드시 하나: 존재는 세상에서 지워지고, 오라·아이템은 사라지고, 땅은 그 이와의 유대가 영영 끊긴다). 무엇을?`;
   if (c.effect.type === 'counter_cast') {
     const e = c.effect;
     const [cast, s, target] = [world.spells.find((x) => x.id === e.cast), world.spells.find((x) => x.id === e.spell), state.actors[e.target]];
@@ -83,6 +85,11 @@ export function askOptions(state: State, world: World, c: Choice): { pick: strin
   }
   if (c.effect.type === 'quell') return [...QUELL_KINDS.map((k) => ({ pick: k as string | null, label: QUELL_LABELS[k] })), { pick: null, label: '부르지 않는다' }];
   if (c.effect.type === 'counter') return [{ pick: c.effect.joiner, label: `무산시킨다 (${world.spells.find((x) => x.id === (c.effect as { spell: string }).spell)?.costText ?? ''})` }, { pick: null, label: '두고 본다' }];
+  if (c.effect.type === 'exile') {
+    const source = state.actors[c.effect.source];
+    const ex = source && npcDef(state, world, source.id)?.enterExile;
+    return source && ex ? banishOptions(state, world, source, ex.color, state.minutes).filter((o) => c.candidates.includes(o.id)).map((o) => ({ pick: o.id as string | null, label: o.label })) : [];
+  }
   if (c.effect.type === 'counter_cast') return [{ pick: c.effect.caster, label: `무효화한다 (${world.spells.find((x) => x.id === (c.effect as { spell: string }).spell)?.costText ?? ''})` }, { pick: null, label: '두고 본다' }];
   if (c.effect.type === 'tide') return [...c.candidates.map((id) => ({ pick: id as string | null, label: region(world, id).name })), { pick: null, label: '내어 주지 않는다 (흩어진다)' }];
   if (c.effect.type === 'search') return [...c.candidates.map((id) => ({ pick: id as string | null, label: region(world, id).name })), { pick: null, label: '맺지 않는다' }];
@@ -173,6 +180,11 @@ export function answerAsk(state: State, world: World, pick: string | null, t: nu
     const x = state.actors[c.effect.source];
     const target = pick && c.candidates.includes(pick) ? state.actors[pick] : undefined;
     if (x && target) applyBind(state, world, x, target, t);
+  } else if (c.effect.type === 'exile') {
+    const source = state.actors[c.effect.source];
+    const ex = source && npcDef(state, world, source.id)?.enterExile;
+    const options = source && ex ? banishOptions(state, world, source, ex.color, t).filter((o) => c.candidates.includes(o.id)) : [];
+    if (source && options.length) applyExile(state, world, source, options.find((o) => o.id === pick)?.id ?? options[0].id, t);
   } else if (c.effect.type === 'counter_cast') {
     answerCounterCast(state, world, p, c.effect, pick === c.effect.caster, t);
   } else if (c.effect.type === 'counter') {

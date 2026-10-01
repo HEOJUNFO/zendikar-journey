@@ -61,6 +61,7 @@ export function topBlocked(state: State, world: World, a: Actor, toId: string, t
   if (!land || land !== landIdOf(world, toId)) return '서고 맨 위에 그 땅이 드러나지 않았다.';
   if (!oraclesOf(state, world, a, t).some((x) => npcDef(state, world, x.id)?.revealTop)) return '앞날을 비춰 줄 신탁자가 곁에 없다.';
   if ((a.bonds ?? []).includes(land)) return `이미 ${region(world, land).name}과 이어져 있다.`;
+  if (a.exiledLands?.includes(land)) return `${region(world, land).name}과의 유대는 추방되어 다시는 맺을 수 없다.`;
   if (state.regions[land]?.destroyed) return '부서진 땅과는 유대를 맺을 수 없다.';
   // Their land for the day: the day's count holds.
   return bondBlocked(t);

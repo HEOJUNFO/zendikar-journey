@@ -5,13 +5,14 @@ name: 메마른 메사
 name_en: Arid Mesa
 summary: 온두의 아쿰 쪽 끝, 층층이 깎인 거대한 탁상지가 늘어선 메마른 땅. 먼지 낀 금빛 하늘 아래 검은 가시덤불이 엉켜 있고, 오래된 길이 산과 평원으로 갈라져 나간다
 status: canon
-sources: [ZEN-211, ZEN-212, ZEN-229, ZEN-24]
+sources: [ZEN-211, ZEN-212, ZEN-229, ZEN-24, ZEN-10]
 tags: [메사, 황무지, 길, 페치]
 links:
   - { to: spl-landbind-ritual, rel: 배우는 주문 }
   - { to: loc-ondu, rel: 바깥 지역 }
   - { to: loc-akoum, rel: 동쪽의 산 }
   - { to: law-life, rel: 길을 여는 값 }
+  - { to: chr-devout-lightcaster, rel: 순례하는 캄사의 사제 }
 map: { in: loc-ondu, terrain: rocky, pos: [-0.7, -0.25], tiles: 10 }
 sim:
   nonbasic: true                          # 이름 있는 대지: 산이 아니다
@@ -36,3 +37,5 @@ sim:
   - 덱 압축: 찾아온 땅은 그 이의 기록(`fetched`)에 남는다. 탐색으로 무언가를 찾는 시스템이 생기면 헛걸음을 줄이는 효과로 살린다 ([결정]).
 - 지금 찾을 수 있는 땅: 아쿰 (산), 온두 (평원).
 - 플레이어는 버튼, NPC는 LLM이 짠 하루의 `fetch` 블록으로 길 찾기를 쓴다 ([결정] 2026-09-30, ZEN-229 때 정함: 페치랜드는 NPC도 쓴다).
+- 캄사의 코르 사제 독실한 빛술사(`chr-devout-lightcaster`, ZEN-10)가 산다: 흑색으로부터 보호, 들어설 때 그 칸의 흑색 지속물 하나를 추방.
+

@@ -1,4 +1,5 @@
 // Landfall (bonding with a land) and activated abilities, used as the morning LLM plans.
+import { enterExile } from './banish.ts';
 import { gameDay, untapTime } from './clock.ts';
 import { addFoe, dealDamage, destroy, leavePlane } from './combat.ts';
 import { creatureColors, manaAvailable, payMana, planPayment } from './mana.ts';
@@ -32,6 +33,7 @@ export function bondBlocked(state: State, world: World, a: Actor, t: number): st
   const r = region(world, landIdOf(world, a.region));
   if (r.notLand) return `${josa(r.name, '은', '는')} 땅이 아니라 유대를 맺을 수 없다.`;
   if (a.bonds?.includes(r.id)) return `이미 ${josa(r.name, '과', '와')} 유대를 맺었다.`;
+  if (a.exiledLands?.includes(r.id)) return `${josa(r.name, '과', '와')}의 유대는 빛에 추방되어 다시는 맺을 수 없다.`;
   if (state.regions[r.id]?.destroyed) return '부서진 땅과는 유대를 맺을 수 없다.';
   if (npcDef(state, world, a.id)?.beast && state.regions[r.id]?.conditions.some((c) => c.label === DEPLETED_LABEL))
     return '사냥감이 바닥난 땅이다.';
@@ -70,7 +72,7 @@ export function bondTargets(state: State, world: World, a: Actor, regionId: stri
 }
 
 // The effect falls on `target`, if they are still there.
-export function applyBondEffect(state: State, world: World, a: Actor, regionId: string, eff: Exclude<ChoiceEffect, { type: 'cast' | 'follow' | 'rally' | 'seize' | 'pledge' | 'evade' | 'discard' | 'pilfer' | 'pour' | 'demolish' | 'sacrifice' | 'destroy' | 'drain_grow' | 'crush' | 'quell' | 'quelled' | 'return_lands' | 'search' | 'tide' | 'bind' | 'shatter' | 'counter' | 'counter_cast' }>, targetId: string | undefined, t: number) {
+export function applyBondEffect(state: State, world: World, a: Actor, regionId: string, eff: Exclude<ChoiceEffect, { type: 'cast' | 'follow' | 'rally' | 'seize' | 'pledge' | 'evade' | 'discard' | 'pilfer' | 'pour' | 'demolish' | 'sacrifice' | 'destroy' | 'drain_grow' | 'crush' | 'quell' | 'quelled' | 'return_lands' | 'search' | 'tide' | 'bind' | 'shatter' | 'counter' | 'counter_cast' | 'exile' }>, targetId: string | undefined, t: number) {
   const r = region(world, regionId);
   if (eff.type === 'damage') return mountainFire(state, world, a, r, eff.amount, targetId, t);
   const target = targetId ? bondTargets(state, world, a, regionId, eff).find((x) => x.id === targetId) : undefined;
@@ -250,7 +252,7 @@ export function fetchTargets(state: State, world: World, a: Actor, fromId: strin
   const from = world.regions.find((r) => r.id === fromId);
   if (!from?.fetch) return [];
   return world.regions.filter(
-    (r) => r.id !== from.id && !r.oneLandWith && !a.bonds?.includes(r.id) && !state.regions[r.id]?.destroyed && landTypes(r).some((x) => from.fetch!.types.includes(x)),
+    (r) => r.id !== from.id && !r.oneLandWith && !a.bonds?.includes(r.id) && !a.exiledLands?.includes(r.id) && !state.regions[r.id]?.destroyed && landTypes(r).some((x) => from.fetch!.types.includes(x)),
   );
 }
 
@@ -674,7 +676,7 @@ export function applyDrainGrow(state: State, world: World, a: Actor, target: Act
 // once a day for balance (user decision 2026-09-30).
 export function onEnter(state: State, world: World, a: Actor, t: number) {
   const def = npcDef(state, world, a.id);
-  if (!def?.enterDestroy && !def?.enterDrain && !def?.enterDraw && !def?.enterSearch && !def?.enterShatter) return;
+  if (!def?.enterDestroy && !def?.enterDrain && !def?.enterDraw && !def?.enterSearch && !def?.enterShatter && !def?.enterExile) return;
   if (a.dead || a.enteredDay === gameDay(t)) return;
   a.enteredDay = gameDay(t);
   enterDestroy(state, world, a, t);
@@ -682,6 +684,7 @@ export function onEnter(state: State, world: World, a: Actor, t: number) {
   enterDraw(state, world, a, t);
   enterSearch(state, world, a, t);
   enterShatter(state, world, a, t);
+  enterExile(state, world, a, t);
 }
 
 // "When this enters, you may search your library for a <type> card, put it onto the
@@ -699,7 +702,7 @@ export function enterSearch(state: State, world: World, a: Actor, t: number) {
 
 // Lands of these types `a` doesn't hold yet, that can be sought (as fetchTargets).
 export function searchTargets(state: State, world: World, a: Actor, types: readonly LandType[]) {
-  return world.regions.filter((r) => !r.oneLandWith && !r.notLand && !a.bonds?.includes(r.id) && !state.regions[r.id]?.destroyed && landTypes(r).some((x) => types.includes(x)));
+  return world.regions.filter((r) => !r.oneLandWith && !r.notLand && !a.bonds?.includes(r.id) && !a.exiledLands?.includes(r.id) && !state.regions[r.id]?.destroyed && landTypes(r).some((x) => types.includes(x)));
 }
 
 // The pick lands: they bond with it from afar, a landfall of its own (not their land for the

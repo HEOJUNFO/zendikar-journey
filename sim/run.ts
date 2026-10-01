@@ -1,6 +1,7 @@
 // Turn driver. Time only moves here: the observer advances N hours, the player acts and the
 // world runs until the action is done. The game passes every LLM hook (sim/llm/index.ts);
 // tests pass fakes or none.
+import { applyExile, banishOptions } from './banish.ts';
 import { answerCounter, answerCounterCast, summon } from './counter.ts';
 import { formatClock, gameDay, untapTime } from './clock.ts';
 import { startAction } from './actions.ts';
@@ -34,7 +35,7 @@ import { castableSpells, castBlocked, castSpell, harmful, learnableSpells, spell
 import { opponentsOf, sealsDue, setSeal } from './seal.ts';
 import { applyPump, pumpController, pumpMax, pumpsDue } from './pump.ts';
 import { applyBind, bindsDue, bindTargets } from './bind.ts';
-import { COLORS } from './mana.ts';
+import { COLOR_LABELS, COLORS } from './mana.ts';
 import type { Color } from './mana.ts';
 import { abilityBlocked, applyBondEffect, applyDrainGrow, applyEnterDestroy, applySearch, enteredToday, fetchBlocked, fetchSource, fetchTargets, growBlocked, growLand, callForth } from './abilities.ts';
 import { bindRetainer, courtTargets, followsMaster, refuse, seize, swayBlocked } from './retainers.ts';
@@ -649,6 +650,26 @@ async function choices(state: State, world: World, llm: Llm) {
         }
       }
       answerCounter(state, world, by, eff, pick === eff.joiner, state.minutes);
+      continue;
+    }
+    // Devout Lightcaster, arriving: which permanent of its color there its controller exiles (one
+    // must go; with no usable answer, the first).
+    if (c.effect.type === 'exile') {
+      const source = state.actors[c.effect.source];
+      const ex = source && npcDef(state, world, source.id)?.enterExile;
+      if (by && !by.dead && npc && source && ex) {
+        const options = banishOptions(state, world, source, ex.color, state.minutes).filter((o) => c.candidates.includes(o.id));
+        if (!options.length) continue;
+        let pick: string | null = null;
+        if (llm.pick) {
+          try {
+            pick = await llm.pick({ world, state, npc, what: `${shortName(source.name)}의 빛이 이 자리의 ${COLOR_LABELS[ex.color]}색 지속물 하나를 추방한다 (반드시 하나). 존재는 세상에서 지워지고, 오라·아이템은 사라지고, 땅은 그 이와의 유대가 영영 끊긴다. 무엇을?`, options });
+          } catch (e) {
+            console.warn(`pick (exile) for ${c.by} failed:`, e);
+          }
+        }
+        applyExile(state, world, source, options.find((o) => o.id === pick)?.id ?? options[0].id, state.minutes);
+      }
       continue;
     }
     // Cancel: whether they answer a spell cast where they stand (sim/counter.ts). The spell waits

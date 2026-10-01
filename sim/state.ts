@@ -74,6 +74,8 @@ export type Actor = {
   // The day they last attacked for the first time ("whenever this attacks" goes off once a day:
   // Timbermaw Larva, Beastmaster Ascension; sim/combat.ts `onAttack`).
   attackDay?: number;
+  // Lands exiled from them (Devout Lightcaster): their bond broken for good, never to be made again.
+  exiledLands?: string[];
   // Game day they last tamed an item: "an artifact entered under their control" (Baloth Cage Trap).
   claimed?: number;
   // Game day they last sought out a land with a fetch land: "searched their library" (Archive Trap).
@@ -189,7 +191,7 @@ export type Actor = {
 // What falls on the one picked: a land's bonding effect, a burst of damage (Valakut), or a
 // spell an NPC casts (sim/spells.ts).
 export type Choice = { by: string; land: string; effect: ChoiceEffect; candidates: string[]; optional?: boolean; t: number };
-export type ChoiceEffect = BondEffect | { type: 'damage'; amount: number } | { type: 'cast'; spell: string; free?: boolean; second?: boolean } | { type: 'follow' } | { type: 'rally'; source: string } | { type: 'seize' } | { type: 'pledge'; from: string } | { type: 'evade'; from: string } | { type: 'discard'; cause: string; count?: number } | { type: 'pilfer'; source: string; target: string } | { type: 'pour'; source: string } | { type: 'demolish'; spell: string } | { type: 'sacrifice'; item: string } | { type: 'destroy'; kind?: CreatureType; kicker?: string } | { type: 'drain_grow'; life: number; counters: number } | { type: 'crush'; spell: string; left: number; first: boolean } | { type: 'quell'; source: string } | { type: 'quelled'; kind: QuellKind; source: string } | { type: 'return_lands'; item: string; left: number } | { type: 'search'; source: string } | { type: 'tide'; source: string } | { type: 'bind'; source: string } | { type: 'shatter' } | { type: 'counter'; spell: string; joiner: string; master: string; how: string } | { type: 'counter_cast'; spell: string; caster: string; cast: string; target: string; kicked: boolean };
+export type ChoiceEffect = BondEffect | { type: 'damage'; amount: number } | { type: 'cast'; spell: string; free?: boolean; second?: boolean } | { type: 'follow' } | { type: 'rally'; source: string } | { type: 'seize' } | { type: 'pledge'; from: string } | { type: 'evade'; from: string } | { type: 'discard'; cause: string; count?: number } | { type: 'pilfer'; source: string; target: string } | { type: 'pour'; source: string } | { type: 'demolish'; spell: string } | { type: 'sacrifice'; item: string } | { type: 'destroy'; kind?: CreatureType; kicker?: string } | { type: 'drain_grow'; life: number; counters: number } | { type: 'crush'; spell: string; left: number; first: boolean } | { type: 'quell'; source: string } | { type: 'quelled'; kind: QuellKind; source: string } | { type: 'return_lands'; item: string; left: number } | { type: 'search'; source: string } | { type: 'tide'; source: string } | { type: 'bind'; source: string } | { type: 'shatter' } | { type: 'counter'; spell: string; joiner: string; master: string; how: string } | { type: 'counter_cast'; spell: string; caster: string; cast: string; target: string; kicked: boolean } | { type: 'exile'; source: string };
 
 export type Condition = {
   label: string;
