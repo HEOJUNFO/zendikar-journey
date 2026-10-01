@@ -196,7 +196,7 @@ export function bondLand(state: State, world: World, a: Actor, t: number, region
   // "Landfall — create a token": one more of their kind, born at their side and theirs.
   if (lf?.landfallToken) {
     const tok = lf.landfallToken;
-    const [born] = spawnWild(state, world, tok.creature, tok.pt, 1, a.region, tok.colors, a.tile);
+    const [born] = spawnWild(state, world, tok.creature, tok.pt, 1, a.region, tok.colors, a.tile, tok.abilities ?? []);
     born.master = a.id;
     addLog(state, {
       kind: 'event',

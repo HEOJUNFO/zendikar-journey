@@ -322,7 +322,7 @@ export const CharacterSimSchema = z.strictObject({
   landfall: z.strictObject({ pt: z.tuple([z.number().int(), z.number().int()]), trample: z.boolean().default(false) }).optional(),
   // "Landfall — … create a P/T <color> <kind> creature token": born at their side, theirs
   // (their retainer), each time they bond with a land (Rampaging Baloths).
-  landfall_token: z.strictObject({ creature: z.string(), pt: PtSchema, colors: z.array(z.enum(COLORS)) }).optional(),
+  landfall_token: z.strictObject({ creature: z.string(), pt: PtSchema, colors: z.array(z.enum(COLORS)), abilities: z.array(z.enum(ABILITIES)).optional() }).optional(),
   // "Landfall — you may gain control of target creature for as long as you control this" (Roil
   // Elemental): as they bond, they may seize one there (anyone, the player too) as their
   // retainer until they die (sim/retainers.ts `seize`).
@@ -691,7 +691,7 @@ export type NpcDef = {
   hireable?: boolean;
   foresight?: boolean;
   landfall?: { pt: [number, number]; trample: boolean };
-  landfallToken?: { creature: string; pt: Pt; colors: Color[] };
+  landfallToken?: { creature: string; pt: Pt; colors: Color[]; abilities?: Ability[] };
   landfallSeize?: boolean;
   landfallLose?: Ability[];
   landfallGrant?: Ability[];

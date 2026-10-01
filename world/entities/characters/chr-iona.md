@@ -5,9 +5,10 @@ name: 이오나, 에메리아의 방패
 name_en: Iona, Shield of Emeria
 summary: 하늘의 폐허 에메리아를 지키는 전설의 천사 수호자
 status: canon
-sources: [ZEN-13, ZEN-96, ZEN-34]
+sources: [ZEN-13, ZEN-96, ZEN-34, ZEN-11]
 tags: [천사, 전설, 백색]
 links:
+  - { to: cre-emeria-angel, rel: 그녀를 섬기는 천사 }
   - { to: cre-shepherd-of-the-lost, rel: 함께 에메리아를 지키는 천사 }
   - { to: law-mana-colors, rel: 한 색을 봉인하는 힘 }
   - { to: cre-halo-hunter, rel: 천사를 사냥하는 악마 }

@@ -1748,6 +1748,31 @@ test('the real Murasa Pyromancer roams Murasa, for 60 coin', () => {
   assert.equal(hirePrice(def), 60);
 });
 
+test('an angel\'s landfall: each land she bonds with, a 1/1 white flying bird is born at her side and serves her', async () => {
+  const plan = [
+    ['00:00', '06:00', 'loc-b', 'sleep', '잠', '💤'],
+    ['06:00', '10:00', 'loc-b', 'bond', '땅과 이어짐', '🕊️'],
+    ['10:00', '24:00', 'loc-b', 'leisure', '하늘을 돎', '☁️'],
+  ];
+  const world = fixture([lore('cre-bd', 'creature'), npc('chr-an', { ...npcSim('loc-b', 'social', [3, 3]), needs: ['energy'], abilities: ['fly'], landfall_token: { creature: 'cre-bd', pt: [1, 1], colors: ['W'], abilities: ['fly'] }, plan })]);
+  const state = newState(world, { seed: 1, mode: 'observer' });
+  await advance(state, world, 4);
+  const [bird] = retainersOf(state, 'chr-an');
+  assert.deepEqual(ptOf(bird), [1, 1]);
+  assert.ok(hasAbility(bird, 'fly', state.minutes));
+  assert.deepEqual(actorColors(state, world, bird), ['W']);
+});
+
+test('the real Emeria Angel lives in Emeria, flying, birds on landfall', () => {
+  const world = loadWorld();
+  const state = newState(world, { seed: 1, mode: 'observer' });
+  const a = state.actors['cre-emeria-angel'];
+  assert.equal(a?.region, 'loc-emeria');
+  assert.ok(hasAbility(a, 'fly', state.minutes));
+  assert.deepEqual(npcDef(state, world, a.id)?.landfallToken, { creature: 'cre-bird', pt: [1, 1], colors: ['W'], abilities: ['fly'] });
+  assert.deepEqual(npcDef(state, world, a.id)?.types, ['angel']);
+});
+
 test('a herd with landfall tokens: each land it bonds with, a new 4/4 of its kind is born at its side and follows it; trample is its own', async () => {
   const plan = [
     ['00:00', '06:00', 'loc-b', 'sleep', '잠', '💤'],
