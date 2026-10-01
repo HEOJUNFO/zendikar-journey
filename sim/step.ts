@@ -31,7 +31,7 @@ import { bite, BITE_HOURS, biteBlocked } from './bite.ts';
 import { eraseFromWorld } from './erase.ts';
 import { addLog, alive, buriedToday, here, landUnusable, needsOf, npcDef, outOfTime, present, ptOf, random, together } from './state.ts';
 import { addFoe, attackBlocked, dealDamage, foesOf, hostileNpcs } from './combat.ts';
-import { bondBlocked, bondLand, expireGranted, upkeepFleeting, onEnter, FETCH_HOURS, fetchLand, fetchSource, growBlocked, growEntered, growLand, spawnWild, summonLibrary, TOP, upkeepRevive, useAbility } from './abilities.ts';
+import { bondBlocked, bondLand, expireGranted, upkeepFleeting, onEnter, FETCH_HOURS, fetchLand, fetchSource, growBlocked, HAND, growEntered, growLand, spawnWild, summonLibrary, TOP, upkeepRevive, useAbility } from './abilities.ts';
 import { CLAIM_HOURS, claimBlocked, claimItem, itemsAt, itemWhere } from './items.ts';
 import { EQUIP_HOURS, equipBlocked, equipItem, equipmentOf, syncEquipment } from './equipment.ts';
 import { EON_HOURS, eonLand, holdStill, spendBlocked, spendDay, storeBlocked, storeDay, timeNews } from './eons.ts';
@@ -749,6 +749,8 @@ function npcTask(state: State, world: World, a: Actor, t: number): Task | undefi
             ? { kind: 'fetch', activity: block.activity, emoji: block.emoji, until: t + FETCH_HOURS * 60, from: fetchFrom.from.id, land: block.land }
           : fetchFrom && 'top' in fetchFrom
             ? { kind: 'fetch', activity: block.activity, emoji: block.emoji, until: t + FETCH_HOURS * 60, from: TOP, land: block.land }
+          : fetchFrom && 'hand' in fetchFrom
+            ? { kind: 'fetch', activity: block.activity, emoji: block.emoji, until: t + FETCH_HOURS * 60, from: HAND, land: block.land }
           : gear
             ? { kind: 'equip', activity: block.activity, emoji: block.emoji, until: t + EQUIP_HOURS * 60, item: gear.id, who: block.who ?? a.id }
           : item

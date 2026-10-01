@@ -9,7 +9,7 @@ import type { Color } from './mana.ts';
 import { itemsOnLandfall } from './items.ts';
 import { enterShatter } from './relics.ts';
 import { blazeLand } from './blaze.ts';
-import { extraLandDrops, topBlocked, topLand } from './oracle.ts';
+import { bondFromHand, enterReveal, extraLandDrops, handBlocked, topBlocked, topLand } from './oracle.ts';
 import { gainLife, lifeOf, loseLife, setLife } from './life.ts';
 import { allyJoined } from './allies.ts';
 import { bindRetainer, controlledCreatures, masterOf, releaseRetainer, retainersOf } from './retainers.ts';
@@ -276,7 +276,9 @@ export function fetchBlocked(state: State, world: World, a: Actor, fromId: strin
 }
 
 // For an NPC's `fetch` block: a fetch land they hold that can seek out `toId` now, or why none can.
-export function fetchSource(state: State, world: World, a: Actor, toId: string | undefined): { from: Region } | { top: true } | { why: string } {
+export function fetchSource(state: State, world: World, a: Actor, toId: string | undefined): { from: Region } | { top: true } | { hand: true } | { why: string } {
+  // A land in their hand (Merfolk Wayfinder): no fetch land needed either.
+  if (toId && !handBlocked(state, world, a, toId, state.minutes, (t) => landDropBlocked(state, world, a, t))) return { hand: true };
   // The land on top of their library (Oracle of Mul Daya): no fetch land needed.
   if (toId && topLand(state, a, state.minutes) === landIdOf(world, toId) && !topBlocked(state, world, a, toId, state.minutes, (t) => landDropBlocked(state, world, a, t))) return { top: true };
   const held = (a.bonds ?? []).map((id) => world.regions.find((r) => r.id === id)).filter((r) => r?.fetch) as Region[];
@@ -291,6 +293,7 @@ export function fetchSource(state: State, world: World, a: Actor, toId: string |
 // land sought from wherever they are. Not their land for the day: a landfall of its own.
 export function fetchLand(state: State, world: World, a: Actor, fromId: string, toId: string, t: number, target?: string) {
   if (fromId === TOP) return bondFromTop(state, world, a, toId, t, target);
+  if (fromId === HAND) return bondFromHand(state, world, a, toId, t, (u) => landDropBlocked(state, world, a, u), (land) => bondLand(state, world, a, t, land, target));
   const why = fetchBlocked(state, world, a, fromId, toId);
   if (why) {
     addLog(state, { kind: 'status', text: `${josa(shortName(a.name), '은', '는')} 길을 찾지 못했다: ${why}`, regions: [a.region], actors: [a.id], t });
@@ -313,6 +316,8 @@ export function fetchLand(state: State, world: World, a: Actor, fromId: string, 
 
 // The source of a bond from the top of the library (Oracle of Mul Daya), as a fetch's `from`.
 export const TOP = 'top';
+// The source of a bond with a land in their hand (Merfolk Wayfinder).
+export const HAND = 'hand';
 
 // They bond from afar with the land on top of their library: their land for the day.
 export function bondFromTop(state: State, world: World, a: Actor, toId: string, t: number, target?: string) {
@@ -681,7 +686,7 @@ export function applyDrainGrow(state: State, world: World, a: Actor, target: Act
 // once a day for balance (user decision 2026-09-30).
 export function onEnter(state: State, world: World, a: Actor, t: number) {
   const def = npcDef(state, world, a.id);
-  if (!def?.enterDestroy && !def?.enterDrain && !def?.enterDraw && !def?.enterSearch && !def?.enterShatter && !def?.enterExile && !def?.enterTap) return;
+  if (!def?.enterDestroy && !def?.enterDrain && !def?.enterDraw && !def?.enterSearch && !def?.enterShatter && !def?.enterExile && !def?.enterTap && !def?.enterReveal) return;
   if (a.dead || a.enteredDay === gameDay(t)) return;
   a.enteredDay = gameDay(t);
   enterDestroy(state, world, a, t);
@@ -691,6 +696,7 @@ export function onEnter(state: State, world: World, a: Actor, t: number) {
   enterShatter(state, world, a, t);
   enterExile(state, world, a, t);
   enterTap(state, world, a, t);
+  enterReveal(state, world, a, t);
 }
 
 // "When this enters, you may search your library for a <type> card, put it onto the

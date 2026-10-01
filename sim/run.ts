@@ -1374,6 +1374,12 @@ function fetchInput(state: State, world: World, a: Actor): PlanDayInput['fetch']
     );
   // The land on top of their library (Oracle of Mul Daya): from afar, as their land for the day.
   const top = topLand(state, a, state.minutes);
+  // Lands in their hand (Merfolk Wayfinder): the same.
+  for (const id of a.handLands ?? []) {
+    if (seen.has(id) || !('hand' in fetchSource(state, world, a, id))) continue;
+    seen.add(id);
+    out.push({ id, text: `${placeName(world, region(world, id))} (${landTypes(region(world, id)).map((x) => LAND_TYPE_LABELS[x]).join('·')}), a way there shown to you (in your hand): from afar, your land for the day` });
+  }
   if (top && !seen.has(top) && 'top' in fetchSource(state, world, a, top)) out.push({ id: top, text: `${placeName(world, region(world, top))} (${landTypes(region(world, top)).map((x) => LAND_TYPE_LABELS[x]).join('·') || 'named land'}), revealed on top of your library by your oracle: no fetch land given up, but it is your land for the day` });
   return out.length ? out : undefined;
 }

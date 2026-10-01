@@ -21,7 +21,7 @@ import { knownSecrets } from '../sim/knowledge.ts';
 import { sealToday } from '../sim/seal.ts';
 import { isWinner } from '../sim/win.ts';
 import { lifeOf } from '../sim/life.ts';
-import { topBlocked, topLand } from '../sim/oracle.ts';
+import { handBlocked, topBlocked, topLand } from '../sim/oracle.ts';
 import type { Actor, LogEntry, State } from '../sim/state.ts';
 import { moveHours, ruinsUntil, travelBlocked } from '../sim/step.ts';
 import { nearestTile, ownsTile, sameTile, tileCenter, tileLabel, tilesOf } from '../sim/tiles.ts';
@@ -363,6 +363,21 @@ export function PlayerCard({ world, state, busy, onAct }: { world: World; state:
           </p>
         );
       })()}
+      {(p.handLands ?? []).length ? (
+        // Lands in their hand (Merfolk Wayfinder): bond from afar, as the land for the day.
+        <p className="muted">
+          손에 든 땅:{' '}
+          {p.handLands!.map((id) => {
+            const why = handBlocked(state, world, p, id, state.minutes, (t) => landDropBlocked(state, world, p, t));
+            return (
+              <span key={id}>
+                {placeName(world, region(world, id))}{' '}
+                {why || !onAct ? <small>{why ? `(${why.replace(/\.$/, '')}) ` : ''}</small> : <button disabled={busy} onClick={() => onAct({ type: 'fetch', from: 'hand', to: id })}>멀리서 이어지기</button>}{' '}
+              </span>
+            );
+          })}
+        </p>
+      ) : null}
       <p className="muted">
         권속:{' '}
         {Object.values(state.actors)

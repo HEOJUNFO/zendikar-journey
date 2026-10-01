@@ -85,6 +85,9 @@ export type Actor = {
   searched?: number;
   // The land on top of their library today (Oracle of Mul Daya, sim/oracle.ts).
   topLand?: { day: number; land: string };
+  // Lands in their hand (Merfolk Wayfinder): revealed to them, to bond with from afar as their land
+  // for a day, whenever they will (sim/oracle.ts `bondFromHand`).
+  handLands?: string[];
   // What an item's blessing gives them now (sim/monument.ts): +P/+T, and the abilities it added.
   anthem?: { pt: [number, number]; added: Ability[] };
   // Game day they last gained life (sim/life.ts).

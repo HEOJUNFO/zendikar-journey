@@ -3158,14 +3158,14 @@ test('Lullmage Mentor: seven unbound merfolk its controller holds there may answ
   assert.equal(retainersOf(state, p.id).length, 8); // a new one for the counter
 });
 
-test('the real Lullmage Mentor teaches in Sea Gate; the world\'s merfolk are the mentor, the seastalkers, the loremaster and the aerialist', () => {
+test('the real Lullmage Mentor teaches in Sea Gate; the world\'s merfolk are the mentor, the seastalkers, the wayfinder, the loremaster and the aerialist', () => {
   const world = loadWorld();
   const state = newState(world, { seed: 1, mode: 'observer' });
   const l = state.actors['chr-lullmage-mentor'];
   assert.equal(l?.region, 'loc-sea-gate');
   assert.deepEqual(npcDef(state, world, l.id)?.counterTokens, { creature: 'cre-merfolk', pt: [1, 1], colors: ['U'] });
   const merfolk = world.npcs.filter((x) => x.types?.includes('merfolk')).map((x) => x.id).sort();
-  assert.deepEqual(merfolk, ['chr-lullmage-mentor', 'chr-merfolk-seastalkers', 'chr-sea-gate-loremaster', 'chr-seascape-aerialist']);
+  assert.deepEqual(merfolk, ['chr-lullmage-mentor', 'chr-merfolk-seastalkers', 'chr-merfolk-wayfinder', 'chr-sea-gate-loremaster', 'chr-seascape-aerialist']);
 });
 
 test('Cancel held by the player: a pick to answer, or let be', async () => {
@@ -5405,6 +5405,36 @@ test('the real Makindi Shieldmate guards in Makindi: a defender Ally for 30 coin
   assert.deepEqual(def.rally, [{ type: 'counter_self' }]);
   assert.equal(hirePrice(def), 30);
   assert.deepEqual(ptOf(sm), [0, 3]);
+});
+
+test('Merfolk Wayfinder arriving: lands of the world come up for its controller; islands they don\'t hold go into their hand, to bond with from afar as their land for a day', async () => {
+  const isles = [loc('loc-i1', 40, 20, 'beach'), loc('loc-i2', 44, 24, 'beach')];
+  const world = fixture([...isles, npc('chr-w', { ...npcSim('loc-a', 'work', [1, 2]), mana: { U: 3 }, abilities: ['fly'], types: ['merfolk'], enter_reveal: { count: 40, land_type: 'island' } })]);
+  const state = character(world, 'loc-a');
+  const [p, w] = [state.actors[PLAYER_ID], state.actors['chr-w']];
+  w.master = p.id;
+  w.tile = p.tile;
+  p.bonds = ['loc-i1'];
+  onEnter(state, world, w, state.minutes);
+  assert.ok(p.handLands?.length);
+  assert.ok(p.handLands!.every((id) => landTypes(region(world, id)).includes('island')));
+  assert.ok(!p.handLands!.includes('loc-i1')); // held already
+  assert.ok(p.handLands!.includes('loc-i2'));
+  await act(state, world, { type: 'fetch', from: 'hand', to: 'loc-i2' });
+  assert.ok(p.bonds.includes('loc-i2'));
+  assert.ok(!p.handLands!.includes('loc-i2'));
+  // It was their land for the day.
+  assert.ok(bondBlocked(state, world, p, state.minutes));
+});
+
+test('the real Merfolk Wayfinder scouts the skies of Tazeem: a flying merfolk who shows the way to islands', () => {
+  const world = loadWorld();
+  const state = newState(world, { seed: 1, mode: 'observer' });
+  const w = state.actors['chr-merfolk-wayfinder'];
+  assert.equal(w?.region, 'loc-tazeem');
+  const def = npcDef(state, world, w.id)!;
+  assert.ok(hasAbility(w, 'fly', state.minutes) && def.types?.includes('merfolk'));
+  assert.deepEqual(def.enterReveal, { count: 3, type: 'island' });
 });
 
 test('the real Merfolk Seastalkers lurk in Bojuka Bay, a basic island on the edge of the Guum Wilds in Bala Ged: islandwalk', () => {
