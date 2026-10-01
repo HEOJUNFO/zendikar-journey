@@ -102,9 +102,12 @@ export function demolish(state: State, world: World, a: Actor, pick: string, spe
 // its own mana, it may pick (the LLM, as it, after the hour) one of the noncreature permanents on
 // its tile: the items standing there, the auras on those there, the land it stands in, or a land
 // someone there holds. It pays as it destroys. "Destroy target nonbasic land" (Goblin
-// Ruinblaster, `nonbasic`): of those, only the lands of a land card of their own.
+// Ruinblaster, `nonbasic`): of those, only the lands of a land card of their own. "Destroy target
+// artifact or enchantment" (Kor Sanctifiers, `relics`): no land.
 export function shatterOptions(state: State, world: World, a: Actor): Relic[] {
-  const nonbasic = !!npcDef(state, world, a.id)?.enterShatter?.nonbasic;
+  const sh = npcDef(state, world, a.id)?.enterShatter;
+  if (sh?.relics) return relicsHere(state, world, a.region, a.tile);
+  const nonbasic = !!sh?.nonbasic;
   const lands = demolishOptions(state, world, a).filter((o) => o.id.startsWith('land:') && (!nonbasic || world.regions.find((r) => `land:${r.id}` === o.id)?.nonbasic));
   return nonbasic ? lands : [...relicsHere(state, world, a.region, a.tile), ...lands];
 }
@@ -128,7 +131,7 @@ export function applyShatter(state: State, world: World, a: Actor, pick: string,
     }
     payMana(state, world, a, sh.kicker, t);
   }
-  addLog(state, { kind: 'event', text: `${josa(shortName(a.name), '이', '가')} 힘(${sh.kickerText ?? ''})을 더 들여 ${sh.nonbasic ? '불붙인 폭탄을 내던진다' : '곰팡이 덮인 몸으로 덮쳐누른다'}.`, regions: [a.region], actors: [a.id], t });
+  addLog(state, { kind: 'event', text: `${josa(shortName(a.name), '이', '가')} 힘(${sh.kickerText ?? ''})을 더 들여 ${sh.nonbasic ? '불붙인 폭탄을 내던진다' : sh.relics ? '정화의 빛을 모은다' : '곰팡이 덮인 몸으로 덮쳐누른다'}.`, regions: [a.region], actors: [a.id], t });
   if (pick.startsWith('land:')) return destroyLand(state, world, pick.slice('land:'.length), [a.id], t, a.name);
   return crushRelic(state, world, pick, a, t);
 }

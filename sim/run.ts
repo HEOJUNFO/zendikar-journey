@@ -676,7 +676,7 @@ async function choices(state: State, world: World, llm: Llm) {
         let pick: string | null = null;
         try {
           const sh = npcDef(state, world, by.id)?.enterShatter;
-          const which = sh?.nonbasic ? '이름 있는 땅(기본 땅이 아닌 곳) 하나: 7일 부서진다' : '생물이 아닌 것 하나(마법물체, 부여마법, 땅: 땅은 7일 부서진다)';
+          const which = sh?.nonbasic ? '이름 있는 땅(기본 땅이 아닌 곳) 하나: 7일 부서진다' : sh?.relics ? '마법물체나 부여마법(아이템, 누군가에게 걸린 오라) 하나' : '생물이 아닌 것 하나(마법물체, 부여마법, 땅: 땅은 7일 부서진다)';
           pick = await llm.pick({ world, state, npc, what: `당신이 이곳에 들어섰다. 힘을 더 들여(${sh?.kickerText ?? ''}) 이 자리의 ${which}를 무너뜨릴 수 있다. 무너뜨리지 않을 수도 있다`, options, optional: true });
         } catch (e) {
           console.warn(`pick (shatter) for ${by.id} failed:`, e);

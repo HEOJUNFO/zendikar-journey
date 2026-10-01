@@ -294,7 +294,8 @@ export const CharacterSimSchema = z.strictObject({
   // "Kicker …. When this enters, if it was kicked, destroy target noncreature permanent" (Mold
   // Shambler): on its first arrival of the day, paid from its own mana (sim/relics.ts).
   // `nonbasic`: only a land of a land card of its own (Goblin Ruinblaster: "destroy target nonbasic land").
-  enter_shatter: z.strictObject({ kicker: CostSchema.optional(), nonbasic: z.boolean().optional() }).optional(),
+  // `relics`: only an artifact or an enchantment, no land (Kor Sanctifiers).
+  enter_shatter: z.strictObject({ kicker: CostSchema.optional(), nonbasic: z.boolean().optional(), relics: z.boolean().optional() }).optional(),
   // "When this enters, exile target <color> permanent" (Devout Lightcaster: black): sim/banish.ts.
   enter_exile: z.strictObject({ color: z.enum(COLORS) }).optional(),
   // "When this enters, tap target creature an opponent controls. It doesn't untap during its
@@ -871,7 +872,7 @@ export type NpcDef = {
   enterDestroy?: { kind?: CreatureType; kicker?: ManaCost; kickerText?: string };
   enterDrain?: { per: string };
   enterSearch?: { types: LandType[]; tapped: boolean };
-  enterShatter?: { kicker?: ManaCost; kickerText?: string; nonbasic?: boolean };
+  enterShatter?: { kicker?: ManaCost; kickerText?: string; nonbasic?: boolean; relics?: boolean };
   enterExile?: { color: Color };
   enterTap?: boolean;
   enterDraw?: { count: number; discard?: number; kicker?: ManaCost; kickerText?: string };
@@ -1089,7 +1090,7 @@ export function buildWorld(entities: RawEntity[]): { world: World; errors: strin
         ...(enter_search ? { enterSearch: enter_search } : {}),
         ...(enter_exile ? { enterExile: { color: enter_exile.color } } : {}),
         ...(enter_tap ? { enterTap: true } : {}),
-        ...(enter_shatter ? { enterShatter: { ...(enter_shatter.kicker ? { kicker: parseManaCost(enter_shatter.kicker)!, kickerText: enter_shatter.kicker } : {}), ...(enter_shatter.nonbasic ? { nonbasic: true } : {}) } } : {}),
+        ...(enter_shatter ? { enterShatter: { ...(enter_shatter.kicker ? { kicker: parseManaCost(enter_shatter.kicker)!, kickerText: enter_shatter.kicker } : {}), ...(enter_shatter.nonbasic ? { nonbasic: true } : {}), ...(enter_shatter.relics ? { relics: true } : {}) } } : {}),
         ...(upkeep_return_land ? { upkeepReturnLand: true } : {}),
         ...(extra_lands ? { extraLands: extra_lands } : {}),
         ...(reveal_top ? { revealTop: true } : {}),

@@ -5370,6 +5370,31 @@ test('the real Goblin Ruinblaster runs the Teeth of Akoum: a speaking goblin sha
   assert.deepEqual(ptOf(g), [2, 1]);
 });
 
+test('Kor Sanctifiers arriving: kicked from their own mana ({W}), they may destroy an artifact or enchantment on their tile, never a land', async () => {
+  const sanct = { ...npcSim('loc-a', 'work', [2, 3]), mana: { W: 4 }, enter_shatter: { kicker: '{W}', relics: true } };
+  const relic: RawEntity = { id: 'itm-r', kind: 'item', name: '유물', status: 'canon', sim: { cost: '{0}', at: 'loc-a', effects: [{ type: 'mana', amount: 1 }] } };
+  const world = fixture([relic, npc('chr-s', sanct), npc('chr-x', npcSim('loc-a', 'work'))]);
+  const state = newState(world, { seed: 1, mode: 'observer' });
+  const [sn, x] = [state.actors['chr-s'], state.actors['chr-x']];
+  sn.tile = x.tile = itemWhere(state, world, world.items[0])!.tile;
+  x.bonds = ['loc-b'];
+  x.auras = [{ spell: 'spl-q', name: '축복', by: 'chr-x', pt: [1, 1], doubleLifeOnHit: false }];
+  onEnter(state, world, sn, state.minutes);
+  const c = state.choices!.find((y) => y.effect.type === 'shatter')!;
+  assert.deepEqual([...c.candidates].sort(), ['aura:chr-x:0:spl-q', 'item:itm-r']);
+  await advance(state, world, 1, { pick: async ({ options }) => (options.some((o) => o.id === 'item:itm-r') ? 'item:itm-r' : null) });
+  assert.ok(state.items?.['itm-r']?.gone);
+  assert.equal(manaAvailable(state, world, sn, state.minutes).W, 3);
+});
+
+test('the real Kor Sanctifiers walk the Arid Mesa: kicker {W} for an artifact or enchantment', () => {
+  const world = loadWorld();
+  const state = newState(world, { seed: 1, mode: 'observer' });
+  const sn = state.actors['chr-kor-sanctifiers'];
+  assert.equal(sn?.region, 'loc-arid-mesa');
+  assert.deepEqual(npcDef(state, world, sn.id)?.enterShatter, { kicker: { generic: 0, colored: { W: 1 } }, kickerText: '{W}', relics: true });
+});
+
 test('the real Mold Shambler roams by Kazandu Refuge', () => {
   const world = loadWorld();
   const state = newState(world, { seed: 1, mode: 'observer' });
