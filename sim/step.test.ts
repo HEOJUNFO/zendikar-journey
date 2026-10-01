@@ -28,7 +28,7 @@ import { applyEnterDestroy, bondBlocked, enterDestroy, onEnter, bondLand, bondTa
 import { DEPLETED_LABEL, DESTROYED_DAYS, TRAVEL_UNITS_PER_HOUR } from './rules.ts';
 import { bindRetainer, retainersOf, swayBlocked } from './retainers.ts';
 import { joinedToday } from './bounce.ts';
-import { centroid, fixedTile, nearestTile, ownsTile, sameTile, TILE, tileCenter, tilesOf, tileSteps, tooSmall } from './tiles.ts';
+import { centroid, eventTile, fixedTile, nearestTile, ownsTile, sameTile, TILE, tileCenter, tilesOf, tileSteps, tooSmall } from './tiles.ts';
 import { applyQuell, upkeepQuell } from './quell.ts';
 import { upkeepWins } from './win.ts';
 import { hirePrice } from './allies.ts';
@@ -3154,6 +3154,69 @@ test('the real Turntimber Ranger rides the Turntimber Grove, calling wolves, for
   const def = world.npcs.find((x) => x.id === 'chr-turntimber-ranger')!;
   assert.equal(hirePrice(def), 50);
   assert.deepEqual(def.rally, [{ type: 'token_counter', creature: 'cre-wolf', pt: [2, 2], colors: ['G'] }]);
+});
+
+test('a thief rifles a hand: the controller sees as many spells and secrets as their Allies, and picks one forgotten', async () => {
+  const thief = { ...npcSim('loc-a', 'work', [2, 2]), mana: { B: 4 }, ally: true, hireable: true, rally: [{ type: 'reveal_discard' }] };
+  const other = { ...npcSim('loc-a', 'work', [3, 3]), mana: { R: 5 }, ally: true, hireable: true };
+  const world = fixture([npc('chr-t', thief), npc('chr-o', other), npc('chr-x', npcSim('loc-a', 'work', [1, 1]))]);
+  const state = character(world, 'loc-a');
+  const p = state.actors[PLAYER_ID];
+  const x = state.actors['chr-x'];
+  x.spells = ['spl-a', 'spl-b'];
+  x.knowledge = [{ id: 'trap:z', text: '숨은 함정' }];
+  p.stats.coin = 100;
+  await act(state, world, { type: 'hire', to: 'chr-t' });
+  assert.equal(state.asks?.[0]?.effect.type, 'rally');
+  assert.ok(askText(state, world, state.asks![0]).includes('1가지'));
+  await act(state, world, { type: 'choose', pick: 'chr-x' });
+  // One Ally: one shown.
+  const ask = state.asks![0];
+  assert.equal(ask.effect.type, 'pilfer');
+  assert.equal(ask.candidates.length, 1);
+  assert.ok(texts(state).some((t) => t.includes('품을 뒤져 1가지를 드러냈다')));
+  const shown = ask.candidates[0];
+  assert.ok(askOptions(state, world, ask)[0].label.startsWith(shown.startsWith('secret:') ? '비밀' : '주문'));
+  await act(state, world, { type: 'choose', pick: shown });
+  assert.equal(x.spells.length + (x.knowledge?.length ?? 0), 2);
+  assert.ok(!x.spells.includes(shown) && !x.knowledge?.some((k) => `secret:${k.id}` === shown));
+  assert.ok(foesOf(x, state.minutes).includes('chr-t'));
+  // Two Allies: two shown; the pick may be a secret, forgotten from the mind.
+  x.knowledge = [{ id: 'trap:z', text: '숨은 함정' }];
+  x.spells = ['spl-a'];
+  await act(state, world, { type: 'hire', to: 'chr-o' });
+  await act(state, world, { type: 'choose', pick: 'chr-x' });
+  assert.equal(state.asks![0].candidates.length, 2);
+  await act(state, world, { type: 'choose', pick: 'secret:trap:z' });
+  assert.deepEqual(x.knowledge, []);
+  assert.deepEqual(x.spells, ['spl-a']);
+  assert.ok(texts(state).some((t) => t.includes('알던 비밀 하나를 잊었다')));
+});
+
+test('an NPC thief\'s master picks the hand to rifle and the card, by the LLM', async () => {
+  const thief = { ...npcSim('loc-a', 'work', [2, 2]), mana: { B: 4 }, ally: true, hireable: true, rally: [{ type: 'reveal_discard' }] };
+  const world = fixture([npc('chr-t', thief), npc('chr-m', npcSim('loc-a', 'work', [3, 3])), npc('chr-x', npcSim('loc-a', 'work', [1, 1]))]);
+  const state = newState(world, { seed: 1, mode: 'observer' });
+  const [t, m, x] = [state.actors['chr-t'], state.actors['chr-m'], state.actors['chr-x']];
+  x.spells = ['spl-a'];
+  bindRetainer(state, world, t, m, state.minutes, '고용');
+  let picked = '';
+  await advance(state, world, 2, { choose: async ({ candidates }) => candidates.find((c) => c.id === 'chr-x')?.id ?? null, pick: async ({ options }) => (picked = options[0].id) });
+  assert.equal(picked, 'spl-a');
+  assert.deepEqual(x.spells, []);
+  assert.deepEqual(x.graveyard, ['spl-a']);
+});
+
+test('the real Bala Ged Thief lurks by the buried ruins of Bala Ged, an Ally for 40 coin', () => {
+  const world = loadWorld();
+  const state = newState(world, { seed: 1, mode: 'observer' });
+  const t = state.actors['chr-bala-ged-thief'];
+  assert.equal(t?.region, 'loc-bala-ged');
+  const def = world.npcs.find((x) => x.id === 'chr-bala-ged-thief')!;
+  assert.equal(hirePrice(def), 40);
+  assert.deepEqual(def.rally, [{ type: 'reveal_discard' }]);
+  const ruins = eventTile(world, world.events.find((e) => e.id === 'evt-summoning-trap')!)!;
+  assert.equal(tileSteps(t.tile!, ruins), 1);
 });
 
 test('a ritual of the land: the caster gains 2 life for each plains they hold (not a destroyed one); an NPC too', async () => {

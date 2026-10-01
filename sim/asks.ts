@@ -5,9 +5,9 @@
 import { untapTime } from './clock.ts';
 import { applyDrainGrow, applyEnterDestroy } from './abilities.ts';
 import { crushOwed, crushRelic, relicsHere } from './relics.ts';
-import { applyRally, rallyText } from './allies.ts';
+import { applyRally, rallyText, rallyWord } from './allies.ts';
 import { bindRetainer, refuse } from './retainers.ts';
-import { discardOwed, letGo } from './discard.ts';
+import { cardLabel, discardOwed, forgetCard, handOf, letGo } from './discard.ts';
 import { sacrifice } from './monument.ts';
 import { applyQuell, permanentsOf, QUELL_KINDS, QUELL_LABELS, quellGive } from './quell.ts';
 import { castSpell } from './spells.ts';
@@ -24,6 +24,7 @@ export function askText(state: State, world: World, c: Choice) {
   if (c.effect.type === 'pledge') return `${josa(shortName(from?.name ?? ''), '이', '가')} 자신을 따르고 섬기라 한다`;
   if (c.effect.type === 'evade') return `날지 못하는 ${josa(shortName(from?.name ?? ''), '이', '가')} 덤벼든다. 날아올라 피하면 자정까지 닿지 않는다`;
   if (c.effect.type === 'discard') return `${c.effect.cause}: 지닌 주문 ${c.effect.count ? `${c.effect.count}개를` : '하나를'} 잊어야 한다. 먼저 무엇을?`;
+  if (c.effect.type === 'pilfer') return `${shortName(state.actors[c.effect.source]?.name ?? '')}의 손길에 ${shortName(state.actors[c.effect.target]?.name ?? '')}의 주문·비밀이 드러났다. 그가 잊을 하나를 고른다`;
   if (c.effect.type === 'cast') return `${world.spells.find((s) => s.id === (c.effect as { spell: string }).spell)?.name ?? ''}을(를) 하나 더, 값 없이 걸 수 있다. 누구에게?`;
   if (c.effect.type === 'sacrifice') return `${state.items?.[c.effect.item]?.name ?? c.effect.item}이(가) 오늘의 제물을 요구한다. 부리는 이 가운데 누구를 바칠까? (바친 이는 죽는다)`;
   if (c.effect.type === 'crush') return `${c.effect.spell}: 이 자리의 마법물체나 부여마법을 ${c.effect.first ? '부순다. 무엇을?' : '하나 더 부술 수 있다. 무엇을?'}`;
@@ -40,6 +41,10 @@ export function askText(state: State, world: World, c: Choice) {
 // The answers they may give: a pick (someone's id), or null.
 export function askOptions(state: State, world: World, c: Choice): { pick: string | null; label: string }[] {
   if (c.effect.type === 'discard') return c.candidates.map((id) => ({ pick: id, label: world.spells.find((s) => s.id === id)?.name ?? id }));
+  if (c.effect.type === 'pilfer') {
+    const target = state.actors[c.effect.target];
+    return c.candidates.map((id) => ({ pick: id, label: cardLabel(world, target, id) }));
+  }
   if (c.effect.type === 'crush') {
     const relics = relicsHere(state, world, c.land, state.actors[c.by]?.tile);
     const opts = c.candidates.map((id) => ({ pick: id as string | null, label: relics.find((r) => r.id === id)?.label ?? id }));
@@ -71,7 +76,7 @@ export function answerAsk(state: State, world: World, pick: string | null, t: nu
   if (c.effect.type === 'rally') {
     const target = pick ? state.actors[pick] : undefined;
     if (target && c.candidates.includes(target.id)) applyRally(state, world, c.effect.source, target.id, t);
-    else addLog(state, { kind: 'status', text: `${shortName(state.actors[c.effect.source]?.name ?? '')}의 불길을 거두었다.`, regions: [c.land], actors: [c.by], t });
+    else addLog(state, { kind: 'status', text: `${shortName(state.actors[c.effect.source]?.name ?? '')}의 ${rallyWord(state, world, c.effect.source)}을 거두었다.`, regions: [c.land], actors: [c.by], t });
   } else if (c.effect.type === 'pledge') {
     const master = state.actors[c.effect.from];
     if (pick === master?.id && canServe(p, master)) bindRetainer(state, world, p, master, t, '설득');
@@ -92,6 +97,14 @@ export function answerAsk(state: State, world: World, pick: string | null, t: nu
     // More owed (Mind Sludge): the next pick comes first.
     const next = discardOwed(state, world, p, c.effect.cause, t, (c.effect.count ?? 1) - 1);
     if (next) (state.asks ??= []).unshift(next);
+  } else if (c.effect.type === 'pilfer') {
+    // One must go: an answer that isn't one shown takes the first still held.
+    const target = state.actors[c.effect.target];
+    if (!target || target.dead) return;
+    const hand = handOf(target, t);
+    const shown = c.candidates.filter((x) => hand.includes(x));
+    const card = pick && shown.includes(pick) ? pick : shown[0];
+    if (card) forgetCard(state, world, target, card, t);
   } else if (c.effect.type === 'crush') {
     // The first must go: an answer that isn't one goes to the first there.
     const relics = relicsHere(state, world, p.region, p.tile);

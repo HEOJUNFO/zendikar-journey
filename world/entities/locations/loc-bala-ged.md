@@ -5,7 +5,7 @@ name: 발라 게드
 name_en: Bala Ged
 summary: 굴 드라즈 동쪽에 붙은 밀림 대륙. 짙은 나무 그늘이 늪 가장자리까지 내려오고, 두 대륙이 겹친 땅 밑에 푸른 지하묘지가 있다
 status: canon
-sources: [ZEN-229, ZEN-178, ZEN-184, ZEN-156, ZEN-107, ZEN-179, ZEN-194]
+sources: [ZEN-229, ZEN-178, ZEN-184, ZEN-156, ZEN-107, ZEN-179, ZEN-194, ZEN-79]
 tags: [대륙, 숲, 밀림, 녹색]
 links:
   - { to: spl-relic-crush, rel: 배우는 주문 }
@@ -16,6 +16,7 @@ links:
   - { to: loc-ondu, rel: 북동쪽의 대륙 }
   - { to: cre-baloth, rel: 사는 짐승 }
   - { to: cre-zendikar-farguide, rel: 밀림을 헤치며 걷는 정령 }
+  - { to: chr-bala-ged-thief, rel: 묻힌 유적을 터는 도적 }
   - { to: evt-summoning-trap, rel: 밀림에 묻힌 유적의 함정 }
   - { to: evt-baloth-cage-trap, rel: 밀림 바닥의 발로스 우리 }
 map: { x: 1072, y: 1614, terrain: forest, size: continent, tiles: 120 }
@@ -33,6 +34,7 @@ map: { x: 1072, y: 1614, terrain: forest, size: continent, tiles: 120 }
 
 - 밀림 바닥에 발로스를 가둔 옛 우리가 있다(`evt-baloth-cage-trap`, ZEN-156). 그날 아이템을 길들인 이가 들어서면 우리가 열려 발로스가 덮친다.
 - 밀림에 옛 석조 유적이 묻혀 있고, 소환 함정(`evt-summoning-trap`, ZEN-184)이 숨어 있다. 그날 무언가를 따르게 하려다 거절당한 이가 들어서면 생물을 불러내 덤비게 한다.
+- 그 유적 바로 곁에 유적을 터는 외눈의 도적 발라 게드의 도둑(`chr-bala-ged-thief`, ZEN-79)이 산다 ([결정] 2026-10-01). 여덟 번째 동료이자 용병(40코인)이고, 동료가 무리에 들 때마다 곁의 하나의 주문·비밀을 동료 수만큼 드러내 하나를 잊게 한다.
 - 발로스(`cre-baloth`, ZEN-157)가 여기서 산다 ([결정] 2026-09-30 다시 놓기). 먹성이 끝이 없어 사냥감을 바닥내면 다른 땅으로 옮겨 간다.
 - 숲의 정령 젠디카르 길잡이(`cre-zendikar-farguide`, ZEN-194)가 밀림 남동쪽 깊은 곳을 헤치며 걷는다 ([결정] 2026-10-01). 지나간 자리에 길이 트인다. 숲걷기: 숲과 유대를 맺은 이는 그를 막아내지 못한다 (발라 게드도 숲이다).
 

@@ -7,6 +7,7 @@
 // sim/asks.ts) or, for an NPC, the LLM's. Mercenaries (`sim.hireable`) serve whoever pays.
 import { addFoe, dealDamage } from './combat.ts';
 import { loseLife } from './life.ts';
+import { revealHand } from './discard.ts';
 import { bindRetainer, masterOf, retainersOf, swayBlocked } from './retainers.ts';
 import { untapTime } from './clock.ts';
 import { grantAbility, spawnWild } from './abilities.ts';
@@ -94,6 +95,12 @@ function tokenCounter(state: State, world: World, x: Actor, master: Actor, eff: 
   });
 }
 
+// What the picked rally is called: the fire, the curse, the hand.
+export function rallyWord(state: State, world: World, sourceId: string) {
+  const eff = (npcDef(state, world, sourceId)?.rally ?? []).find(targeted);
+  return eff?.type === 'lose_life_allies' ? '저주' : eff?.type === 'reveal_discard' ? '손길' : '불길';
+}
+
 // What the rally of `sourceId` would do now, for the one picking.
 export function rallyText(state: State, world: World, sourceId: string) {
   const x = state.actors[sourceId];
@@ -105,7 +112,9 @@ export function rallyText(state: State, world: World, sourceId: string) {
     .map((eff) =>
       eff.type === 'lose_life_allies'
         ? `${shortName(x.name)}의 저주: 고른 하나가 생명 ${n}을 잃는다 (무리의 동료 수, 죽을 수도 있다)`
-        : `${shortName(x.name)}의 불길: 고른 하나에게 피해 ${n} (무리의 동료 수, 죽을 수도 있다)`,
+        : eff.type === 'reveal_discard'
+          ? `${shortName(x.name)}의 손길: 고른 하나가 지닌 주문·비밀 가운데 ${n}가지(무리의 동료 수)가 드러나고, 그중 하나를 골라 잊게 한다`
+          : `${shortName(x.name)}의 불길: 고른 하나에게 피해 ${n} (무리의 동료 수, 죽을 수도 있다)`,
     )
     .join(', ');
 }
@@ -119,6 +128,14 @@ export function applyRally(state: State, world: World, sourceId: string, targetI
   const controller = masterOf(state, x) ?? x;
   for (const eff of (npcDef(state, world, x.id)?.rally ?? []).filter(targeted)) {
     const n = alliesOf(state, world, controller).length;
+    // Bala Ged Thief: n of their hand shown to the controller, who picks one they forget.
+    if (eff.type === 'reveal_discard') {
+      const pick = revealHand(state, world, controller, x, target, n, t);
+      if (pick && controller.kind === 'player') (state.asks ??= []).unshift(pick);
+      else if (pick) (state.choices ??= []).push(pick);
+      addFoe(target, x.id, t);
+      continue;
+    }
     if (eff.type === 'lose_life_allies') {
       addLog(state, {
         kind: 'combat',

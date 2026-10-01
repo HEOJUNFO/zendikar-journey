@@ -14,7 +14,7 @@ import { lifeOf } from './life.ts';
 import { foresightText } from './foresight.ts';
 import { knowledgeText } from './knowledge.ts';
 import { setOff, wandersDue, withPositions } from './wander.ts';
-import { discardOwed, letGo } from './discard.ts';
+import { cardLabel, discardOwed, forgetCard, handOf, letGo } from './discard.ts';
 import { crushRelic, relicsHere } from './relics.ts';
 import { loremastersOf, recallBlocked, recallCount } from './loremaster.ts';
 import { sacrifice } from './monument.ts';
@@ -272,6 +272,27 @@ async function discardChoice(state: State, world: World, llm: Llm, a: Actor, npc
   letGo(state, world, a, pick, state.minutes);
 }
 
+// Bala Ged Thief: the NPC controller picks which of what was shown the one robbed forgets (the
+// LLM; with no usable answer, one at random). One must go.
+async function pilferChoice(state: State, world: World, llm: Llm, a: Actor, npc: Speaker, c: Choice & { effect: { type: 'pilfer' } }) {
+  const target = state.actors[c.effect.target];
+  if (!target || target.dead) return;
+  const hand = handOf(target, state.minutes);
+  const shown = c.candidates.filter((x) => hand.includes(x));
+  if (!shown.length) return;
+  let pick: string | null = null;
+  if (llm.pick) {
+    try {
+      const what = `${shortName(state.actors[c.effect.source]?.name ?? '')}의 손길에 ${shortName(target.name)}의 주문·비밀이 드러났다. 그가 잊을 하나를 고른다`;
+      pick = await llm.pick({ world, state, npc, what, options: shown.map((x) => ({ id: x, label: cardLabel(world, target, x) })) });
+    } catch (e) {
+      console.warn(`pick (pilfer) for ${a.id} failed:`, e);
+    }
+  }
+  if (!pick || !shown.includes(pick)) pick = shown[Math.floor(random(state) * shown.length)];
+  forgetCard(state, world, target, pick, state.minutes);
+}
+
 // Relic Crush: the NPC caster picks what to destroy, one at a time (the LLM); the first must go
 // (with no usable answer, one at random), the rest they may let be.
 async function crushChoice(state: State, world: World, llm: Llm, a: Actor, npc: Speaker, eff: { spell: string; left: number; first: boolean }) {
@@ -500,6 +521,11 @@ async function choices(state: State, world: World, llm: Llm) {
         if (!next || !by || by.dead || !npc) break;
         await discardChoice(state, world, llm, by, npc, next.candidates, c.effect.cause);
       }
+      continue;
+    }
+    // What a thief turned up of someone's hand (candidates are spells and secrets).
+    if (c.effect.type === 'pilfer') {
+      if (by && !by.dead && npc) await pilferChoice(state, world, llm, by, npc, c as Choice & { effect: { type: 'pilfer' } });
       continue;
     }
     // Relics to destroy (candidates are things, not people).
