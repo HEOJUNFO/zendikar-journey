@@ -214,6 +214,9 @@ export function unblockable(state: State, world: World, attacker: Actor, defende
   // A grappling hook: the one its bearer falls on is dragged down, no flying off.
   const hook = flight ? hooks(state, world, attacker) : undefined;
   if (hook) return `${hook.name}에 걸려 끌려 내려와`;
+  // "Can't be blocked" (Aether Figment): no one strikes back; a flyer may still fly off (as from
+  // a landwalker).
+  if (!flight && hasAbility(attacker, 'unblockable', t)) return '막을 수 없는 적에게';
   const walked = !flight && landwalked(world, attacker, defender, t);
   if (walked) return `${LAND_TYPE_LABELS[walked]}과 이어진 몸이라 ${LAND_TYPE_LABELS[walked]}을 걷는 적에게`;
   // Protection from a color: one of that color can't block them.
@@ -496,7 +499,9 @@ export function hostileNpcs(state: State, world: World, t: number) {
     const m = masterOf(state, a);
     const unless = npcDef(state, world, a.id)?.cantBlockUnless;
     const cantBlock = hasAbility(a, 'cant_block', t) || (!!unless && !!m && !controlsKind(state, world, m, unless));
-    const guards = m && together(m, a) ? foesOf(m, t).filter((id) => (defender ? !!m.foes?.struck?.includes(id) : !cantBlock || !m.foes?.struck?.includes(id))) : [];
+    // One that can't be blocked (Aether Figment): no one stands against it for its master.
+    const unblockedBy = (id: string) => !!m?.foes?.struck?.includes(id) && !!state.actors[id] && hasAbility(state.actors[id], 'unblockable', t);
+    const guards = m && together(m, a) ? foesOf(m, t).filter((id) => !unblockedBy(id) && (defender ? !!m.foes?.struck?.includes(id) : !cantBlock || !m.foes?.struck?.includes(id))) : [];
     const theirs = defender ? guards : [...foesOf(a, t), ...guards];
     let foe = present(state, a.region, a.tile).find((b) => theirs.includes(b.id) && b.id !== a.master && !down(b) && (evasion(a, b, t) !== 'evade' || !!unblockable(state, world, a, b, t, true)));
     const hunted = !foe && !defender && prey(state, world, a, t);

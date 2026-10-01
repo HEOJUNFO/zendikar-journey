@@ -14,9 +14,9 @@ export const MAP_WIDTH = 2880;
 export const MAP_HEIGHT = 2160;
 
 // fly: can reach sky islands. aquatic: lives in the sea, and only there.
-export const ABILITIES = ['fly', 'aquatic', 'lifelink', 'vigilance', 'haste', 'trample', 'defender', 'shroud', 'swampwalk', 'forestwalk', 'islandwalk', 'indestructible', 'intimidate', 'first_strike', 'double_strike', 'cant_block', 'bite', 'deathtouch', 'reach'] as const;
+export const ABILITIES = ['fly', 'aquatic', 'lifelink', 'vigilance', 'haste', 'trample', 'defender', 'shroud', 'swampwalk', 'forestwalk', 'islandwalk', 'indestructible', 'intimidate', 'first_strike', 'double_strike', 'cant_block', 'bite', 'deathtouch', 'reach', 'unblockable'] as const;
 export type Ability = (typeof ABILITIES)[number];
-export const ABILITY_LABELS: Record<Ability, string> = { fly: '비행', aquatic: '물에 삶', lifelink: '생명연결', vigilance: '경계', haste: '속공', trample: '돌진', defender: '수비대', shroud: '방어막', swampwalk: '늪걷기', forestwalk: '숲걷기', islandwalk: '섬걷기', indestructible: '파괴불가', intimidate: '위협', first_strike: '선제공격', double_strike: '이중 타격', cant_block: '막지 못함', bite: '물어뜯기', deathtouch: '죽음의 손길', reach: '도달' };
+export const ABILITY_LABELS: Record<Ability, string> = { fly: '비행', aquatic: '물에 삶', lifelink: '생명연결', vigilance: '경계', haste: '속공', trample: '돌진', defender: '수비대', shroud: '방어막', swampwalk: '늪걷기', forestwalk: '숲걷기', islandwalk: '섬걷기', indestructible: '파괴불가', intimidate: '위협', first_strike: '선제공격', double_strike: '이중 타격', cant_block: '막지 못함', bite: '물어뜯기', deathtouch: '죽음의 손길', reach: '도달', unblockable: '막을 수 없음' };
 // Creature types a card may name ("destroy target Angel"), and `artifact` for an artifact
 // creature (마법물체 생물: it may block an intimidating one).
 export const CREATURE_TYPES = ['angel', 'demon', 'artifact', 'elf', 'merfolk'] as const;
@@ -305,6 +305,10 @@ export const CharacterSimSchema = z.strictObject({
   // "Kicker <cost>. When this enters, if it was kicked, it deals N damage to target creature"
   // (Torch Slinger): on its first arrival of the day, paid from its own mana; its controller picks
   // (sim/torch.ts).
+  // "Kicker <cost>. If this was kicked, it enters with N +1/+1 counters" (Aether Figment): on its
+  // first arrival of the day, if it can pay from its own mana, it pays and has +N/+N until midnight
+  // (user decision 2026-10-01: no counters piling up day on day).
+  enter_pump: z.strictObject({ pt: z.tuple([z.number().int().min(0), z.number().int().min(0)]), kicker: CostSchema }).optional(),
   enter_damage: z.strictObject({ amount: z.number().int().positive(), kicker: CostSchema.optional() }).optional(),
   // "When this enters, reveal the top N cards of your library. Put all <type> cards revealed this way
   // into your hand" (Merfolk Wayfinder): lands in hand, to bond with from afar (sim/oracle.ts).
@@ -950,6 +954,7 @@ export type NpcDef = {
   enterShatter?: { kicker?: ManaCost; kickerText?: string; nonbasic?: boolean; relics?: boolean };
   enterExile?: { color: Color };
   enterTap?: boolean;
+  enterPump?: { pt: [number, number]; kicker: ManaCost; kickerText: string };
   enterDamage?: { amount: number; kicker?: ManaCost; kickerText?: string };
   enterReveal?: { count: number; type: LandType };
   enterDraw?: { count: number; discard?: number; kicker?: ManaCost; kickerText?: string };
@@ -1147,7 +1152,7 @@ export function buildWorld(entities: RawEntity[]): { world: World; errors: strin
         err(e.id, `sim 오류: ${issues(sim.error)}`);
         continue;
       }
-      const { knows_colors, activated, wins_at_life, extra_combat, pump, empty_hand_pump, attack_pump, discard_on_hit, landfall_token, landfall_seize, landfall_lose, landfall_grant, landfall_life, landfall_drain, landfall_lure, enter_destroy, enter_drain, enter_draw, enter_search, enter_shatter, enter_exile, enter_tap, enter_damage, enter_reveal, upkeep_return_land, extra_lands, reveal_top, tap_foe, tap_draw_allies, engulf, tap_mana, upkeep_burn, counter_tokens, follows_only, cant_block_unless, tap_shield, tap_loot, hit_sacrifice_land, name, home_pos, ...rest } = sim.data;
+      const { knows_colors, activated, wins_at_life, extra_combat, pump, empty_hand_pump, attack_pump, discard_on_hit, landfall_token, landfall_seize, landfall_lose, landfall_grant, landfall_life, landfall_drain, landfall_lure, enter_destroy, enter_drain, enter_draw, enter_search, enter_shatter, enter_exile, enter_tap, enter_damage, enter_pump, enter_reveal, upkeep_return_land, extra_lands, reveal_top, tap_foe, tap_draw_allies, engulf, tap_mana, upkeep_burn, counter_tokens, follows_only, cant_block_unless, tap_shield, tap_loot, hit_sacrifice_land, name, home_pos, ...rest } = sim.data;
 
       world.npcs.push({
         id: e.id,
@@ -1169,6 +1174,7 @@ export function buildWorld(entities: RawEntity[]): { world: World; errors: strin
         ...(enter_search ? { enterSearch: enter_search } : {}),
         ...(enter_exile ? { enterExile: { color: enter_exile.color } } : {}),
         ...(enter_tap ? { enterTap: true } : {}),
+        ...(enter_pump ? { enterPump: { pt: enter_pump.pt, kicker: parseManaCost(enter_pump.kicker)!, kickerText: enter_pump.kicker } } : {}),
         ...(enter_damage ? { enterDamage: { amount: enter_damage.amount, ...(enter_damage.kicker ? { kicker: parseManaCost(enter_damage.kicker)!, kickerText: enter_damage.kicker } : {}) } } : {}),
         ...(enter_reveal ? { enterReveal: { count: enter_reveal.count, type: enter_reveal.land_type } } : {}),
         ...(enter_shatter ? { enterShatter: { ...(enter_shatter.kicker ? { kicker: parseManaCost(enter_shatter.kicker)!, kickerText: enter_shatter.kicker } : {}), ...(enter_shatter.nonbasic ? { nonbasic: true } : {}), ...(enter_shatter.relics ? { relics: true } : {}) } } : {}),

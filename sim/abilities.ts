@@ -705,7 +705,7 @@ export function applyDrainGrow(state: State, world: World, a: Actor, target: Act
 // once a day for balance (user decision 2026-09-30).
 export function onEnter(state: State, world: World, a: Actor, t: number) {
   const def = npcDef(state, world, a.id);
-  if (!def?.enterDestroy && !def?.enterDrain && !def?.enterDraw && !def?.enterSearch && !def?.enterShatter && !def?.enterExile && !def?.enterTap && !def?.enterDamage && !def?.enterReveal) return;
+  if (!def?.enterDestroy && !def?.enterDrain && !def?.enterDraw && !def?.enterSearch && !def?.enterShatter && !def?.enterExile && !def?.enterTap && !def?.enterDamage && !def?.enterPump && !def?.enterReveal) return;
   if (a.dead || a.enteredDay === gameDay(t)) return;
   a.enteredDay = gameDay(t);
   enterDestroy(state, world, a, t);
@@ -717,6 +717,17 @@ export function onEnter(state: State, world: World, a: Actor, t: number) {
   enterTap(state, world, a, t);
   enterDamage(state, world, a, t);
   enterReveal(state, world, a, t);
+  enterPump(state, world, a, t);
+}
+
+// "Kicker <cost>. If this was kicked, it enters with N +1/+1 counters" (Aether Figment): paid from
+// its own mana if it can (always: it only helps, [가공]), +N/+N until midnight (user decision
+// 2026-10-01).
+function enterPump(state: State, world: World, a: Actor, t: number) {
+  const ep = npcDef(state, world, a.id)?.enterPump;
+  if (!ep || a.dead || powersSealed(state, world, a, t) || !payMana(state, world, a, ep.kicker, t)) return;
+  (a.pumps ??= []).push({ pt: [...ep.pt], until: untapTime(t) });
+  addLog(state, { kind: 'status', text: `${josa(shortName(a.name), '이', '가')} 힘(${ep.kickerText})을 더 들여 부풀어 들어섰다 (자정까지 +${ep.pt[0]}/+${ep.pt[1]}, ${ptOf(a).join('/')}).`, regions: [a.region], actors: [a.id], t });
 }
 
 // "When this enters, you may search your library for a <type> card, put it onto the

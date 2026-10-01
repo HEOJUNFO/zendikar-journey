@@ -6674,3 +6674,39 @@ test('the real Vampire Nighthawk perches on the towers of Malakir: flying, death
   assert.equal(followBlocked(state, world, state.actors['cre-mindless-null'], v), null);
   assert.equal(swayBlocked(state, world, v), null);
 });
+
+test('can\'t be blocked: no one strikes back at it, nor stands against it for its master; a flyer may still fly off', () => {
+  const fig = { ...npcSim('loc-a', 'work', [1, 1]), abilities: ['unblockable'] };
+  const world = fixture([npc('chr-u', fig), npc('chr-m', npcSim('loc-a', 'work', [1, 20])), npc('chr-g', npcSim('loc-a', 'work', [3, 3])), npc('chr-f', { ...npcSim('loc-a'), abilities: ['fly'] })]);
+  const state = newState(world, { seed: 1, mode: 'observer' });
+  const [u, m, g, f] = ['chr-u', 'chr-m', 'chr-g', 'chr-f'].map((id) => state.actors[id]);
+  for (const a of [m, g, f]) a.tile = u.tile;
+  assert.ok(unblockable(state, world, u, m, state.minutes)?.includes('막을 수 없는'));
+  assert.equal(unblockable(state, world, u, f, state.minutes, true), null);
+  g.master = 'chr-m';
+  const t = state.minutes;
+  clash(state, world, u, m, t);
+  hostileNpcs(state, world, t + 60);
+  assert.ok(!state.log.some((e) => e.kind === 'combat' && e.actors[0] === 'chr-g' && e.actors[1] === 'chr-u'));
+});
+
+test('Aether Figment: arriving with {3} to spare it pays and swells +2/+2 until midnight; short of it, nothing', () => {
+  const fig = (mana: number) => ({ ...npcSim('loc-a', 'work', [1, 1]), mana: { U: mana }, needs: ['energy'], beast: true, abilities: ['unblockable'], enter_pump: { pt: [2, 2], kicker: '{3}' } });
+  const world = fixture([npc('chr-u', fig(5)), npc('chr-p', fig(2))]);
+  const state = newState(world, { seed: 1, mode: 'observer' });
+  const [u, p] = [state.actors['chr-u'], state.actors['chr-p']];
+  onEnter(state, world, u, state.minutes);
+  onEnter(state, world, p, state.minutes);
+  assert.deepEqual(ptOf(u), [3, 3]);
+  assert.deepEqual(ptOf(p), [1, 1]);
+  assert.equal(manaAvailable(state, world, u, state.minutes).U, 2);
+});
+
+test('the real Aether Figment drifts on Jwar Isle: unblockable, swelling when kicked', () => {
+  const world = loadWorld();
+  const state = newState(world, { seed: 1, mode: 'observer' });
+  const f = state.actors['cre-aether-figment'];
+  assert.equal(f?.region, 'loc-jwar-isle');
+  assert.ok(hasAbility(f, 'unblockable', state.minutes));
+  assert.deepEqual(npcDef(state, world, f.id)?.enterPump?.pt, [2, 2]);
+});
