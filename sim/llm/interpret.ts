@@ -16,6 +16,7 @@ import { itemsAt, itemOwner } from '../items.ts';
 import { equipBlocked, equipmentOf, equipTargets } from '../equipment.ts';
 import { loremastersOf, recallBlocked, recallCount } from '../loremaster.ts';
 import { biteable, readyBiter } from '../bite.ts';
+import { readyWarden, wardable } from '../vestige.ts';
 import { enteredToday, fetchTargets, fireTargets, growBlocked, growLand, landDropBlocked, targetedBondEffect } from '../abilities.ts';
 import { topBlocked, topLand } from '../oracle.ts';
 import { eonLand, spendBlocked, storeBlocked } from '../eons.ts';
@@ -74,6 +75,13 @@ export async function interpret({ world, state, text }: InterpretInput): Promise
   // A Sea Gate Loremaster they control: draw a spell per Ally of their party.
   if (!recallBlocked(state, world, p, state.minutes)) {
     days.push(`- {"type":"recall"}  (tap ${shortName(loremastersOf(state, world, p)[0].name)}: come to know ${recallCount(state, world, p)} hidden secret(s) of the world, one per Ally of their party; 1 hour)`);
+  }
+  // A Noble Vestige they control: ward one standing with it against the next damage today.
+  const warden = readyWarden(state, world, p, state.minutes);
+  if (warden) {
+    const near = Object.values(state.actors).filter((x) => (x.id === warden.id || together(warden, x)) && wardable(state, x, state.minutes));
+    if (near.length)
+      days.push(`- {"type":"shield","to":"<person id>"}  (tap ${shortName(warden.name)}: the next ${npcDef(state, world, warden.id)!.tapShield} damage that one would take today is prevented; leave "to" out for themselves; once a day; 1 hour. Who: ${near.map((x) => `${x.id} (${shortName(x.name)})`).join(', ')})`);
   }
   // One they control bearing Predatory Urge: bite someone standing with them.
   const biter = readyBiter(state, p, state.minutes);

@@ -10,6 +10,7 @@ import { woundsOf } from '../sim/combat.ts';
 import { COLOR_LABELS, formatMana, manaAvailable, manaCapacity, manaLabel } from '../sim/mana.ts';
 import { loremastersOf, recallBlocked, recallCount } from '../sim/loremaster.ts';
 import { biteBlocked, bitersOf } from '../sim/bite.ts';
+import { shieldBlocked, wardensOf } from '../sim/vestige.ts';
 import { bondBlocked, bondTargets, enteredToday, fetchTargets, landDropBlocked, fireTargets, firesOnBond, growBlocked, growLand, targetedBondEffect } from '../sim/abilities.ts';
 import { BOND_HOURS } from '../sim/actions.ts';
 import { CLAIM_HOURS, claimBlocked, itemsAt, itemsOf } from '../sim/items.ts';
@@ -679,6 +680,18 @@ export function CharacterControls(props: {
           </button>
         </div>
       )}
+      {wardensOf(state, world, p).length > 0 && (
+        <div className="row">
+          <span className="muted">🕯️ {shortName(wardensOf(state, world, p)[0].name)}:</span>
+          <button
+            disabled={busy || !!stuck || !!shieldBlocked(state, world, p, p.id, state.minutes)}
+            title={shieldBlocked(state, world, p, p.id, state.minutes) ?? '오늘 받을 다음 피해를 막는다 (영혼은 자정까지 묶임)'}
+            onClick={() => onAct({ type: 'shield' })}
+          >
+            자신에게 가호
+          </button>
+        </div>
+      )}
       {people.length > 0 && (
         <form
           className="row"
@@ -716,6 +729,16 @@ export function CharacterControls(props: {
               onClick={() => onAct({ type: 'bite', to: target.id })}
             >
               🦷 물어뜯기
+            </button>
+          )}
+          {target && wardensOf(state, world, p).length > 0 && (
+            <button
+              type="button"
+              disabled={busy || !!stuck || !!shieldBlocked(state, world, p, target.id, state.minutes)}
+              title={shieldBlocked(state, world, p, target.id, state.minutes) ?? `${shortName(target.name)}이(가) 오늘 받을 다음 피해를 막는다`}
+              onClick={() => onAct({ type: 'shield', to: target.id })}
+            >
+              🕯️ 가호
             </button>
           )}
           {target &&

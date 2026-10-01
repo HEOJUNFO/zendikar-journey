@@ -23,6 +23,7 @@ import { applyShatter, crushRelic, demolish, demolishOptions, relicsHere, shatte
 import { applyEscape, escapeOptions } from './escape.ts';
 import { loremastersOf, recallBlocked, recallCount } from './loremaster.ts';
 import { biteable, readyBiter } from './bite.ts';
+import { readyWarden, wardable } from './vestige.ts';
 import { crumble, sacrifice, sacrificeDefault } from './monument.ts';
 import { answerTide } from './tide.ts';
 import { topLand } from './oracle.ts';
@@ -1263,6 +1264,7 @@ async function prepare(state: State, world: World, llm: Llm): Promise<string | n
           grow: growInput(state, world, a),
           recall: recallInput(state, world, a),
           bite: biteInput(state, a),
+          shield: shieldInput(state, world, a),
           fetch: fetchInput(state, world, a),
           court: courtInput(state, world, a),
           hire: hireInput(state, world, a),
@@ -1309,6 +1311,12 @@ function equipInput(state: State, world: World, a: Actor): PlanDayInput['equip']
     text: `${gear.name} (${gear.summary}; costs ${gear.equip.costText}; the bearer has ${gives}${gear.equip.lure ? ', and whoever they fall on cannot fly off' : ''}${bearer ? `; now on ${shortName(state.actors[bearer]?.name ?? bearer)}` : ''})`,
     who: who.map((x) => ({ id: x.id, text: x.id === a.id ? 'themselves' : `${shortName(x.name)}, who serves them` })),
   };
+}
+
+// A Noble Vestige they control that could ward someone today, for their plan.
+function shieldInput(state: State, world: World, a: Actor): PlanDayInput['shield'] {
+  const w = readyWarden(state, world, a, state.minutes);
+  return w && { who: w.id === a.id ? 'they themselves' : shortName(w.name), amount: npcDef(state, world, w.id)!.tapShield! };
 }
 
 // One they control bearing Predatory Urge who could bite today, for their plan.
@@ -1362,6 +1370,7 @@ function hireInput(state: State, world: World, a: Actor): PlanDayInput['hire'] {
 function peopleInput(state: State, world: World, a: Actor): PlanDayInput['people'] {
   const canAttack = !hasAbility(a, 'defender', state.minutes);
   const biter = readyBiter(state, a, state.minutes);
+  const warden = readyWarden(state, world, a, state.minutes);
   const out = Object.values(state.actors)
     .filter((x) => !x.dead && x.id !== a.id && !outOfTime(state, x))
     .map((x) => {
@@ -1373,6 +1382,7 @@ function peopleInput(state: State, world: World, a: Actor): PlanDayInput['people
         talk: !def?.beast,
         attack: canAttack && !(a.seized && a.master === x.id),
         bite: !!biter && biteable(state, world, biter, x, state.minutes),
+        shield: !!warden && wardable(state, x, state.minutes),
       };
     });
   return out.length ? out : undefined;

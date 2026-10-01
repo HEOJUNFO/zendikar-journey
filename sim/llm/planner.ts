@@ -57,6 +57,8 @@ export type PlanDayInput = {
   recall?: { who: string; count: number };
   // One they control bearing Predatory Urge who could bite someone today (sim/bite.ts), and their power.
   bite?: { who: string; power: number };
+  // A Noble Vestige they control that could ward someone today (sim/vestige.ts), and how much.
+  shield?: { who: string; amount: number };
   // Lands they could seek out today by giving up a fetch land they hold (Arid Mesa...).
   fetch?: { id: string; text: string }[];
   // Spells they could learn (where each is taught), and spells they hold and could pay for.
@@ -71,12 +73,12 @@ export type PlanDayInput = {
   equip?: { text: string; who: { id: string; text: string }[] };
   // Others in the world and where each is now: whom they could seek out to talk with (not
   // beasts) or go after (attack), as the player may anyone standing with them.
-  people?: { id: string; at: string; text: string; talk: boolean; attack: boolean; bite?: boolean }[];
+  people?: { id: string; at: string; text: string; talk: boolean; attack: boolean; bite?: boolean; shield?: boolean }[];
 };
 
 // Kinds of blocks they may plan: no meals without hunger, taming only if there is an item for
 // them to tame, keeping days only with a land that keeps them.
-function kindsFor(input: Pick<PlanDayInput, 'needs' | 'items' | 'equip' | 'days' | 'grow' | 'recall' | 'bite' | 'fetch' | 'learn' | 'cast' | 'court' | 'hire' | 'people'>) {
+function kindsFor(input: Pick<PlanDayInput, 'needs' | 'items' | 'equip' | 'days' | 'grow' | 'recall' | 'bite' | 'shield' | 'fetch' | 'learn' | 'cast' | 'court' | 'hire' | 'people'>) {
   return LIFE_KINDS.filter(
     (k) =>
       (k !== 'eat' || input.needs.includes('hunger')) &&
@@ -86,6 +88,7 @@ function kindsFor(input: Pick<PlanDayInput, 'needs' | 'items' | 'equip' | 'days'
       (k !== 'spend_day' || !!input.days?.spend) &&
       (k !== 'grow' || !!input.grow) &&
       (k !== 'recall' || !!input.recall) &&
+      (k !== 'shield' || !!input.shield) &&
       (k !== 'fetch' || !!input.fetch?.length) &&
       (k !== 'learn' || !!input.learn?.length) &&
       (k !== 'cast' || !!input.cast?.length) &&
@@ -126,7 +129,8 @@ export async function planDay(input: PlanDayInput): Promise<ScheduleBlock[] | nu
     (b.kind === 'equip' && !!b.who && !input.equip?.who.some((x) => x.id === b.who)) ||
     (b.kind === 'social' && !!b.who && !people.get(b.who)?.talk) ||
     (b.kind === 'attack' && !people.get(b.who ?? '')?.attack) ||
-    (b.kind === 'bite' && !people.get(b.who ?? '')?.bite);
+    (b.kind === 'bite' && !people.get(b.who ?? '')?.bite) ||
+    (b.kind === 'shield' && !!b.who && b.who !== input.id && !people.get(b.who)?.shield);
   if (blocks?.some(bad)) blocks = null;
   if (!blocks) console.warn(`Unusable plan for ${input.name}:`, content);
   return blocks;
@@ -195,6 +199,10 @@ Rules:
       ? `\n- "recall" takes 1 hour, anywhere: ${recall!.who}, who remembers everything their band has seen, is tapped (bound until midnight) and they come to know ${recall!.count} hidden secret(s) of the world (one per Ally of their party): traps and what sets them off, where relics stand, where spells are taught, what is coming today.`
       : ''
   }${
+    kinds.includes('shield')
+      ? `\n- "shield" takes 1 hour; "who" is the id of one to ward (leave it out for themselves): ${input.shield!.who}, a spirit of hope, goes with them to that one and is tapped (bound until midnight), and the next ${input.shield!.amount} damage that one would take today is prevented. Once a day; for one about to be hurt.`
+      : ''
+  }${
     kinds.includes('fetch')
       ? `\n- "fetch" takes 1 hour, anywhere, and needs "land": the id of the land sought. They give up a fetch land they hold (the bond with it ends) and some life, and bond from afar with the land sought, drawing its mana from then on. It is not their one land of the day. Lands they could seek:\n${fetch.map((x) => `  - "${x.id}": ${x.text}`).join('\n')}`
       : ''
@@ -233,7 +241,7 @@ ${
 
 Answer: {"blocks":[{"start":0,"end":360,"regionId":"...","activity":"...","emoji":"...","kind":"sleep"}, ...]}${
     kinds.includes('fetch') || kinds.includes('learn') || kinds.includes('cast') || kinds.includes('court') || kinds.includes('hire') || kinds.includes('attack') || kinds.includes('bite')
-      ? ` (${[kinds.includes('fetch') && 'a "fetch" block also has "land"', (kinds.includes('learn') || kinds.includes('cast')) && '"learn" and "cast" blocks also have "spell"', (kinds.includes('court') || kinds.includes('hire') || kinds.includes('attack') || kinds.includes('bite')) && '"court", "hire", "attack" and "bite" blocks also have "who" (a "social" block may)'].filter(Boolean).join('; ')})`
+      ? ` (${[kinds.includes('fetch') && 'a "fetch" block also has "land"', (kinds.includes('learn') || kinds.includes('cast')) && '"learn" and "cast" blocks also have "spell"', (kinds.includes('court') || kinds.includes('hire') || kinds.includes('attack') || kinds.includes('bite')) && '"court", "hire", "attack" and "bite" blocks also have "who" (a "social" or "shield" block may)'].filter(Boolean).join('; ')})`
       : ''
   }`;
 }

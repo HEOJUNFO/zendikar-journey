@@ -10,6 +10,7 @@ import type { State, Task } from './state.ts';
 import { startTravel, travelBlocked } from './step.ts';
 import { RECALL_HOURS, recallBlocked, recallCount } from './loremaster.ts';
 import { BITE_HOURS, biteBlocked, readyBiter } from './bite.ts';
+import { readyWarden, SHIELD_HOURS, shieldBlocked } from './vestige.ts';
 import { bondBlocked, bondTargets, FETCH_HOURS, fetchBlocked, firesOnBond, growBlocked, HAND, landDropBlocked, targetedBondEffect, TOP } from './abilities.ts';
 import { handBlocked, topBlocked } from './oracle.ts';
 import { CLAIM_HOURS, claimBlocked, itemDef } from './items.ts';
@@ -57,6 +58,9 @@ export const ActionSchema = z.discriminatedUnion('type', [
   // Have one you control bearing Predatory Urge (yourself, or one who serves you) bite `to`, one
   // standing with them: the biter is tapped until midnight, the two deal each other their power.
   z.object({ type: z.literal('bite'), to: z.string() }),
+  // Have a Noble Vestige you control ward `to` (yourself if none), one standing with it: it is
+  // tapped until midnight, and the next damage they would take today is prevented.
+  z.object({ type: z.literal('shield'), to: z.string().optional() }),
   // Hire a mercenary here: pay their price and they serve you for good (sim/allies.ts).
   z.object({ type: z.literal('hire'), to: z.string() }),
   // Answer the pick you owe (an Ally's rally in your party): someone's id, or null for no one.
@@ -259,6 +263,16 @@ export function startAction(state: State, world: World, action: Action): string 
       const name = shortName(b.name);
       task = { kind: 'bite', activity: `${name} 물어뜯기`, emoji: '🦷', until: until(BITE_HOURS), who: b.id };
       text = biter.id === p.id ? `포식 충동에 몸을 맡겨 ${josa(name, '을', '를')} 물어뜯으려 한다. 자정까지 묶인다.` : `${josa(shortName(biter.name), '이', '가')} ${josa(name, '을', '를')} 물어뜯게 한다.`;
+      break;
+    }
+    case 'shield': {
+      const why = shieldBlocked(state, world, p, action.to, t);
+      if (why) return why;
+      const b = state.actors[action.to ?? p.id];
+      const w = readyWarden(state, world, p, t, b)!;
+      const name = b.id === p.id ? '자신' : shortName(b.name);
+      task = { kind: 'shield', activity: `${name}에게 가호`, emoji: '🕯️', until: until(SHIELD_HOURS), who: b.id };
+      text = `${josa(shortName(w.name), '이', '가')} ${name}에게 희망의 빛을 드리운다. 오늘 받을 다음 피해 ${npcDef(state, world, w.id)!.tapShield}를 막는다.`;
       break;
     }
     case 'hire': {

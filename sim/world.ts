@@ -322,6 +322,9 @@ export const CharacterSimSchema = z.strictObject({
   // A beast that may choose to follow one who wins its trust (the Felidar Sovereign): the
   // player by talking to it, an NPC by a "court" block. The LLM decides, as the beast.
   tamable: z.boolean().default(false),
+  // "{T}: Prevent the next N damage that would be dealt to target player this turn" (Noble Vestige):
+  // whoever controls it wards one on its tile until midnight (sim/vestige.ts).
+  tap_shield: z.number().int().positive().optional(),
   // A beast that follows only one who controls a creature of this kind (a creature entity, e.g.
   // cre-vampire: Mindless Null follows a vampire's side) or that one character (Molten Ravager:
   // the Lullmage Mentor), user decision 2026-10-01: no one else may court or sway it.
@@ -874,6 +877,7 @@ export type NpcDef = {
   beast?: boolean;
   tamable?: boolean;
   followsOnly?: string;
+  tapShield?: number;
   cantBlockUnless?: string;
   upkeepReturnLand?: boolean;
   extraLands?: number;
@@ -1102,7 +1106,7 @@ export function buildWorld(entities: RawEntity[]): { world: World; errors: strin
         err(e.id, `sim 오류: ${issues(sim.error)}`);
         continue;
       }
-      const { knows_colors, activated, wins_at_life, extra_combat, pump, empty_hand_pump, attack_pump, discard_on_hit, landfall_token, landfall_seize, landfall_lose, landfall_grant, landfall_life, landfall_drain, enter_destroy, enter_drain, enter_draw, enter_search, enter_shatter, enter_exile, enter_tap, enter_reveal, upkeep_return_land, extra_lands, reveal_top, tap_foe, tap_draw_allies, engulf, tap_mana, upkeep_burn, counter_tokens, follows_only, cant_block_unless, name, home_pos, ...rest } = sim.data;
+      const { knows_colors, activated, wins_at_life, extra_combat, pump, empty_hand_pump, attack_pump, discard_on_hit, landfall_token, landfall_seize, landfall_lose, landfall_grant, landfall_life, landfall_drain, enter_destroy, enter_drain, enter_draw, enter_search, enter_shatter, enter_exile, enter_tap, enter_reveal, upkeep_return_land, extra_lands, reveal_top, tap_foe, tap_draw_allies, engulf, tap_mana, upkeep_burn, counter_tokens, follows_only, cant_block_unless, tap_shield, name, home_pos, ...rest } = sim.data;
 
       world.npcs.push({
         id: e.id,
@@ -1131,6 +1135,7 @@ export function buildWorld(entities: RawEntity[]): { world: World; errors: strin
         ...(reveal_top ? { revealTop: true } : {}),
         ...(engulf ? { engulf: true } : {}),
         ...(follows_only ? { followsOnly: follows_only } : {}),
+        ...(tap_shield ? { tapShield: tap_shield } : {}),
         ...(cant_block_unless ? { cantBlockUnless: cant_block_unless } : {}),
         ...(counter_tokens ? { counterTokens: { creature: counter_tokens.creature, pt: [...counter_tokens.pt], colors: [...counter_tokens.colors] } } : {}),
         ...(upkeep_burn ? { upkeepBurn: { damage: upkeep_burn.damage, maxHand: upkeep_burn.max_hand } } : {}),

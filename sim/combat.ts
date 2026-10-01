@@ -10,6 +10,7 @@ import { controlsKind, masterOf, releaseRetainer, retainersOf } from './retainer
 import { releaseItems } from './items.ts';
 import { owesDiscard } from './discard.ts';
 import { hooks } from './equipment.ts';
+import { shielded } from './vestige.ts';
 import { doubleLife, gainLife, lifeOf } from './life.ts';
 import { actorColors, COLOR_LABELS, manaAvailable, payMana, planPayment } from './mana.ts';
 import { HUNT_HUNGER, KILL_FEED, KO_ACTIVITY, KO_HOURS } from './rules.ts';
@@ -32,6 +33,9 @@ export function woundsOf(a: Actor, t: number) {
 // deathtouch is its.
 export function dealDamage(state: State, a: Actor, amount: number, t: number, cause: string, nonlethal = false, by?: Actor, dealer?: Actor) {
   if (a.dead || amount <= 0) return false;
+  // A ward (Noble Vestige) takes what it can first.
+  amount = shielded(state, a, amount, t);
+  if (amount <= 0) return false;
   if (a.loyalty !== undefined) {
     a.loyalty = Math.max(nonlethal ? 1 : 0, a.loyalty - amount);
     addLog(state, { kind: 'combat', text: `${josa(shortName(a.name), '이', '가')} 피해 ${amount}로 기세가 꺾였다 (기세 ${a.loyalty}).`, regions: [a.region], actors: [a.id] });

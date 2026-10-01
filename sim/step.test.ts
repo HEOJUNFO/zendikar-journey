@@ -43,6 +43,7 @@ import { upkeepWins } from './win.ts';
 import { allyJoined, hireMerc, hirePrice } from './allies.ts';
 import { askOptions, askText } from './asks.ts';
 import { applyEscape, escapeOptions } from './escape.ts';
+import { shieldBlocked, shielded } from './vestige.ts';
 import type { Actor, State } from './state.ts';
 import { affectedRegions, buildWorld, descendantsOf, distance, landTypes, placeName, realmOf, region, travelHours, within } from './world.ts';
 import type { RawEntity } from './world.ts';
@@ -6155,4 +6156,55 @@ test('the real Narrow Escape is taught in Kazandu: an instant, one of your own b
   assert.equal(s.learnAt, 'loc-kazandu');
   assert.equal(s.speed, 'instant');
   assert.deepEqual(s.effects.map((e) => e.type), ['return_own', 'gain_life']);
+});
+
+const vestige = (plan?: unknown[][]) => npc('chr-v', { ...npcSim('loc-a', 'work', [1, 2]), mana: { W: 3 }, needs: ['energy'], abilities: ['fly'], tap_shield: 1, ...(plan ? { plan } : {}) });
+
+test('Noble Vestige: the player taps the spirit they keep to ward themselves; the next 1 damage today is prevented, and the ward is gone at midnight', async () => {
+  const world = fixture([vestige()]);
+  const state = character(world, 'loc-a');
+  const [p, v] = [state.actors[PLAYER_ID], state.actors['chr-v']];
+  v.tile = p.tile;
+  assert.ok(shieldBlocked(state, world, p, undefined, state.minutes)?.includes('영혼이 없다'));
+  v.master = p.id;
+  await act(state, world, { type: 'shield' });
+  assert.ok(v.boundUntil !== undefined);
+  assert.deepEqual(p.shield?.amount, 1);
+  assert.ok(shieldBlocked(state, world, p, undefined, state.minutes)?.includes('지금 쓸 수 없다'));
+  dealDamage(state, p, 3, state.minutes, '시험');
+  assert.equal(woundsOf(p, state.minutes), 2);
+  assert.equal(p.shield, undefined);
+  assert.ok(texts(state).some((l) => l.includes('가호가') && l.includes('피해 1를 막았다')));
+  // One unspent wears off with the day.
+  p.shield = { day: gameDay(state.minutes), amount: 1 };
+  assert.equal(shielded(state, p, 2, state.minutes + 24 * 60), 2);
+});
+
+test('Noble Vestige: an NPC plans a shield block for someone; the spirit (on its own, serving no one) wards them and is tapped', async () => {
+  const plan = [
+    ['00:00', '06:00', 'loc-a', 'sleep', '잠', '😴'],
+    ['06:00', '07:00', 'loc-a', 'shield', '가호', '🕯️', undefined, undefined, 'chr-x'],
+    ['07:00', '24:00', 'loc-a', 'work', '일', '🔨'],
+  ];
+  const world = fixture([vestige(plan), npc('chr-x', npcSim('loc-a', 'work', [1, 5]))]);
+  const state = newState(world, { seed: 1, mode: 'observer' });
+  const [v, x] = [state.actors['chr-v'], state.actors['chr-x']];
+  x.tile = v.tile;
+  let offered: PlanDayInput | undefined;
+  await advance(state, world, 1, { planDay: async (input) => (input.id === 'chr-v' && (offered = input), planDay!(input)) });
+  assert.deepEqual(offered?.shield, { who: 'they themselves', amount: 1 });
+  assert.ok(offered?.people?.find((y) => y.id === 'chr-x')?.shield);
+  assert.equal(x.shield?.amount, 1);
+  assert.ok(v.boundUntil !== undefined);
+});
+
+test('the real Noble Vestige lingers in Emeria: a flying spirit of hope who may be talked round, warding one beside it', () => {
+  const world = loadWorld();
+  const state = newState(world, { seed: 1, mode: 'observer' });
+  const v = state.actors['chr-noble-vestige'];
+  assert.equal(v?.region, 'loc-emeria');
+  const def = npcDef(state, world, v.id)!;
+  assert.equal(def.tapShield, 1);
+  assert.ok(hasAbility(v, 'fly', state.minutes) && !def.beast && !def.needs.includes('hunger'));
+  assert.equal(swayBlocked(state, world, v), null);
 });
