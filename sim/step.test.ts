@@ -2529,7 +2529,7 @@ test('a hungry token hunts only with no master: a herd\'s young keeps to its mas
   assert.ok(state.log.some((e) => e.kind === 'combat' && e.text.includes('굶주린') && e.actors[0] === wild.id));
 });
 
-test('swampwalk: one bonded with a swamp can\'t strike back at it, nor fly from it', async () => {
+test('swampwalk: one bonded with a swamp can\'t strike back at it, but may fly from it', async () => {
   const wraith = { ...npcSim('loc-a', 'work', [4, 2]), needs: ['energy'], beast: true, abilities: ['swampwalk'] };
   const world = fixture([loc('loc-swamp', 12, 10, 'swamp'), npc('chr-w', wraith), npc('chr-x', npcSim('loc-a', 'work', [3, 9])), npc('chr-f', { ...npcSim('loc-a', 'work', [3, 9]), abilities: ['fly'] })]);
   const state = newState(world, { seed: 1, mode: 'observer' });
@@ -2542,12 +2542,13 @@ test('swampwalk: one bonded with a swamp can\'t strike back at it, nor fly from 
   assert.equal(woundsOf(x, state.minutes), 4);
   assert.equal(woundsOf(w, state.minutes), 0); // no blow back
   assert.ok(texts(state).some((t) => t.includes('늪을 걷는 적에게 맞서지 못한다')));
-  // A flyer bonded with a swamp can't take to the air from it.
+  // A flyer bonded with a swamp can't strike back, but may still take to the air (user decision
+  // 2026-10-01).
   x.region = 'loc-b';
   addFoe(w, 'chr-f', state.minutes);
-  await advance(state, world, 1, { evade: async () => (asked++, true) });
-  assert.equal(asked, 0);
-  assert.equal(woundsOf(f, state.minutes), 4);
+  await advance(state, world, 2, { evade: async () => (asked++, true) });
+  assert.equal(asked, 1);
+  assert.equal(woundsOf(f, state.minutes), 0);
   // One with no swamp strikes back.
   f.bonds = [];
   x.bonds = [];

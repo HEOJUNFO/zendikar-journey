@@ -163,9 +163,11 @@ export function caughtAsleep(attacker: Actor, defender: Actor, t: number) {
 }
 
 // Why the defender can't block the attacker (strike back, or fly from them), or null.
-export function unblockable(state: State, world: World, attacker: Actor, defender: Actor, t: number): string | null {
+// `flight`: whether they may still fly from them. A landwalker's prey can't strike back but may
+// take to the air (user decision 2026-10-01).
+export function unblockable(state: State, world: World, attacker: Actor, defender: Actor, t: number, flight = false): string | null {
   if (caughtAsleep(attacker, defender, t)) return '잠든 채 덮쳐져';
-  const walked = landwalked(world, attacker, defender, t);
+  const walked = !flight && landwalked(world, attacker, defender, t);
   if (walked) return `${LAND_TYPE_LABELS[walked]}과 이어진 몸이라 ${LAND_TYPE_LABELS[walked]}을 걷는 적에게`;
   // Protection from a color: one of that color can't block them.
   const shield = protectedFrom(attacker, actorColors(state, world, defender), t);
@@ -357,7 +359,7 @@ export function hostileNpcs(state: State, world: World, t: number) {
     // Their own foes, and (a retainer) whoever their master is fighting right here.
     const m = masterOf(state, a);
     const theirs = [...foesOf(a, t), ...(m && together(m, a) ? foesOf(m, t) : [])];
-    let foe = present(state, a.region, a.tile).find((b) => theirs.includes(b.id) && b.id !== a.master && !down(b) && (evasion(a, b, t) !== 'evade' || !!unblockable(state, world, a, b, t)));
+    let foe = present(state, a.region, a.tile).find((b) => theirs.includes(b.id) && b.id !== a.master && !down(b) && (evasion(a, b, t) !== 'evade' || !!unblockable(state, world, a, b, t, true)));
     const hunted = !foe && prey(state, world, a, t);
     if (hunted) {
       foe = hunted;
@@ -371,9 +373,9 @@ export function hostileNpcs(state: State, world: World, t: number) {
     }
     if (!foe) continue;
     // A flyer yet to answer: the blow waits for it (asked after the hour).
-    // One who can't block it (landwalk, intimidate) can't fly from it either.
+    // One who can't block it (intimidate, asleep) can't fly from it either; a landwalker's prey may.
     const walked = unblockable(state, world, a, foe, t);
-    if (!walked && evasion(a, foe, t) === 'ask') {
+    if (!unblockable(state, world, a, foe, t, true) && evasion(a, foe, t) === 'ask') {
       const f = foe;
       if (f.kind === 'player') {
         const owed = [...(state.choices ?? []), ...(state.asks ?? [])].some((c) => c.effect.type === 'evade' && c.effect.from === a.id);

@@ -752,9 +752,10 @@ async function attack(state: State, world: World, p: Actor, npcId: string, llm: 
   const target = state.actors[npcId];
   const npc = speakerDef(state, world, npcId)!;
   const flies = (a: Actor) => hasAbility(a, 'fly', state.minutes);
-  // One who can't block the player (landwalk, intimidate) can't fly from them either.
-  const unblocked = unblockable(state, world, p, target, state.minutes);
-  if (!unblocked && flies(target) && !flies(p) && target.boundUntil === undefined && llm.evade) {
+  // One who can't block the player (intimidate, asleep) can't fly from them either; a
+  // landwalker's prey may (user decision 2026-10-01).
+  const inescapable = unblockable(state, world, p, target, state.minutes, true);
+  if (!inescapable && flies(target) && !flies(p) && target.boundUntil === undefined && llm.evade) {
     let evades = false;
     try {
       evades = await llm.evade({ world, state, npc, attacker: p });
@@ -771,7 +772,7 @@ async function attack(state: State, world: World, p: Actor, npcId: string, llm: 
       return;
     }
   }
-  clash(state, world, p, target, state.minutes, unblocked);
+  clash(state, world, p, target, state.minutes, unblockable(state, world, p, target, state.minutes));
 }
 
 // An NPC's day is asked for this many times before the world halts.
