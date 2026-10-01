@@ -449,16 +449,18 @@ export function hostileNpcs(state: State, world: World, t: number) {
     if (a.kind === 'player' || a.dead || a.travel || a.boundUntil !== undefined || outOfTime(state, a, t)) continue;
     if (a.forced && a.forced.kind !== 'fight') continue; // collapsed
     if (a.lastClash === t) continue; // already fought this hour
-    // Defender: they never strike first (they still strike back when struck).
-    if (hasAbility(a, 'defender', t)) continue;
+    // Defender: they never strike first (they still strike back when struck), but they block:
+    // one who fell on their master first, they stand against (user decision 2026-10-01, Makindi
+    // Shieldmate). Never their master's own fights, never a hunt.
+    const defender = hasAbility(a, 'defender', t);
     // Their own foes, and (a retainer) whoever their master is fighting right here.
     // "Can't block" (Hagra Crocodile): not one who fell on their master first; they only join the
     // fights their master started (user decision 2026-10-01).
     const m = masterOf(state, a);
-    const guards = m && together(m, a) ? foesOf(m, t).filter((id) => !hasAbility(a, 'cant_block', t) || !m.foes?.struck?.includes(id)) : [];
-    const theirs = [...foesOf(a, t), ...guards];
+    const guards = m && together(m, a) ? foesOf(m, t).filter((id) => (defender ? !!m.foes?.struck?.includes(id) : !hasAbility(a, 'cant_block', t) || !m.foes?.struck?.includes(id))) : [];
+    const theirs = defender ? guards : [...foesOf(a, t), ...guards];
     let foe = present(state, a.region, a.tile).find((b) => theirs.includes(b.id) && b.id !== a.master && !down(b) && (evasion(a, b, t) !== 'evade' || !!unblockable(state, world, a, b, t, true)));
-    const hunted = !foe && prey(state, world, a, t);
+    const hunted = !foe && !defender && prey(state, world, a, t);
     if (hunted) {
       foe = hunted;
       addFoe(a, foe.id, t);

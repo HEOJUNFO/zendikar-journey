@@ -5345,6 +5345,40 @@ test('the real Kor Hookmaster lives in Makindi: a speaking kor soldier who binds
   assert.ok(def.enterTap && !def.beast);
 });
 
+test('a defender blocks: it stands against one who fell on its master first, but never joins the fights its master starts', () => {
+  const world = fixture([npc('chr-d', { ...npcSim('loc-a', 'work', [1, 5]), abilities: ['defender'] }), npc('chr-m', npcSim('loc-a', 'work', [0, 9])), npc('chr-x', npcSim('loc-a', 'work', [0, 9])), npc('chr-y', npcSim('loc-a', 'work', [0, 9]))]);
+  const state = newState(world, { seed: 1, mode: 'observer' });
+  const [d, m, x, y] = ['chr-d', 'chr-m', 'chr-x', 'chr-y'].map((id) => state.actors[id]);
+  for (const a of [m, x, y]) a.tile = d.tile;
+  d.master = m.id;
+  clash(state, world, x, m, state.minutes); // x fell on the master
+  state.minutes += 60;
+  hostileNpcs(state, world, state.minutes);
+  assert.ok(woundsOf(x, state.minutes) >= 1); // the defender struck x (the master has no power)
+  assert.ok(foesOf(x, state.minutes).includes('chr-d'));
+  // The master starts a fight: the defender stays out.
+  const s2 = newState(world, { seed: 1, mode: 'observer' });
+  const [d2, m2, y2] = ['chr-d', 'chr-m', 'chr-y'].map((id) => s2.actors[id]);
+  m2.tile = y2.tile = d2.tile;
+  d2.master = m2.id;
+  clash(s2, world, m2, y2, s2.minutes);
+  s2.minutes += 60;
+  hostileNpcs(s2, world, s2.minutes);
+  assert.ok(!foesOf(y2, s2.minutes).includes('chr-d'));
+});
+
+test('the real Makindi Shieldmate guards in Makindi: a defender Ally for 30 coin, steadier with each Ally', () => {
+  const world = loadWorld();
+  const state = newState(world, { seed: 1, mode: 'observer' });
+  const sm = state.actors['chr-makindi-shieldmate'];
+  assert.equal(sm?.region, 'loc-makindi');
+  const def = world.npcs.find((x) => x.id === 'chr-makindi-shieldmate')!;
+  assert.ok(hasAbility(sm, 'defender', state.minutes) && def.ally);
+  assert.deepEqual(def.rally, [{ type: 'counter_self' }]);
+  assert.equal(hirePrice(def), 30);
+  assert.deepEqual(ptOf(sm), [0, 3]);
+});
+
 test('the real Merfolk Seastalkers lurk in Bojuka Bay, a basic island on the edge of the Guum Wilds in Bala Ged: islandwalk', () => {
   const world = loadWorld();
   const state = newState(world, { seed: 1, mode: 'observer' });
