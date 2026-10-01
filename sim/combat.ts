@@ -13,7 +13,7 @@ import { hooks } from './equipment.ts';
 import { shielded } from './tapper.ts';
 import { harrowOwed } from './harrow.ts';
 import { doubleLife, gainLife, lifeOf } from './life.ts';
-import { actorColors, COLOR_LABELS, manaAvailable, payMana, planPayment } from './mana.ts';
+import { actorColors, COLOR_LABELS, manaAvailable, parseManaCost, payMana, planPayment } from './mana.ts';
 import { HUNT_HUNGER, KILL_FEED, KO_ACTIVITY, KO_HOURS } from './rules.ts';
 import { powersSealed } from './seal.ts';
 import { landsOfType } from './spells.ts';
@@ -32,7 +32,7 @@ export function woundsOf(a: Actor, t: number) {
 // if anyone (where one with no master goes when they die: `die`). `dealer`: the creature the
 // damage comes from itself (a blow, a bite, its own power), not a spell or land of theirs:
 // deathtouch is its.
-export function dealDamage(state: State, a: Actor, amount: number, t: number, cause: string, nonlethal = false, by?: Actor, dealer?: Actor) {
+export function dealDamage(state: State, world: World, a: Actor, amount: number, t: number, cause: string, nonlethal = false, by?: Actor, dealer?: Actor) {
   if (a.dead || amount <= 0) return false;
   // A ward (Noble Vestige) takes what it can first.
   amount = shielded(state, a, amount, t);
@@ -55,6 +55,7 @@ export function dealDamage(state: State, a: Actor, amount: number, t: number, ca
     addLog(state, { kind: 'combat', text: `${josa(shortName(a.name), '이', '가')} 피해 ${amount}를 입었지만 쓰러지지 않는다 (${total}/${toughness}, 파괴불가).`, regions: [a.region], actors: [a.id] });
     return false;
   }
+  if (total >= toughness && regenerate(state, world, a, t, cause)) return false;
   if (total >= toughness && nonlethal) {
     knockOut(state, a, t, cause);
     return false;
@@ -71,6 +72,25 @@ export function dealDamage(state: State, a: Actor, amount: number, t: number, ca
     actors: [a.id],
   });
   return false;
+}
+
+// "Regenerate this creature" (Savage Silhouette's aura): about to die or fall (damage, destroy),
+// whoever controls them (their master, or they themselves) pays the cost if they can, by itself
+// (user decision 2026-10-01), every time. Instead they are healed, tapped (bound until midnight)
+// and taken out of today's fights. Life lost, sacrifice and exile are no destruction.
+function regenerate(state: State, world: World, a: Actor, t: number, cause: string) {
+  const aura = a.auras?.find((x) => x.regen);
+  if (!aura || a.dead || a.loyalty !== undefined) return false;
+  const payer = masterOf(state, a) ?? a;
+  const cost = parseManaCost(aura.regen!)!;
+  if (payer.dead || !payMana(state, world, payer, cost, t)) return false;
+  delete a.wounds;
+  a.boundUntil = untapTime(t);
+  a.task = undefined;
+  delete a.foes;
+  for (const y of Object.values(state.actors)) if (y.foes?.ids.includes(a.id)) y.foes = { ...y.foes, ids: y.foes.ids.filter((f) => f !== a.id), struck: y.foes.struck?.filter((f) => f !== a.id) };
+  addLog(state, { kind: 'effect', text: `${cause}: 쓰러지려던 ${josa(shortName(a.name), '이', '가')} ${aura.name}의 힘으로 되살아났다 (${aura.regen}${payer.id === a.id ? '' : `, ${shortName(payer.name)}이(가) 치름`}). 상처가 아물었지만 자정까지 꼼짝 못 하고 싸움에서 빠진다.`, regions: [a.region], actors: [a.id, payer.id], t });
+  return true;
 }
 
 // `by`: whose doing it was, if anyone's.
@@ -207,11 +227,12 @@ export function unblockable(state: State, world: World, attacker: Actor, defende
 }
 
 // "Destroy": they die, unless indestructible. Returns whether they died. `by`: whose doing it is.
-export function destroy(state: State, target: Actor, t: number, cause: string, by?: Actor) {
+export function destroy(state: State, world: World, target: Actor, t: number, cause: string, by?: Actor) {
   if (hasAbility(target, 'indestructible', t)) {
     addLog(state, { kind: 'effect', text: `${josa(shortName(target.name), '은', '는')} 파괴되지 않는다 (파괴불가).`, regions: [target.region], actors: [target.id], t });
     return false;
   }
+  if (regenerate(state, world, target, t, cause)) return false;
   die(state, target, t, cause, by);
   return true;
 }
@@ -312,7 +333,7 @@ export function clash(state: State, world: World, attacker: Actor, defender: Act
   const hit = (to: Actor, n: number, by: string) => {
     const from = to === defender ? attacker : defender;
     hurt(to, from, n, t);
-    return dealDamage(state, to, n, t, `${josa(by, '과', '와')}의 싸움`, !lethal(attacker, defender), from, from);
+    return dealDamage(state, world, to, n, t, `${josa(by, '과', '와')}의 싸움`, !lethal(attacker, defender), from, from);
   };
   let [dealtA, dealtD] = [0, 0];
   if (!aFirst && !dFirst) {
@@ -378,7 +399,7 @@ export function clash(state: State, world: World, attacker: Actor, defender: Act
       actors: [s.who.id],
     });
     hurt(s.who, from, s.excess, t);
-    dealDamage(state, s.who, s.excess, t, `${by}의 돌진`, !lethal(from, s.who), from, from);
+    dealDamage(state, world, s.who, s.excess, t, `${by}의 돌진`, !lethal(from, s.who), from, from);
     lifelink(state, from, s.excess, t);
   }
 }

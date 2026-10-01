@@ -2559,20 +2559,20 @@ test('graveyards: a retainer goes to their master\'s, one serving no one to thei
   const t = state.minutes;
   const [p, x, y, r, k, z] = [PLAYER_ID, 'chr-x', 'chr-y', 'chr-r', 'chr-k', 'chr-z'].map((id) => state.actors[id]);
   // The player kills x, who serves no one: into the player's graveyard.
-  dealDamage(state, x, 9, t, '시험', false, p);
+  dealDamage(state, world, x, 9, t, '시험', false, p);
   assert.deepEqual(p.fallen, ['chr-x']);
   // r serves the player and kills y: the player's too.
   r.master = PLAYER_ID;
-  dealDamage(state, y, 9, t, '시험', false, r);
+  dealDamage(state, world, y, 9, t, '시험', false, r);
   assert.deepEqual(p.fallen, ['chr-x', 'chr-y']);
   // A token who serves k dies: no graveyard (it ceases to be).
   (state.tokens ??= {})['chr-z'] = {} as never;
   z.master = 'chr-k';
-  dealDamage(state, z, 9, t, '시험', false, p);
+  dealDamage(state, world, z, 9, t, '시험', false, p);
   assert.equal(k.fallen, undefined);
   assert.deepEqual(p.fallen, ['chr-x', 'chr-y']);
   // k dies of a trap: no one's doing, no graveyard.
-  dealDamage(state, k, 9, t, '함정');
+  dealDamage(state, world, k, 9, t, '함정');
   assert.ok(k.dead);
   assert.deepEqual(p.fallen, ['chr-x', 'chr-y']);
   assert.equal(buriedToday(p, t), 2);
@@ -2923,7 +2923,7 @@ test('Rite of Replication: a copy of their card, none of what befell them, serve
   const twice = retainersOf(state, c.id).find((x) => npcDef(state, world, x.id)?.copyOf === copy.id)!;
   assert.equal(state.tokens![twice.id].vanishAt, undefined);
   // A token: no graveyard.
-  destroy(state, twice, state.minutes, '시험', o);
+  destroy(state, world, twice, state.minutes, '시험', o);
   assert.ok(!(c.fallen ?? []).includes(twice.id) && !(o.fallen ?? []).includes(twice.id));
 });
 
@@ -3328,7 +3328,7 @@ test('an Eldrazi Monument: its owner\'s creatures (themselves too, a creature ca
   }
   assert.equal(ptOf(x)[1], 1);
   // Lethal damage leaves them standing.
-  (await import('./combat.ts')).dealDamage(state, r1, 5, state.minutes, '시험');
+  (await import('./combat.ts')).dealDamage(state, world, r1, 5, state.minutes, '시험');
   assert.equal(r1.dead, undefined);
   // Midnight: the owner gives one.
   const asked: string[][] = [];
@@ -3598,11 +3598,11 @@ test('deathtouch: any damage from it fells (a knockout between NPCs, death with 
   clash(state, world, sc, i, t);
   assert.ok(!knockedOut(i) && !i.dead);
   // Damage by a spell or land of theirs is not the creature's own.
-  dealDamage(state, y, 1, t, '주문', false, sc);
+  dealDamage(state, world, y, 1, t, '주문', false, sc);
   assert.equal(woundsOf(y, t), 1);
   assert.ok(!knockedOut(y));
   // With the player: death.
-  dealDamage(state, p, 1, t, '침', false, sc, sc);
+  dealDamage(state, world, p, 1, t, '침', false, sc, sc);
   assert.ok(p.dead);
 });
 
@@ -6178,7 +6178,7 @@ test('Noble Vestige: the player taps the spirit they keep to ward themselves; th
   assert.ok(v.boundUntil !== undefined);
   assert.deepEqual(p.shield?.amount, 1);
   assert.ok(tapBlocked(state, world, p, 'shield', undefined, state.minutes)?.includes('지금 쓸 수 없다'));
-  dealDamage(state, p, 3, state.minutes, '시험');
+  dealDamage(state, world, p, 3, state.minutes, '시험');
   assert.equal(woundsOf(p, state.minutes), 2);
   assert.equal(p.shield, undefined);
   assert.ok(texts(state).some((l) => l.includes('가호가') && l.includes('피해 1를 막았다')));
@@ -6481,4 +6481,46 @@ test('the real Sadistic Sacrament is taught in Malakir: three spells cut from on
   assert.equal(s.learnAt, 'loc-malakir');
   const e = s.effects[0];
   assert.ok(e.type === 'exile_library' && e.count === 3 && e.kicked_count === 15);
+});
+
+const silhouette: RawEntity = { id: 'spl-sil', kind: 'spell', name: '야성의 그림자', status: 'canon', sim: { cost: '{0}', learn_at: 'loc-a', target: 'any_here', effects: [{ type: 'aura', pt: [2, 2], regenerate: '{1}{G}' }] } };
+
+test('Savage Silhouette: +2/+2; about to die, the bearer pays {1}{G} by itself and is healed, bound and out of the fight; with no mana left, it dies', () => {
+  const world = fixture([silhouette, npc('chr-x', { ...npcSim('loc-a', 'work', [1, 1]), mana: { G: 2 } }), npc('chr-y', npcSim('loc-a', 'work', [5, 5]))]);
+  const state = newState(world, { seed: 1, mode: 'observer' });
+  const [x, y] = [state.actors['chr-x'], state.actors['chr-y']];
+  y.tile = x.tile;
+  castSpell(state, world, x, 'spl-sil', 'chr-x', false, state.minutes);
+  assert.deepEqual(ptOf(x), [3, 3]);
+  addFoe(y, 'chr-x', state.minutes);
+  addFoe(x, 'chr-y', state.minutes);
+  dealDamage(state, world, x, 9, state.minutes, '시험');
+  assert.ok(!x.dead);
+  assert.equal(woundsOf(x, state.minutes), 0);
+  assert.ok(x.boundUntil !== undefined);
+  assert.ok(!foesOf(y, state.minutes).includes('chr-x'));
+  assert.ok(texts(state).some((l) => l.includes('야성의 그림자의 힘으로 되살아났다')));
+  // Spent: the next blow is the end.
+  dealDamage(state, world, x, 9, state.minutes, '시험');
+  assert.ok(x.dead);
+});
+
+test('Savage Silhouette: a destroy is regenerated too, its master paying for a retainer', () => {
+  const world = fixture([silhouette, npc('chr-x', npcSim('loc-a')), npc('chr-m', { ...npcSim('loc-a'), mana: { G: 2 } })]);
+  const state = newState(world, { seed: 1, mode: 'observer' });
+  const [x, m] = [state.actors['chr-x'], state.actors['chr-m']];
+  x.tile = m.tile;
+  x.master = 'chr-m';
+  castSpell(state, world, m, 'spl-sil', 'chr-x', false, state.minutes);
+  assert.equal(destroy(state, world, x, state.minutes, '시험'), false);
+  assert.ok(!x.dead);
+  assert.ok(texts(state).some((l) => l.includes('chr-m이(가) 치름')));
+});
+
+test('the real Savage Silhouette is taught in the Tangled Vale: +2/+2 and regeneration for {1}{G}', () => {
+  const world = loadWorld();
+  const s = world.spells.find((x) => x.id === 'spl-savage-silhouette')!;
+  assert.equal(s.learnAt, 'loc-tangled-vale');
+  const e = s.effects[0];
+  assert.ok(e.type === 'aura' && e.regenerate === '{1}{G}' && e.pt[0] === 2 && e.pt[1] === 2);
 });

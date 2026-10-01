@@ -27,7 +27,7 @@ export function upkeepScorch(state: State, world: World, t: number) {
     for (const y of victims) {
       addLog(state, { kind: 'combat', text: `한밤, ${josa(shortName(x.name), '이', '가')} 쥔 것이 적은 ${shortName(y.name)}에게 불길을 토했다.`, regions: [x.region], actors: [x.id, y.id], t });
       const nonlethal = y.kind !== 'player' && controller.kind !== 'player';
-      if (!dealDamage(state, y, burn.damage, t, `${shortName(x.name)}의 지옥불`, nonlethal, x, x) && !y.dead) {
+      if (!dealDamage(state, world, y, burn.damage, t, `${shortName(x.name)}의 지옥불`, nonlethal, x, x) && !y.dead) {
         addFoe(y, x.id, t);
         remember(y, x, '한밤에 불길을 토해 나를 태웠다', t);
       }

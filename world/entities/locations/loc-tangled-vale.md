@@ -5,9 +5,10 @@ name: 탱글드 베일
 name_en: Tangled Vale
 summary: 발라 게드 남쪽, 가파른 언덕 사이로 이어진 밀림 골짜기들. 사람을 잡아먹는 덩굴이 얽힌 위험한 수렁이고, 조라가 엘프 부족의 본거지다
 status: canon
-sources: [ZEN-166, ZEN-170]
+sources: [ZEN-166, ZEN-170, ZEN-181]
 tags: [골짜기, 밀림, 엘프, 조라가, 녹색]
 links:
+  - { to: spl-savage-silhouette, rel: 가르치는 주문 (야성의 그림자) }
   - { to: loc-bala-ged, rel: 바깥 지역 }
   - { to: chr-joraga-bard, rel: 사는 조라가 음유시인 }
   - { to: chr-nissa-revane, rel: 나고 자란 플레인즈워커 }
@@ -26,6 +27,8 @@ map: { in: loc-bala-ged, terrain: forest, pos: [-0.3, 0.75], tiles: 10 }   # 기
 - 자리: 발라 게드 남쪽(`pos: [-0.3, 0.75]`). 남쪽은 [배경]("발라 게드 남쪽의 언덕 사이 골짜기"), 동서 자리는 설정에 없어 [가공]이다. 발라 게드 대부분을 덮은 굼 밀림의 남서쪽 밖이다.
 - 조라가 음유시인(`chr-joraga-bard`, ZEN-166)이 산다.
 - 조라가 출신의 플레인즈워커 니사 레베인(`chr-nissa-revane`, ZEN-170)이 머문다.
+
+- 야성의 그림자(`spl-savage-silhouette`, ZEN-181)를 배울 수 있다 (4시간, [결정] 2026-10-01): +2/+2와, 쓰러질 때 {1}{G}로 되살아나는 재생을 주는 오라. 윤회를 믿는 조라가 엘프의 마법이다.
 
 ## 미정/질문
 

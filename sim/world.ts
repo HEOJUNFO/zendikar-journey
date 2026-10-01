@@ -609,6 +609,10 @@ export const SpellSimSchema = z.strictObject({
           // "Enchanted creature doesn't untap during its controller's untap step" (Paralyzing
           // Grasp): once bound (tapped), they stay bound at 00:00 while it is on them.
           no_untap: z.boolean().default(false),
+          // "Enchanted creature has '<cost>: Regenerate this creature'" (Savage Silhouette): when it
+          // would die or fall by damage or be destroyed, whoever controls it pays this if they can,
+          // and instead it is healed, bound until midnight and out of today's fights (combat.ts).
+          regenerate: CostSchema.optional(),
         }),
         // "If it was kicked, you may search your library for another <this> and put it onto the
         // battlefield": the caster may cast it once more, free, on someone else there (their pick

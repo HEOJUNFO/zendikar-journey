@@ -491,7 +491,7 @@ async function volleys(state: State, world: World, llm: Llm) {
       const n = shares[a.id] ?? 0;
       if (n <= 0 || a.dead) continue;
       addLog(state, { kind: 'combat', text: `${trap.name}: 화살 ${n}대가 ${shortName(a.name)}에게 꽂혔다.`, regions: [a.region], actors: [a.id] });
-      dealDamage(state, a, n, state.minutes, trap.name);
+      dealDamage(state, world, a, n, state.minutes, trap.name);
     }
   }
 }
@@ -517,7 +517,7 @@ async function burns(state: State, world: World, llm: Llm) {
     }
     const target = targets.find((a) => a.id === pick) ?? [...targets].sort((x, y) => ptOf(y)[0] - ptOf(x)[0] || x.id.localeCompare(y.id))[0];
     addLog(state, { kind: 'combat', text: `${trap.name}: 불길이 ${josa(shortName(target.name), '을', '를')} 휘감았다.`, regions: [target.region], actors: [target.id] });
-    dealDamage(state, target, b.amount, state.minutes, trap.name);
+    dealDamage(state, world, target, b.amount, state.minutes, trap.name);
   }
 }
 

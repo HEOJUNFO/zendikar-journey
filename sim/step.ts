@@ -338,7 +338,7 @@ function fire(state: State, world: World, ev: EventDef, t: number, omened: boole
   };
   for (const eff of ev.effects) {
     if (eff.type === 'damage') {
-      for (const a of targets) if (!dodged(a)) dealDamage(state, a, eff.amount, t, ev.name);
+      for (const a of targets) if (!dodged(a)) dealDamage(state, world, a, eff.amount, t, ev.name);
     } else if (eff.type === 'stat') {
       for (const a of targets) {
         const name = shortName(a.name);
@@ -376,7 +376,7 @@ function fire(state: State, world: World, ev: EventDef, t: number, omened: boole
         if (!a || a.dead || a.travel) continue;
         // Their hand: the spells they hold (sim/knowledge.ts).
         const n = handSize(a);
-        if (n) dealDamage(state, a, n, t, `${ev.name} (쥔 주문 ${n})`);
+        if (n) dealDamage(state, world, a, n, t, `${ev.name} (쥔 주문 ${n})`);
         else addLog(state, { kind: 'effect', text: `${josa(shortName(a.name), '은', '는')} 쥔 주문이 없어 불길이 비껴갔다.`, regions: [a.region], actors: [a.id], t });
       }
     } else if (eff.type === 'lose_life') {
@@ -412,7 +412,7 @@ function fire(state: State, world: World, ev: EventDef, t: number, omened: boole
           addLog(state, { kind: 'effect', text: `${josa(shortName(a.name), '은', '는')} 날개를 펴 구덩이 위로 떠올랐다.`, regions: [a.region], actors: [a.id], t });
           continue;
         }
-        destroy(state, a, t, ev.name);
+        destroy(state, world, a, t, ev.name);
       }
     } else if (eff.type === 'burn') {
       // Which of those who hurt them it falls on is the trap's, asked after the hour.

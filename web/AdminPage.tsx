@@ -424,7 +424,7 @@ function spellEffectText(e: SpellEffect) {
     case 'gain_life_lost':
       return `잃은 만큼 시전자가 생명을 얻음${e.if_kicked ? ' (킥커 시)' : ''}`;
     case 'aura':
-      return `오라: ${e.base_pt ? `기본 ${e.base_pt.join('/')}` : `${signed(e.pt[0])}/${signed(e.pt[1])}`}${e.abilities.length ? `, ${e.abilities.join(', ')}` : ''}${e.double_life_on_hit ? ', 전투 피해를 주면 조종자의 생명 두 배' : ''}${e.no_untap ? ', 묶이면 00:00에 풀리지 않음' : ''}`;
+      return `오라: ${e.base_pt ? `기본 ${e.base_pt.join('/')}` : `${signed(e.pt[0])}/${signed(e.pt[1])}`}${e.abilities.length ? `, ${e.abilities.join(', ')}` : ''}${e.double_life_on_hit ? ', 전투 피해를 주면 조종자의 생명 두 배' : ''}${e.no_untap ? ', 묶이면 00:00에 풀리지 않음' : ''}${e.regenerate ? `, 재생 ${e.regenerate}` : ''}`;
     case 'copy_if_kicked':
       return '킥커 시 같은 곳의 다른 하나에게 하나 더 (값 없이)';
     case 'destroy_land':

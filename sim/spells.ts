@@ -292,7 +292,7 @@ export function resolveSpell(state: State, world: World, a: Actor, spellId: stri
     } else if (eff.type === 'destroy_target') {
       // Whose it is, as it falls (a master lets go of the dead).
       const controller = masterOf(state, target) ?? target;
-      destroy(state, target, t, s.name, a);
+      destroy(state, world, target, t, s.name, a);
       if (eff.lose_life && !controller.dead) loseLife(state, controller, eff.lose_life, t, s.name, a);
     } else if (eff.type === 'threaten') {
       const until = untapTime(t);
@@ -301,7 +301,7 @@ export function resolveSpell(state: State, world: World, a: Actor, spellId: stri
       delete target.boundUntil;
       for (const ab of eff.abilities) grantAbility(state, target, ab, until, s.name, t);
     } else if (eff.type === 'damage') {
-      dealDamage(state, target, eff.amount, t, s.name, false, a);
+      dealDamage(state, world, target, eff.amount, t, s.name, false, a);
     } else if (eff.type === 'sacrifice_land') {
       const owed = harrowOwed(state, world, a, { type: 'harrow', spell: s.name, left: 0, given: false }, t);
       if (owed) (state.choices ??= []).push(owed);
@@ -319,7 +319,7 @@ export function resolveSpell(state: State, world: World, a: Actor, spellId: stri
       else addLog(state, { kind: 'status', text: `${josa(shortName(a.name), '은', '는')} ${josa(LAND_TYPE_LABELS[eff.land], '과', '와')} 이어져 있지 않아 아무 일도 없었다.`, regions: [a.region], actors: [a.id], t });
     } else if (eff.type === 'damage_per_land') {
       const n = landsOfType(state, world, a, eff.land).length;
-      if (n > 0) dealDamage(state, target, n, t, s.name, false, a);
+      if (n > 0) dealDamage(state, world, target, n, t, s.name, false, a);
       else addLog(state, { kind: 'status', text: `${josa(shortName(a.name), '은', '는')} ${josa(LAND_TYPE_LABELS[eff.land], '과', '와')} 이어져 있지 않아 아무 일도 없었다.`, regions: [a.region], actors: [a.id], t });
     } else if (eff.type === 'hunt_creatures') {
       huntKnowledge(state, world, target, eff.count, t, s.name);
@@ -351,7 +351,7 @@ export function resolveSpell(state: State, world: World, a: Actor, spellId: stri
       replicate(state, world, a, target, kicked && eff.kicked_count ? eff.kicked_count : eff.count, t, s.name);
     } else if (eff.type === 'aura') {
       const added = eff.abilities.filter((ab) => !target.abilities.includes(ab));
-      target.auras = [...(target.auras ?? []), { spell: s.id, name: s.name, by: a.id, pt: [...eff.pt], ...(eff.base_pt ? { base: [...eff.base_pt] as [number, number] } : {}), doubleLifeOnHit: eff.double_life_on_hit, ...(added.length ? { added } : {}), ...(eff.no_untap ? { noUntap: true } : {}) }];
+      target.auras = [...(target.auras ?? []), { spell: s.id, name: s.name, by: a.id, pt: [...eff.pt], ...(eff.base_pt ? { base: [...eff.base_pt] as [number, number] } : {}), doubleLifeOnHit: eff.double_life_on_hit, ...(added.length ? { added } : {}), ...(eff.no_untap ? { noUntap: true } : {}), ...(eff.regenerate ? { regen: eff.regenerate } : {}) }];
       // What it gives stays as long as the aura does: until they die.
       for (const ab of eff.abilities) if (!target.abilities.includes(ab)) target.abilities = [...target.abilities, ab];
       addLog(state, {
@@ -387,5 +387,5 @@ function boostTillMidnight(state: State, target: Actor, pt: readonly [number, nu
 function judgment(state: State, world: World, a: Actor, name: string, t: number) {
   const all = present(state, a.region, a.tile).filter((x) => npcDef(state, world, x.id)?.loyalty === undefined);
   addLog(state, { kind: 'event', text: `${name}: 눈부신 빛이 ${shortName(a.name)}의 곁을 덮쳤다.`, regions: [a.region], actors: all.map((x) => x.id), t });
-  for (const x of [...all.filter((y) => y.id !== a.id), ...all.filter((y) => y.id === a.id)]) if (!x.dead) destroy(state, x, t, name, a);
+  for (const x of [...all.filter((y) => y.id !== a.id), ...all.filter((y) => y.id === a.id)]) if (!x.dead) destroy(state, world, x, t, name, a);
 }
