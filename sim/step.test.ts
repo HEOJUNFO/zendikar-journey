@@ -40,7 +40,7 @@ import { joinedToday } from './bounce.ts';
 import { centroid, eventTile, fixedTile, nearestTile, ownsTile, sameTile, TILE, tileCenter, tilesOf, tileSteps, tooSmall } from './tiles.ts';
 import { applyQuell, upkeepQuell } from './quell.ts';
 import { upkeepWins } from './win.ts';
-import { allyJoined, hireMerc, hirePrice } from './allies.ts';
+import { allyJoined, applyRally, hireMerc, hirePrice } from './allies.ts';
 import { askOptions, askText } from './asks.ts';
 import { applyEscape, escapeOptions } from './escape.ts';
 import { applyHarrow } from './harrow.ts';
@@ -5649,7 +5649,7 @@ test('the real Nissa Revane bides in the Tangled Vale; the world\'s elves are th
   assert.equal(n.loyalty, 2);
   assert.deepEqual(npcDef(state, world, n.id)?.activated?.map((x) => x.loyalty), [1, 1, -7]);
   const elves = world.npcs.filter((x) => x.types?.includes('elf')).map((x) => x.id).sort();
-  assert.deepEqual(elves, ['chr-greenweaver-druid', 'chr-joraga-bard', 'chr-oracle-of-mul-daya', 'chr-turntimber-ranger']);
+  assert.deepEqual(elves, ['chr-greenweaver-druid', 'chr-joraga-bard', 'chr-oracle-of-mul-daya', 'chr-tajuru-archer', 'chr-turntimber-ranger']);
 });
 
 test('a blaze counter: the target\'s latest unburning land catches fire; all bonded with it lose 1 life each midnight, even after the fireheart dies, until the land is destroyed', async () => {
@@ -6564,4 +6564,31 @@ test('the real Stonework Puma walks the Makindi trails: a colorless artifact All
   const boar = state.actors['cre-bladetusk-boar'];
   assert.equal(intimidated(state, world, boar, p, state.minutes), false);
   assert.equal(swayBlocked(state, world, p), null);
+});
+
+test('Tajuru Archer: an Ally joining, the controller may shoot one there who can fly, for as many as the party\'s Allies; not one on the ground', () => {
+  const archer = { ...npcSim('loc-a', 'work', [1, 2]), mana: { G: 3 }, ally: true, hireable: true, types: ['elf'], rally: [{ type: 'damage_fliers' }] };
+  const world = fixture([npc('chr-ar', archer), npc('chr-m', npcSim('loc-a')), npc('chr-f', { ...npcSim('loc-a', 'work', [1, 9]), abilities: ['fly'] }), npc('chr-g', npcSim('loc-a', 'work', [1, 9]))]);
+  const state = newState(world, { seed: 1, mode: 'observer' });
+  const [ar, m, f, g] = ['chr-ar', 'chr-m', 'chr-f', 'chr-g'].map((id) => state.actors[id]);
+  for (const a of [ar, f, g]) a.tile = m.tile;
+  bindRetainer(state, world, ar, m, state.minutes, '고용');
+  const c = state.choices!.find((x) => x.effect.type === 'rally')!;
+  assert.deepEqual(c.candidates, ['chr-f']);
+  applyRally(state, world, 'chr-ar', 'chr-f', state.minutes);
+  assert.equal(woundsOf(f, state.minutes), 1); // one Ally in the party
+  assert.ok(texts(state).some((l) => l.includes('화살을 날렸다')));
+  applyRally(state, world, 'chr-ar', 'chr-g', state.minutes);
+  assert.equal(woundsOf(g, state.minutes), 0);
+});
+
+test('the real Tajuru Archer lives in the Oran-Rief treetop village: an elf Ally for 30 coin, shooting fliers', () => {
+  const world = loadWorld();
+  const state = newState(world, { seed: 1, mode: 'observer' });
+  const a = state.actors['chr-tajuru-archer'];
+  assert.equal(a?.region, 'loc-oran-rief');
+  const def = npcDef(state, world, a.id)!;
+  assert.ok(def.ally && def.hireable && def.types?.includes('elf'));
+  assert.equal(hirePrice(def), 30);
+  assert.deepEqual(def.rally, [{ type: 'damage_fliers' }]);
 });

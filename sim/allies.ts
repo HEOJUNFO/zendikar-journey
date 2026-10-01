@@ -15,7 +15,7 @@ import { grantAbility, spawnWild } from './abilities.ts';
 import { COLOR_LABELS, COLORS, creatureColors } from './mana.ts';
 import type { Color } from './mana.ts';
 import { powersSealed } from './seal.ts';
-import { addLog, awayText, npcDef, present, targetable, together } from './state.ts';
+import { addLog, awayText, hasAbility, npcDef, present, targetable, together } from './state.ts';
 import type { Actor, State } from './state.ts';
 import { josa, shortName } from './text.ts';
 import type { NpcDef, World } from './world.ts';
@@ -56,7 +56,11 @@ export function allyJoined(state: State, world: World, a: Actor, master: Actor, 
     // turn": the color is the controller's pick, after the hour (or none).
     if (rally.some((eff) => eff.type === 'ward_allies')) (state.choices ??= []).push({ by: master.id, land: x.region, effect: { type: 'ward', source: x.id }, candidates: [...COLORS], optional: true, t });
     if (!rally.some(targeted)) continue;
-    const candidates = present(state, x.region, x.tile).filter((y) => y.id !== x.id && targetable(y, t, creatureColors(npcDef(state, world, x.id)))).map((y) => y.id);
+    // Tajuru Archer: only one who can fly, no planeswalker.
+    const fliersOnly = rally.some((eff) => eff.type === 'damage_fliers');
+    const candidates = present(state, x.region, x.tile)
+      .filter((y) => y.id !== x.id && targetable(y, t, creatureColors(npcDef(state, world, x.id))) && (!fliersOnly || (hasAbility(y, 'fly', t) && y.loyalty === undefined)))
+      .map((y) => y.id);
     if (candidates.length) (state.choices ??= []).push({ by: master.id, land: x.region, effect: { type: 'rally', source: x.id }, candidates, optional: true, t });
   }
 }
@@ -102,7 +106,7 @@ function tokenCounter(state: State, world: World, x: Actor, master: Actor, eff: 
 // What the picked rally is called: the fire, the curse, the hand.
 export function rallyWord(state: State, world: World, sourceId: string) {
   const eff = (npcDef(state, world, sourceId)?.rally ?? []).find(targeted);
-  return eff?.type === 'lose_life_allies' ? '저주' : eff?.type === 'reveal_discard' ? '손길' : '불길';
+  return eff?.type === 'lose_life_allies' ? '저주' : eff?.type === 'reveal_discard' ? '손길' : eff?.type === 'damage_fliers' ? '화살' : '불길';
 }
 
 // What the rally of `sourceId` would do now, for the one picking.
@@ -118,7 +122,9 @@ export function rallyText(state: State, world: World, sourceId: string) {
         ? `${shortName(x.name)}의 저주: 고른 하나가 생명 ${n}을 잃는다 (무리의 동료 수, 죽을 수도 있다)`
         : eff.type === 'reveal_discard'
           ? `${shortName(x.name)}의 손길: 고른 하나가 지닌 주문 가운데 ${n}가지(무리의 동료 수)가 드러나고, 그중 하나를 골라 잊게 한다`
-          : `${shortName(x.name)}의 불길: 고른 하나에게 피해 ${n} (무리의 동료 수, 죽을 수도 있다)`,
+          : eff.type === 'damage_fliers'
+            ? `${shortName(x.name)}의 화살: 날 수 있는 하나에게 피해 ${n} (무리의 동료 수, 죽을 수도 있다)`
+            : `${shortName(x.name)}의 불길: 고른 하나에게 피해 ${n} (무리의 동료 수, 죽을 수도 있다)`,
     )
     .join(', ');
 }
@@ -149,6 +155,13 @@ export function applyRally(state: State, world: World, sourceId: string, targetI
       });
       loseLife(state, target, n, t, `${shortName(x.name)}의 저주`, x);
       if (!target.dead) addFoe(target, x.id, t);
+      continue;
+    }
+    // Tajuru Archer: an arrow at a flyer (one who can't fly is out of its aim).
+    if (eff.type === 'damage_fliers') {
+      if (!hasAbility(target, 'fly', t) || target.loyalty !== undefined) continue;
+      addLog(state, { kind: 'combat', text: `${josa(shortName(x.name), '이', '가')} 하늘의 ${shortName(target.name)}에게 화살을 날렸다 (동료 ${n}).`, regions: [x.region], actors: [x.id, target.id], t });
+      if (!dealDamage(state, world, target, n, t, `${shortName(x.name)}의 화살`, false, x, x)) addFoe(target, x.id, t);
       continue;
     }
     addLog(state, {
