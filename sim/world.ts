@@ -442,6 +442,9 @@ export const CharacterSimSchema = z.strictObject({
   // "Landfall — you may return this card from your graveyard to the battlefield" (Bloodghast):
   // dead in someone's graveyard, it rises at their side when they bond with a land (sim/bloodghast.ts).
   landfall_return: z.boolean().default(false),
+  // "Whenever a creature an opponent controls enters, you may have that player lose N life" (Blood
+  // Seeker): one on its tile not of its side gains a creature (sim/seeker.ts).
+  drain_on_join: z.number().int().positive().optional(),
   // "This has haste as long as an opponent has N or less life" (Bloodghast): its foes of today.
   haste_low_life: z.number().int().positive().optional(),
   // "Landfall — this loses <ability> until end of turn" (Shoal Serpent: defender).
@@ -958,6 +961,7 @@ export type NpcDef = {
   landfallDrain?: { life: number; counters: number };
   landfallLure?: boolean;
   landfallReturn?: boolean;
+  drainOnJoin?: number;
   hasteLowLife?: number;
   tapDrawAllies?: boolean;
   types?: CreatureType[];
@@ -1165,7 +1169,7 @@ export function buildWorld(entities: RawEntity[]): { world: World; errors: strin
         err(e.id, `sim 오류: ${issues(sim.error)}`);
         continue;
       }
-      const { knows_colors, activated, wins_at_life, extra_combat, pump, empty_hand_pump, attack_pump, discard_on_hit, landfall_token, landfall_seize, landfall_lose, landfall_grant, landfall_life, landfall_drain, landfall_lure, landfall_return, haste_low_life, enter_destroy, enter_drain, enter_draw, enter_search, enter_shatter, enter_exile, enter_tap, enter_damage, enter_pump, enter_reveal, upkeep_return_land, extra_lands, reveal_top, tap_foe, tap_draw_allies, engulf, tap_mana, upkeep_burn, counter_tokens, follows_only, cant_block_unless, tap_shield, tap_loot, equip_anthem, hit_sacrifice_land, name, home_pos, ...rest } = sim.data;
+      const { knows_colors, activated, wins_at_life, extra_combat, pump, empty_hand_pump, attack_pump, discard_on_hit, landfall_token, landfall_seize, landfall_lose, landfall_grant, landfall_life, landfall_drain, landfall_lure, landfall_return, drain_on_join, haste_low_life, enter_destroy, enter_drain, enter_draw, enter_search, enter_shatter, enter_exile, enter_tap, enter_damage, enter_pump, enter_reveal, upkeep_return_land, extra_lands, reveal_top, tap_foe, tap_draw_allies, engulf, tap_mana, upkeep_burn, counter_tokens, follows_only, cant_block_unless, tap_shield, tap_loot, equip_anthem, hit_sacrifice_land, name, home_pos, ...rest } = sim.data;
 
       world.npcs.push({
         id: e.id,
@@ -1210,6 +1214,7 @@ export function buildWorld(entities: RawEntity[]): { world: World; errors: strin
         ...(landfall_drain ? { landfallDrain: landfall_drain } : {}),
         ...(landfall_lure ? { landfallLure: true } : {}),
         ...(landfall_return ? { landfallReturn: true } : {}),
+        ...(drain_on_join ? { drainOnJoin: drain_on_join } : {}),
         ...(haste_low_life ? { hasteLowLife: haste_low_life } : {}),
         ...(tap_draw_allies ? { tapDrawAllies: true } : {}),
         ...(extra_combat ? { extraCombat: { cost: parseManaCost(extra_combat.cost)!, costText: extra_combat.cost } } : {}),

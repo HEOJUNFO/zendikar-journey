@@ -306,6 +306,8 @@ export type State = {
   // after the hour (sim/run.ts), from these candidates.
   // `optional`: they may pick no one ("you may").
   choices?: Choice[];
+  // Until when Blood Seeker has counted creatures coming under someone's control (sim/seeker.ts).
+  seekScan?: number;
   // Where each wandering place (sim/wander.ts) is now, the stop it is heading for (or the one
   // it last reached, waiting for the LLM to pick the next).
   wanderers?: Record<string, { x: number; y: number; to?: string; at?: string }>;

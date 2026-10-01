@@ -5,9 +5,10 @@ name: 말라키르
 name_en: Malakir
 summary: 굴 드라즈의 흡혈귀 도시. 도시 둘레에 피를 빠는 함정이 깔려 있다
 status: canon
-sources: [ZEN-105, ZEN-81, ZEN-100, ZEN-110, ZEN-116]
+sources: [ZEN-105, ZEN-81, ZEN-100, ZEN-110, ZEN-116, ZEN-80]
 tags: [흡혈귀, 도시, 흑색, 구역]
 links:
+  - { to: chr-blood-seeker, rel: 골목의 피를 찾는 자 }
   - { to: loc-guul-draz, rel: 바깥 지역 }
   - { to: loc-ghet-estate, rel: 안의 구역 (게트 혈족의 동네) }
   - { to: loc-hagra, rel: 곁의 저수조 }
@@ -34,6 +35,8 @@ map: { in: loc-guul-draz, terrain: swamp, pos: [-0.4, -0.15], tiles: 25 }   # �
 - 흡혈귀 주술사 말라키르 피마녀(`chr-malakir-bloodwitch`, ZEN-100)가 산다. 날아다니며 백색으로부터 보호받고, 그날 처음 들어서는 곳의 모두에게서 생명을 빨아들인다 ([결정] 2026-09-30).
 
 - 흡혈귀 밤매(`chr-vampire-nighthawk`, ZEN-116)가 북동쪽 탑 처마에 웅크린다 ([결정] 2026-10-01). 비행·죽음의 손길·생명연결을 지닌 말하는 흡혈귀 주술사로, 설득하면 따른다.
+
+- 피를 찾는 자(`chr-blood-seeker`, ZEN-80)가 북서쪽 좁은 골목에 산다 ([결정] 2026-10-01). 곁의 남이 권속을 얻을 때마다 그의 피 한 방울(생명 1)을 앗는 흡혈귀 주술사다.
 
 ## 미정/질문
 

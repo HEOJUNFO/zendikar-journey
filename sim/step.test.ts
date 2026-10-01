@@ -45,6 +45,7 @@ import { askOptions, askText } from './asks.ts';
 import { applyEscape, escapeOptions } from './escape.ts';
 import { applyTorch, enterDamage } from './torch.ts';
 import { bloodHasteHour } from './bloodghast.ts';
+import { bloodSeekHour } from './seeker.ts';
 import { applyHarrow } from './harrow.ts';
 import type { HarrowEffect } from './harrow.ts';
 import { applySacrament } from './sacrament.ts';
@@ -6785,5 +6786,35 @@ test('the real Bloodghast drifts in the Guul Draz mists: a vampire that can\'t b
   const def = npcDef(state, world, b.id)!;
   assert.ok(def.beast && def.landfallReturn && def.hasteLowLife === 10);
   assert.ok(hasAbility(b, 'cant_block', state.minutes));
+  assert.equal(creatureOf(state, world, b.id), 'cre-vampire');
+});
+
+test('Blood Seeker: one on its tile not of its side who gains a retainer loses 1 life; its own side, or one elsewhere, loses none', () => {
+  const seeker = { ...npcSim('loc-a', 'work', [1, 1]), drain_on_join: 1 };
+  const world = fixture([npc('chr-s', seeker), npc('chr-m', npcSim('loc-a')), npc('chr-x', npcSim('loc-a')), npc('chr-o', npcSim('loc-a')), npc('chr-y', npcSim('loc-a')), npc('chr-z', npcSim('loc-a'))]);
+  const state = newState(world, { seed: 1, mode: 'observer' });
+  const [s, m, x, o, y, z] = ['chr-s', 'chr-m', 'chr-x', 'chr-o', 'chr-y', 'chr-z'].map((id) => state.actors[id]);
+  for (const a of [m, x, o, y]) a.tile = s.tile;
+  z.region = 'loc-b';
+  const t = state.minutes;
+  bloodSeekHour(state, world, t); // start counting
+  bindRetainer(state, world, x, m, t, '설득'); // a stranger gains one: drained
+  bindRetainer(state, world, y, s, t, '설득'); // its own side: nothing
+  bindRetainer(state, world, o, z, t, '설득'); // elsewhere: nothing
+  bloodSeekHour(state, world, t + 60);
+  assert.equal(lifeOf(m), 19);
+  assert.equal(lifeOf(s), 20);
+  assert.equal(lifeOf(z), 20);
+  // Counted once.
+  bloodSeekHour(state, world, t + 120);
+  assert.equal(lifeOf(m), 19);
+});
+
+test('the real Blood Seeker haunts the alleys of Malakir: a vampire who takes a drop of blood for each creature a stranger gains', () => {
+  const world = loadWorld();
+  const state = newState(world, { seed: 1, mode: 'observer' });
+  const b = state.actors['chr-blood-seeker'];
+  assert.equal(b?.region, 'loc-malakir');
+  assert.equal(npcDef(state, world, b.id)?.drainOnJoin, 1);
   assert.equal(creatureOf(state, world, b.id), 'cre-vampire');
 });

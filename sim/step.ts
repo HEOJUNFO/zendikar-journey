@@ -29,6 +29,7 @@ import { handSize } from './knowledge.ts';
 import { recall, RECALL_HOURS, recallBlocked } from './loremaster.ts';
 import { TAP_HOURS, tapBlocked, useTap } from './tapper.ts';
 import { bloodHasteHour } from './bloodghast.ts';
+import { bloodSeekHour } from './seeker.ts';
 import { bite, BITE_HOURS, biteBlocked } from './bite.ts';
 import { eraseFromWorld } from './erase.ts';
 import { addLog, alive, buriedToday, hasAbility, here, landUnusable, needsOf, npcDef, outOfTime, present, ptOf, random, together } from './state.ts';
@@ -112,6 +113,7 @@ export function step(state: State, placed: World) {
   attackEvents(state, world, t);
   hurtEvents(state, world, t);
   meetings(state, world);
+  bloodSeekHour(state, world, t + STEP_MINUTES);
   state.minutes = t + STEP_MINUTES;
 }
 
