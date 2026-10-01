@@ -4,6 +4,7 @@
 // nothing is raised that day.
 //
 // Order within an hour: raised events -> factions -> regions -> characters -> meetings.
+import { upkeepQuest } from './ascension.ts';
 import { formatClock, gameDay, minuteOfDay, STEP_MINUTES, untapTime } from './clock.ts';
 import {
   applyEffect,
@@ -122,6 +123,7 @@ function startDay(state: State, world: World, t: number) {
     upkeepTide(state, world, t);
     upkeepBlaze(state, world, t);
     upkeepOracle(state, world, t);
+    upkeepQuest(state, world, t);
     upkeepQuell(state, world, t);
     upkeepPossessions(state, t);
   }

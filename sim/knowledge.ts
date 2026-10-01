@@ -5,6 +5,7 @@
 // know yet. What they know goes into their plan and their talk (the LLM makes use of it); the
 // player sees it. The day's count of secrets learned is what "drew N cards this turn" asks
 // (the Runeflare Trap).
+import { ascended, obtain } from './ascension.ts';
 import { gameDay } from './clock.ts';
 import { eventTile, tileLabel } from './tiles.ts';
 import { itemWhere } from './items.ts';
@@ -103,7 +104,14 @@ export function knownSecrets(a: Actor, t: number): Secret[] {
 export function drawKnowledge(state: State, world: World, a: Actor, n: number, t: number, cause: string) {
   const pool = unknownTo(state, world, a, t);
   const got: Secret[] = [];
-  while (got.length < n && pool.length) got.push(pool.splice(Math.floor(random(state) * pool.length), 1)[0]);
+  // Archmage Ascension: what they would come to know they may have for real instead (no draw).
+  const real = ascended(state, world, a);
+  let had = 0;
+  for (let i = 0; i < n && pool.length; i++) {
+    const s = pool.splice(Math.floor(random(state) * pool.length), 1)[0];
+    if (real && obtain(state, world, a, s, t)) had++;
+    else got.push(s);
+  }
   a.knowledge = [...knownSecrets(a, t), ...got];
   const day = gameDay(t);
   a.drawn = { day, count: (a.drawn?.day === day ? a.drawn.count : 0) + got.length, sprung: a.drawn?.day === day ? a.drawn.sprung : undefined };
@@ -111,7 +119,7 @@ export function drawKnowledge(state: State, world: World, a: Actor, n: number, t
     kind: 'effect',
     text: got.length
       ? `${cause}: ${josa(shortName(a.name), '이', '가')} 숨은 것 ${got.length}가지를 알게 되었다.${a.kind === 'player' ? got.map((s) => `\n· ${s.text}`).join('') : ''}`
-      : `${cause}: ${josa(shortName(a.name), '은', '는')} 더 알아낼 것이 없었다.`,
+      : had ? `${cause}: ${josa(shortName(a.name), '은', '는')} 비밀 대신 그것을 손에 넣었다.` : `${cause}: ${josa(shortName(a.name), '은', '는')} 더 알아낼 것이 없었다.`,
     regions: [a.region],
     actors: [a.id],
     t,

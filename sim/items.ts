@@ -88,13 +88,19 @@ export function claimItem(state: State, world: World, a: Actor, itemId: string, 
     return;
   }
   payMana(state, world, a, x.cost, t);
+  takeItem(state, world, a, x, t, '길들였다');
+}
+
+// The item becomes `a`'s, as it enters under their control (tamed, or had otherwise: Archmage
+// Ascension). `how`: what the log says they did.
+export function takeItem(state: State, world: World, a: Actor, x: ItemDef, t: number, how: string) {
   const counters = x.effects.some((e) => e.type === 'charge_life') ? lifeOf(a) : 0;
   (state.items ??= {})[x.id] = { name: x.name, owner: a.id, counters, ...(x.equip ? { carried: true } : {}) };
   // "An artifact entered the battlefield under their control this turn" (Baloth Cage Trap).
   a.claimed = gameDay(t);
   addLog(state, {
     kind: 'event',
-    text: `${josa(shortName(a.name), '이', '가')} ${josa(x.name, '을', '를')} 길들였다.${counters ? ` 그릇에 생명 ${counters}이 담겼다.` : ''}`,
+    text: `${josa(shortName(a.name), '이', '가')} ${josa(x.name, '을', '를')} ${how}.${counters ? ` 그릇에 생명 ${counters}이 담겼다.` : ''}`,
     regions: [a.region],
     actors: [a.id],
     t,

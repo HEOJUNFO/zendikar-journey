@@ -5012,6 +5012,49 @@ test('the real Windrider Eel swims the winds of Makindi: a flying, hungry beast,
   assert.deepEqual(ptOf(e), [2, 2]);
 });
 
+test('Archmage Ascension: a quest counter at midnight for two secrets a day; with six, what would be known is had for real', async () => {
+  const asc: RawEntity = { id: 'itm-aa', kind: 'item', name: '대마법사의 승천', status: 'canon', sim: { card_type: 'enchantment', cost: '{0}', at: 'loc-a', effects: [{ type: 'quest', draws: 2, counters: 6 }] } };
+  const relic: RawEntity = { id: 'itm-r', kind: 'item', name: '유물', status: 'canon', sim: { cost: '{9}', at: 'loc-b', effects: [{ type: 'mana', amount: 1 }] } };
+  const sp: RawEntity = { id: 'spl-z', kind: 'spell', name: '먼 주문', status: 'canon', sim: { cost: '{1}', learn_at: 'loc-b', effects: [{ type: 'discard' }] } };
+  const world = fixture([asc, relic, sp, npc('chr-o', npcSim('loc-a')), npc('chr-c', npcSim('loc-b')), npc('chr-s', npcSim('loc-b')), lore('cre-x', 'creature')]);
+  const state = newState(world, { seed: 1, mode: 'observer' });
+  const [o, c, sv] = [state.actors['chr-o'], state.actors['chr-c'], state.actors['chr-s']];
+  claimItem(state, world, o, 'itm-aa', state.minutes);
+  assert.equal(state.items?.['itm-aa']?.owner, o.id);
+  // Came to know two secrets today: a counter at midnight.
+  drawKnowledge(state, world, o, 2, state.minutes, '시험');
+  await advance(state, world, 19, { planDay: async () => [] });
+  assert.equal(state.items!['itm-aa'].counters, 1);
+  // One the next day: none.
+  drawKnowledge(state, world, o, 1, state.minutes, '시험');
+  await advance(state, world, 24, { planDay: async () => [] });
+  assert.equal(state.items!['itm-aa'].counters, 1);
+  // Six: everything there is to know, had for real where there is something to have.
+  state.items!['itm-aa'].counters = 6;
+  o.knowledge = [];
+  sv.master = c.id; // serving someone: not to be had
+  const before = o.drawn?.day === gameDay(state.minutes) ? o.drawn.count : 0;
+  const got = drawKnowledge(state, world, o, 99, state.minutes, '시험');
+  assert.ok(o.spells?.includes('spl-z'));
+  assert.equal(state.items!['itm-r'].owner, o.id);
+  assert.equal(c.master, o.id);
+  assert.equal(c.region, o.region);
+  assert.equal(sv.master, c.id);
+  // What stays a secret: none of those had; only they count as drawn.
+  assert.ok(!got.some((x) => x.id === 'spell:spl-z' || x.id === 'item:itm-r' || x.id.startsWith('creature:chr-c:')));
+  assert.ok(got.some((x) => x.id.startsWith('creature:chr-s:')));
+  assert.equal(o.drawn!.count, before + got.length);
+  assert.ok(texts(state).some((l) => l.includes('곧바로 익혔다')));
+});
+
+test('the real Archmage Ascension stands in Sea Gate', () => {
+  const world = loadWorld();
+  const x = world.items.find((i) => i.id === 'itm-archmage-ascension')!;
+  assert.equal(x.at, 'loc-sea-gate');
+  assert.equal(x.cardType, 'enchantment');
+  assert.deepEqual(x.effects, [{ type: 'quest', draws: 2, counters: 6 }]);
+});
+
 test('the real Oracle of Mul Daya lives in Riverroot, in the Guum Wilds of Bala Ged', () => {
   const world = loadWorld();
   const state = newState(world, { seed: 1, mode: 'observer' });

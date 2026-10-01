@@ -656,6 +656,12 @@ export const ItemSimSchema = z.strictObject({
         // "When this enters, return N lands you control to their owner's hand": when tamed, the
         // tamer's bonds with N lands break (they may bond with them again).
         z.strictObject({ type: z.literal('return_lands'), count: z.number().int().positive() }),
+        // "At the beginning of each end step, if you drew N or more cards this turn, you may put
+        // a quest counter on this. As long as it has M or more, if you would draw a card, you may
+        // instead search your library for a card and put it into your hand" (Archmage
+        // Ascension): a counter at midnight for an owner who came to know N secrets that day;
+        // with M, what they would come to know they have for real instead (sim/ascension.ts).
+        z.strictObject({ type: z.literal('quest'), draws: z.number().int().positive(), counters: z.number().int().positive() }),
       ]),
     )
     .default([]),
