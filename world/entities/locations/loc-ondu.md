@@ -5,7 +5,7 @@ name: 온두
 name_en: Ondu
 summary: 아쿰 서쪽의 섬 대륙. 바람 부는 고원이 펼쳐지고, 아쿰 쪽 끝에는 메마른 메사, 서쪽 숲에는 그레이펠트 피난처가 있다. 서쪽 바다에 아게딤 섬, 남쪽 앞바다에 즈와르 섬이 붙어 있다
 status: canon
-sources: [ZEN-212, ZEN-211, ZEN-214, ZEN-215, ZEN-227, ZEN-200, ZEN-2, ZEN-8, ZEN-124, ZEN-64, ZEN-65, ZEN-226, ZEN-228, ZEN-39, ZEN-111]
+sources: [ZEN-212, ZEN-211, ZEN-214, ZEN-215, ZEN-227, ZEN-200, ZEN-2, ZEN-8, ZEN-124, ZEN-64, ZEN-65, ZEN-226, ZEN-228, ZEN-39, ZEN-111, ZEN-158]
 tags: [대륙, 섬, 고원, 백색]
 links:
   - { to: chr-sorin-markov, rel: 그레이펠트 가장자리를 거니는 옛 흡혈귀 }
@@ -16,6 +16,7 @@ links:
   - { to: loc-silundi-sea, rel: 남서쪽 바다 }
   - { to: loc-makindi, rel: 안의 구역 (협곡) }
   - { to: spl-conquerors-pledge, rel: 배우는 주문 }
+  - { to: spl-beast-hunt, rel: 사냥터지기들의 주문 }
   - { to: evt-arrow-volley-trap, rel: 풀 언덕에 숨은 보석 제단의 함정 }
   - { to: loc-arid-mesa, rel: 안의 구역 }
   - { to: loc-graypelt-refuge, rel: 안의 구역 }

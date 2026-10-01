@@ -510,6 +510,10 @@ export const SpellSimSchema = z.strictObject({
         // enchantment" (Relic Crush): items standing where the caster is, auras on those there.
         // The caster picks after casting, the first surely, the rest if they will (sim/relics.ts).
         z.strictObject({ type: z.literal('destroy_relics'), count: z.number().int().positive() }),
+        // "Reveal the top N cards of your library. Put all creature cards revealed this way into
+        // your hand and the rest into your graveyard" (Beast Hunt): N unknown secrets turn up; the
+        // caster keeps creatures' whereabouts (sim/knowledge.ts `huntKnowledge`).
+        z.strictObject({ type: z.literal('hunt_creatures'), count: z.number().int().positive() }),
         // "You gain N life for each <land type> you control" (Landbind Ritual: Plains): per land
         // of that type the target has bonded with, not destroyed.
         z.strictObject({ type: z.literal('gain_life_per_land'), land: z.enum(LAND_TYPES), amount: z.number().int().positive() }),

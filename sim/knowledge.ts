@@ -9,7 +9,8 @@ import { gameDay } from './clock.ts';
 import { eventTile, tileLabel } from './tiles.ts';
 import { itemTile } from './items.ts';
 import { foresightText } from './foresight.ts';
-import { addLog, random } from './state.ts';
+import { addLog, outOfTime, random } from './state.ts';
+import { hirePrice } from './allies.ts';
 import type { Actor, State } from './state.ts';
 import { josa, shortName } from './text.ts';
 import { placeName, region } from './world.ts';
@@ -61,7 +62,29 @@ export function secretsOf(state: State, world: World, t: number): Secret[] {
   const spells = world.spells.map((s) => ({ id: `spell:${s.id}`, text: `주문 ${s.name}(${s.costText})은(는) ${placeName(world, region(world, s.learnAt))}에서 배운다: ${s.summary}.` }));
   const day = gameDay(t);
   const today = foresightText(state, world, t).map((text, i) => ({ id: `today:${day}:${i}`, text: `오늘 ${text}`, day }));
-  return [...traps, ...items, ...spells, ...today];
+  return [...traps, ...items, ...spells, ...today, ...creatureSecrets(state, world, t)];
+}
+
+// The creature cards' whereabouts (user decision 2026-10-01, Beast Hunt): where each living
+// creature of a card (not a planeswalker, not a token) is now, what it is, and how it might be
+// won. True only today: they move.
+export function creatureSecrets(state: State, world: World, t: number): Secret[] {
+  const day = gameDay(t);
+  return world.npcs
+    .filter((n) => n.loyalty === undefined)
+    .map((n) => ({ n, a: state.actors[n.id] }))
+    .filter(({ a }) => a && !a.dead && !a.left && !outOfTime(state, a))
+    .map(({ n, a }) => {
+      const where = a.travel ? '길 위' : `${placeName(world, region(world, a.region))}${a.tile ? `(${tileLabel(world, a.region, a.tile)})` : ''}`;
+      const ways = [
+        n.beast ? '말을 하지 않는 짐승' : '말을 하는 이',
+        n.needs.includes('hunger') ? '먹는다' : '먹지 않는다',
+        n.hireable && `${hirePrice(n)}코인에 고용할 수 있다`,
+        n.tamable && '따를 이를 스스로 고른다',
+        a.master && `지금은 ${shortName(state.actors[a.master]?.name ?? a.master)}의 권속`,
+      ].filter(Boolean);
+      return { id: `creature:${n.id}:${day}`, text: `오늘 ${josa(shortName(a.name), '이', '가')} ${where}에 있다: ${n.role ?? ''} (${ways.join(', ')}).`, day };
+    });
 }
 
 // What they know now (a secret of another day has passed).
@@ -71,8 +94,7 @@ export function knownSecrets(a: Actor, t: number): Secret[] {
 
 // "Draw N": N secrets they don't know yet, at random. Returns what they learned.
 export function drawKnowledge(state: State, world: World, a: Actor, n: number, t: number, cause: string) {
-  const known = new Set(knownSecrets(a, t).map((k) => k.id));
-  const pool = secretsOf(state, world, t).filter((s) => !known.has(s.id));
+  const pool = unknownTo(state, world, a, t);
   const got: Secret[] = [];
   while (got.length < n && pool.length) got.push(pool.splice(Math.floor(random(state) * pool.length), 1)[0]);
   a.knowledge = [...knownSecrets(a, t), ...got];
@@ -88,6 +110,35 @@ export function drawKnowledge(state: State, world: World, a: Actor, n: number, t
     t,
   });
   return got;
+}
+
+// What `a` doesn't know yet (their own whereabouts aside), as a library.
+function unknownTo(state: State, world: World, a: Actor, t: number) {
+  const known = new Set(knownSecrets(a, t).map((k) => k.id));
+  return secretsOf(state, world, t).filter((s) => !known.has(s.id) && !s.id.startsWith(`creature:${a.id}:`));
+}
+
+// "Reveal the top N cards of your library. Put all creature cards revealed this way into your
+// hand and the rest into your graveyard" (Beast Hunt): N secrets they don't know, at random,
+// turn up; they keep those of creatures' whereabouts and let the rest go by. Not a draw (no
+// count toward "drew N"). Returns what they kept.
+export function huntKnowledge(state: State, world: World, a: Actor, n: number, t: number, cause: string) {
+  const pool = unknownTo(state, world, a, t);
+  const shown: Secret[] = [];
+  while (shown.length < n && pool.length) shown.push(pool.splice(Math.floor(random(state) * pool.length), 1)[0]);
+  const kept = shown.filter((s) => s.id.startsWith('creature:'));
+  a.knowledge = [...knownSecrets(a, t), ...kept];
+  const missed = shown.length - kept.length;
+  addLog(state, {
+    kind: 'effect',
+    text: shown.length
+      ? `${cause}: ${josa(shortName(a.name), '이', '가')} 숨은 것 ${shown.length}가지를 더듬어, 생물의 자취 ${kept.length}가지를 알게 되었다${missed ? ` (나머지 ${missed}가지는 흘려보냈다)` : ''}.${a.kind === 'player' ? kept.map((s) => `\n· ${s.text}`).join('') : ''}`
+      : `${cause}: ${josa(shortName(a.name), '은', '는')} 더 알아낼 것이 없었다.`,
+    regions: [a.region],
+    actors: [a.id],
+    t,
+  });
+  return kept;
 }
 
 // For their prompts.

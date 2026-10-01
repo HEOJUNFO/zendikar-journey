@@ -21,7 +21,7 @@ import { withPositions } from './wander.ts';
 import { nodeAt } from '../web/view.ts';
 import { crushRelic, relicsHere } from './relics.ts';
 import { recallBlocked, recallCount } from './loremaster.ts';
-import { drawKnowledge, handSize, knownSecrets, secretsOf } from './knowledge.ts';
+import { drawKnowledge, handSize, huntKnowledge, knownSecrets, secretsOf } from './knowledge.ts';
 import { claimBlocked } from './items.ts';
 import { spendBlocked, storeBlocked } from './eons.ts';
 import { applyEnterDestroy, bondBlocked, enterDestroy, onEnter, bondLand, bondTargets, callForth, fetchTargets, fireTargets, firesOnBond, growBlocked, spawnWild, summonLibrary, useAbility } from './abilities.ts';
@@ -3516,16 +3516,41 @@ test('drawing is coming to know secrets of the world: traps and what sets them o
   const state = newState(world, { seed: 1, mode: 'observer' });
   const x = state.actors['chr-x'];
   const all = secretsOf(state, world, state.minutes).map((s) => s.id);
-  assert.deepEqual(all.sort(), ['item:itm-v', 'spell:spl-bolt', 'trap:evt-rune']);
+  // A creature card's whereabouts too, today only (Beast Hunt, 2026-10-01).
+  assert.deepEqual(all.sort(), ['creature:chr-x:0', 'item:itm-v', 'spell:spl-bolt', 'trap:evt-rune']);
   assert.match(secretsOf(state, world, state.minutes).find((s) => s.id === 'trap:evt-rune')!.text, /비밀을 3가지 이상 알게 된 이가/);
   const got = drawKnowledge(state, world, x, 5, state.minutes, '시험');
-  assert.equal(got.length, 3); // no more than there is
+  assert.equal(got.length, 3); // no more than there is (not their own whereabouts)
   assert.equal(handSize(x, state.minutes), 3);
   assert.deepEqual(drawKnowledge(state, world, x, 1, state.minutes, '시험'), []);
   assert.ok(texts(state).some((t) => t.includes('더 알아낼 것이 없었다')));
   // A secret of the day passes with it.
   x.knowledge!.push({ id: 'today:0:0', text: '오늘 무엇', day: 0 });
   assert.equal(knownSecrets(x, state.minutes + 1440).some((k) => k.id === 'today:0:0'), false);
+});
+
+test('Beast Hunt: three unknown secrets turn up; the caster keeps only creatures\' whereabouts, and it is no draw', () => {
+  const hunt: RawEntity = { id: 'spl-h', kind: 'spell', name: '짐승 사냥', status: 'canon', sim: { cost: '{1}', learn_at: 'loc-a', target: 'self', effects: [{ type: 'hunt_creatures', count: 3 }] } };
+  const world = fixture([runeflare, bolt, vessel, hunt, npc('chr-x', npcSim('loc-a')), npc('chr-b', { ...npcSim('loc-b'), beast: true, needs: ['energy', 'hunger'] })]);
+  const state = newState(world, { seed: 1, mode: 'observer' });
+  const x = state.actors['chr-x'];
+  const t = state.minutes;
+  // Unknown to them: three of the world's secrets (rune, vessel, the two spells' places) and the beast; not themselves.
+  const kept = huntKnowledge(state, world, x, 9, t, '짐승 사냥');
+  assert.deepEqual(kept.map((k) => k.id), ['creature:chr-b:0']);
+  assert.match(kept[0].text, /말을 하지 않는 짐승, 먹는다/);
+  assert.deepEqual(knownSecrets(x, t).map((k) => k.id), ['creature:chr-b:0']);
+  assert.equal(x.drawn, undefined); // not a draw
+  assert.ok(texts(state).some((l) => l.includes('생물의 자취 1가지를 알게 되었다') && l.includes('흘려보냈다')));
+  // Whereabouts pass with the day.
+  assert.deepEqual(knownSecrets(x, t + 1440), []);
+});
+
+test('the real Beast Hunt is taught in Ondu', () => {
+  const world = loadWorld();
+  const s = world.spells.find((x) => x.id === 'spl-beast-hunt')!;
+  assert.equal(s.learnAt, 'loc-ondu');
+  assert.deepEqual(s.effects, [{ type: 'hunt_creatures', count: 3 }]);
 });
 
 test('enter_draw: arriving, the sphinx learns three secrets; kicked from its own mana it keeps its spells, unkicked it lets three go', () => {
