@@ -14,7 +14,8 @@ import { bondEffectText, placeName, region, TERRAINS } from '../world.ts';
 import { itemsAt, itemOwner } from '../items.ts';
 import { equipBlocked, equipmentOf, equipTargets } from '../equipment.ts';
 import { loremastersOf, recallBlocked, recallCount } from '../loremaster.ts';
-import { enteredToday, fetchTargets, fireTargets, growBlocked, growLand, targetedBondEffect } from '../abilities.ts';
+import { enteredToday, fetchTargets, fireTargets, growBlocked, growLand, landDropBlocked, targetedBondEffect } from '../abilities.ts';
+import { topBlocked, topLand } from '../oracle.ts';
 import { eonLand, spendBlocked, storeBlocked } from '../eons.ts';
 import { spellsTaughtAt } from '../spells.ts';
 import { chatCompletion, extractJson } from './chat.ts';
@@ -43,6 +44,10 @@ export async function interpret({ world, state, text }: InterpretInput): Promise
   const fetches = world.regions
     .filter((r) => r.fetch && p.bonds?.includes(r.id))
     .flatMap((r) => fetchTargets(state, world, p, r.id).map((to) => `- {"type":"fetch","from":"${r.id}","to":"${to.id}"}  (give up ${r.name} and ${r.fetch!.life} life to bond with ${placeName(world, to)} from afar)`));
+  // The land on top of their library (Oracle of Mul Daya).
+  const top = topLand(state, p, state.minutes);
+  if (top && !topBlocked(state, world, p, top, state.minutes, (t) => landDropBlocked(state, world, p, t)))
+    fetches.push(`- {"type":"fetch","from":"top","to":"${top}"}  (bond with ${placeName(world, region(world, top))}, revealed on top of their library by their oracle, from afar: their land for the day)`);
   const keeper = eonLand(world, p);
   const days = keeper
     ? [

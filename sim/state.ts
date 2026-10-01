@@ -75,6 +75,8 @@ export type Actor = {
   claimed?: number;
   // Game day they last sought out a land with a fetch land: "searched their library" (Archive Trap).
   searched?: number;
+  // The land on top of their library today (Oracle of Mul Daya, sim/oracle.ts).
+  topLand?: { day: number; land: string };
   // What an item's blessing gives them now (sim/monument.ts): +P/+T, and the abilities it added.
   anthem?: { pt: [number, number]; added: Ability[] };
   // Game day they last gained life (sim/life.ts).

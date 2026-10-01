@@ -3,7 +3,7 @@
 import { formatClock } from '../sim/clock.ts';
 import { player } from '../sim/state.ts';
 import type { Actor, State } from '../sim/state.ts';
-import { MAP_HEIGHT, MAP_WIDTH, TERRAINS } from '../sim/world.ts';
+import { descendantsOf, MAP_HEIGHT, MAP_WIDTH, TERRAINS } from '../sim/world.ts';
 import { centroid, TILE, tilesOf } from '../sim/tiles.ts';
 import type { EventDef, Region, World } from '../sim/world.ts';
 import type { Color } from '../sim/mana.ts';
@@ -71,7 +71,7 @@ export function nodeAt(world: World, r: Region) {
 
 // The tiles of a region with its areas.
 function blobTiles(world: World, r: Region) {
-  return [r, ...world.regions.filter((x) => x.parent === r.id)].flatMap((x) => tilesOf(world, x.id));
+  return [r, ...descendantsOf(world, r.id)].flatMap((x) => tilesOf(world, x.id));
 }
 
 // The box around a region's tiles (its areas' too).

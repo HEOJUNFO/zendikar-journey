@@ -3,7 +3,7 @@ import type { PointerEvent as ReactPointerEvent } from 'react';
 import { npcDef } from '../sim/state.ts';
 import type { Actor, State } from '../sim/state.ts';
 import { shortName } from '../sim/text.ts';
-import { hasPowers, MAP_HEIGHT, MAP_WIDTH, region, spellColors, TERRAINS } from '../sim/world.ts';
+import { hasPowers, MAP_HEIGHT, MAP_WIDTH, placeName, region, spellColors, TERRAINS } from '../sim/world.ts';
 import type { World } from '../sim/world.ts';
 import { moveHours } from '../sim/step.ts';
 import { eventTile, nearestTile, sameTile, TILE, tileCenter, tileKey } from '../sim/tiles.ts';
@@ -193,7 +193,7 @@ export function MapView({ world, state, selected, selectedTile, onSelect, all, p
           const top = !r.parent;
           return (
             <g key={`tile-${tileKey(tile)}`} className={`map-region${top ? '' : ' map-area'}`} onClick={() => onSelect(r.id, tile)}>
-              <title>{`${r.parent ? `${region(world, r.parent).name} › ` : ''}${r.name} (${t.label}) (${tile.join(',')})`}</title>
+              <title>{`${placeName(world, r)} (${t.label}) (${tile.join(',')})`}</title>
               {t.sea && !r.parent ? (
                 <rect x={x} y={y} width={TILE} height={TILE} fill={t.color} opacity={0.85} className="map-tile map-tile-sea" />
               ) : (

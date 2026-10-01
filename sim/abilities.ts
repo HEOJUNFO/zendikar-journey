@@ -7,6 +7,7 @@ import type { Color } from './mana.ts';
 import { itemsOnLandfall } from './items.ts';
 import { enterShatter } from './relics.ts';
 import { blazeLand } from './blaze.ts';
+import { extraLandDrops, topBlocked, topLand } from './oracle.ts';
 import { gainLife, lifeOf, loseLife, setLife } from './life.ts';
 import { allyJoined } from './allies.ts';
 import { bindRetainer, masterOf, releaseRetainer, retainersOf } from './retainers.ts';
@@ -33,8 +34,15 @@ export function bondBlocked(state: State, world: World, a: Actor, t: number): st
   if (state.regions[r.id]?.destroyed) return '부서진 땅과는 유대를 맺을 수 없다.';
   if (npcDef(state, world, a.id)?.beast && state.regions[r.id]?.conditions.some((c) => c.label === DEPLETED_LABEL))
     return '사냥감이 바닥난 땅이다.';
-  // A land sought out with a fetch land isn't the day's one land.
-  if (a.landfalls?.day === gameDay(t) && a.landfalls.regions.filter((id) => !a.fetched?.includes(id)).length >= 1) return '오늘은 이미 한 땅과 유대를 맺었다. 땅은 하루에 하나.';
+  return landDropBlocked(state, world, a, t);
+}
+
+// Whether `a` has a land for the day left: one, and one more for each oracle they control
+// (sim/oracle.ts). A land sought out with a fetch land isn't the day's land.
+export function landDropBlocked(state: State, world: World, a: Actor, t: number): string | null {
+  const max = 1 + extraLandDrops(state, world, a, t);
+  if (a.landfalls?.day === gameDay(t) && a.landfalls.regions.filter((id) => !a.fetched?.includes(id)).length >= max)
+    return max > 1 ? `오늘은 이미 ${max} 땅과 유대를 맺었다.` : '오늘은 이미 한 땅과 유대를 맺었다. 땅은 하루에 하나.';
   return null;
 }
 
@@ -261,7 +269,9 @@ export function fetchBlocked(state: State, world: World, a: Actor, fromId: strin
 }
 
 // For an NPC's `fetch` block: a fetch land they hold that can seek out `toId` now, or why none can.
-export function fetchSource(state: State, world: World, a: Actor, toId: string | undefined): { from: Region } | { why: string } {
+export function fetchSource(state: State, world: World, a: Actor, toId: string | undefined): { from: Region } | { top: true } | { why: string } {
+  // The land on top of their library (Oracle of Mul Daya): no fetch land needed.
+  if (toId && topLand(state, a, state.minutes) === landIdOf(world, toId) && !topBlocked(state, world, a, toId, state.minutes, (t) => landDropBlocked(state, world, a, t))) return { top: true };
   const held = (a.bonds ?? []).map((id) => world.regions.find((r) => r.id === id)).filter((r) => r?.fetch) as Region[];
   if (!held.length) return { why: '내어 줄 길 찾기 땅이 없다.' };
   if (!toId) return { why: '찾을 땅을 정하지 않았다.' };
@@ -273,6 +283,7 @@ export function fetchSource(state: State, world: World, a: Actor, toId: string |
 // the battlefield": they lose N life and their bond with the fetch land, and bond with the
 // land sought from wherever they are. Not their land for the day: a landfall of its own.
 export function fetchLand(state: State, world: World, a: Actor, fromId: string, toId: string, t: number, target?: string) {
+  if (fromId === TOP) return bondFromTop(state, world, a, toId, t, target);
   const why = fetchBlocked(state, world, a, fromId, toId);
   if (why) {
     addLog(state, { kind: 'status', text: `${josa(shortName(a.name), '은', '는')} 길을 찾지 못했다: ${why}`, regions: [a.region], actors: [a.id], t });
@@ -291,6 +302,22 @@ export function fetchLand(state: State, world: World, a: Actor, fromId: string, 
   a.fetched = [...(a.fetched ?? []), toId];
   a.searched = gameDay(t);
   bondLand(state, world, a, t, toId, target);
+}
+
+// The source of a bond from the top of the library (Oracle of Mul Daya), as a fetch's `from`.
+export const TOP = 'top';
+
+// They bond from afar with the land on top of their library: their land for the day.
+export function bondFromTop(state: State, world: World, a: Actor, toId: string, t: number, target?: string) {
+  const why = topBlocked(state, world, a, toId, t, (u) => landDropBlocked(state, world, a, u));
+  if (why) {
+    addLog(state, { kind: 'status', text: `${josa(shortName(a.name), '은', '는')} 드러난 땅과 이어지지 못했다: ${why}`, regions: [a.region], actors: [a.id], t });
+    return;
+  }
+  const land = landIdOf(world, toId);
+  addLog(state, { kind: 'status', text: `${josa(shortName(a.name), '이', '가')} 앞날에 비친 ${toward(region(world, land).name)} 멀리서 이어졌다.`, regions: [a.region, land], actors: [a.id], t });
+  a.topLand = undefined;
+  bondLand(state, world, a, t, land, target);
 }
 
 // At a turn's start (00:00): whoever holds a land like Emeria and enough plains gets back the

@@ -9,7 +9,8 @@ import { masterOf } from './retainers.ts';
 import type { State, Task } from './state.ts';
 import { startTravel, travelBlocked } from './step.ts';
 import { RECALL_HOURS, recallBlocked, recallCount } from './loremaster.ts';
-import { bondBlocked, bondTargets, FETCH_HOURS, fetchBlocked, firesOnBond, growBlocked, targetedBondEffect } from './abilities.ts';
+import { bondBlocked, bondTargets, FETCH_HOURS, fetchBlocked, firesOnBond, growBlocked, landDropBlocked, targetedBondEffect, TOP } from './abilities.ts';
+import { topBlocked } from './oracle.ts';
 import { CLAIM_HOURS, claimBlocked, itemDef } from './items.ts';
 import { EQUIP_HOURS, equipBlocked } from './equipment.ts';
 import { EON_HOURS, spendBlocked, storeBlocked } from './eons.ts';
@@ -190,6 +191,15 @@ export function startAction(state: State, world: World, action: Action): string 
       break;
     }
     case 'fetch': {
+      // The land on top of their library (Oracle of Mul Daya).
+      if (action.from === TOP) {
+        const why = topBlocked(state, world, p, action.to, state.minutes, (t) => landDropBlocked(state, world, p, t));
+        if (why) return why;
+        const to = region(world, action.to);
+        task = { kind: 'fetch', activity: `${to.name}과 멀리서 이어지기`, emoji: '🔮', until: until(FETCH_HOURS), from: TOP, land: to.id, ...(action.target ? { target: action.target } : {}) };
+        text = `앞날에 비친 ${toward(to.name)} 멀리서 이어진다 (오늘의 땅).`;
+        break;
+      }
       const why = fetchBlocked(state, world, p, action.from, action.to);
       if (why) return why;
       const [from, to] = [region(world, action.from), region(world, action.to)];

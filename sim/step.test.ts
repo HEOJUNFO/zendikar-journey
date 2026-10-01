@@ -37,7 +37,7 @@ import { upkeepWins } from './win.ts';
 import { hirePrice } from './allies.ts';
 import { askOptions, askText } from './asks.ts';
 import type { Actor, State } from './state.ts';
-import { affectedRegions, buildWorld, distance, landTypes, realmOf, region, travelHours } from './world.ts';
+import { affectedRegions, buildWorld, descendantsOf, distance, landTypes, placeName, realmOf, region, travelHours, within } from './world.ts';
 import type { RawEntity } from './world.ts';
 
 // Puts `a` in a land, on its middle tile (as arriving there would).
@@ -507,7 +507,7 @@ test('areas: a land inside a region, an hour from it, reached by events on the r
   assert.deepEqual(affectedRegions(world, { region: 'loc-in', range: 0 } as never).map((r) => r.id), ['loc-in']);
 });
 
-test('buildWorld rejects areas in nowhere, in areas, or in a sea; a sea may be an area of a land (a bay)', () => {
+test('buildWorld rejects areas in nowhere or in a sea; an area may hold areas; a sea may be an area of a land (a bay)', () => {
   const area = (id: string, parent: string, terrain = 'swamp'): RawEntity => ({ id, kind: 'location', name: id, status: 'canon', map: { in: parent, terrain } });
   const { errors } = buildWorld([
     loc('loc-a', 10, 10, 'grassland'),
@@ -521,7 +521,7 @@ test('buildWorld rejects areas in nowhere, in areas, or in a sea; a sea may be a
   const has = (id: string) => errors.some((e) => e.startsWith(`${id}:`));
   assert.ok(!has('loc-in'));
   assert.ok(has('loc-nowhere'));
-  assert.ok(has('loc-nested'));
+  assert.ok(!has('loc-nested')); // an area in an area (user decision 2026-10-01)
   assert.ok(has('loc-wet'));
   assert.ok(!has('loc-bay'));
 });
@@ -2184,7 +2184,8 @@ test('tiles: every land holds as many tiles as the lore gives it, at least 100 a
   const owners = Object.values(world.tileOwner!);
   for (const r of world.regions.filter((x) => !x.wanders)) {
     const n = tilesOf(world, r.id).length;
-    if (r.parent) assert.equal(n, r.tileCount ?? 10, r.id);
+    // An area's own tiles, with those of the areas in it.
+    if (r.parent) assert.equal(n + descendantsOf(world, r.id).reduce((m, x) => m + tilesOf(world, x.id).length, 0), r.tileCount ?? 10, r.id);
     assert.equal(owners.filter((o) => o === r.id).length, n, r.id); // one land to a tile
   }
   assert.deepEqual(tooSmall(world), []);
@@ -4455,7 +4456,7 @@ test('Nissa Revane: +1 calls an elf warrior to her side, +1 gains 2 life per elf
   assert.equal(state.actors['chr-h'].master, undefined);
 });
 
-test('the real Nissa Revane bides in the Tangled Vale; the world\'s elves are the ranger and the bard', () => {
+test('the real Nissa Revane bides in the Tangled Vale; the world\'s elves are the ranger, the bard and the oracle', () => {
   const world = loadWorld();
   const state = newState(world, { seed: 1, mode: 'observer' });
   const n = state.actors['chr-nissa-revane'];
@@ -4463,7 +4464,7 @@ test('the real Nissa Revane bides in the Tangled Vale; the world\'s elves are th
   assert.equal(n.loyalty, 2);
   assert.deepEqual(npcDef(state, world, n.id)?.activated?.map((x) => x.loyalty), [1, 1, -7]);
   const elves = world.npcs.filter((x) => x.types?.includes('elf')).map((x) => x.id).sort();
-  assert.deepEqual(elves, ['chr-joraga-bard', 'chr-turntimber-ranger']);
+  assert.deepEqual(elves, ['chr-joraga-bard', 'chr-oracle-of-mul-daya', 'chr-turntimber-ranger']);
 });
 
 test('a blaze counter: the target\'s latest unburning land catches fire; all bonded with it lose 1 life each midnight, even after the fireheart dies, until the land is destroyed', async () => {
@@ -4493,4 +4494,65 @@ test('the real Obsidian Fireheart burns in Valakut', () => {
   const f = state.actors['cre-obsidian-fireheart'];
   assert.equal(f?.region, 'loc-valakut');
   assert.deepEqual(npcDef(state, world, f.id)?.activated?.[0]?.effects, [{ type: 'blaze_land' }]);
+});
+
+test('an area in an area: it takes its tiles from the area it lies in; events, travel and names reach through', () => {
+  const area = (id: string, parent: string, tiles: number, pos?: [number, number]): RawEntity => ({ id, kind: 'location', name: id, status: 'canon', map: { in: parent, terrain: 'forest', tiles, ...(pos ? { pos } : {}) } });
+  const { world, errors } = buildWorld([{ ...loc('loc-a', 10, 10, 'forest'), map: { x: 600, y: 600, terrain: 'forest', size: 'continent', tiles: 120 } } as RawEntity, area('loc-wild', 'loc-a', 50, [0, -0.4]), area('loc-root', 'loc-wild', 10, [0, 0]), area('loc-vale', 'loc-a', 10, [0, 0.8])]);
+  assert.deepEqual(errors, []);
+  const tiles = (id: string) => world.tiles![id];
+  assert.equal(tiles('loc-root').length, 10);
+  assert.equal(tiles('loc-wild').length, 40); // 50, less its own area
+  assert.ok(tiles('loc-root').every((t) => world.tileOwner![`${t[0]},${t[1]}`] === 'loc-root'));
+  assert.equal(region(world, 'loc-root').top, 'loc-a');
+  assert.equal(placeName(world, region(world, 'loc-root')), 'loc-a › loc-wild › loc-root');
+  assert.ok(within(world, 'loc-root', 'loc-a') && within(world, 'loc-root', 'loc-wild') && !within(world, 'loc-vale', 'loc-wild'));
+  assert.deepEqual(descendantsOf(world, 'loc-a').map((r) => r.id).sort(), ['loc-root', 'loc-vale', 'loc-wild']);
+  // Within one land at the top: an hour apart, as any two areas.
+  assert.equal(travelHours(region(world, 'loc-root'), region(world, 'loc-vale'), []), 1);
+  assert.deepEqual(tooSmall(world), []);
+});
+
+test('an oracle of Mul Daya: its controller bonds with one more land a day; at midnight a land of the world comes up on top, to bond with from afar unless already theirs', async () => {
+  const oracle = { ...npcSim('loc-a', 'work', [2, 2]), mana: { G: 4 }, types: ['elf'], extra_lands: 1, reveal_top: true };
+  const world = fixture([npc('chr-o', oracle)]);
+  const state = character(world, 'loc-a');
+  const p = state.actors[PLAYER_ID];
+  state.actors['chr-o'].master = PLAYER_ID;
+  // Two lands today: loc-a here, then loc-b.
+  await act(state, world, { type: 'bond' });
+  assert.ok(p.bonds?.includes('loc-a'));
+  await act(state, world, { type: 'move', to: 'loc-b' });
+  assert.equal((await act(state, world, { type: 'bond' })).error, undefined);
+  assert.ok(p.bonds?.includes('loc-b'));
+  // A third is too many.
+  await act(state, world, { type: 'move', to: 'loc-c' });
+  assert.match(bondBlocked(state, world, p, state.minutes) ?? '', /이미 2 땅/);
+  // Midnight: a land comes up on top. One not yet theirs: bond from afar.
+  state.minutes = (Math.floor(state.minutes / 1440) + 1) * 1440 - 60;
+  await act(state, world, { type: 'wait', hours: 2 });
+  const top = p.topLand?.land;
+  assert.ok(top);
+  assert.ok(texts(state).some((l) => l.includes('다음에 맺을 땅은')));
+  p.topLand = { day: gameDay(state.minutes), land: 'loc-c' };
+  const r = await act(state, world, { type: 'fetch', from: 'top', to: 'loc-c' });
+  assert.equal(r.error, undefined);
+  assert.ok(p.bonds?.includes('loc-c'));
+  // One already theirs comes up: no use.
+  p.topLand = { day: gameDay(state.minutes), land: 'loc-a' };
+  assert.match((await act(state, world, { type: 'fetch', from: 'top', to: 'loc-a' })).error ?? '', /이미/);
+});
+
+test('the real Oracle of Mul Daya lives in Riverroot, in the Guum Wilds of Bala Ged', () => {
+  const world = loadWorld();
+  const state = newState(world, { seed: 1, mode: 'observer' });
+  const o = state.actors['chr-oracle-of-mul-daya'];
+  assert.equal(o?.region, 'loc-riverroot');
+  assert.equal(region(world, 'loc-riverroot').parent, 'loc-guum-wilds');
+  assert.equal(region(world, 'loc-guum-wilds').parent, 'loc-bala-ged');
+  assert.equal(placeName(world, region(world, 'loc-riverroot')), '발라 게드 › 굼 밀림 › 리버루트');
+  assert.deepEqual(landTypes(region(world, 'loc-riverroot')), ['forest']);
+  const def = npcDef(state, world, o.id)!;
+  assert.equal(def.extraLands, 1);
+  assert.ok(def.revealTop);
 });

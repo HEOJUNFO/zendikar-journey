@@ -60,7 +60,9 @@ export function tooSmall(world: World) {
   return world.regions
     .filter((r) => !r.wanders && !isSea(r))
     .map((r) => {
-      const n = tilesOf(world, r.id).length + (r.parent ? 0 : world.regions.filter((x) => x.parent === r.id).reduce((m, x) => m + tilesOf(world, x.id).length, 0));
+      // With its areas, and theirs (an area holding areas counts them too).
+      const all = (id: string): number => tilesOf(world, id).length + world.regions.filter((x) => x.parent === id).reduce((m, x) => m + all(x.id), 0);
+      const n = all(r.id);
       const least = r.size === 'continent' ? CONTINENT_MIN : LAND_MIN;
       return n < least ? `${r.id}: 칸 ${n}개 (최소 ${least})` : null;
     })
@@ -101,15 +103,24 @@ export function layTiles(world: World) {
     tiles[r.id] = claim(r.id, r, wanted.get(r.id)!, nearTiles(r, wanted.get(r.id)!), (t) => !owner[tileKey(t)]);
     r.radius = radiusOf(tiles[r.id].length);
   }
-  for (const top of tops) {
-    const R = top.radius!;
-    const areas = world.regions.filter((x) => x.parent === top.id).sort((a, b) => areaTiles(b) - areaTiles(a) || a.id.localeCompare(b.id));
+  // Areas take their tiles from the place they lie in, nearest where the lore puts them
+  // (`map.pos`, in parts of that place's radius from its middle); an area's own areas then take
+  // theirs from it, and so on down (an area in an area, user decision 2026-10-01).
+  const layAreas = (parent: string, mid: { x: number; y: number }, R: number) => {
+    const areas = world.regions.filter((x) => x.parent === parent).sort((a, b) => areaTiles(b) - areaTiles(a) || a.id.localeCompare(b.id));
     for (const a of areas) {
-      const at = a.pos ? { x: top.x + a.pos[0] * R * 0.8, y: top.y + a.pos[1] * R * 0.8 } : { x: top.x, y: top.y };
-      tiles[a.id] = claim(a.id, at, areaTiles(a), tiles[top.id], (t) => owner[tileKey(t)] === top.id);
+      const at = a.pos ? { x: mid.x + a.pos[0] * R * 0.8, y: mid.y + a.pos[1] * R * 0.8 } : mid;
+      tiles[a.id] = claim(a.id, at, areaTiles(a), tiles[parent], (t) => owner[tileKey(t)] === parent);
       a.radius = radiusOf(tiles[a.id].length);
     }
-    tiles[top.id] = tiles[top.id].filter((t) => owner[tileKey(t)] === top.id);
+    tiles[parent] = tiles[parent].filter((t) => owner[tileKey(t)] === parent);
+    for (const a of areas) {
+      const ts = tiles[a.id];
+      if (ts.length) layAreas(a.id, { x: ts.reduce((s, t) => s + tileCenter(t).x, 0) / ts.length, y: ts.reduce((s, t) => s + tileCenter(t).y, 0) / ts.length }, a.radius!);
+    }
+  };
+  for (const top of tops) {
+    layAreas(top.id, { x: top.x, y: top.y }, top.radius!);
   }
   // The seas: the water no land holds, as much as the lore gives each (`map.tiles`), the water
   // nearest each; the rest is the open sea, no one's.

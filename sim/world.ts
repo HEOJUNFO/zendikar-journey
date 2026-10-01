@@ -315,6 +315,12 @@ export const CharacterSimSchema = z.strictObject({
   // "At the beginning of your upkeep, sacrifice this creature unless you return a land you
   // control to its owner's hand" (Living Tsunami): while it serves someone (sim/tide.ts).
   upkeep_return_land: z.boolean().default(false),
+  // "You may play an additional land on each of your turns" (Oracle of Mul Daya): its controller
+  // may bond with N more lands a day (sim/oracle.ts).
+  extra_lands: z.number().int().min(1).optional(),
+  // "Play with the top card of your library revealed; you may play lands from the top": a land
+  // of the world revealed each 00:00 for its controller, to bond with from afar (sim/oracle.ts).
+  reveal_top: z.boolean().default(false),
   // "{2}{U}: Tap target creature without flying" (Merfolk Seastalkers): in a fight, its
   // controller may pay to bind a foe there until midnight (`no_fly`: not one who flies,
   // sim/bind.ts).
@@ -719,6 +725,8 @@ export type Region = {
   // An area inside this region (its x, y are the region's). Areas are lands of their own:
   // people meet, bond, and get hit by events there, but an event on the region reaches them.
   parent?: string;
+  // The land at the top an area lies in (its region's, for an area in an area).
+  top?: string;
   // How large a region is drawn (web/view.ts).
   size?: 'continent' | 'island';
   // The continent this island belongs to (`map.of`), for the map only.
@@ -750,6 +758,8 @@ export type NpcDef = {
   beast?: boolean;
   tamable?: boolean;
   upkeepReturnLand?: boolean;
+  extraLands?: number;
+  revealTop?: boolean;
   tapFoe?: { cost: ManaCost; costText: string; noFly: boolean };
   winsAtLife?: number;
   extraCombat?: { cost: ManaCost; costText: string };
@@ -935,15 +945,20 @@ export function buildWorld(entities: RawEntity[]): { world: World; errors: strin
     if (!o) err(r.id, `sim.one_land_with ${r.oneLandWith} 가 맵에 없음`);
     else if (o.oneLandWith || o.notLand) err(r.id, `sim.one_land_with ${r.oneLandWith} 는 그 자체로 땅이어야 함`);
   }
-  // Areas sit where their region is. One level only, and never in a sea region (a sea may be
-  // an area of a land region, as a bay: Thunder Bay in Murasa, user decision 2026-09-30).
+  // Areas sit where their region is. An area may hold areas of its own (user decision
+  // 2026-10-01), never in a sea region (a sea may be an area of a land region, as a bay: Thunder
+  // Bay in Murasa, user decision 2026-09-30).
   for (const r of world.regions) {
     if (!r.parent) continue;
     const p = world.regions.find((x) => x.id === r.parent);
     if (!p) err(r.id, `map.in ${r.parent} 가 맵에 없음`);
-    else if (p.parent) err(r.id, `map.in ${r.parent} 도 구역임 (구역 안에 구역은 둘 수 없음)`);
+    else if (TERRAINS[topOf(world, p).terrain].sea) err(r.id, `map.in ${r.parent} 은 바다 안이라 구역을 둘 수 없음`);
+    else if (within(world, p.id, r.id)) err(r.id, `map.in ${r.parent} 가 돌고 돎 (구역이 제 안에 들어감)`);
     else if (TERRAINS[p.terrain].sea) err(r.id, '바다 지역 안에는 구역을 둘 수 없음 (바다 구역은 뭍 지역 안에 둔다)');
-    else Object.assign(r, { x: p.x, y: p.y });
+    else {
+      const top = topOf(world, p);
+      Object.assign(r, { x: top.x, y: top.y, top: top.id });
+    }
   }
   layTiles(world);
 
@@ -959,7 +974,7 @@ export function buildWorld(entities: RawEntity[]): { world: World; errors: strin
         err(e.id, `sim 오류: ${issues(sim.error)}`);
         continue;
       }
-      const { knows_colors, activated, wins_at_life, extra_combat, pump, empty_hand_pump, discard_on_hit, landfall_token, landfall_seize, landfall_lose, landfall_grant, landfall_drain, enter_destroy, enter_drain, enter_draw, enter_search, enter_shatter, upkeep_return_land, tap_foe, tap_draw_allies, name, home_pos, ...rest } = sim.data;
+      const { knows_colors, activated, wins_at_life, extra_combat, pump, empty_hand_pump, discard_on_hit, landfall_token, landfall_seize, landfall_lose, landfall_grant, landfall_drain, enter_destroy, enter_drain, enter_draw, enter_search, enter_shatter, upkeep_return_land, extra_lands, reveal_top, tap_foe, tap_draw_allies, name, home_pos, ...rest } = sim.data;
 
       world.npcs.push({
         id: e.id,
@@ -980,6 +995,8 @@ export function buildWorld(entities: RawEntity[]): { world: World; errors: strin
         ...(enter_search ? { enterSearch: enter_search } : {}),
         ...(enter_shatter ? { enterShatter: enter_shatter.kicker ? { kicker: parseManaCost(enter_shatter.kicker)!, kickerText: enter_shatter.kicker } : {} } : {}),
         ...(upkeep_return_land ? { upkeepReturnLand: true } : {}),
+        ...(extra_lands ? { extraLands: extra_lands } : {}),
+        ...(reveal_top ? { revealTop: true } : {}),
         ...(tap_foe ? { tapFoe: { cost: parseManaCost(tap_foe.cost)!, costText: tap_foe.cost, noFly: tap_foe.no_fly } } : {}),
         ...(home_pos ? { homePos: home_pos } : {}),
         ...(enter_draw ? { enterDraw: { count: enter_draw.count, discard: enter_draw.discard, ...(enter_draw.kicker ? { kicker: parseManaCost(enter_draw.kicker)!, kickerText: enter_draw.kicker } : {}) } } : {}),
@@ -1125,7 +1142,7 @@ function baseTravelHours(a: Region, b: Region, abilities: readonly Ability[]) {
     const need = TERRAINS[r.terrain].requires;
     return need && !abilities.includes(need) ? (r.climbHours ?? 0) : 0;
   };
-  const home = (r: Region) => r.parent ?? r.id;
+  const home = (r: Region) => r.top ?? r.parent ?? r.id;
   if (home(a) === home(b)) return 1 + climb(a) + climb(b);
   // One land in two places (a sea and its coast): an hour between them.
   if (a.oneLandWith === b.id || b.oneLandWith === a.id) return 1 + climb(a) + climb(b);
@@ -1157,8 +1174,28 @@ export function canStay(r: Region, abilities: readonly Ability[]) {
 // with range 0 stays in that area.
 export function affectedRegions(world: World, ev: EventDef) {
   const origin = region(world, ev.region);
-  if (origin.parent && ev.range === 0) return [origin];
+  if (origin.parent && ev.range === 0) return [origin, ...descendantsOf(world, origin.id)];
   return world.regions.filter((r) => !TERRAINS[r.terrain].sea && distance(origin, r) <= ev.range);
+}
+
+// The land at the top of a place: itself, or the continent, island or sea its areas (and their
+// areas) lie in. An area may hold areas of its own (Riverroot in the Guum Wilds of Bala Ged,
+// user decision 2026-10-01).
+export function topOf(world: World, r: Region): Region {
+  let x = r;
+  for (let i = 0; x.parent && i < 8; i++) x = world.regions.find((y) => y.id === x.parent) ?? x;
+  return x;
+}
+
+// A region's areas, theirs, and so on down.
+export function descendantsOf(world: World, id: string): Region[] {
+  return world.regions.filter((r) => r.parent === id).flatMap((r) => [r, ...descendantsOf(world, r.id)]);
+}
+
+// Whether `id` is `ancestor` or lies in it (at any depth).
+export function within(world: World, id: string, ancestor: string) {
+  for (let x = world.regions.find((r) => r.id === id), i = 0; x && i < 8; x = x.parent ? world.regions.find((r) => r.id === x!.parent) : undefined, i++) if (x.id === ancestor) return true;
+  return false;
 }
 
 // Areas inside a region.
@@ -1172,14 +1209,15 @@ export function areasOf(world: World, id: string) {
 export function realmOf(world: World, id: string) {
   const r = world.regions.find((x) => x.id === id);
   if (!r) return [];
-  const home = world.regions.find((x) => x.id === (r.parent ?? r.id))!;
+  const home = topOf(world, r);
   const top = home.of ?? home.id;
   const regions = [top, ...world.regions.filter((x) => x.of === top).map((x) => x.id)];
-  return [...regions, ...world.regions.filter((x) => x.parent && regions.includes(x.parent)).map((x) => x.id)];
+  return [...regions, ...regions.flatMap((id) => descendantsOf(world, id).map((x) => x.id))];
 }
 
-// "굴 드라즈 › 게트 혈족의 영지" for an area, the name for a region.
-export function placeName(world: World, r: Region) {
+// "굴 드라즈 › 게트 혈족의 영지" for an area ("발라 게드 › 굼 밀림 › 리버루트" for one in an area),
+// the name for a region.
+export function placeName(world: World, r: Region): string {
   const p = r.parent && world.regions.find((x) => x.id === r.parent);
-  return p ? `${p.name} › ${r.name}` : r.name;
+  return p ? `${placeName(world, p)} › ${r.name}` : r.name;
 }

@@ -20,6 +20,7 @@ import { applyShatter, crushRelic, demolish, demolishOptions, relicsHere, shatte
 import { loremastersOf, recallBlocked, recallCount } from './loremaster.ts';
 import { sacrifice } from './monument.ts';
 import { answerTide } from './tide.ts';
+import { topLand } from './oracle.ts';
 import { strandedText } from './stranded.ts';
 import { bounce, bounceCandidates } from './bounce.ts';
 import { eventTile } from './tiles.ts';
@@ -33,7 +34,7 @@ import { applyPump, pumpController, pumpMax, pumpsDue } from './pump.ts';
 import { applyBind, bindsDue, bindTargets } from './bind.ts';
 import { COLORS } from './mana.ts';
 import type { Color } from './mana.ts';
-import { abilityBlocked, applyBondEffect, applyDrainGrow, applyEnterDestroy, applySearch, enteredToday, fetchBlocked, fetchTargets, growBlocked, growLand, callForth } from './abilities.ts';
+import { abilityBlocked, applyBondEffect, applyDrainGrow, applyEnterDestroy, applySearch, enteredToday, fetchBlocked, fetchSource, fetchTargets, growBlocked, growLand, callForth } from './abilities.ts';
 import { bindRetainer, courtTargets, followsMaster, refuse, seize, swayBlocked } from './retainers.ts';
 import { josa, shortName } from './text.ts';
 import type { ScheduleBlock } from './types.ts';
@@ -1166,6 +1167,9 @@ function fetchInput(state: State, world: World, a: Actor): PlanDayInput['fetch']
         .filter((to) => !fetchBlocked(state, world, a, from.id, to.id) && !seen.has(to.id) && seen.add(to.id))
         .map((to) => ({ id: to.id, text: `${placeName(world, to)} (${landTypes(to).map((x) => LAND_TYPE_LABELS[x]).join('·')}), giving up ${from.name} and ${from.fetch!.life} life` })),
     );
+  // The land on top of their library (Oracle of Mul Daya): from afar, as their land for the day.
+  const top = topLand(state, a, state.minutes);
+  if (top && !seen.has(top) && 'top' in fetchSource(state, world, a, top)) out.push({ id: top, text: `${placeName(world, region(world, top))} (${landTypes(region(world, top)).map((x) => LAND_TYPE_LABELS[x]).join('·') || 'named land'}), revealed on top of your library by your oracle: no fetch land given up, but it is your land for the day` });
   return out.length ? out : undefined;
 }
 

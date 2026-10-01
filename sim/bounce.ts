@@ -10,7 +10,7 @@ import { addLog, npcDef, present, random, targetable } from './state.ts';
 import type { Actor, State } from './state.ts';
 import { travelBlocked } from './step.ts';
 import { josa, shortName } from './text.ts';
-import { region } from './world.ts';
+import { descendantsOf, region, topOf } from './world.ts';
 import type { World } from './world.ts';
 import { nearestTile, tileCenter } from './tiles.ts';
 import type { Tile } from './tiles.ts';
@@ -36,8 +36,8 @@ export function bounceCandidates(state: State, world: World, regionId: string, t
 // are in; one they could go to (not the sea for those of the land, the sky only for flyers).
 function landing(state: State, world: World, a: Actor) {
   const here = region(world, a.region);
-  const top = here.parent ? region(world, here.parent) : here;
-  const places = [top, ...world.regions.filter((r) => r.parent === top.id)].filter((r) => r.id !== here.id && !travelBlocked(state, world, a, r.id));
+  const top = topOf(world, here);
+  const places = [top, ...descendantsOf(world, top.id)].filter((r) => r.id !== here.id && !travelBlocked(state, world, a, r.id));
   return places.length ? places[Math.floor(random(state) * places.length)] : undefined;
 }
 

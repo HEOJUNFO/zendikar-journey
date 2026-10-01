@@ -27,7 +27,7 @@ import { handSize } from './knowledge.ts';
 import { recall, RECALL_HOURS, recallBlocked } from './loremaster.ts';
 import { addLog, alive, here, landUnusable, needsOf, npcDef, outOfTime, present, ptOf, random, together } from './state.ts';
 import { addFoe, attackBlocked, dealDamage, foesOf, hostileNpcs } from './combat.ts';
-import { bondBlocked, bondLand, expireGranted, upkeepFleeting, onEnter, FETCH_HOURS, fetchLand, fetchSource, growBlocked, growEntered, growLand, spawnWild, summonLibrary, upkeepRevive, useAbility } from './abilities.ts';
+import { bondBlocked, bondLand, expireGranted, upkeepFleeting, onEnter, FETCH_HOURS, fetchLand, fetchSource, growBlocked, growEntered, growLand, spawnWild, summonLibrary, TOP, upkeepRevive, useAbility } from './abilities.ts';
 import { CLAIM_HOURS, claimBlocked, claimItem, itemsAt, itemWhere } from './items.ts';
 import { EQUIP_HOURS, equipBlocked, equipItem, equipmentOf, syncEquipment } from './equipment.ts';
 import { EON_HOURS, eonLand, holdStill, spendBlocked, spendDay, storeBlocked, storeDay, timeNews } from './eons.ts';
@@ -38,6 +38,7 @@ import { anthemHour, upkeepSacrifice } from './monument.ts';
 import { upkeepQuell } from './quell.ts';
 import { upkeepTide } from './tide.ts';
 import { upkeepBlaze } from './blaze.ts';
+import { upkeepOracle } from './oracle.ts';
 import { HIRE_HOURS, hireBlocked, hireMerc } from './allies.ts';
 import { bounceCandidates, joinedToday } from './bounce.ts';
 import { eventTile, fixedTile, homeTile, nearestTile, sameTile, tileCenter, tileLabel, tilesOf, tileSteps } from './tiles.ts';
@@ -48,7 +49,7 @@ import { payMana } from './mana.ts';
 import type { Actor, GmPlan, State, Task } from './state.ts';
 import { josa, shortName, toward } from './text.ts';
 import { currentBlock } from './types.ts';
-import { ABILITY_LABELS, affectedRegions, hasPowers, region, TERRAINS, travelHours } from './world.ts';
+import { ABILITY_LABELS, affectedRegions, descendantsOf, hasPowers, region, TERRAINS, travelHours, within } from './world.ts';
 import type { EventDef, Region, World } from './world.ts';
 
 export function step(state: State, placed: World) {
@@ -116,6 +117,7 @@ function startDay(state: State, world: World, t: number) {
     upkeepSacrifice(state, world, t);
     upkeepTide(state, world, t);
     upkeepBlaze(state, world, t);
+    upkeepOracle(state, world, t);
     upkeepQuell(state, world, t);
     upkeepPossessions(state, t);
   }
@@ -197,7 +199,7 @@ function enterEvents(state: State, world: World, at: number) {
     // Those here who drew enough spells today, each once a day (this spring included).
     if (ev.trigger === 'drew') {
       if (onCooldown(state, ev, at)) continue;
-      const here = new Set([ev.region, ...world.regions.filter((r) => r.parent === ev.region).map((r) => r.id)]);
+      const here = new Set([ev.region, ...descendantsOf(world, ev.region).map((r) => r.id)]);
       const day = gameDay(at);
       const by = alive(state).filter(
         (a) => here.has(a.region) && !a.travel && !outOfTime(state, a, at) && a.drawn?.day === day && a.drawn.count >= ev.cards! && !a.drawn.sprung?.includes(ev.id),
@@ -232,10 +234,9 @@ export function castEvents(state: State, world: World, a: Actor, t: number) {
   if (a.cast?.day !== day) a.cast = { day, count: 0 };
   a.cast.count++;
   let countered = false;
-  const land = region(world, a.region);
   for (const ev of world.events) {
     if (ev.trigger !== 'cast' || onCooldown(state, ev, t) || a.cast.count < ev.spells! || a.cast.sprung?.includes(ev.id)) continue;
-    if (ev.region !== a.region && ev.region !== land.parent) continue;
+    if (!within(world, a.region, ev.region)) continue;
     a.cast.sprung = [...(a.cast.sprung ?? []), ev.id];
     trigger(state, world, ev, t, { by: [a.id], lands: [] });
     if (ev.effects.some((e) => e.type === 'counter_spell')) countered = true;
@@ -248,7 +249,7 @@ export function castEvents(state: State, world: World, a: Actor, t: number) {
 function hurtEvents(state: State, world: World, t: number) {
   for (const ev of world.events) {
     if (ev.trigger !== 'hurt' || onCooldown(state, ev, t)) continue;
-    const here = new Set([ev.region, ...world.regions.filter((r) => r.parent === ev.region).map((r) => r.id)]);
+    const here = new Set([ev.region, ...descendantsOf(world, ev.region).map((r) => r.id)]);
     const day = gameDay(t);
     const by = alive(state).filter(
       (a) => here.has(a.region) && !a.travel && !outOfTime(state, a, t) && a.hurtBy?.day === day && a.hurtBy.ids.length >= ev.creatures! && !a.hurtBy.sprung?.includes(ev.id),
@@ -705,6 +706,8 @@ function npcTask(state: State, world: World, a: Actor, t: number): Task | undefi
             ? { kind: block.kind, activity: block.activity, emoji: block.emoji, who: block.who }
           : fetchFrom && 'from' in fetchFrom
             ? { kind: 'fetch', activity: block.activity, emoji: block.emoji, until: t + FETCH_HOURS * 60, from: fetchFrom.from.id, land: block.land }
+          : fetchFrom && 'top' in fetchFrom
+            ? { kind: 'fetch', activity: block.activity, emoji: block.emoji, until: t + FETCH_HOURS * 60, from: TOP, land: block.land }
           : gear
             ? { kind: 'equip', activity: block.activity, emoji: block.emoji, until: t + EQUIP_HOURS * 60, item: gear.id, who: block.who ?? a.id }
           : item

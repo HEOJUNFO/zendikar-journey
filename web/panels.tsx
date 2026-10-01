@@ -9,7 +9,7 @@ import { askOptions, askText } from '../sim/asks.ts';
 import { woundsOf } from '../sim/combat.ts';
 import { COLOR_LABELS, formatMana, manaAvailable, manaCapacity, manaLabel } from '../sim/mana.ts';
 import { loremastersOf, recallBlocked, recallCount } from '../sim/loremaster.ts';
-import { bondBlocked, bondTargets, enteredToday, fetchTargets, fireTargets, firesOnBond, growBlocked, growLand, targetedBondEffect } from '../sim/abilities.ts';
+import { bondBlocked, bondTargets, enteredToday, fetchTargets, landDropBlocked, fireTargets, firesOnBond, growBlocked, growLand, targetedBondEffect } from '../sim/abilities.ts';
 import { BOND_HOURS } from '../sim/actions.ts';
 import { CLAIM_HOURS, claimBlocked, itemsAt, itemsOf } from '../sim/items.ts';
 import { EQUIP_HOURS, equipBlocked, equipmentOf, equipTargets } from '../sim/equipment.ts';
@@ -19,6 +19,7 @@ import { knownSecrets } from '../sim/knowledge.ts';
 import { sealToday } from '../sim/seal.ts';
 import { isWinner } from '../sim/win.ts';
 import { lifeOf } from '../sim/life.ts';
+import { topBlocked, topLand } from '../sim/oracle.ts';
 import type { Actor, LogEntry, State } from '../sim/state.ts';
 import { moveHours, ruinsUntil, travelBlocked } from '../sim/step.ts';
 import { nearestTile, ownsTile, sameTile, tileCenter, tileLabel, tilesOf } from '../sim/tiles.ts';
@@ -348,6 +349,18 @@ export function PlayerCard({ world, state, busy, onAct }: { world: World; state:
       <p className="muted">
         유대를 맺은 땅: {p.bonds?.length ? p.bonds.map((id) => region(world, id).name).join(', ') : '없음'}
       </p>
+      {(() => {
+        // The land on top of their library (Oracle of Mul Daya): bond from afar.
+        const top = topLand(state, p, state.minutes);
+        if (!top) return null;
+        const why = topBlocked(state, world, p, top, state.minutes, (t) => landDropBlocked(state, world, p, t));
+        return (
+          <p className="muted">
+            서고 맨 위: {placeName(world, region(world, top))}{' '}
+            {why || !onAct ? <small>{why ? `(${why.replace(/\.$/, '')})` : ''}</small> : <button disabled={busy} onClick={() => onAct({ type: 'fetch', from: 'top', to: top })}>멀리서 이어지기</button>}
+          </p>
+        );
+      })()}
       <p className="muted">
         권속:{' '}
         {Object.values(state.actors)
