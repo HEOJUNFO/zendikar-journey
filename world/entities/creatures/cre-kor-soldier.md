@@ -5,9 +5,10 @@ name: 코르 병사
 name_en: Kor Soldier
 summary: 흰 머리칼의 유목 종족 코르의 전사. 밧줄과 갈고리를 다루며, 서약한 이를 목숨 걸고 따른다
 status: canon
-sources: [ZEN-8, ZEN-124, ZEN-1]
+sources: [ZEN-8, ZEN-124, ZEN-1, ZEN-7]
 tags: [코르, 병사, 백색]
 links:
+  - { to: chr-cliff-threader, rel: 같은 코르 (절벽 타는 이) }
   - { to: chr-armament-master, rel: 무장의 달인 }
   - { to: law-mana-colors, rel: 백색의 존재 }
   - { to: law-retainers, rel: 서약한 이를 따르는 권속 }

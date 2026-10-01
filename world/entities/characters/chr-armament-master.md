@@ -5,9 +5,10 @@ name: 무장의 달인
 name_en: Armament Master
 summary: 마킨디 협곡 코르 야영지의 백발 병사. 온갖 장비를 손질해 몸에 두르고, 그가 장비를 맬수록 그와 함께하는 코르들이 강해진다
 status: canon
-sources: [ZEN-1]
+sources: [ZEN-1, ZEN-7]
 tags: [코르, 병사, 백색]
 links:
+  - { to: chr-cliff-threader, rel: 같은 코르 (절벽 타는 이) }
   - { to: law-mana-colors, rel: 백색의 존재 }
   - { to: loc-makindi, rel: 코르 야영지 }
   - { to: itm-grappling-hook, rel: 맬 수 있는 장비 }

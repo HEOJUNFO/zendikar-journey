@@ -6868,3 +6868,23 @@ test('the real Carnage Altar stands in the ruins of the Teeth of Akoum', () => {
   assert.equal(x.at, 'loc-teeth-of-akoum');
   assert.deepEqual(x.effects, [{ type: 'sacrifice_draw', cost: '{3}', draws: 1 }]);
 });
+
+test('mountainwalk: one bonded with a mountain can\'t strike back at it; one with none can', () => {
+  const world = fixture([npc('chr-c', { ...npcSim('loc-a', 'work', [2, 1]), abilities: ['mountainwalk'] }), npc('chr-x', npcSim('loc-a')), npc('chr-y', npcSim('loc-a'))]);
+  const state = newState(world, { seed: 1, mode: 'observer' });
+  const [c, x, y] = ['chr-c', 'chr-x', 'chr-y'].map((id) => state.actors[id]);
+  x.bonds = ['loc-c']; // rocky: a mountain
+  y.bonds = ['loc-b'];
+  assert.equal(landwalked(world, c, x, state.minutes), 'mountain');
+  assert.equal(landwalked(world, c, y, state.minutes), null);
+});
+
+test('the real Cliff Threader crosses the Makindi cliffs: a Kor scout with mountainwalk', () => {
+  const world = loadWorld();
+  const state = newState(world, { seed: 1, mode: 'observer' });
+  const c = state.actors['chr-cliff-threader'];
+  assert.equal(c?.region, 'loc-makindi');
+  assert.ok(hasAbility(c, 'mountainwalk', state.minutes));
+  assert.ok(npcDef(state, world, c.id)?.types?.includes('kor'));
+  assert.equal(swayBlocked(state, world, c), null);
+});
