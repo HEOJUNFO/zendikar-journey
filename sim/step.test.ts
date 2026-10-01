@@ -45,6 +45,7 @@ import { askOptions, askText } from './asks.ts';
 import { applyEscape, escapeOptions } from './escape.ts';
 import { applyTorch, enterDamage } from './torch.ts';
 import { applyToll, enterSacrifice } from './toll.ts';
+import { applyShortcut, enterNoBlock } from './shortcut.ts';
 import { bloodHasteHour } from './bloodghast.ts';
 import { bloodSeekHour } from './seeker.ts';
 import { altarBlocked } from './altar.ts';
@@ -6974,4 +6975,27 @@ test('the real Gatekeeper of Malakir guards the east gate of Malakir: a vampire 
   assert.equal(g?.region, 'loc-malakir');
   assert.equal(npcDef(state, world, g.id)?.enterSacrifice?.kickerText, '{B}');
   assert.equal(creatureOf(state, world, g.id), 'cre-vampire');
+});
+
+test('Goblin Shortcutter: arriving, its controller picks one there (one must be) who can\'t block until midnight', async () => {
+  const world = fixture([npc('chr-gs', { ...npcSim('loc-a', 'work', [2, 1]), enter_no_block: true }), npc('chr-x', npcSim('loc-a')), npc('chr-pw', { ...npcSim('loc-a'), loyalty: 3 })]);
+  const state = newState(world, { seed: 1, mode: 'observer' });
+  const [gs, x, pw] = ['chr-gs', 'chr-x', 'chr-pw'].map((id) => state.actors[id]);
+  for (const a of [x, pw]) a.tile = gs.tile;
+  enterNoBlock(state, world, gs, state.minutes);
+  const c = state.choices!.find((y) => y.effect.type === 'shortcut')!;
+  assert.ok(!c.optional && c.candidates.includes('chr-x') && !c.candidates.includes('chr-pw'));
+  applyShortcut(state, world, gs, x, state.minutes);
+  assert.ok(hasAbility(x, 'cant_block', state.minutes));
+  await advance(state, world, 24, { choose: async ({ candidates }) => candidates[0]?.id ?? null });
+  assert.ok(!hasAbility(x, 'cant_block', state.minutes));
+});
+
+test('the real Goblin Shortcutter runs the passes of Murasa', () => {
+  const world = loadWorld();
+  const state = newState(world, { seed: 1, mode: 'observer' });
+  const g = state.actors['chr-goblin-shortcutter'];
+  assert.equal(g?.region, 'loc-murasa');
+  const def = npcDef(state, world, g.id)!;
+  assert.ok(def.enterNoBlock && !def.hireable);
 });

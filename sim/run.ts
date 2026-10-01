@@ -23,6 +23,7 @@ import { applyShatter, crushRelic, demolish, demolishOptions, relicsHere, shatte
 import { applyEscape, escapeOptions } from './escape.ts';
 import { applyTorch } from './torch.ts';
 import { applyToll } from './toll.ts';
+import { applyShortcut } from './shortcut.ts';
 import { applySacrament } from './sacrament.ts';
 import type { SacramentEffect } from './sacrament.ts';
 import { loremastersOf, recallBlocked, recallCount } from './loremaster.ts';
@@ -911,6 +912,22 @@ async function choices(state: State, world: World, llm: Llm) {
       }
       const target = candidates.find((x) => x.id === pick) ?? candidates[Math.floor(random(state) * candidates.length)];
       if (target) applyHook(state, world, source, target, state.minutes);
+      continue;
+    }
+    // Goblin Shortcutter, arriving: whom its controller leaves unable to block today (one must be).
+    if (c.effect.type === 'shortcut') {
+      const source = state.actors[c.effect.source];
+      if (!source) continue;
+      let pick: string | null = null;
+      if (llm.choose) {
+        try {
+          pick = await llm.choose({ world, state, npc, candidates, optional: false, what: `${land.name}: ${source.id === by.id ? '당신' : shortName(source.name)}이(가) 이곳에 들어섰다. 여기 있는 이 하나를 휘저어 놓아, 그 이는 자정까지 누구도 막아 주지 못한다 (주인에게 덤빈 이에게 맞서지 못한다). 누구를?` });
+        } catch (e) {
+          console.warn(`choose (shortcut) for ${c.by} failed:`, e);
+        }
+      }
+      const target = candidates.find((x) => x.id === pick) ?? candidates[Math.floor(random(state) * candidates.length)];
+      if (target) applyShortcut(state, world, source, target, state.minutes);
       continue;
     }
     // Gatekeeper of Malakir, arriving kicked: whom its controller makes pay the toll, or no one.
