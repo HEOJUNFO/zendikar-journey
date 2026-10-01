@@ -2,6 +2,7 @@
 import { enterExile } from './banish.ts';
 import { enterTap } from './hook.ts';
 import { enterDamage } from './torch.ts';
+import { landfallReturn } from './bloodghast.ts';
 import { remember } from './relations.ts';
 import { gameDay, untapTime } from './clock.ts';
 import { addFoe, dealDamage, destroy, leavePlane } from './combat.ts';
@@ -178,6 +179,8 @@ export function bondLand(state: State, world: World, a: Actor, t: number, region
     actors: [a.id],
     t,
   });
+  // What lies in their graveyard and rises on their landfall (Bloodghast).
+  landfallReturn(state, world, a, t);
   // A color of theirs sealed against them (Iona): their landfall does nothing.
   const lf = powersSealed(state, world, a, t) ? undefined : def;
   // "Landfall — … gets +N/+N (and trample) until end of turn."

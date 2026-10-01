@@ -108,6 +108,8 @@ export type Actor = {
   wounds?: { day: number; amount: number };
   // Damage prevented for them today, still to come (Noble Vestige's ward, sim/tapper.ts).
   shield?: { day: number; amount: number };
+  // Haste given by the scent of blood this hour (Bloodghast, sim/bloodghast.ts).
+  bloodHaste?: boolean;
   // Those who dealt them combat damage this turn (Inferno Trap: "dealt damage by two or more
   // creatures this turn"). `sprung`: the `hurt` events they set off today.
   hurtBy?: { day: number; ids: string[]; sprung?: string[] };

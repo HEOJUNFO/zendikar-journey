@@ -44,6 +44,7 @@ import { allyJoined, applyRally, hireMerc, hirePrice } from './allies.ts';
 import { askOptions, askText } from './asks.ts';
 import { applyEscape, escapeOptions } from './escape.ts';
 import { applyTorch, enterDamage } from './torch.ts';
+import { bloodHasteHour } from './bloodghast.ts';
 import { applyHarrow } from './harrow.ts';
 import type { HarrowEffect } from './harrow.ts';
 import { applySacrament } from './sacrament.ts';
@@ -6740,4 +6741,49 @@ test('the real Armament Master keeps the Kor camp in Makindi; the world\'s Kor a
     assert.ok(npcDef(state, world, id)?.types?.includes('kor'), id);
   const pledge = world.spells.find((s) => s.id === 'spl-conquerors-pledge')!.effects[0];
   assert.ok(pledge.type === 'create_retainers' && pledge.types?.includes('kor'));
+});
+
+const bloodghast = () => npc('chr-bg', { ...npcSim('loc-a', 'work', [2, 1]), mana: { B: 2 }, needs: ['energy'], beast: true, creature: 'cre-v', abilities: ['cant_block'], haste_low_life: 10, landfall_return: true });
+
+test('Bloodghast: dead in its master\'s graveyard, it rises at their side when they bond with a land', () => {
+  const world = fixture([vampireKind(), bloodghast(), npc('chr-m', npcSim('loc-a'))]);
+  const state = newState(world, { seed: 1, mode: 'observer' });
+  const [bg, m] = [state.actors['chr-bg'], state.actors['chr-m']];
+  bg.master = 'chr-m';
+  die(state, bg, state.minutes, '시험');
+  assert.ok(bg.dead);
+  assert.deepEqual(m.fallen, ['chr-bg']);
+  m.region = 'loc-b';
+  bondLand(state, world, m, state.minutes, 'loc-b');
+  assert.ok(!bg.dead);
+  assert.equal(bg.master, 'chr-m');
+  assert.equal(bg.region, 'loc-b');
+  assert.deepEqual(m.fallen, []);
+  assert.ok(texts(state).some((l) => l.includes('무덤에서') && l.includes('되살아나')));
+});
+
+test('Bloodghast: haste while a foe of today has 10 life or less; gone when none does', () => {
+  const world = fixture([vampireKind(), bloodghast(), npc('chr-x', npcSim('loc-a'))]);
+  const state = newState(world, { seed: 1, mode: 'observer' });
+  const [bg, x] = [state.actors['chr-bg'], state.actors['chr-x']];
+  addFoe(bg, 'chr-x', state.minutes);
+  bloodHasteHour(state, world, state.minutes);
+  assert.ok(!hasAbility(bg, 'haste', state.minutes));
+  x.life = 10;
+  bloodHasteHour(state, world, state.minutes);
+  assert.ok(hasAbility(bg, 'haste', state.minutes));
+  x.life = 15;
+  bloodHasteHour(state, world, state.minutes);
+  assert.ok(!hasAbility(bg, 'haste', state.minutes));
+});
+
+test('the real Bloodghast drifts in the Guul Draz mists: a vampire that can\'t block, swift on the scent, back from the grave on landfall', () => {
+  const world = loadWorld();
+  const state = newState(world, { seed: 1, mode: 'observer' });
+  const b = state.actors['chr-bloodghast'];
+  assert.equal(b?.region, 'loc-guul-draz');
+  const def = npcDef(state, world, b.id)!;
+  assert.ok(def.beast && def.landfallReturn && def.hasteLowLife === 10);
+  assert.ok(hasAbility(b, 'cant_block', state.minutes));
+  assert.equal(creatureOf(state, world, b.id), 'cre-vampire');
 });

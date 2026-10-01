@@ -28,6 +28,7 @@ import { markSealed } from './seal.ts';
 import { handSize } from './knowledge.ts';
 import { recall, RECALL_HOURS, recallBlocked } from './loremaster.ts';
 import { TAP_HOURS, tapBlocked, useTap } from './tapper.ts';
+import { bloodHasteHour } from './bloodghast.ts';
 import { bite, BITE_HOURS, biteBlocked } from './bite.ts';
 import { eraseFromWorld } from './erase.ts';
 import { addLog, alive, buriedToday, hasAbility, here, landUnusable, needsOf, npcDef, outOfTime, present, ptOf, random, together } from './state.ts';
@@ -70,6 +71,7 @@ export function step(state: State, placed: World) {
   regionLayer(state, world, t);
   syncEquipment(state, world);
   anthemHour(state, world);
+  bloodHasteHour(state, world, t);
   electroHour(state, world, t);
   dryOut(state, world, t);
   hostileNpcs(state, world, t);
