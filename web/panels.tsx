@@ -11,6 +11,7 @@ import { COLOR_LABELS, formatMana, manaAvailable, manaCapacity, manaLabel } from
 import { loremastersOf, recallBlocked, recallCount } from '../sim/loremaster.ts';
 import { biteBlocked, bitersOf } from '../sim/bite.ts';
 import { TAP_POWERS, tapBlocked, tappersOf } from '../sim/tapper.ts';
+import { altarBlocked, altarOf, altarVictims } from '../sim/altar.ts';
 import type { TapPower } from '../sim/tapper.ts';
 
 // The buttons for a creature's power on someone (sim/tapper.ts).
@@ -685,6 +686,22 @@ export function CharacterControls(props: {
           >
             기억 빌리기
           </button>
+        </div>
+      )}
+      {altarOf(state, world, p) && altarVictims(state, p, state.minutes).length > 0 && (
+        <div className="row">
+          <span className="muted">🩸 {altarOf(state, world, p)!.name}:</span>
+          {altarVictims(state, p, state.minutes).map((v) => (
+            <button
+              key={v.id}
+              className="danger"
+              disabled={busy || !!stuck || !!altarBlocked(state, world, p, v.id, state.minutes)}
+              title={altarBlocked(state, world, p, v.id, state.minutes) ?? `${shortName(v.name)}을(를) 바치고 숨은 것 하나를 알게 된다 (죽는다)`}
+              onClick={() => onAct({ type: 'altar', to: v.id })}
+            >
+              {shortName(v.name)} 바치기
+            </button>
+          ))}
         </div>
       )}
       {TAP_POWERS.filter((power) => tappersOf(state, world, p, power).length > 0).map((power) => (

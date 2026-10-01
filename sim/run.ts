@@ -27,6 +27,7 @@ import type { SacramentEffect } from './sacrament.ts';
 import { loremastersOf, recallBlocked, recallCount } from './loremaster.ts';
 import { biteable, readyBiter } from './bite.ts';
 import { readyTapper, tapAmount, tapTargetable } from './tapper.ts';
+import { altarOf } from './altar.ts';
 import type { TapPower } from './tapper.ts';
 import { crumble, sacrifice, sacrificeDefault } from './monument.ts';
 import { answerTide } from './tide.ts';
@@ -49,7 +50,7 @@ import type { HarrowEffect } from './harrow.ts';
 import { COLOR_LABELS, COLORS } from './mana.ts';
 import type { Color } from './mana.ts';
 import { abilityBlocked, applyBondEffect, applyDrainGrow, applyEnterDestroy, applyLure, applySearch, enteredToday, fetchBlocked, fetchSource, fetchTargets, growBlocked, growLand, callForth } from './abilities.ts';
-import { bindRetainer, courtTargets, followBlocked, followsMaster, refuse, seize, swayBlocked } from './retainers.ts';
+import { bindRetainer, courtTargets, followBlocked, followsMaster, refuse, retainersOf, seize, swayBlocked } from './retainers.ts';
 import { josa, shortName } from './text.ts';
 import type { ScheduleBlock } from './types.ts';
 import { ABILITY_LABELS, canStay, CREATURE_TYPE_LABELS, LAND_TYPE_LABELS, landTypes, placeName, region } from './world.ts';
@@ -1313,6 +1314,7 @@ async function prepare(state: State, world: World, llm: Llm): Promise<string | n
           bite: biteInput(state, a),
           shield: tapInput(state, world, a, 'shield'),
           loot: tapInput(state, world, a, 'loot'),
+          altar: altarInput(state, world, a),
           fetch: fetchInput(state, world, a),
           court: courtInput(state, world, a),
           hire: hireInput(state, world, a),
@@ -1359,6 +1361,15 @@ function equipInput(state: State, world: World, a: Actor): PlanDayInput['equip']
     text: `${gear.name} (${gear.summary}; costs ${gear.equip.costText}; the bearer has ${gives}${gear.equip.lure ? ', and whoever they fall on cannot fly off' : ''}${bearer ? `; now on ${shortName(state.actors[bearer]?.name ?? bearer)}` : ''})`,
     who: who.map((x) => ({ id: x.id, text: x.id === a.id ? 'themselves' : `${shortName(x.name)}, who serves them` })),
   };
+}
+
+// A Carnage Altar they own and whom of theirs they could offer on it, for their plan.
+function altarInput(state: State, world: World, a: Actor): PlanDayInput['altar'] {
+  const x = altarOf(state, world, a);
+  const w = x && itemWhere(state, world, x);
+  if (!x || !w) return undefined;
+  const who = retainersOf(state, a.id).filter((y) => !y.dead).map((y) => ({ id: y.id, text: `${shortName(y.name)} (${ptOf(y).join('/')})` }));
+  return { name: x.name, at: w.region, who };
 }
 
 // A creature they control with a tap power on someone (Noble Vestige, Reckless Scholar) that they

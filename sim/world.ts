@@ -782,6 +782,9 @@ export const ItemSimSchema = z.strictObject({
         // "{T}: Add N mana of any one color": its owner draws on N more of any color each turn
         // (sim/mana.ts `manaCapacity`).
         z.strictObject({ type: z.literal('mana'), amount: z.number().int().positive() }),
+        // "<cost>, Sacrifice a creature: Draw N cards" (Carnage Altar): its owner, before it, offers
+        // one who serves them (sim/altar.ts).
+        z.strictObject({ type: z.literal('sacrifice_draw'), cost: CostSchema, draws: z.number().int().positive().default(1) }),
         // "When this enters, return N lands you control to their owner's hand": when tamed, the
         // tamer's bonds with N lands break (they may bond with them again).
         z.strictObject({ type: z.literal('return_lands'), count: z.number().int().positive() }),

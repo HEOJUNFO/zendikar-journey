@@ -61,6 +61,8 @@ export type PlanDayInput = {
   shield?: { who: string; amount: number };
   // A Reckless Scholar they control that could tell someone what it has heard today.
   loot?: { who: string; amount: number };
+  // A Carnage Altar they own: where it stands, and whom of theirs they could offer there.
+  altar?: { name: string; at: string; who: { id: string; text: string }[] };
   // Lands they could seek out today by giving up a fetch land they hold (Arid Mesa...).
   fetch?: { id: string; text: string }[];
   // Spells they could learn (where each is taught), and spells they hold and could pay for.
@@ -80,7 +82,7 @@ export type PlanDayInput = {
 
 // Kinds of blocks they may plan: no meals without hunger, taming only if there is an item for
 // them to tame, keeping days only with a land that keeps them.
-function kindsFor(input: Pick<PlanDayInput, 'needs' | 'items' | 'equip' | 'days' | 'grow' | 'recall' | 'bite' | 'shield' | 'loot' | 'fetch' | 'learn' | 'cast' | 'court' | 'hire' | 'people'>) {
+function kindsFor(input: Pick<PlanDayInput, 'needs' | 'items' | 'equip' | 'days' | 'grow' | 'recall' | 'bite' | 'shield' | 'loot' | 'altar' | 'fetch' | 'learn' | 'cast' | 'court' | 'hire' | 'people'>) {
   return LIFE_KINDS.filter(
     (k) =>
       (k !== 'eat' || input.needs.includes('hunger')) &&
@@ -92,6 +94,7 @@ function kindsFor(input: Pick<PlanDayInput, 'needs' | 'items' | 'equip' | 'days'
       (k !== 'recall' || !!input.recall) &&
       (k !== 'shield' || !!input.shield) &&
       (k !== 'loot' || !!input.loot) &&
+      (k !== 'altar' || !!input.altar?.who.length) &&
       (k !== 'fetch' || !!input.fetch?.length) &&
       (k !== 'learn' || !!input.learn?.length) &&
       (k !== 'cast' || !!input.cast?.length) &&
@@ -134,7 +137,8 @@ export async function planDay(input: PlanDayInput): Promise<ScheduleBlock[] | nu
     (b.kind === 'attack' && !people.get(b.who ?? '')?.attack) ||
     (b.kind === 'bite' && !people.get(b.who ?? '')?.bite) ||
     (b.kind === 'shield' && !!b.who && b.who !== input.id && !people.get(b.who)?.shield) ||
-    (b.kind === 'loot' && !!b.who && b.who !== input.id && !people.get(b.who)?.loot);
+    (b.kind === 'loot' && !!b.who && b.who !== input.id && !people.get(b.who)?.loot) ||
+    (b.kind === 'altar' && (b.regionId !== input.altar?.at || !input.altar?.who.some((x) => x.id === b.who)));
   if (blocks?.some(bad)) blocks = null;
   if (!blocks) console.warn(`Unusable plan for ${input.name}:`, content);
   return blocks;
@@ -205,6 +209,10 @@ Rules:
   }${
     kinds.includes('shield')
       ? `\n- "shield" takes 1 hour; "who" is the id of one to ward (leave it out for themselves): ${input.shield!.who}, a spirit of hope, goes with them to that one and is tapped (bound until midnight), and the next ${input.shield!.amount} damage that one would take today is prevented. Once a day; for one about to be hurt.`
+      : ''
+  }${
+    kinds.includes('altar')
+      ? `\n- "altar" takes 1 hour, in the region where their ${input.altar!.name} stands (regionId "${input.altar!.at}"), and needs "who": one of theirs to offer on it; that one dies, and they come to know a hidden secret of the world. Only when, in character, it is worth a life. Whom they could offer: ${input.altar!.who.map((x) => `"${x.id}" (${x.text})`).join(', ')}.`
       : ''
   }${
     kinds.includes('loot')

@@ -46,6 +46,7 @@ import { applyEscape, escapeOptions } from './escape.ts';
 import { applyTorch, enterDamage } from './torch.ts';
 import { bloodHasteHour } from './bloodghast.ts';
 import { bloodSeekHour } from './seeker.ts';
+import { altarBlocked } from './altar.ts';
 import { applyHarrow } from './harrow.ts';
 import type { HarrowEffect } from './harrow.ts';
 import { applySacrament } from './sacrament.ts';
@@ -6817,4 +6818,53 @@ test('the real Blood Seeker haunts the alleys of Malakir: a vampire who takes a 
   assert.equal(b?.region, 'loc-malakir');
   assert.equal(npcDef(state, world, b.id)?.drainOnJoin, 1);
   assert.equal(creatureOf(state, world, b.id), 'cre-vampire');
+});
+
+const altarItem: RawEntity = { id: 'itm-alt', kind: 'item', name: '제단', status: 'canon', sim: { cost: '{0}', at: 'loc-a', pos: [0, 0], effects: [{ type: 'sacrifice_draw', cost: '{1}', draws: 1 }] } };
+
+test('Carnage Altar by the player: before it, they pay and offer one who serves them; that one dies into their graveyard, and they learn a secret', async () => {
+  const world = fixture([altarItem, demolishSpell, npc('chr-x', npcSim('loc-a'))]);
+  const state = character(world, 'loc-a');
+  const [p, x] = [state.actors[PLAYER_ID], state.actors['chr-x']];
+  p.bonds = ['loc-a'];
+  state.items = { 'itm-alt': { name: '제단', owner: p.id, counters: 0 } };
+  x.master = p.id;
+  const spot = itemWhere(state, world, world.items.find((i) => i.id === 'itm-alt')!)!.tile!;
+  p.tile = tilesOf(world, 'loc-a').find((t) => !sameTile(t, spot)) ?? spot;
+  x.tile = p.tile;
+  if (!sameTile(p.tile, spot)) assert.ok(altarBlocked(state, world, p, 'chr-x', state.minutes)?.includes('앞에 있어야'));
+  p.tile = spot;
+  x.tile = spot;
+  assert.ok(altarBlocked(state, world, p, p.id, state.minutes)?.includes('자신은 바치지 않는다'));
+  const known = p.knowledge?.length ?? 0;
+  await act(state, world, { type: 'altar', to: 'chr-x' });
+  assert.ok(x.dead);
+  assert.ok(p.fallen?.includes('chr-x'));
+  assert.equal(p.knowledge?.length, known + 1);
+});
+
+test('Carnage Altar by an NPC: an altar block, walking to it, offering a retainer', async () => {
+  const plan = [
+    ['00:00', '06:00', 'loc-a', 'sleep', '잠', '😴'],
+    ['06:00', '08:00', 'loc-a', 'altar', '제물', '🩸', undefined, undefined, 'chr-x'],
+    ['08:00', '24:00', 'loc-a', 'work', '일', '🔨'],
+  ];
+  const world = fixture([altarItem, demolishSpell, npc('chr-m', { ...npcSim('loc-a'), mana: { B: 3 }, plan }), npc('chr-x', npcSim('loc-a'))]);
+  const state = newState(world, { seed: 1, mode: 'observer' });
+  const [m, x] = [state.actors['chr-m'], state.actors['chr-x']];
+  state.items = { 'itm-alt': { name: '제단', owner: m.id, counters: 0 } };
+  x.master = m.id;
+  let offered: PlanDayInput | undefined;
+  await advance(state, world, 2, { planDay: async (input) => (input.id === 'chr-m' && (offered = input), planDay!(input)) });
+  assert.equal(offered?.altar?.at, 'loc-a');
+  assert.deepEqual(offered?.altar?.who.map((w) => w.id), ['chr-x']);
+  assert.ok(x.dead);
+  assert.equal(m.knowledge?.length, 1);
+});
+
+test('the real Carnage Altar stands in the ruins of the Teeth of Akoum', () => {
+  const world = loadWorld();
+  const x = world.items.find((i) => i.id === 'itm-carnage-altar')!;
+  assert.equal(x.at, 'loc-teeth-of-akoum');
+  assert.deepEqual(x.effects, [{ type: 'sacrifice_draw', cost: '{3}', draws: 1 }]);
 });

@@ -5,9 +5,10 @@ name: 아쿰의 이빨
 name_en: Teeth of Akoum
 summary: 아쿰 북쪽을 가로지르는 눈 덮인 산맥. 용이 사냥하고 카르간 부족과 고블린 둥지가 산비탈에 매달리며, 그 아래 깊은 곳에 우긴의 눈이 잠들어 있다
 status: canon
-sources: [ZEN-120, ZEN-131, ZEN-152, ZEN-118, ZEN-148, ZEN-127, ZEN-136, ZEN-138]
+sources: [ZEN-120, ZEN-131, ZEN-152, ZEN-118, ZEN-148, ZEN-127, ZEN-136, ZEN-138, ZEN-198]
 tags: [산맥, 산, 용, 고블린, 적색]
 links:
+  - { to: itm-carnage-altar, rel: 북서쪽 폐허의 제단 }
   - { to: spl-magma-rift, rel: 배우는 주문 (용암 균열) }
   - { to: chr-goblin-ruinblaster, rel: 남동쪽 기슭의 고블린 폐허폭파꾼 }
   - { to: loc-akoum, rel: 바깥 지역 }
@@ -37,6 +38,8 @@ map: { in: loc-akoum, terrain: rocky, pos: [0, -0.72], tiles: 40 }   # 기본 �
   - 칼엄니 멧돼지(`cre-bladetusk-boar`, ZEN-118): 서쪽 끝 눈 덮인 높은 협곡 (그림의 눈, [가공]).
   - 녹아내린 약탈자(`cre-molten-ravager`, ZEN-138): 북쪽 높은 화산재 비탈의 살아 있는 불. 플레이버의 "아쿰 산맥"이 이곳이다 ([배경]). 잠재움술사를 거느린 이만 달랜다 ([결정] 2026-10-01).
 - 안의 구역: 섀터스컬 고개(`loc-shatterskull-pass`, 10칸, 남서쪽, ZEN-148). 40칸은 고개를 포함한 수다.
+
+- 북서쪽 무너진 석조 계단 꼭대기에 살육의 제단(`itm-carnage-altar`, ZEN-198)이 서 있다 ([결정] 2026-10-01). 길들인 이가 그 앞에서 {3}을 치르고 권속 하나를 바치면 숨은 것 하나를 알게 된다.
 
 ## 미정/질문
 

@@ -17,6 +17,7 @@ import { equipBlocked, equipmentOf, equipTargets } from '../equipment.ts';
 import { loremastersOf, recallBlocked, recallCount } from '../loremaster.ts';
 import { biteable, readyBiter } from '../bite.ts';
 import { readyTapper, TAP_POWERS, tapAmount, tapTargetable } from '../tapper.ts';
+import { altarBlocked, altarOf, altarVictims } from '../altar.ts';
 import { enteredToday, fetchTargets, fireTargets, growBlocked, growLand, landDropBlocked, targetedBondEffect } from '../abilities.ts';
 import { topBlocked, topLand } from '../oracle.ts';
 import { eonLand, spendBlocked, storeBlocked } from '../eons.ts';
@@ -75,6 +76,12 @@ export async function interpret({ world, state, text }: InterpretInput): Promise
   // A Sea Gate Loremaster they control: draw a spell per Ally of their party.
   if (!recallBlocked(state, world, p, state.minutes)) {
     days.push(`- {"type":"recall"}  (tap ${shortName(loremastersOf(state, world, p)[0].name)}: come to know ${recallCount(state, world, p)} hidden secret(s) of the world, one per Ally of their party; 1 hour)`);
+  }
+  // A Carnage Altar they own, standing before it: offer one of theirs.
+  const altar = altarOf(state, world, p);
+  if (altar) {
+    const victims = altarVictims(state, p, state.minutes).filter((x) => !altarBlocked(state, world, p, x.id, state.minutes));
+    if (victims.length) days.push(`- {"type":"altar","to":"<retainer id>"}  (offer one who serves them on ${altar.name}: that one dies, they come to know a hidden secret; 1 hour. Who: ${victims.map((x) => `${x.id} (${shortName(x.name)})`).join(', ')})`);
   }
   // A Noble Vestige or a Reckless Scholar they control: its power on one standing with it.
   for (const power of TAP_POWERS) {

@@ -30,6 +30,7 @@ import { recall, RECALL_HOURS, recallBlocked } from './loremaster.ts';
 import { TAP_HOURS, tapBlocked, useTap } from './tapper.ts';
 import { bloodHasteHour } from './bloodghast.ts';
 import { bloodSeekHour } from './seeker.ts';
+import { ALTAR_HOURS, altarBlocked, altarOf, sacrificeAtAltar } from './altar.ts';
 import { bite, BITE_HOURS, biteBlocked } from './bite.ts';
 import { eraseFromWorld } from './erase.ts';
 import { addLog, alive, buriedToday, hasAbility, here, landUnusable, needsOf, npcDef, outOfTime, present, ptOf, random, together } from './state.ts';
@@ -85,7 +86,7 @@ export function step(state: State, placed: World) {
     actorHour(state, world, a, t);
     // A timed task done: the player's action, or an NPC's bonding, taming or keeping days.
     const done = a.task?.until !== undefined && a.task.until <= t + STEP_MINUTES && !a.travel;
-    const timed = ['bond', 'claim', 'equip', 'store_day', 'spend_day', 'grow', 'fetch', 'learn', 'cast', 'court', 'hire', 'recall', 'bite', 'shield', 'loot'];
+    const timed = ['bond', 'claim', 'equip', 'store_day', 'spend_day', 'grow', 'fetch', 'learn', 'cast', 'court', 'hire', 'recall', 'bite', 'shield', 'loot', 'altar'];
     if (done && (a.kind === 'player' || timed.includes(a.task!.kind))) {
       const at = t + STEP_MINUTES;
       if (a.task!.kind === 'bond') bondLand(state, world, a, at, a.region, a.task!.target);
@@ -98,6 +99,7 @@ export function step(state: State, placed: World) {
       if (a.task!.kind === 'grow' && a.task!.land) growEntered(state, world, a, a.task!.land, at);
       if (a.task!.kind === 'recall') recall(state, world, a, at);
       if (a.task!.kind === 'shield' || a.task!.kind === 'loot') useTap(state, world, a, a.task!.kind, a.task!.who, at);
+      if (a.task!.kind === 'altar') sacrificeAtAltar(state, world, a, a.task!.who, at);
       // An NPC's spell: whom it falls on is asked of the LLM after the hour (the player's was cast as they began).
       if (a.task!.kind === 'cast' && a.kind === 'npc' && a.task!.spell) readyCast(state, world, a, a.task!.spell, at);
       // A court: the beast decides after the hour whether to follow them.
@@ -713,6 +715,14 @@ function npcTask(state: State, world: World, a: Actor, t: number): Task | undefi
       startTravel(state, world, a, a.region, t, own);
       return a.task;
     }
+  } else if (block.kind === 'altar') {
+    // The altar stands on one tile: they walk to it.
+    const x = altarOf(state, world, a);
+    const w = x && itemWhere(state, world, x);
+    if (w && w.region === a.region && !sameTile(w.tile, a.tile)) {
+      startTravel(state, world, a, a.region, t, w.tile);
+      return a.task;
+    }
   } else if (block.kind === 'claim') {
     // An item to tame stands on one tile of its land: they walk to it.
     const x = itemsAt(state, world, a.region).find((y) => !state.items?.[y.id]?.owner);
@@ -753,8 +763,9 @@ function npcTask(state: State, world: World, a: Actor, t: number): Task | undefi
     : block.kind === 'recall' ? recallBlocked(state, world, a, t)
     : block.kind === 'bite' ? biteBlocked(state, world, a, block.who, t)
     : block.kind === 'shield' || block.kind === 'loot' ? tapBlocked(state, world, a, block.kind, block.who, t, false)
+    : block.kind === 'altar' ? altarBlocked(state, world, a, block.who, t, false)
     : null;
-  const timed = ['bond', 'claim', 'equip', 'store_day', 'spend_day', 'grow', 'fetch', 'learn', 'cast', 'court', 'hire', 'recall', 'bite', 'shield', 'loot'];
+  const timed = ['bond', 'claim', 'equip', 'store_day', 'spend_day', 'grow', 'fetch', 'learn', 'cast', 'court', 'hire', 'recall', 'bite', 'shield', 'loot', 'altar'];
   if (!cannot && timed.includes(block.kind) && a.task?.kind === block.kind) return a.task;
   const task: Task =
     block.kind === 'work' && landUnusable(state, a.region)
@@ -773,6 +784,8 @@ function npcTask(state: State, world: World, a: Actor, t: number): Task | undefi
             ? { kind: 'bite', activity: block.activity, emoji: block.emoji, until: t + BITE_HOURS * 60, who: block.who }
           : block.kind === 'shield' || block.kind === 'loot'
             ? { kind: block.kind, activity: block.activity, emoji: block.emoji, until: t + TAP_HOURS * 60, who: block.who }
+          : block.kind === 'altar'
+            ? { kind: 'altar', activity: block.activity, emoji: block.emoji, until: t + ALTAR_HOURS * 60, who: block.who }
           : block.kind === 'attack' || (block.kind === 'social' && block.who)
             ? { kind: block.kind, activity: block.activity, emoji: block.emoji, who: block.who }
           : fetchFrom && 'from' in fetchFrom
