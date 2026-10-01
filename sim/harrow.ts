@@ -48,7 +48,7 @@ export function applyHarrow(state: State, world: World, a: Actor, eff: HarrowEff
   if (!id) return null;
   if (!eff.given) {
     a.bonds = (a.bonds ?? []).filter((b) => b !== id);
-    addLog(state, { kind: 'status', text: `${eff.spell}: ${josa(shortName(a.name), '이', '가')} ${josa(region(world, id).name, '과', '와')}의 유대를 내어 주었다. 땅이 갈아엎어진다.`, regions: [a.region, id], actors: [a.id], t });
+    addLog(state, { kind: 'status', text: `${eff.spell}: ${josa(shortName(a.name), '이', '가')} ${josa(region(world, id).name, '과', '와')}의 유대를 내어 주었다.${eff.left > 0 ? ' 땅이 갈아엎어진다.' : ''}`, regions: [a.region, id], actors: [a.id], t });
     return harrowOwed(state, world, a, { ...eff, given: true }, t);
   }
   addLog(state, { kind: 'status', text: `${eff.spell}: ${josa(shortName(a.name), '이', '가')} 다시 그려진 땅을 따라 ${toward(region(world, id).name)} 이어졌다.`, regions: [a.region, id], actors: [a.id], t });

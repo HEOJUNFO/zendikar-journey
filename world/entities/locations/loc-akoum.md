@@ -5,9 +5,10 @@ name: 아쿰
 name_en: Akoum
 summary: 젠디카르 북쪽 가운데의 험한 화산 대륙. 검붉은 바위 협곡이 이어지고, 뒤틀린 땅에서 떨어져 나온 바위 조각들이 하늘에 떠 있다
 status: canon
-sources: [ZEN-210, ZEN-223, ZEN-120, ZEN-131, ZEN-146, ZEN-5, ZEN-150, ZEN-152, ZEN-118, ZEN-123, ZEN-133, ZEN-205, ZEN-130, ZEN-137]
+sources: [ZEN-210, ZEN-223, ZEN-120, ZEN-131, ZEN-146, ZEN-5, ZEN-150, ZEN-152, ZEN-118, ZEN-123, ZEN-133, ZEN-205, ZEN-130, ZEN-137, ZEN-145]
 tags: [대륙, 화산, 협곡, 적색]
 links:
+  - { to: cre-ruinous-minotaur, rel: 남서쪽 황무지의 미노타우로스 }
   - { to: spl-mark-of-mutiny, rel: 배우는 주문 (반란의 낙인) }
   - { to: cre-hellfire-mongrel, rel: 남쪽 들판의 용암 사냥개 }
   - { to: spl-elemental-appeal, rel: 배우는 주문 }
@@ -50,6 +51,8 @@ map: { x: 1450, y: 620, terrain: volcanic, size: continent, tiles: 180 }
 
 - 정령의 부름(`spl-elemental-appeal`, ZEN-123)을 여기서 배운다 (4시간). 7/1 불의 정령을 불러 자정까지 부린다 (킥커면 14/1).
 - 첨탑 폭격(`spl-spire-barrage`, ZEN-150)을 여기서 배운다 (4시간). 쥔 산마다 대상에게 피해 1. 고블린의 산악에서 전해지는 주문이다.
+
+- 파멸의 미노타우로스(`cre-ruinous-minotaur`, ZEN-145)가 남서쪽 헤드론 황무지를 날뛴다 ([결정] 2026-10-01). 말 없는 5/2 짐승으로, 그가 피를 볼 때마다 그를 부리는 이가 땅 하나를 내어 준다.
 
 ## 미정/질문
 

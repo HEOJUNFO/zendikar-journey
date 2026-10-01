@@ -11,6 +11,7 @@ import { releaseItems } from './items.ts';
 import { owesDiscard } from './discard.ts';
 import { hooks } from './equipment.ts';
 import { shielded } from './tapper.ts';
+import { harrowOwed } from './harrow.ts';
 import { doubleLife, gainLife, lifeOf } from './life.ts';
 import { actorColors, COLOR_LABELS, manaAvailable, payMana, planPayment } from './mana.ts';
 import { HUNT_HUNGER, KILL_FEED, KO_ACTIVITY, KO_HOURS } from './rules.ts';
@@ -352,6 +353,14 @@ export function clash(state: State, world: World, attacker: Actor, defender: Act
   // "Deals combat damage to a player, that player discards a card": one who holds a spell lets one go.
   for (const [x, dealt, to] of [[attacker, dealtA, defender], [defender, dealtD, attacker]] as const) {
     if (dealt > 0 && !to.dead && to.spells?.length && npcDef(state, world, x.id)?.discardOnHit && !powersSealed(state, world, x, t)) owesDiscard(state, world, to, `${shortName(x.name)}의 손길`, t);
+  }
+  // "Whenever this deals damage to an opponent, sacrifice a land" (Ruinous Minotaur): whoever
+  // controls it gives up a land they hold, their pick (with none, nothing).
+  for (const [x, dealt] of [[attacker, dealtA], [defender, dealtD]] as const) {
+    if (dealt <= 0 || x.dead || !npcDef(state, world, x.id)?.hitSacrificeLand || powersSealed(state, world, x, t)) continue;
+    const controller = masterOf(state, x) ?? x;
+    const owed = harrowOwed(state, world, controller, { type: 'harrow', spell: `${shortName(x.name)}의 파멸`, left: 0, given: false }, t);
+    if (owed) (state.choices ??= []).push(owed);
   }
   // Someone went down: the fight is over.
   if (down(attacker) || down(defender)) {

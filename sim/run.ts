@@ -325,7 +325,7 @@ async function harrowChoice(state: State, world: World, llm: Llm, a: Actor, npc:
       try {
         const what = eff.given
           ? `${eff.spell}: 아직 이어지지 않은 기본 땅(세계 어디든) 하나와 멀리서 유대를 맺는다 (그날 마나를 낸다, 하루 한 땅에 들지 않는다). 그만둘 수도 있다 (남은 수 ${eff.left})`
-          : `${eff.spell}: 먼저 유대를 맺은 땅 하나를 내어 준다 (다시 맺을 수 있다). 어느 땅을?`;
+          : `${eff.spell}: ${eff.left > 0 ? '먼저 ' : ''}유대를 맺은 땅 하나를 내어 준다 (다시 맺을 수 있다). 어느 땅을?`;
         pick = await llm.pick({ world, state, npc, what, options, optional: eff.given });
       } catch (e) {
         console.warn(`pick (harrow) for ${a.id} failed:`, e);

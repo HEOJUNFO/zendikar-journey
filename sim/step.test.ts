@@ -43,6 +43,8 @@ import { upkeepWins } from './win.ts';
 import { allyJoined, hireMerc, hirePrice } from './allies.ts';
 import { askOptions, askText } from './asks.ts';
 import { applyEscape, escapeOptions } from './escape.ts';
+import { applyHarrow } from './harrow.ts';
+import type { HarrowEffect } from './harrow.ts';
 import { shielded, tapBlocked } from './tapper.ts';
 import type { Actor, State } from './state.ts';
 import { affectedRegions, buildWorld, descendantsOf, distance, landTypes, placeName, realmOf, region, travelHours, within } from './world.ts';
@@ -6395,4 +6397,37 @@ test('the real Reckless Scholar haunts the docks of Sea Gate: talked round, tell
   assert.ok(def.tapLoot && !def.beast && !def.hireable);
   assert.deepEqual(ptOf(s), [2, 1]);
   assert.equal(swayBlocked(state, world, s), null);
+});
+
+test('Ruinous Minotaur: each exchange it deals damage in, whoever controls it gives up a land, their pick; one holding none gives nothing', () => {
+  const mino = { ...npcSim('loc-a', 'work', [5, 2]), needs: ['energy', 'hunger'], beast: true, hit_sacrifice_land: true };
+  const world = fixture([npc('chr-r', mino), npc('chr-m', npcSim('loc-a')), npc('chr-y', npcSim('loc-a', 'work', [0, 20]))]);
+  const state = newState(world, { seed: 1, mode: 'observer' });
+  const [r, m, y] = ['chr-r', 'chr-m', 'chr-y'].map((id) => state.actors[id]);
+  for (const a of [m, y]) a.tile = r.tile;
+  // On its own, holding no land: nothing to give.
+  clash(state, world, r, y, state.minutes);
+  assert.equal(state.choices?.filter((c) => c.effect.type === 'harrow').length ?? 0, 0);
+  // Its master holds two: one must go.
+  r.master = 'chr-m';
+  m.bonds = ['loc-a', 'loc-b'];
+  const t = state.minutes + 60;
+  clash(state, world, r, y, t);
+  const c = state.choices!.find((x) => x.effect.type === 'harrow')!;
+  assert.equal(c.by, 'chr-m');
+  assert.deepEqual(c.candidates, ['loc-a', 'loc-b']);
+  applyHarrow(state, world, m, c.effect as HarrowEffect, 'loc-b', t);
+  assert.deepEqual(m.bonds, ['loc-a']);
+  const line = texts(state).find((l) => l.includes('의 파멸:'))!;
+  assert.ok(line.includes('유대를 내어 주었다') && !line.includes('갈아엎어진다'));
+});
+
+test('the real Ruinous Minotaur rages in the hedron wastes of Akoum: a 5/2 beast that costs its master lands', () => {
+  const world = loadWorld();
+  const state = newState(world, { seed: 1, mode: 'observer' });
+  const r = state.actors['cre-ruinous-minotaur'];
+  assert.equal(r?.region, 'loc-akoum');
+  assert.deepEqual(ptOf(r), [5, 2]);
+  const def = npcDef(state, world, r.id)!;
+  assert.ok(def.beast && def.hitSacrificeLand && def.needs.includes('hunger'));
 });
