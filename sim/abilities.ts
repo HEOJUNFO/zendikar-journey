@@ -7,7 +7,7 @@ import type { Color } from './mana.ts';
 import { itemsOnLandfall } from './items.ts';
 import { gainLife, lifeOf, loseLife, setLife } from './life.ts';
 import { allyJoined } from './allies.ts';
-import { masterOf, retainersOf } from './retainers.ts';
+import { masterOf, releaseRetainer, retainersOf } from './retainers.ts';
 import { DEPLETED_LABEL } from './rules.ts';
 import { castSpell, spellDef } from './spells.ts';
 import { drawKnowledge } from './knowledge.ts';
@@ -489,7 +489,7 @@ function raiseToken(state: State, world: World, from: Actor, creature: string, f
 
 // New creatures of a kind (MTG tokens) come into being in `regionId` with no master: beasts
 // that don't talk and keep to that land. Returns them.
-export function spawnWild(state: State, world: World, creature: string, pt: [number, number], count: number, regionId: string, colors: Color[], tile?: Tile) {
+export function spawnWild(state: State, world: World, creature: string, pt: [number, number], count: number, regionId: string, colors: Color[], tile?: Tile, abilities: Ability[] = []) {
   const kind = world.lore.find((l) => l.id === creature);
   const kindName = kind?.name ?? creature;
   // A kind that lives in the world as its own card lives by its needs (a baloth hunts when
@@ -508,7 +508,7 @@ export function spawnWild(state: State, world: World, creature: string, pt: [num
       persona: `말을 하지 않는 ${kindName}. ${kind?.summary ?? ''}`,
       goal: '제 땅을 지킨다.',
       pt: [...pt],
-      abilities: [],
+      abilities: [...abilities],
       needs: [...needs],
       beast: true,
       creature,
@@ -523,13 +523,28 @@ export function spawnWild(state: State, world: World, creature: string, pt: [num
       stats: { energy: 80, hunger: 0, coin: 0 },
       pt: [...pt],
       pace: 'normal',
-      abilities: [],
+      abilities: [...abilities],
       needs: [...needs],
       enteredAt: state.minutes,
     };
     out.push(state.actors[id]);
   }
   return out;
+}
+
+// Tokens whose time is up ("exile it at the beginning of the next end step"): gone, no trace.
+export function upkeepFleeting(state: State, t: number) {
+  for (const [id, def] of Object.entries(state.tokens ?? {})) {
+    const a = state.actors[id];
+    if (def.vanishAt === undefined || def.vanishAt > t || !a || a.dead) continue;
+    a.dead = { at: t, cause: '사라짐' };
+    a.left = true;
+    for (const r of retainersOf(state, a.id)) releaseRetainer(state, r, `${shortName(a.name)}이(가) 사라짐`);
+    a.task = undefined;
+    a.forced = undefined;
+    a.travel = undefined;
+    addLog(state, { kind: 'event', text: `${josa(shortName(a.name), '이', '가')} 흩어져 사라졌다.`, regions: [a.region], actors: [a.id], t });
+  }
 }
 
 // --- Summoning Trap: "look at the top N cards of your library, put a creature onto the battlefield" ---

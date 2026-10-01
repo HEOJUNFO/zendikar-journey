@@ -196,6 +196,7 @@ const ManaSchema = z.partialRecord(z.enum(COLORS), z.number().int().min(1));
 // Power / toughness, as on the card. Combat damage piles up against toughness until the turn
 // ends; reaching it is death.
 const PtSchema = z.tuple([z.number().int().min(0), z.number().int().min(1)]);
+const PtBonusSchema = z.tuple([z.number().int().min(0), z.number().int().min(0)]);
 export type Pt = z.infer<typeof PtSchema>;
 
 // What an activated ability does (world/entities/characters sim.activated).
@@ -535,6 +536,12 @@ export const SpellSimSchema = z.strictObject({
           kicked_count: z.number().int().positive().optional(),
           pt: z.tuple([z.number().int().min(0), z.number().int().min(1)]),
           colors: z.array(z.enum(COLORS)),
+          // Keywords the tokens have (Elemental Appeal: trample, haste).
+          abilities: z.array(z.enum(ABILITIES)).optional(),
+          // "Exile it at the beginning of the next end step": gone at midnight.
+          until_midnight: z.boolean().optional(),
+          // "If kicked, that creature gets +P/+T until end of turn".
+          kicked_pump: PtBonusSchema.optional(),
         }),
       ]),
     )
@@ -660,6 +667,8 @@ export type Region = {
 };
 
 export type NpcDef = {
+  // A token gone at this time (Elemental Appeal's elemental: midnight).
+  vanishAt?: number;
   id: string;
   name: string;
   summary: string;

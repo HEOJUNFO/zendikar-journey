@@ -18,7 +18,7 @@ import { addLog, npcDef, present, ptOf, targetable, untargetableText } from './s
 import type { Actor, State } from './state.ts';
 import { sealedBy, sealText } from './seal.ts';
 import { josa, shortName } from './text.ts';
-import { LAND_TYPE_LABELS, landTypes, placeName, region, spellColors } from './world.ts';
+import { ABILITY_LABELS, LAND_TYPE_LABELS, landTypes, placeName, region, spellColors } from './world.ts';
 import type { LandType } from './world.ts';
 import type { SpellDef, World } from './world.ts';
 
@@ -203,10 +203,14 @@ export function castSpell(state: State, world: World, a: Actor, spellId: string,
       else addLog(state, { kind: 'status', text: `${josa(shortName(target.name), '은', '는')} ${josa(LAND_TYPE_LABELS[eff.land], '과', '와')} 이어져 있지 않아 얻은 것이 없다.`, regions: [target.region], actors: [target.id], t });
     } else if (eff.type === 'create_retainers') {
       const n = kicked && eff.kicked_count ? eff.kicked_count : eff.count;
-      const born = spawnWild(state, world, eff.creature, eff.pt, n, a.region, eff.colors, a.tile);
-      for (const b of born) b.master = a.id;
+      const born = spawnWild(state, world, eff.creature, eff.pt, n, a.region, eff.colors, a.tile, eff.abilities ?? []);
+      for (const b of born) {
+        b.master = a.id;
+        if (eff.until_midnight) state.tokens![b.id].vanishAt = untapTime(t);
+        if (kicked && eff.kicked_pump) b.pumps = [...(b.pumps ?? []), { pt: [...eff.kicked_pump], until: untapTime(t) }];
+      }
       const kind = world.lore.find((l) => l.id === eff.creature)?.name ?? eff.creature;
-      addLog(state, { kind: 'event', text: `${kind} ${n}명이 나타나 ${shortName(a.name)}에게 서약했다 (${eff.pt.join('/')}, 권속).`, regions: [a.region], actors: [a.id, ...born.map((b) => b.id)] });
+      addLog(state, { kind: 'event', text: eff.until_midnight ? `${josa(shortName(a.name), '이', '가')} ${josa(kind, '을', '를')} 불러냈다 (${ptOf(born[0]).join('/')}${eff.abilities?.length ? `, ${eff.abilities.map((x) => ABILITY_LABELS[x]).join('·')}` : ''}, 권속, 자정에 사라진다).` : `${kind} ${n}명이 나타나 ${shortName(a.name)}에게 서약했다 (${eff.pt.join('/')}, 권속).`, regions: [a.region], actors: [a.id, ...born.map((b) => b.id)] });
     } else if (eff.type === 'aura') {
       const added = eff.abilities.filter((ab) => !target.abilities.includes(ab));
       target.auras = [...(target.auras ?? []), { spell: s.id, name: s.name, by: a.id, pt: [...eff.pt], ...(eff.base_pt ? { base: [...eff.base_pt] as [number, number] } : {}), doubleLifeOnHit: eff.double_life_on_hit, ...(added.length ? { added } : {}) }];

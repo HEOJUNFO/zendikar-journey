@@ -27,7 +27,7 @@ import { handSize } from './knowledge.ts';
 import { recall, RECALL_HOURS, recallBlocked } from './loremaster.ts';
 import { addLog, alive, here, landUnusable, needsOf, npcDef, outOfTime, present, ptOf, random, together } from './state.ts';
 import { addFoe, attackBlocked, dealDamage, foesOf, hostileNpcs } from './combat.ts';
-import { bondBlocked, bondLand, expireGranted, onEnter, FETCH_HOURS, fetchLand, fetchSource, growBlocked, growEntered, growLand, spawnWild, summonLibrary, upkeepRevive, useAbility } from './abilities.ts';
+import { bondBlocked, bondLand, expireGranted, upkeepFleeting, onEnter, FETCH_HOURS, fetchLand, fetchSource, growBlocked, growEntered, growLand, spawnWild, summonLibrary, upkeepRevive, useAbility } from './abilities.ts';
 import { CLAIM_HOURS, claimBlocked, claimItem, itemsAt, itemTile } from './items.ts';
 import { EON_HOURS, eonLand, holdStill, spendBlocked, spendDay, storeBlocked, storeDay, timeNews } from './eons.ts';
 import { upkeepWins } from './win.ts';
@@ -103,6 +103,7 @@ function startDay(state: State, world: World, t: number) {
   // The upkeep: at a turn's start. Who is out of time today hears so first.
   if (minuteOfDay(t) === 0) {
     timeNews(state, world, t);
+    upkeepFleeting(state, t);
     expireGranted(state, t);
     upkeepRevive(state, world, t);
     upkeepWins(state, world, t);

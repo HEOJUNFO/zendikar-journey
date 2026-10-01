@@ -440,7 +440,13 @@ function spellEffectText(e: SpellEffect) {
     case 'destroy_relics':
       return `그 자리의 마법물체·부여마법 ${e.count}까지 파괴 (첫째는 반드시)`;
     case 'create_retainers':
-      return `${e.pt.join('/')} 권속 ${e.count}${e.kicked_count ? ` (킥커 시 ${e.kicked_count})` : ''}`;
+      return `${e.pt.join('/')} 권속 ${e.count}${e.kicked_count ? ` (킥커 시 ${e.kicked_count})` : ''}${e.abilities?.length ? `, ${e.abilities.join(', ')}` : ''}${e.until_midnight ? ', 자정에 사라짐' : ''}${e.kicked_pump ? ` (킥커 시 +${e.kicked_pump.join('/+')})` : ''}`;
+    case 'hunt_creatures':
+      return `모르는 비밀 ${e.count}을 더듬어 생물의 자취만 앎`;
+    case 'destroy_all':
+      return '같은 칸의 모두를 파괴 (시전자도, 플레인즈워커 빼고)';
+    case 'demolish':
+      return '그 칸의 마법물체나 땅 하나를 골라 파괴';
   }
 }
 

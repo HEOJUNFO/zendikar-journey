@@ -2675,6 +2675,34 @@ test('a spell of one\'s own: soldiers born at the caster\'s side as retainers; a
   assert.equal(s3.choices?.length ?? 0, 0); // no one to pick
 });
 
+test('Elemental Appeal: a 7/1 trampling, hasty elemental serves the caster until midnight; kicked, 14/1 for the day', async () => {
+  const appeal: RawEntity = { id: 'spl-ea', kind: 'spell', name: '정령의 부름', status: 'canon', sim: { cost: '{R}', learn_at: 'loc-a', target: 'self', kicker: { mana: '{1}' }, effects: [{ type: 'create_retainers', creature: 'cre-e', count: 1, pt: [7, 1], colors: ['R'], abilities: ['trample', 'haste'], until_midnight: true, kicked_pump: [7, 0] }] } };
+  const world = fixture([appeal, lore('cre-e', 'creature'), npc('chr-c', { ...npcSim('loc-a'), mana: { R: 4 } })]);
+  const state = newState(world, { seed: 1, mode: 'observer' });
+  const c = state.actors['chr-c'];
+  c.spells = ['spl-ea'];
+  castSpell(state, world, c, 'spl-ea', c.id, true, state.minutes);
+  const [e] = retainersOf(state, c.id);
+  assert.deepEqual(ptOf(e), [14, 1]);
+  assert.ok(hasAbility(e, 'trample', state.minutes) && hasAbility(e, 'haste', state.minutes));
+  assert.ok(texts(state).some((l) => l.includes('자정에 사라진다')));
+  castSpell(state, world, c, 'spl-ea', c.id, false, state.minutes);
+  const unkicked = retainersOf(state, c.id).find((x) => x.id !== e.id)!;
+  assert.deepEqual(ptOf(unkicked), [7, 1]);
+  // Midnight: both gone.
+  await advance(state, world, 19, { planDay: async () => [] });
+  assert.ok(e.dead && e.left && unkicked.dead);
+  assert.deepEqual(retainersOf(state, c.id), []);
+  assert.ok(texts(state).some((l) => l.includes('흩어져 사라졌다')));
+});
+
+test('the real Elemental Appeal is taught in Akoum', () => {
+  const world = loadWorld();
+  const s = world.spells.find((x) => x.id === 'spl-elemental-appeal')!;
+  assert.equal(s.learnAt, 'loc-akoum');
+  assert.equal(s.kicker?.manaText, '{5}');
+});
+
 test('the real Conqueror\'s Pledge is taught in Ondu: six Kor Soldiers, twelve kicked for {6}', () => {
   const world = loadWorld();
   const s = world.spells.find((x) => x.id === 'spl-conquerors-pledge')!;

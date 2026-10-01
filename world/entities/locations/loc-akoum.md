@@ -5,9 +5,10 @@ name: 아쿰
 name_en: Akoum
 summary: 젠디카르 동쪽의 험한 화산 대륙. 검붉은 바위 협곡이 이어지고, 뒤틀린 땅에서 떨어져 나온 바위 조각들이 하늘에 떠 있다
 status: canon
-sources: [ZEN-210, ZEN-223, ZEN-120, ZEN-131, ZEN-146, ZEN-5, ZEN-150, ZEN-152, ZEN-118]
+sources: [ZEN-210, ZEN-223, ZEN-120, ZEN-131, ZEN-146, ZEN-5, ZEN-150, ZEN-152, ZEN-118, ZEN-123]
 tags: [대륙, 화산, 협곡, 적색]
 links:
+  - { to: spl-elemental-appeal, rel: 배우는 주문 }
   - { to: cre-bladetusk-boar, rel: 눈 덮인 협곡을 내달리는 멧돼지 }
   - { to: chr-tuktuk-grunts, rel: 사는 고블린 용병 }
   - { to: spl-spire-barrage, rel: 가르치는 주문 }
@@ -40,6 +41,7 @@ map: { x: 2236.4, y: 1105.2, terrain: volcanic, size: continent, tiles: 180 }
 
 - 고마 파다(`loc-goma-fada`, ZEN-5): 아쿰 대륙 위를 걸어 다니는 "걸어 다니는 도시", 코르·인간 유목민의 대상단. 로가 대로, 아쿰의 띠, 비탄의 고개를 오간다. 움직이는 기본 산이다 (적 마나). 짐꾼 후르다를 고용할 수 있다.
 
+- 정령의 부름(`spl-elemental-appeal`, ZEN-123)을 여기서 배운다 (4시간). 7/1 불의 정령을 불러 자정까지 부린다 (킥커면 14/1).
 - 첨탑 폭격(`spl-spire-barrage`, ZEN-150)을 여기서 배운다 (4시간). 쥔 산마다 대상에게 피해 1. 고블린의 산악에서 전해지는 주문이다.
 
 ## 미정/질문
