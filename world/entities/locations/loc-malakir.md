@@ -5,7 +5,7 @@ name: 말라키르
 name_en: Malakir
 summary: 굴 드라즈의 흡혈귀 도시. 도시 둘레에 피를 빠는 함정이 깔려 있다
 status: canon
-sources: [ZEN-105, ZEN-81, ZEN-100, ZEN-110]
+sources: [ZEN-105, ZEN-81, ZEN-100, ZEN-110, ZEN-116]
 tags: [흡혈귀, 도시, 흑색, 구역]
 links:
   - { to: loc-guul-draz, rel: 바깥 지역 }
@@ -16,6 +16,7 @@ links:
   - { to: spl-blood-tribute, rel: 가르치는 주문 }
   - { to: spl-sadistic-sacrament, rel: 가르치는 주문 (피의 의례) }
   - { to: chr-malakir-bloodwitch, rel: 도시의 흡혈귀 주술사 }
+  - { to: chr-vampire-nighthawk, rel: 탑 처마의 흡혈귀 밤매 }
 map: { in: loc-guul-draz, terrain: swamp, pos: [-0.4, -0.15], tiles: 25 }   # 기본 늪: 흑 마나 [결정] 2026-09-30. 25칸은 안의 게트 혈족의 영지 포함 [결정] 2026-10-01
 ---
 
@@ -31,6 +32,8 @@ map: { in: loc-guul-draz, terrain: swamp, pos: [-0.4, -0.15], tiles: 25 }   # �
 - 흡혈귀의 주문 피의 공물(`spl-blood-tribute`, ZEN-81)을 배울 수 있다 (4시간). 플레이어도 NPC도.
 - 가학의 성례(`spl-sadistic-sacrament`, ZEN-110)도 배울 수 있다 (4시간, [결정] 2026-10-01): 곁의 한 사람이 아직 익히지 않은 주문을 셋(킥커면 열다섯)까지 골라 그의 앞날에서 도려낸다.
 - 흡혈귀 주술사 말라키르 피마녀(`chr-malakir-bloodwitch`, ZEN-100)가 산다. 날아다니며 백색으로부터 보호받고, 그날 처음 들어서는 곳의 모두에게서 생명을 빨아들인다 ([결정] 2026-09-30).
+
+- 흡혈귀 밤매(`chr-vampire-nighthawk`, ZEN-116)가 북동쪽 탑 처마에 웅크린다 ([결정] 2026-10-01). 비행·죽음의 손길·생명연결을 지닌 말하는 흡혈귀 주술사로, 설득하면 따른다.
 
 ## 미정/질문
 

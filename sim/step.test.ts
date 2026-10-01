@@ -6663,3 +6663,14 @@ test('the real Umara Raptor nests by the falls of the Umara gorge: a flying bird
   bindRetainer(state, world, r, m, state.minutes, '고용');
   assert.equal(r.plusCounters, 1);
 });
+
+test('the real Vampire Nighthawk perches on the towers of Malakir: flying, deathtouch, lifelink, a vampire the Mindless Null may follow', () => {
+  const world = loadWorld();
+  const state = newState(world, { seed: 1, mode: 'observer' });
+  const v = state.actors['chr-vampire-nighthawk'];
+  assert.equal(v?.region, 'loc-malakir');
+  for (const ab of ['fly', 'deathtouch', 'lifelink'] as const) assert.ok(hasAbility(v, ab, state.minutes), ab);
+  assert.equal(creatureOf(state, world, v.id), 'cre-vampire');
+  assert.equal(followBlocked(state, world, state.actors['cre-mindless-null'], v), null);
+  assert.equal(swayBlocked(state, world, v), null);
+});

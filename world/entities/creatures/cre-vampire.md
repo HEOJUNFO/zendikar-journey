@@ -5,7 +5,7 @@ name: 흡혈귀
 name_en: Vampire
 summary: 칼리타스와 게트 혈족을 이루는 흑색의 존재. 칼리타스 손에 죽은 자는 같은 힘을 지닌 흡혈귀로 되살아난다
 status: canon
-sources: [ZEN-99, ZEN-105, ZEN-81, ZEN-100, ZEN-103]
+sources: [ZEN-99, ZEN-105, ZEN-81, ZEN-100, ZEN-103, ZEN-116]
 tags: [흡혈귀, 흑색]
 links:
   - { to: chr-kalitas, rel: 혈족장 }
@@ -13,6 +13,7 @@ links:
   - { to: spl-blood-tribute, rel: 흡혈귀의 주문 }
   - { to: law-retainers, rel: 칼리타스의 권속 }
   - { to: chr-malakir-bloodwitch, rel: 말라키르의 흡혈귀 주술사 }
+  - { to: chr-vampire-nighthawk, rel: 말라키르의 흡혈귀 밤매 }
   - { to: cre-mindless-null, rel: 혈족장이 아닌 흡혈귀가 낳는 공허자 }
 ---
 
