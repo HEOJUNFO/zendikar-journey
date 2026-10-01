@@ -601,6 +601,10 @@ export const SpellSimSchema = z.strictObject({
           // "If kicked, that creature gets +P/+T until end of turn".
           kicked_pump: PtBonusSchema.optional(),
         }),
+        // "Create a token that's a copy of target creature" (kicked: `kicked_count` instead,
+        // Rite of Replication): copies of the target, born the caster's retainers; planeswalkers
+        // can't be copied (sim/replicate.ts).
+        z.strictObject({ type: z.literal('copy_target'), count: z.number().int().positive(), kicked_count: z.number().int().positive().optional() }),
       ]),
     )
     .min(1),
@@ -752,6 +756,8 @@ export type Region = {
 export type NpcDef = {
   // A token gone at this time (Elemental Appeal's elemental: midnight).
   vanishAt?: number;
+  // A token copy of someone (Rite of Replication, sim/replicate.ts): whom it was made from.
+  copyOf?: string;
   id: string;
   name: string;
   summary: string;

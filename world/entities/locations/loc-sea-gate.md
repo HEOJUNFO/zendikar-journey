@@ -5,12 +5,13 @@ name: 바다 관문
 name_en: Sea Gate
 summary: 타짐 해안, 할리마르 분지 어귀의 큰 항구 도시. 인어와 인간이 함께 살고, 원정대가 모이고 떠나는 곳
 status: canon
-sources: [ZEN-63, ZEN-66]
+sources: [ZEN-63, ZEN-66, ZEN-61]
 tags: [도시, 항구, 해안, 인어, 원정대, 청색]
 links:
   - { to: cre-sky-ruin-drake, rel: 용병들이 경계하는 하늘의 드레이크 }
   - { to: loc-tazeem, rel: 바깥 지역 }
   - { to: chr-sea-gate-loremaster, rel: 도시의 전승술사 }
+  - { to: spl-rite-of-replication, rel: 배우는 주문 }
 map: { in: loc-tazeem, terrain: beach, pos: [0, 0.6], tiles: 10 }   # 기본 섬: 청 마나 [결정] 2026-09-30
 ---
 
@@ -25,6 +26,7 @@ map: { in: loc-tazeem, terrain: beach, pos: [0, 0.6], tiles: 10 }   # 기본 섬
 - 타짐 안의 구역이다 (지형 `beach`) ([결정] 2026-09-30: 카드 ZEN-63 의 이름에서, 사용자 요청으로 더함).
 - **기본 섬**이다 ([결정] 2026-09-30): 유대를 맺으면 청 마나 1을 내고, 섬 종류라 페치로 찾을 수 있다.
 - 인어 전승술사(`chr-sea-gate-loremaster`)가 산다.
+- 복제의 의식(`spl-rite-of-replication`)을 배운다: 인어의 물 의식 ([결정] 2026-10-01, ZEN-61).
 
 ## 미정/질문
 

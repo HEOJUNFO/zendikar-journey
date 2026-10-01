@@ -1075,7 +1075,8 @@ async function prepare(state: State, world: World, llm: Llm): Promise<string | n
 
 // Activated abilities characters could use today: untapped and able to pay.
 export function usableAbilities(state: State, world: World, t: number) {
-  return world.npcs
+  // Those born in play too: a copy of a character of legend has their powers (Rite of Replication).
+  return [...world.npcs, ...Object.values(state.tokens ?? {})]
     .filter((being) => state.actors[being.id] && !outOfTime(state, state.actors[being.id], t))
     .flatMap((being) => (being.activated ?? []).filter((x) => !abilityBlocked(state, world, being.id, x, t)).map((ability) => ({ being, ability })));
 }

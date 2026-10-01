@@ -8,7 +8,7 @@ import type { PlanDayInput } from './llm/planner.ts';
 import type { Action } from './actions.ts';
 import { startAction } from './actions.ts';
 import type { World } from './world.ts';
-import { addFoe, attackBlocked, caughtAsleep, clash, dealDamage, die, foesOf, hostileNpcs, intimidated, knockedOut, landwalked, unblockable, woundsOf } from './combat.ts';
+import { addFoe, attackBlocked, caughtAsleep, clash, dealDamage, destroy, die, foesOf, hostileNpcs, intimidated, knockedOut, landwalked, unblockable, woundsOf } from './combat.ts';
 import { landSealed, powersSealed, sealedBy, sealToday, setSeal } from './seal.ts';
 import { castBlocked, castSpell, castTargets, learnBlocked, readyCast } from './spells.ts';
 import { actorColors, COLORS, formatMana, manaAvailable, manaCapacity, parseManaCost, planPayment } from './mana.ts';
@@ -2842,6 +2842,67 @@ test('the real Elemental Appeal is taught in Akoum', () => {
   const s = world.spells.find((x) => x.id === 'spl-elemental-appeal')!;
   assert.equal(s.learnAt, 'loc-akoum');
   assert.equal(s.kicker?.manaText, '{5}');
+});
+
+test('Rite of Replication: a copy of their card, none of what befell them, serves the caster; kicked, five; no planeswalker', () => {
+  const rite: RawEntity = { id: 'spl-r', kind: 'spell', name: '복제의 의식', status: 'canon', sim: { cost: '{U}', learn_at: 'loc-a', target: 'any_here', kicker: { mana: '{1}' }, effects: [{ type: 'copy_target', count: 1, kicked_count: 5 }] } };
+  const world = fixture([rite, walker, npc('chr-c', { ...npcSim('loc-a'), mana: { U: 9 } }), npc('chr-o', { ...npcSim('loc-a', 'social', [2, 3]), abilities: ['fly'] })]);
+  const state = character(world, 'loc-a');
+  const [c, o, w, p] = [state.actors['chr-c'], state.actors['chr-o'], state.actors['chr-w'], state.actors[PLAYER_ID]];
+  for (const x of [o, w, p]) x.tile = c.tile;
+  c.spells = ['spl-r'];
+  // What befell the original: counters, an aura, wounds, spells, bonds, memories.
+  o.plusCounters = 2;
+  o.auras = [{ spell: 'spl-x', name: '오라', by: c.id, pt: [3, 3], doubleLifeOnHit: false, added: ['trample'] }];
+  o.abilities = [...o.abilities, 'trample'];
+  o.wounds = { day: 0, amount: 1 };
+  o.spells = ['spl-r'];
+  o.bonds = ['loc-a'];
+  o.relations = { [p.id]: { name: '나', text: '오랜 벗', t: 0 } };
+  // A planeswalker is no creature.
+  assert.match(castBlocked(state, world, c, 'spl-r', w.id, false, state.minutes) ?? '', /플레인즈워커/);
+  assert.ok(!castTargets(state, c, world.spells.find((x) => x.id === 'spl-r')!).some((x) => x.id === w.id));
+  assert.equal(castBlocked(state, world, c, 'spl-r', o.id, false, state.minutes), null);
+  castSpell(state, world, c, 'spl-r', o.id, false, state.minutes);
+  const [copy] = retainersOf(state, c.id);
+  assert.equal(copy.name, o.name);
+  assert.deepEqual(ptOf(copy), [2, 3]);
+  assert.ok(hasAbility(copy, 'fly', state.minutes) && !hasAbility(copy, 'trample', state.minutes));
+  assert.equal(copy.wounds, undefined);
+  assert.equal(copy.spells, undefined);
+  assert.equal(copy.bonds, undefined);
+  assert.equal(copy.relations?.[p.id], undefined);
+  const def = npcDef(state, world, copy.id)!;
+  assert.equal(def.copyOf, o.id);
+  assert.match(def.persona, /분신/);
+  assert.ok(!def.beast);
+  assert.ok(texts(state).some((l) => l.includes('분신 하나를 빚었다')));
+  // Kicked: five more.
+  castSpell(state, world, c, 'spl-r', o.id, true, state.minutes);
+  assert.equal(retainersOf(state, c.id).length, 6);
+  // The player too: their body by nature.
+  castSpell(state, world, c, 'spl-r', p.id, false, state.minutes);
+  const me = retainersOf(state, c.id).find((x) => npcDef(state, world, x.id)?.copyOf === p.id)!;
+  assert.equal(me.name, '나');
+  assert.equal(me.kind, 'npc');
+  assert.deepEqual(ptOf(me), [1, 1]);
+  // A copy of a fleeting token stays: "exile it at end of turn" is no part of the copy.
+  state.tokens![copy.id].vanishAt = state.minutes + 60;
+  castSpell(state, world, c, 'spl-r', copy.id, false, state.minutes);
+  const twice = retainersOf(state, c.id).find((x) => npcDef(state, world, x.id)?.copyOf === copy.id)!;
+  assert.equal(state.tokens![twice.id].vanishAt, undefined);
+  // A token: no graveyard.
+  destroy(state, twice, state.minutes, '시험', o);
+  assert.ok(!(c.fallen ?? []).includes(twice.id) && !(o.fallen ?? []).includes(twice.id));
+});
+
+test('the real Rite of Replication is taught in Sea Gate: a copy, five kicked for {5}', () => {
+  const world = loadWorld();
+  const s = world.spells.find((x) => x.id === 'spl-rite-of-replication')!;
+  assert.equal(s.learnAt, 'loc-sea-gate');
+  assert.equal(s.target, 'any_here');
+  assert.equal(s.kicker?.manaText, '{5}');
+  assert.deepEqual(s.effects[0], { type: 'copy_target', count: 1, kicked_count: 5 });
 });
 
 test('the real Conqueror\'s Pledge is taught in Ondu: six Kor Soldiers, twelve kicked for {6}', () => {

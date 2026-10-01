@@ -13,6 +13,7 @@ import { castEvents, destroyLand } from './step.ts';
 import { owesDiscard } from './discard.ts';
 import { crushOwed, demolishOptions, demolishOwed, relicsHere } from './relics.ts';
 import { remember } from './relations.ts';
+import { copyable, replicate } from './replicate.ts';
 import { creatureOf, retainersOf } from './retainers.ts';
 import { addLog, npcDef, present, ptOf, targetable, untargetableText } from './state.ts';
 import type { Actor, State } from './state.ts';
@@ -64,6 +65,7 @@ export function castBlocked(state: State, world: World, a: Actor, spellId: strin
     return `${josa(shortName(target.name), '은', '는')} 여기 없다.`;
   if (s.effects.some((e) => e.type === 'destroy_land') && !landToDestroy(state, target))
     return `${josa(shortName(target.name), '은', '는')} 부술 땅을 쥐고 있지 않다.`;
+  if (s.effects.some((e) => e.type === 'copy_target') && !copyable(target)) return `${josa(shortName(target.name), '은', '는')} 생물이 아니다 (플레인즈워커). 복제할 수 없다.`;
   if (s.effects.some((e) => e.type === 'destroy_relics') && !relicsHere(state, world, a.region, a.tile).length) return '여기엔 부술 마법물체도 부여마법도 없다.';
   if (s.effects.some((e) => e.type === 'demolish') && !demolishOptions(state, world, a).length) return '여기엔 부술 마법물체도 땅도 없다.';
   if (s.target !== 'self' && !targetable(target, t, spellColors(s))) return untargetableText(target, t, spellColors(s));
@@ -80,7 +82,8 @@ export function castBlocked(state: State, world: World, a: Actor, spellId: strin
 export function castTargets(state: State, a: Actor, s: SpellDef) {
   if (s.target === 'self') return [a];
   const needsLand = s.effects.some((e) => e.type === 'destroy_land');
-  return present(state, a.region, a.tile).filter((x) => (x.id !== a.id || s.target === 'any_here') && targetable(x, state.minutes, spellColors(s)) && (!needsLand || !!landToDestroy(state, x)));
+  const copies = s.effects.some((e) => e.type === 'copy_target');
+  return present(state, a.region, a.tile).filter((x) => (x.id !== a.id || s.target === 'any_here') && targetable(x, state.minutes, spellColors(s)) && (!needsLand || !!landToDestroy(state, x)) && (!copies || copyable(x)));
 }
 
 // The land "target land" falls on for one: the one they most lately bonded with, standing.
@@ -220,6 +223,8 @@ export function castSpell(state: State, world: World, a: Actor, spellId: string,
       }
       const kind = world.lore.find((l) => l.id === eff.creature)?.name ?? eff.creature;
       addLog(state, { kind: 'event', text: eff.until_midnight ? `${josa(shortName(a.name), '이', '가')} ${josa(kind, '을', '를')} 불러냈다 (${ptOf(born[0]).join('/')}${eff.abilities?.length ? `, ${eff.abilities.map((x) => ABILITY_LABELS[x]).join('·')}` : ''}, 권속, 자정에 사라진다).` : `${kind} ${n}명이 나타나 ${shortName(a.name)}에게 서약했다 (${eff.pt.join('/')}, 권속).`, regions: [a.region], actors: [a.id, ...born.map((b) => b.id)] });
+    } else if (eff.type === 'copy_target') {
+      replicate(state, world, a, target, kicked && eff.kicked_count ? eff.kicked_count : eff.count, t, s.name);
     } else if (eff.type === 'aura') {
       const added = eff.abilities.filter((ab) => !target.abilities.includes(ab));
       target.auras = [...(target.auras ?? []), { spell: s.id, name: s.name, by: a.id, pt: [...eff.pt], ...(eff.base_pt ? { base: [...eff.base_pt] as [number, number] } : {}), doubleLifeOnHit: eff.double_life_on_hit, ...(added.length ? { added } : {}) }];
