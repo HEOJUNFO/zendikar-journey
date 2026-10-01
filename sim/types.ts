@@ -8,9 +8,10 @@
 // learn / cast: learning the block's `spell` where it is taught, or casting one they hold on
 // someone there (spells.ts).
 // recall: tapping a Sea Gate Loremaster they control to draw a spell per Ally (sim/loremaster.ts).
+// equip: putting equipment they hold on the block's `who` (themselves if none; sim/equipment.ts).
 // attack: going after the block's `who` (wherever they are) and falling on them: they become
 // foes and fight from the next hour (sim/combat.ts), as the player's attack.
-export const LIFE_KINDS = ['sleep', 'eat', 'work', 'social', 'leisure', 'bond', 'claim', 'store_day', 'spend_day', 'grow', 'fetch', 'learn', 'cast', 'court', 'hire', 'attack', 'recall'] as const;
+export const LIFE_KINDS = ['sleep', 'eat', 'work', 'social', 'leisure', 'bond', 'claim', 'store_day', 'spend_day', 'grow', 'fetch', 'learn', 'cast', 'court', 'hire', 'attack', 'recall', 'equip'] as const;
 export type LifeKind = (typeof LIFE_KINDS)[number];
 
 // start/end are minutes of the game day, 0..1440, end exclusive.
@@ -26,7 +27,8 @@ export type ScheduleBlock = {
   // learn / cast: the spell.
   spell?: string;
   // court: the beast whose trust they seek (sim/retainers.ts); hire: the mercenary (sim/allies.ts);
-  // social: one they seek out to talk with (optional); attack: one they go after.
+  // social: one they seek out to talk with (optional); attack: one they go after; equip: who
+  // bears it.
   who?: string;
 };
 

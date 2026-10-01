@@ -7,7 +7,7 @@
 // (the Runeflare Trap).
 import { gameDay } from './clock.ts';
 import { eventTile, tileLabel } from './tiles.ts';
-import { itemTile } from './items.ts';
+import { itemWhere } from './items.ts';
 import { foresightText } from './foresight.ts';
 import { addLog, outOfTime, random } from './state.ts';
 import { hirePrice } from './allies.ts';
@@ -53,11 +53,13 @@ export function secretsOf(state: State, world: World, t: number): Secret[] {
   };
   const traps = world.events.map((ev) => ({ id: `trap:${ev.id}`, text: `${spot(ev)}의 ${ev.name}: ${ev.summary}. ${triggerText(ev)}.` }));
   const items = world.items
-    .filter((x) => !state.items?.[x.id]?.gone)
+    .filter((x) => itemWhere(state, world, x))
     .map((x) => {
       const owner = state.items?.[x.id]?.owner;
-      const tile = itemTile(world, x);
-      return { id: `item:${x.id}`, text: `${x.name}이(가) ${placeName(world, region(world, x.at))}${tile ? `(${tileLabel(world, x.at, tile)})` : ''}에 서 있다: ${x.summary}. 길들이는 값 ${x.costText}${owner ? `, 지금은 ${shortName(state.actors[owner]?.name ?? owner)}의 것` : ', 아직 주인이 없다'}.` };
+      const w = itemWhere(state, world, x)!;
+      const where = `${placeName(world, region(world, w.region))}${w.tile ? `(${tileLabel(world, w.region, w.tile)})` : ''}`;
+      const how = w.carried ? `${shortName(state.actors[w.carried]?.name ?? w.carried)}이(가) 지니고 ${where}에 있다` : `${where}에 ${state.items?.[x.id]?.lies ? '떨어져' : '서'} 있다`;
+      return { id: `item:${x.id}`, text: `${x.name}은(는) ${how}: ${x.summary}. 길들이는 값 ${x.costText}${x.equip ? `, 매는 값 ${x.equip.costText}` : ''}${owner ? `, 지금은 ${shortName(state.actors[owner]?.name ?? owner)}의 것` : ', 아직 주인이 없다'}.` };
     });
   const spells = world.spells.map((s) => ({ id: `spell:${s.id}`, text: `주문 ${s.name}(${s.costText})은(는) ${placeName(world, region(world, s.learnAt))}에서 배운다: ${s.summary}.` }));
   const day = gameDay(t);

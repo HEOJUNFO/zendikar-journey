@@ -159,7 +159,7 @@ export function App() {
           )}
         </section>
         <aside className="pane side-pane">
-          <PlayerCard world={world} state={state} />
+          <PlayerCard world={world} state={state} busy={busy} onAct={act} />
           <PeopleList world={world} state={state} />
           <LegendsList world={world} state={state} />
         </aside>

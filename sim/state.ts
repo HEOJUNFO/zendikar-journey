@@ -257,7 +257,9 @@ export type State = {
   talks?: { day: number; count: number };
   // Items (sim/items.ts): who holds each, and the charge counters on it.
   // `gone`: sacrificed (Eldrazi Monument), no longer in the world.
-  items?: Record<string, { name: string; owner?: string; counters: number; gone?: boolean }>;
+  // An item's state: its owner; carried (equipment, with its owner wherever they go), where it
+  // lies dropped (its owner died); on whom it is equipped and what that gave them.
+  items?: Record<string, { name: string; owner?: string; counters: number; gone?: boolean; carried?: boolean; lies?: { region: string; tile?: Tile }; bearer?: string; added?: Ability[] }>;
   // Extra turns (sim/eons.ts): on that game day only `actor` moves; everyone else is out of time.
   extraDays?: { actor: string; day: number }[];
   // Picks an NPC owes (a land's targeted effect as they bonded with it): the LLM makes them

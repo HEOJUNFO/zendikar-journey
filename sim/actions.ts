@@ -11,6 +11,7 @@ import { startTravel, travelBlocked } from './step.ts';
 import { RECALL_HOURS, recallBlocked, recallCount } from './loremaster.ts';
 import { bondBlocked, bondTargets, FETCH_HOURS, fetchBlocked, firesOnBond, growBlocked, targetedBondEffect } from './abilities.ts';
 import { CLAIM_HOURS, claimBlocked, itemDef } from './items.ts';
+import { EQUIP_HOURS, equipBlocked } from './equipment.ts';
 import { EON_HOURS, spendBlocked, storeBlocked } from './eons.ts';
 import { castBlocked, learnBlocked, spellDef } from './spells.ts';
 import { josa, shortName, toward } from './text.ts';
@@ -40,6 +41,8 @@ export const ActionSchema = z.discriminatedUnion('type', [
   z.object({ type: z.literal('cast'), spell: z.string(), to: z.string(), kick: z.boolean().default(false) }),
   // Tame an item that stands here: pay its cost and it becomes yours.
   z.object({ type: z.literal('claim'), item: z.string() }),
+  // Put equipment you hold on yourself or a retainer here (`to`; yourself if none).
+  z.object({ type: z.literal('equip'), item: z.string(), to: z.string().optional() }),
   // Give up a fetch land you hold to seek out a land of its types, from wherever you are.
   // `target`: whom a Valakut's fire falls on, if the land sought is a mountain that wakes it.
   z.object({ type: z.literal('fetch'), from: z.string(), to: z.string(), target: z.string().optional() }),
@@ -175,6 +178,15 @@ export function startAction(state: State, world: World, action: Action): string 
       const x = itemDef(world, action.item)!;
       task = { kind: 'claim', activity: `${x.name} 길들이기`, emoji: '🏺', until: until(CLAIM_HOURS), item: x.id };
       text = `${josa(x.name, '을', '를')} 길들인다 (${x.costText}).`;
+      break;
+    }
+    case 'equip': {
+      const why = equipBlocked(state, world, p, action.item, action.to, t);
+      if (why) return why;
+      const x = itemDef(world, action.item)!;
+      const to = state.actors[action.to ?? p.id];
+      task = { kind: 'equip', activity: `${x.name} 매기`, emoji: '🪝', until: until(EQUIP_HOURS), item: x.id, who: to.id };
+      text = `${josa(x.name, '을', '를')} ${to.id === p.id ? '몸에' : `${shortName(to.name)}에게`} 맨다 (${x.equip!.costText}).`;
       break;
     }
     case 'fetch': {

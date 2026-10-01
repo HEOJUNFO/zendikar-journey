@@ -14,9 +14,9 @@ export const MAP_WIDTH = 2880;
 export const MAP_HEIGHT = 2160;
 
 // fly: can reach sky islands. aquatic: lives in the sea, and only there.
-export const ABILITIES = ['fly', 'aquatic', 'lifelink', 'vigilance', 'haste', 'trample', 'defender', 'shroud', 'swampwalk', 'forestwalk', 'indestructible', 'intimidate', 'first_strike'] as const;
+export const ABILITIES = ['fly', 'aquatic', 'lifelink', 'vigilance', 'haste', 'trample', 'defender', 'shroud', 'swampwalk', 'forestwalk', 'indestructible', 'intimidate', 'first_strike', 'double_strike'] as const;
 export type Ability = (typeof ABILITIES)[number];
-export const ABILITY_LABELS: Record<Ability, string> = { fly: '비행', aquatic: '물에 삶', lifelink: '생명연결', vigilance: '경계', haste: '속공', trample: '돌진', defender: '수비대', shroud: '방어막', swampwalk: '늪걷기', forestwalk: '숲걷기', indestructible: '파괴불가', intimidate: '위협', first_strike: '선제공격' };
+export const ABILITY_LABELS: Record<Ability, string> = { fly: '비행', aquatic: '물에 삶', lifelink: '생명연결', vigilance: '경계', haste: '속공', trample: '돌진', defender: '수비대', shroud: '방어막', swampwalk: '늪걷기', forestwalk: '숲걷기', indestructible: '파괴불가', intimidate: '위협', first_strike: '선제공격', double_strike: '이중 타격' };
 // Creature types a card may name ("destroy target Angel"), and `artifact` for an artifact
 // creature (마법물체 생물: it may block an intimidating one).
 export const CREATURE_TYPES = ['angel', 'demon', 'artifact'] as const;
@@ -559,6 +559,11 @@ export const ItemSimSchema = z.strictObject({
   at: z.string(),
   // Where in its land it stands, like `home_pos`.
   pos: z.tuple([z.number().min(-1).max(1), z.number().min(-1).max(1)]).optional(),
+  // Equipment (Grappling Hook): tamed, it is carried by its owner (not standing); "Equip <cost>":
+  // its owner pays to put it on themselves or a retainer standing with them, who then has
+  // `abilities`; `lure`: "whenever equipped creature attacks, you may have target creature
+  // block it": the one it falls on can't fly from it (sim/equipment.ts).
+  equip: z.strictObject({ cost: CostSchema, abilities: z.array(z.enum(ABILITIES)).default([]), lure: z.boolean().default(false) }).optional(),
   effects: z
     .array(
       z.discriminatedUnion('type', [
@@ -573,8 +578,8 @@ export const ItemSimSchema = z.strictObject({
         z.strictObject({ type: z.literal('upkeep_sacrifice') }),
       ]),
     )
-    .min(1),
-});
+    .default([]),
+}).refine((x) => x.effects.length > 0 || !!x.equip, '효과(effects)나 장착(equip)이 있어야 한다');
 export type ItemEffect = z.infer<typeof ItemSimSchema>['effects'][number];
 
 export const EventSimSchema = z.discriminatedUnion('trigger', [
@@ -741,6 +746,7 @@ export type ItemDef = {
   at: string;
   effects: ItemEffect[];
   pos?: [number, number];
+  equip?: { cost: ManaCost; costText: string; abilities: Ability[]; lure: boolean };
 };
 
 // Who answers when spoken to.
@@ -955,7 +961,7 @@ export function buildWorld(entities: RawEntity[]): { world: World; errors: strin
         continue;
       }
       const d = sim.data;
-      world.items.push({ id: e.id, name: e.name, summary: e.summary ?? '', cardType: d.card_type, cost: parseManaCost(d.cost)!, costText: d.cost, at: d.at, ...(d.pos ? { pos: d.pos } : {}), effects: d.effects });
+      world.items.push({ id: e.id, name: e.name, summary: e.summary ?? '', cardType: d.card_type, cost: parseManaCost(d.cost)!, costText: d.cost, at: d.at, ...(d.pos ? { pos: d.pos } : {}), effects: d.effects, ...(d.equip ? { equip: { cost: parseManaCost(d.equip.cost)!, costText: d.equip.cost, abilities: d.equip.abilities, lure: d.equip.lure } } : {}) });
     } else {
       err(e.id, `sim 은 location, character, creature, event, spell, item 에만 쓸 수 있음 (${e.kind})`);
     }

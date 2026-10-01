@@ -64,6 +64,9 @@ export type PlanDayInput = {
   court?: { id: string; at: string; text: string }[];
   // Mercenaries they could afford to hire, and where each is now.
   hire?: { id: string; at: string; text: string }[];
+  // Equipment they hold and could pay to put on someone: what it gives, and on whom (themselves
+  // and their retainers).
+  equip?: { text: string; who: { id: string; text: string }[] };
   // Others in the world and where each is now: whom they could seek out to talk with (not
   // beasts) or go after (attack), as the player may anyone standing with them.
   people?: { id: string; at: string; text: string; talk: boolean; attack: boolean }[];
@@ -71,11 +74,12 @@ export type PlanDayInput = {
 
 // Kinds of blocks they may plan: no meals without hunger, taming only if there is an item for
 // them to tame, keeping days only with a land that keeps them.
-function kindsFor(input: Pick<PlanDayInput, 'needs' | 'items' | 'days' | 'grow' | 'recall' | 'fetch' | 'learn' | 'cast' | 'court' | 'hire' | 'people'>) {
+function kindsFor(input: Pick<PlanDayInput, 'needs' | 'items' | 'equip' | 'days' | 'grow' | 'recall' | 'fetch' | 'learn' | 'cast' | 'court' | 'hire' | 'people'>) {
   return LIFE_KINDS.filter(
     (k) =>
       (k !== 'eat' || input.needs.includes('hunger')) &&
       (k !== 'claim' || !!input.items?.length) &&
+      (k !== 'equip' || !!input.equip) &&
       (k !== 'store_day' || !!input.days?.store) &&
       (k !== 'spend_day' || !!input.days?.spend) &&
       (k !== 'grow' || !!input.grow) &&
@@ -116,6 +120,7 @@ export async function planDay(input: PlanDayInput): Promise<ScheduleBlock[] | nu
     (b.kind === 'cast' && !castable.has(b.spell ?? '')) ||
     (b.kind === 'court' && beasts.get(b.who ?? '') !== b.regionId) ||
     (b.kind === 'hire' && mercs.get(b.who ?? '') !== b.regionId) ||
+    (b.kind === 'equip' && !!b.who && !input.equip?.who.some((x) => x.id === b.who)) ||
     (b.kind === 'social' && !!b.who && !people.get(b.who)?.talk) ||
     (b.kind === 'attack' && !people.get(b.who ?? '')?.attack);
   if (blocks?.some(bad)) blocks = null;
@@ -164,6 +169,10 @@ Rules:
 - "bond" takes 4 hours in one region: they make that land theirs and draw its mana each day (at most one land a day; not one already theirs or hunted out). Only if it fits who they are.${
     kinds.includes('claim')
       ? `\n- "claim" takes 1 hour where an item stands: they pay its mana and it becomes theirs (only if they would want it). Items no one holds:\n${items.join('\n')}`
+      : ''
+  }${
+    kinds.includes('equip')
+      ? `\n- "equip" takes 1 hour, and may have "who": the one to bear it (themselves if left out). They pay its mana and put ${input.equip!.text} on them. Who could bear it:\n${input.equip!.who.map((x) => `  - "${x.id}": ${x.text}`).join('\n')}`
       : ''
   }${
     kinds.includes('store_day')

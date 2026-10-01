@@ -3,7 +3,7 @@
 // (enchantments on someone). The caster picks, one at a time: an
 // NPC by the LLM (`llm.pick`), the player as a pick they owe (sim/asks.ts); the first must be
 // picked, the rest may be let be ("up to one other").
-import { itemTile } from './items.ts';
+import { itemWhere, unequip } from './items.ts';
 import { addLog, present, together } from './state.ts';
 import { sameTile } from './tiles.ts';
 import type { Tile } from './tiles.ts';
@@ -17,8 +17,12 @@ export type Relic = { id: string; label: string };
 
 // What stands to be destroyed on `tile` of `regionId`: items standing there, auras on those there.
 export function relicsHere(state: State, world: World, regionId: string, tile: Tile | undefined): Relic[] {
+  // Carried ones (equipment) too, with whoever carries them there.
   const items = world.items
-    .filter((x) => x.at === regionId && sameTile(itemTile(world, x), tile) && !state.items?.[x.id]?.gone)
+    .filter((x) => {
+      const w = itemWhere(state, world, x);
+      return !!w && w.region === regionId && sameTile(w.tile, tile);
+    })
     .map((x) => {
       const owner = state.items?.[x.id]?.owner;
       const kind = x.cardType === 'enchantment' ? '부여마법' : '마법물체';
@@ -34,9 +38,11 @@ export function crushRelic(state: State, world: World, relicId: string, by: Acto
   if (kind === 'item') {
     const def = world.items.find((x) => x.id === rest[0]);
     const s = state.items?.[rest[0]];
-    if (!def || def.at !== by.region || !sameTile(itemTile(world, def), by.tile) || s?.gone) return false;
+    const w = def && itemWhere(state, world, def);
+    if (!def || !w || w.region !== by.region || !sameTile(w.tile, by.tile)) return false;
+    unequip(state, def.id);
     (state.items ??= {})[def.id] = { name: def.name, counters: 0, ...s, owner: undefined, gone: true };
-    addLog(state, { kind: 'event', text: `${region(world, def.at).name}의 ${josa(def.name, '이', '가')} 산산이 부서졌다 (${shortName(by.name)}의 손에).`, regions: [def.at], actors: [by.id, ...(s?.owner ? [s.owner] : [])], t });
+    addLog(state, { kind: 'event', text: `${region(world, w.region).name}의 ${josa(def.name, '이', '가')} 산산이 부서졌다 (${shortName(by.name)}의 손에).`, regions: [def.at], actors: [by.id, ...(s?.owner ? [s.owner] : [])], t });
     return true;
   }
   const [actorId, index, spell] = rest;

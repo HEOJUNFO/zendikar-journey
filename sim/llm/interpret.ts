@@ -12,6 +12,7 @@ import { travelBlocked } from '../step.ts';
 import { shortName } from '../text.ts';
 import { bondEffectText, placeName, region, TERRAINS } from '../world.ts';
 import { itemsAt, itemOwner } from '../items.ts';
+import { equipBlocked, equipmentOf, equipTargets } from '../equipment.ts';
 import { loremastersOf, recallBlocked, recallCount } from '../loremaster.ts';
 import { enteredToday, fetchTargets, fireTargets, growBlocked, growLand, targetedBondEffect } from '../abilities.ts';
 import { eonLand, spendBlocked, storeBlocked } from '../eons.ts';
@@ -38,7 +39,7 @@ export async function interpret({ world, state, text }: InterpretInput): Promise
     });
   const taught = spellsTaughtAt(world, p.region).filter((s) => !p.spells?.includes(s.id));
   const known = world.spells.filter((s) => p.spells?.includes(s.id));
-  const items = itemsAt(world, p.region).filter((x) => !itemOwner(state, x.id));
+  const items = itemsAt(state, world, p.region).filter((x) => !itemOwner(state, x.id));
   const fetches = world.regions
     .filter((r) => r.fetch && p.bonds?.includes(r.id))
     .flatMap((r) => fetchTargets(state, world, p, r.id).map((to) => `- {"type":"fetch","from":"${r.id}","to":"${to.id}"}  (give up ${r.name} and ${r.fetch!.life} life to bond with ${placeName(world, to)} from afar)`));
@@ -55,6 +56,12 @@ export async function interpret({ world, state, text }: InterpretInput): Promise
   if (grower && !growBlocked(state, world, p, grower.id, state.minutes)) {
     const who = enteredToday(state, world, grower.growEntered!.color, state.minutes).map((x) => shortName(x.name));
     days.push(`- {"type":"grow","land":"${grower.id}"}  (call on ${grower.name}: a +1/+1 counter on each creature of its color that came into the world today, whoever they belong to: ${who.join(', ')}; 1 hour)`);
+  }
+  // Equipment they hold: put it on themselves or a retainer here.
+  for (const x of equipmentOf(state, world, p)) {
+    for (const to of equipTargets(state, p).filter((y) => !equipBlocked(state, world, p, x.id, y.id, state.minutes))) {
+      days.push(`- {"type":"equip","item":"${x.id}","to":"${to.id}"}  (pay ${x.equip!.costText} to put ${x.name} on ${to.id === p.id ? 'themselves' : shortName(to.name)}: they have ${x.equip!.abilities.join(', ')}${x.equip!.lure ? ', and whoever they fall on cannot fly off' : ''}; 1 hour)`);
+    }
   }
   // A Sea Gate Loremaster they control: draw a spell per Ally of their party.
   if (!recallBlocked(state, world, p, state.minutes)) {

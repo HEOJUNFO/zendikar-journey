@@ -6,6 +6,7 @@ import { gainLife, lifeOf } from './life.ts';
 import { formatMana, manaAvailable, payMana, planPayment } from './mana.ts';
 import { addLog, npcDef } from './state.ts';
 import type { Actor, State } from './state.ts';
+import type { Tile } from './tiles.ts';
 import { josa, shortName } from './text.ts';
 import { canStay, placeName, region } from './world.ts';
 import type { ItemDef, World } from './world.ts';
@@ -17,8 +18,23 @@ export function itemDef(world: World, id: string) {
   return world.items.find((x) => x.id === id);
 }
 
-export function itemsAt(world: World, regionId: string) {
-  return world.items.filter((x) => x.at === regionId);
+// Where an item is now: where it stands (or lies, dropped), or with its owner if they carry it
+// (equipment). Undefined once gone.
+export function itemWhere(state: State, world: World, x: ItemDef): { region: string; tile?: Tile; carried?: string } | undefined {
+  const s = state.items?.[x.id];
+  if (s?.gone) return undefined;
+  const owner = s?.owner ? state.actors[s.owner] : undefined;
+  if (x.equip && owner && !owner.dead) return { region: owner.region, tile: owner.tile, carried: owner.id };
+  if (s?.lies) return { region: s.lies.region, tile: s.lies.tile };
+  return { region: x.at, tile: itemTile(world, x) };
+}
+
+// Items standing (or lying) in a land, not carried by anyone.
+export function itemsAt(state: State, world: World, regionId: string) {
+  return world.items.filter((x) => {
+    const w = itemWhere(state, world, x);
+    return w && !w.carried && w.region === regionId;
+  });
 }
 
 // The tile of its land an item stands on: always the same one (sim/tiles.ts).
@@ -40,12 +56,16 @@ export function claimBlocked(state: State, world: World, a: Actor, itemId: strin
   const owner = itemOwner(state, x.id);
   if (owner === a.id) return `이미 ${josa(x.name, '을', '를')} 길들였다.`;
   if (owner) return `${josa(x.name, '은', '는')} 이미 ${shortName(state.actors[owner]?.name ?? owner)}의 것이다.`;
-  if (a.region !== x.at) return `${josa(x.name, '은', '는')} ${placeName(world, region(world, x.at))}에 있다.`;
-  const at = itemTile(world, x);
-  if (at && !sameTile(a.tile, at)) return `${josa(x.name, '은', '는')} ${tileLabel(world, x.at, at)}에 서 있다.`;
+  const w = itemWhere(state, world, x)!;
+  if (a.region !== w.region) return `${josa(x.name, '은', '는')} ${placeName(world, region(world, w.region))}에 있다.`;
+  if (w.tile && !sameTile(a.tile, w.tile)) return `${josa(x.name, '은', '는')} ${tileLabel(world, w.region, w.tile)}에 ${s_lies(state, x.id) ? '떨어져 있다' : '서 있다'}.`;
   if (!planPayment(manaAvailable(state, world, a, t), x.cost))
     return `마나가 모자라다 (${x.costText}, 지금 ${formatMana(manaAvailable(state, world, a, t))}).`;
   return null;
+}
+
+function s_lies(state: State, id: string) {
+  return !!state.items?.[id]?.lies;
 }
 
 // Items an NPC could set out to tame today: no one holds them, they can stand where the item
@@ -54,7 +74,7 @@ export function claimableItems(state: State, world: World, a: Actor, t: number) 
   const def = npcDef(state, world, a.id);
   if (!def || def.beast) return [];
   return world.items.filter(
-    (x) => !itemOwner(state, x.id) && !state.items?.[x.id]?.gone && canStay(region(world, x.at), def.abilities) && planPayment(manaAvailable(state, world, a, t), x.cost),
+    (x) => !itemOwner(state, x.id) && !!itemWhere(state, world, x) && canStay(region(world, itemWhere(state, world, x)!.region), def.abilities) && planPayment(manaAvailable(state, world, a, t), x.cost),
   );
 }
 
@@ -69,7 +89,7 @@ export function claimItem(state: State, world: World, a: Actor, itemId: string, 
   }
   payMana(state, world, a, x.cost, t);
   const counters = x.effects.some((e) => e.type === 'charge_life') ? lifeOf(a) : 0;
-  (state.items ??= {})[x.id] = { name: x.name, owner: a.id, counters };
+  (state.items ??= {})[x.id] = { name: x.name, owner: a.id, counters, ...(x.equip ? { carried: true } : {}) };
   // "An artifact entered the battlefield under their control this turn" (Baloth Cage Trap).
   a.claimed = gameDay(t);
   addLog(state, {
@@ -94,10 +114,22 @@ export function itemsOnLandfall(state: State, world: World, a: Actor, t: number)
 }
 
 // Their items stand unheld again (they died or left the plane).
+// What they carried falls where they were.
 export function releaseItems(state: State, a: Actor, t: number) {
   for (const [id, x] of Object.entries(state.items ?? {})) {
     if (x.owner !== a.id) continue;
-    state.items![id] = { name: x.name, counters: 0 };
-    addLog(state, { kind: 'status', text: `${josa(x.name, '은', '는')} 다시 주인 없는 것이 되었다.`, regions: [a.region], actors: [a.id], t });
+    unequip(state, id);
+    state.items![id] = { name: x.name, counters: 0, ...(x.carried ? { lies: { region: a.region, ...(a.tile ? { tile: a.tile } : {}) } } : {}) };
+    addLog(state, { kind: 'status', text: `${josa(x.name, '은', '는')} ${x.carried ? '그 자리에 떨어져 ' : ''}다시 주인 없는 것이 되었다.`, regions: [a.region], actors: [a.id], t });
   }
+}
+
+// Equipment comes off its bearer (sim/equipment.ts): what it gave them goes with it.
+export function unequip(state: State, id: string) {
+  const s = state.items?.[id];
+  if (!s?.bearer) return;
+  const b = state.actors[s.bearer];
+  if (b && s.added?.length) b.abilities = b.abilities.filter((x) => !s.added!.includes(x));
+  delete s.bearer;
+  delete s.added;
 }

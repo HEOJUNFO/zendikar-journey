@@ -23,11 +23,11 @@ import { crushRelic, relicsHere } from './relics.ts';
 import { recallBlocked, recallCount } from './loremaster.ts';
 import { pumpMax, pumpsDue } from './pump.ts';
 import { drawKnowledge, handSize, huntKnowledge, knownSecrets, secretsOf } from './knowledge.ts';
-import { claimBlocked } from './items.ts';
+import { claimBlocked, itemOwner, itemsAt, itemWhere } from './items.ts';
 import { spendBlocked, storeBlocked } from './eons.ts';
 import { applyEnterDestroy, bondBlocked, enterDestroy, onEnter, bondLand, bondTargets, callForth, fetchTargets, fireTargets, firesOnBond, growBlocked, spawnWild, summonLibrary, useAbility } from './abilities.ts';
 import { DEPLETED_LABEL, DESTROYED_DAYS, TRAVEL_UNITS_PER_HOUR } from './rules.ts';
-import { bindRetainer, retainersOf, swayBlocked } from './retainers.ts';
+import { bindRetainer, releaseRetainer, retainersOf, swayBlocked } from './retainers.ts';
 import { joinedToday } from './bounce.ts';
 import { centroid, eventTile, fixedTile, nearestTile, ownsTile, sameTile, TILE, tileCenter, tilesOf, tileSteps, tooSmall } from './tiles.ts';
 import { applyQuell, upkeepQuell } from './quell.ts';
@@ -3038,6 +3038,78 @@ test('the real Crypt Ripper haunts the Crypt of Agadeem, hasty, pumping on black
   assert.ok(hasAbility(r, 'haste', state.minutes));
   assert.equal(npcDef(state, world, r.id)?.pump?.costText, '{B}');
   assert.equal(pumpMax(state, world, r, state.minutes), 4);
+});
+
+test('double strike: a first-strike blow, then a regular one if both stand', () => {
+  const world = fixture([npc('chr-d', { ...npcSim('loc-a', 'work', [2, 4]), abilities: ['double_strike'] }), npc('chr-x', npcSim('loc-a', 'work', [3, 3])), npc('chr-y', npcSim('loc-a', 'work', [2, 2]))]);
+  const state = newState(world, { seed: 1, mode: 'observer' });
+  const [d, x, y] = [state.actors['chr-d'], state.actors['chr-x'], state.actors['chr-y']];
+  clash(state, world, d, x, state.minutes);
+  // 2 first (3/3 stands), then 2 more as x strikes back 3.
+  assert.ok(knockedOut(x));
+  assert.equal(woundsOf(d, state.minutes), 3);
+  assert.ok(texts(state).some((l) => l.includes('두 번 내리쳤다')));
+  // One the first blow fells never strikes back.
+  clash(state, world, d, y, state.minutes);
+  assert.ok(knockedOut(y));
+  assert.equal(woundsOf(d, state.minutes), 3);
+});
+
+const hook: RawEntity = { id: 'itm-h', kind: 'item', name: '갈고리', status: 'canon', sim: { cost: '{1}', at: 'loc-a', equip: { cost: '{1}', abilities: ['double_strike'], lure: true } } };
+
+test('equipment: tamed, it goes where its owner goes; equipped, its bearer double strikes and a flyer it falls on cannot fly off; dropped where its owner falls', async () => {
+  const world = fixture([hook, npc('chr-f', { ...npcSim('loc-b', 'work', [1, 9]), abilities: ['fly'] })]);
+  const state = character(world, 'loc-a');
+  const p = state.actors[PLAYER_ID];
+  p.bonds = ['loc-a', 'loc-b'];
+  await act(state, world, { type: 'claim', item: 'itm-h' });
+  assert.equal(itemOwner(state, 'itm-h'), p.id);
+  assert.deepEqual(itemsAt(state, world, 'loc-a'), []); // carried, not standing
+  await act(state, world, { type: 'equip', item: 'itm-h', to: p.id });
+  assert.ok(hasAbility(p, 'double_strike', state.minutes));
+  await act(state, world, { type: 'move', to: 'loc-b' });
+  assert.equal(itemWhere(state, world, world.items[0])?.region, 'loc-b');
+  // The flyer it falls on is dragged down: no asking to fly off.
+  const f = state.actors['chr-f'];
+  let asked = 0;
+  await act(state, world, { type: 'attack', to: 'chr-f' }, { evade: async () => (asked++, true) });
+  assert.equal(asked, 0);
+  assert.ok(woundsOf(f, state.minutes) >= 2);
+  assert.ok(texts(state).some((l) => l.includes('갈고리에 걸려')));
+  // The owner falls: it lies there, no one's, unequipped.
+  die(state, p, state.minutes, '시험');
+  assert.equal(itemOwner(state, 'itm-h'), undefined);
+  assert.equal(p.abilities.includes('double_strike'), false);
+  assert.deepEqual(itemsAt(state, world, 'loc-b').map((x) => x.id), ['itm-h']);
+  assert.match(claimBlocked(state, world, f, 'itm-h', state.minutes) ?? '', /^$|마나/);
+});
+
+test('an NPC puts its equipment on a retainer by an equip block; it comes off when the retainer leaves its service', async () => {
+  const plan = [
+    ['00:00', '06:00', 'loc-a', 'sleep', '잠', '💤'],
+    ['06:00', '07:00', 'loc-a', 'equip', '갈고리 매기', '🪝', undefined, undefined, 'chr-r'],
+    ['07:00', '24:00', 'loc-a', 'work', '일', '🔨'],
+  ];
+  const world = fixture([hook, npc('chr-m', { ...npcSim('loc-a'), mana: { W: 2 }, plan }), npc('chr-r', npcSim('loc-a'))]);
+  const state = newState(world, { seed: 1, mode: 'observer' });
+  const [m, r] = [state.actors['chr-m'], state.actors['chr-r']];
+  state.items = { 'itm-h': { name: '갈고리', owner: m.id, counters: 0, carried: true } };
+  bindRetainer(state, world, r, m, state.minutes, '설득');
+  await advance(state, world, 1);
+  assert.equal(state.items['itm-h'].bearer, r.id);
+  assert.ok(hasAbility(r, 'double_strike', state.minutes));
+  releaseRetainer(state, r, '시험');
+  await advance(state, world, 1);
+  assert.equal(state.items['itm-h'].bearer, undefined);
+  assert.equal(hasAbility(r, 'double_strike', state.minutes), false);
+});
+
+test('the real Grappling Hook lies in the Makindi Trenches', () => {
+  const world = loadWorld();
+  const x = world.items.find((i) => i.id === 'itm-grappling-hook')!;
+  assert.equal(x.at, 'loc-makindi');
+  assert.deepEqual(x.equip?.abilities, ['double_strike']);
+  assert.ok(x.equip?.lure);
 });
 
 test('first strike: one who has it strikes first, and one it fells never strikes back; both have it, simultaneous', () => {

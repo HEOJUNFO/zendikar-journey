@@ -3,10 +3,11 @@
 // fighting is one exchange: both sides strike at once, except that a tapped (bound) defender
 // can't strike back. A fight with no player in it is not to the death: whoever goes down is
 // knocked out for a few hours and the fight is over.
-import { formatClock, gameDay, STEP_MINUTES } from './clock.ts';
+import { formatClock, gameDay, STEP_MINUTES, untapTime } from './clock.ts';
 import { remember } from './relations.ts';
 import { masterOf, releaseRetainer, retainersOf } from './retainers.ts';
 import { releaseItems } from './items.ts';
+import { hooks } from './equipment.ts';
 import { doubleLife, gainLife, lifeOf } from './life.ts';
 import { actorColors, COLOR_LABELS, manaAvailable, payMana, planPayment } from './mana.ts';
 import { HUNT_HUNGER, KILL_FEED, KO_ACTIVITY, KO_HOURS } from './rules.ts';
@@ -168,6 +169,9 @@ export function caughtAsleep(attacker: Actor, defender: Actor, t: number) {
 // protected one is shielded from, may not.
 export function unblockable(state: State, world: World, attacker: Actor, defender: Actor, t: number, flight = false): string | null {
   if (caughtAsleep(attacker, defender, t)) return '잠든 채 덮쳐져';
+  // A grappling hook: the one its bearer falls on is dragged down, no flying off.
+  const hook = flight ? hooks(state, world, attacker) : undefined;
+  if (hook) return `${hook.name}에 걸려 끌려 내려와`;
   const walked = !flight && landwalked(world, attacker, defender, t);
   if (walked) return `${LAND_TYPE_LABELS[walked]}과 이어진 몸이라 ${LAND_TYPE_LABELS[walked]}을 걷는 적에게`;
   // Protection from a color: one of that color can't block them.
@@ -233,29 +237,41 @@ export function clash(state: State, world: World, attacker: Actor, defender: Act
   };
   const spills = [spill(attacker, defender, ap), tapped ? null : spill(defender, attacker, dp)];
   // First strike: if only one side has it, their blow lands first, and one it fells (dead or
-  // knocked out) never strikes back. Both or neither: simultaneous.
-  const aFirst = hasAbility(attacker, 'first_strike', t);
-  const dFirst = !tapped && hasAbility(defender, 'first_strike', t);
+  // knocked out) never strikes back. Both or neither: simultaneous. Double strike (Grappling
+  // Hook): a first-strike blow and then a regular one too.
+  const aDouble = hasAbility(attacker, 'double_strike', t);
+  const dDouble = !tapped && hasAbility(defender, 'double_strike', t);
+  const aFirst = aDouble || hasAbility(attacker, 'first_strike', t);
+  const dFirst = !tapped && (dDouble || hasAbility(defender, 'first_strike', t));
   const hit = (to: Actor, n: number, by: string) => dealDamage(state, to, n, t, `${josa(by, '과', '와')}의 싸움`, !lethal(attacker, defender));
-  const firstBlow = (from: Actor, to: Actor, n: number) => {
-    hit(to, n, shortName(from.name));
-    if (!down(to)) return false;
-    addLog(state, { kind: 'combat', text: `${josa(shortName(from.name), '이', '가')} 먼저 쳐 ${josa(shortName(to.name), '은', '는')} 되받아치지 못했다 (선제공격).`, regions: [attacker.region], actors: [from.id, to.id] });
-    return true;
-  };
-  if (aFirst && !dFirst) {
-    if (firstBlow(attacker, defender, ap)) [dp, spills[1]] = [0, null];
-    else hit(attacker, dp, d);
-  } else if (dFirst && !aFirst) {
-    if (firstBlow(defender, attacker, dp)) [ap, spills[0]] = [0, null];
-    else hit(defender, ap, a);
-  } else {
+  let [dealtA, dealtD] = [0, 0];
+  if (!aFirst && !dFirst) {
     // Simultaneous: both blows land before either death counts.
     hit(defender, ap, a);
     hit(attacker, dp, d);
+    [dealtA, dealtD] = [ap, dp];
+  } else {
+    // The first-strike step, then the regular one for those without first strike and those
+    // with double strike, if both still stand.
+    if (aFirst) (hit(defender, ap, a), (dealtA += ap));
+    if (dFirst) (hit(attacker, dp, d), (dealtD += dp));
+    const aAgain = (!aFirst || aDouble) && !down(attacker) && !down(defender);
+    const dAgain = (!dFirst || dDouble) && !down(attacker) && !down(defender);
+    if (aAgain) (hit(defender, ap, a), (dealtA += ap));
+    if (dAgain) (hit(attacker, dp, d), (dealtD += dp));
+    for (const [from, to, struck, double] of [[attacker, defender, aFirst, aDouble], [defender, attacker, dFirst, dDouble]] as const) {
+      if (double && dealtOf(from) > 0) addLog(state, { kind: 'combat', text: `${josa(shortName(from.name), '이', '가')} 두 번 내리쳤다 (이중 타격).`, regions: [attacker.region], actors: [from.id, to.id] });
+      else if (struck && down(to) && !(to === defender ? dFirst : aFirst))
+        addLog(state, { kind: 'combat', text: `${josa(shortName(from.name), '이', '가')} 먼저 쳐 ${josa(shortName(to.name), '은', '는')} 되받아치지 못했다 (선제공격).`, regions: [attacker.region], actors: [from.id, to.id] });
+    }
+    if (!dealtD) spills[1] = null;
+    if (!dealtA) spills[0] = null;
+  }
+  function dealtOf(x: Actor) {
+    return x === attacker ? dealtA : dealtD;
   }
   // An aura that doubles its controller's life when its bearer deals combat damage.
-  for (const [x, dealt] of [[attacker, ap], [defender, dp]] as const) {
+  for (const [x, dealt] of [[attacker, dealtA], [defender, dealtD]] as const) {
     if (dealt <= 0) continue;
     lifelink(state, x, dealt, t);
     for (const aura of x.auras ?? []) {
@@ -377,7 +393,13 @@ export function hostileNpcs(state: State, world: World, t: number) {
     // One who can't block it (asleep, protection) can't fly from it either; prey of a landwalker or
     // an intimidator may.
     const walked = unblockable(state, world, a, foe, t);
-    if (!unblockable(state, world, a, foe, t, true) && evasion(a, foe, t) === 'ask') {
+    const pinned = unblockable(state, world, a, foe, t, true);
+    // Pinned: no asking this hour. Hooked ("block it this turn"): they stand and fight it out today.
+    if (pinned && evasion(a, foe, t) === 'ask') {
+      if (hooks(state, world, a)) foe.evasions = [...(foe.evasions ?? []).filter((e) => e.until > t && e.from !== a.id), { from: a.id, evade: false, until: untapTime(t) }];
+      addLog(state, { kind: 'combat', text: `${josa(shortName(foe.name), '은', '는')} ${pinned} 날아 달아나지 못한다.`, regions: [a.region], actors: [foe.id, a.id] });
+    }
+    if (!pinned && evasion(a, foe, t) === 'ask') {
       const f = foe;
       if (f.kind === 'player') {
         const owed = [...(state.choices ?? []), ...(state.asks ?? [])].some((c) => c.effect.type === 'evade' && c.effect.from === a.id);

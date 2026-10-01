@@ -28,7 +28,8 @@ import { recall, RECALL_HOURS, recallBlocked } from './loremaster.ts';
 import { addLog, alive, here, landUnusable, needsOf, npcDef, outOfTime, present, ptOf, random, together } from './state.ts';
 import { addFoe, attackBlocked, dealDamage, foesOf, hostileNpcs } from './combat.ts';
 import { bondBlocked, bondLand, expireGranted, upkeepFleeting, onEnter, FETCH_HOURS, fetchLand, fetchSource, growBlocked, growEntered, growLand, spawnWild, summonLibrary, upkeepRevive, useAbility } from './abilities.ts';
-import { CLAIM_HOURS, claimBlocked, claimItem, itemsAt, itemTile } from './items.ts';
+import { CLAIM_HOURS, claimBlocked, claimItem, itemsAt, itemWhere } from './items.ts';
+import { EQUIP_HOURS, equipBlocked, equipItem, equipmentOf, syncEquipment } from './equipment.ts';
 import { EON_HOURS, eonLand, holdStill, spendBlocked, spendDay, storeBlocked, storeDay, timeNews } from './eons.ts';
 import { upkeepWins } from './win.ts';
 import { CRAWL_FACTOR, dryOut, stranded } from './stranded.ts';
@@ -58,6 +59,7 @@ export function step(state: State, placed: World) {
   gmLayer(state, world, t);
   // Factions: none yet (world/entities/factions is empty).
   regionLayer(state, world, t);
+  syncEquipment(state, world);
   anthemHour(state, world);
   dryOut(state, world, t);
   hostileNpcs(state, world, t);
@@ -70,12 +72,13 @@ export function step(state: State, placed: World) {
     actorHour(state, world, a, t);
     // A timed task done: the player's action, or an NPC's bonding, taming or keeping days.
     const done = a.task?.until !== undefined && a.task.until <= t + STEP_MINUTES && !a.travel;
-    const timed = ['bond', 'claim', 'store_day', 'spend_day', 'grow', 'fetch', 'learn', 'cast', 'court', 'hire', 'recall'];
+    const timed = ['bond', 'claim', 'equip', 'store_day', 'spend_day', 'grow', 'fetch', 'learn', 'cast', 'court', 'hire', 'recall'];
     if (done && (a.kind === 'player' || timed.includes(a.task!.kind))) {
       const at = t + STEP_MINUTES;
       if (a.task!.kind === 'bond') bondLand(state, world, a, at, a.region, a.task!.target);
       if (a.task!.kind === 'learn' && a.task!.spell) learnSpell(state, world, a, a.task!.spell, at);
       if (a.task!.kind === 'claim' && a.task!.item) claimItem(state, world, a, a.task!.item, at);
+      if (a.task!.kind === 'equip' && a.task!.item) equipItem(state, world, a, a.task!.item, a.task!.who, at);
       if (a.task!.kind === 'fetch' && a.task!.from && a.task!.land) fetchLand(state, world, a, a.task!.from, a.task!.land, at, a.task!.target);
       if (a.task!.kind === 'store_day' && a.task!.land) storeDay(state, world, a, a.task!.land, at);
       if (a.task!.kind === 'spend_day' && a.task!.land) spendDay(state, world, a, a.task!.land, at);
@@ -592,8 +595,8 @@ function npcTask(state: State, world: World, a: Actor, t: number): Task | undefi
     }
   } else if (block.kind === 'claim') {
     // An item to tame stands on one tile of its land: they walk to it.
-    const x = itemsAt(world, a.region).find((y) => !state.items?.[y.id]?.owner && !state.items?.[y.id]?.gone);
-    const at = x && itemTile(world, x);
+    const x = itemsAt(state, world, a.region).find((y) => !state.items?.[y.id]?.owner);
+    const at = x && itemWhere(state, world, x)?.tile;
     if (at && !sameTile(at, a.tile)) {
       startTravel(state, world, a, a.region, t, at);
       return a.task;
@@ -602,7 +605,9 @@ function npcTask(state: State, world: World, a: Actor, t: number): Task | undefi
   // Can't get there (or already there): do it here. Nothing can be worked on a destroyed or
   // tapped land. Bonding takes BOND_HOURS, taming CLAIM_HOURS and keeping a day EON_HOURS; each
   // carries on until done (step).
-  const item = block.kind === 'claim' ? itemsAt(world, a.region).find((x) => !claimBlocked(state, world, a, x.id, t)) : undefined;
+  const item = block.kind === 'claim' ? itemsAt(state, world, a.region).find((x) => !claimBlocked(state, world, a, x.id, t)) : undefined;
+  // Equipment they hold, to put on themselves or the block's `who`.
+  const gear = block.kind === 'equip' ? equipmentOf(state, world, a)[0] : undefined;
   // A land's power (Magosi's days, Oran-Rief's growth): the land they hold that has it.
   const power = block.kind === 'store_day' || block.kind === 'spend_day' || block.kind === 'grow';
   const land = block.kind === 'grow' ? growLand(world, a) : power ? eonLand(world, a) : undefined;
@@ -619,14 +624,15 @@ function npcTask(state: State, world: World, a: Actor, t: number): Task | undefi
     : block.kind === 'court' ? courtBlocked(state, world, a, block.who)
     : block.kind === 'hire' ? hireBlocked(state, world, a, block.who)
     : block.kind === 'attack' ? attackBlocked(state, world, a, block.who, t)
-    : block.kind === 'claim' && !item ? (itemsAt(world, a.region).map((x) => claimBlocked(state, world, a, x.id, t))[0] ?? '길들일 것이 없다.')
+    : block.kind === 'equip' ? (gear ? equipBlocked(state, world, a, gear.id, block.who ?? a.id, t) : '맬 것이 없다.')
+    : block.kind === 'claim' && !item ? (itemsAt(state, world, a.region).map((x) => claimBlocked(state, world, a, x.id, t))[0] ?? '길들일 것이 없다.')
     : power && !land ? '그런 힘을 가진 땅이 없다.'
     : block.kind === 'store_day' ? storeBlocked(state, world, a, land!.id, t)
     : block.kind === 'spend_day' ? spendBlocked(state, world, a, land!.id, t)
     : block.kind === 'grow' ? growBlocked(state, world, a, land!.id, t)
     : block.kind === 'recall' ? recallBlocked(state, world, a, t)
     : null;
-  const timed = ['bond', 'claim', 'store_day', 'spend_day', 'grow', 'fetch', 'learn', 'cast', 'court', 'hire', 'recall'];
+  const timed = ['bond', 'claim', 'equip', 'store_day', 'spend_day', 'grow', 'fetch', 'learn', 'cast', 'court', 'hire', 'recall'];
   if (!cannot && timed.includes(block.kind) && a.task?.kind === block.kind) return a.task;
   const task: Task =
     block.kind === 'work' && landUnusable(state, a.region)
@@ -645,6 +651,8 @@ function npcTask(state: State, world: World, a: Actor, t: number): Task | undefi
             ? { kind: block.kind, activity: block.activity, emoji: block.emoji, who: block.who }
           : fetchFrom && 'from' in fetchFrom
             ? { kind: 'fetch', activity: block.activity, emoji: block.emoji, until: t + FETCH_HOURS * 60, from: fetchFrom.from.id, land: block.land }
+          : gear
+            ? { kind: 'equip', activity: block.activity, emoji: block.emoji, until: t + EQUIP_HOURS * 60, item: gear.id, who: block.who ?? a.id }
           : item
             ? { kind: 'claim', activity: block.activity, emoji: block.emoji, until: t + CLAIM_HOURS * 60, item: item.id }
             : land

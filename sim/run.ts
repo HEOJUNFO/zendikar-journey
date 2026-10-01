@@ -9,7 +9,8 @@ import type { Actor, Choice, GmPlan, LogEntry, State } from './state.ts';
 import { eligibleGmEvents, ruinsUntil, step } from './step.ts';
 import { addFoe, clash, dealDamage, unblockable } from './combat.ts';
 import { relationsText, remember } from './relations.ts';
-import { claimableItems } from './items.ts';
+import { claimableItems, itemWhere } from './items.ts';
+import { equipBlocked, equipmentOf, equipTargets } from './equipment.ts';
 import { lifeOf } from './life.ts';
 import { foresightText } from './foresight.ts';
 import { knowledgeText } from './knowledge.ts';
@@ -828,6 +829,8 @@ async function attack(state: State, world: World, p: Actor, npcId: string, llm: 
   // One who can't block the player (asleep, protection) can't fly from them either; prey of a
   // landwalker or an intimidator may (user decision 2026-10-01).
   const inescapable = unblockable(state, world, p, target, state.minutes, true);
+  if (inescapable && flies(target) && !flies(p) && target.boundUntil === undefined)
+    addLog(state, { kind: 'combat', text: `${josa(shortName(target.name), '은', '는')} ${inescapable} 날아 달아나지 못한다.`, regions: [p.region], actors: [target.id, p.id] });
   if (!inescapable && flies(target) && !flies(p) && target.boundUntil === undefined && llm.evade) {
     let evades = false;
     try {
@@ -905,7 +908,8 @@ async function prepare(state: State, world: World, llm: Llm): Promise<string | n
           // Where they could be today, and where they are (one of the sea may lie stranded on land).
           regions: world.regions.filter((r) => canStay(r, npc.abilities) || r.id === a.region).map((r) => ({ ...r, name: placeName(world, r) })),
           stranded: strandedText(world, a),
-          items: claimableItems(state, world, a, state.minutes).map((x) => `  - ${x.id} in ${x.at}: ${x.name} (${x.summary}), costs ${x.costText}`),
+          items: claimableItems(state, world, a, state.minutes).map((x) => `  - ${x.id} in ${itemWhere(state, world, x)?.region ?? x.at}: ${x.name} (${x.summary}), costs ${x.costText}`),
+          equip: equipInput(state, world, a),
           days: daysInput(state, world, a),
           grow: growInput(state, world, a),
           recall: recallInput(state, world, a),
@@ -938,6 +942,20 @@ export function usableAbilities(state: State, world: World, t: number) {
   return world.npcs
     .filter((being) => state.actors[being.id] && !outOfTime(state, state.actors[being.id], t))
     .flatMap((being) => (being.activated ?? []).filter((x) => !abilityBlocked(state, world, being.id, x, t)).map((ability) => ({ being, ability })));
+}
+
+// Equipment they hold and could put on someone today, for their plan.
+function equipInput(state: State, world: World, a: Actor): PlanDayInput['equip'] {
+  const gear = equipmentOf(state, world, a)[0];
+  if (!gear?.equip) return undefined;
+  const who = equipTargets(state, a).filter((x) => !equipBlocked(state, world, a, gear.id, x.id, state.minutes));
+  if (!who.length) return undefined;
+  const bearer = state.items?.[gear.id]?.bearer;
+  const gives = gear.equip.abilities.map((x) => ABILITY_LABELS[x]).join(', ');
+  return {
+    text: `${gear.name} (${gear.summary}; costs ${gear.equip.costText}; the bearer has ${gives}${gear.equip.lure ? ', and whoever they fall on cannot fly off' : ''}${bearer ? `; now on ${shortName(state.actors[bearer]?.name ?? bearer)}` : ''})`,
+    who: who.map((x) => ({ id: x.id, text: x.id === a.id ? 'themselves' : `${shortName(x.name)}, who serves them` })),
+  };
 }
 
 // A Sea Gate Loremaster they control they could tap today, for their plan.

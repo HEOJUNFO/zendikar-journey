@@ -12,6 +12,7 @@ export const KIND_EFFECTS: Record<LifeKind, Effect> = {
   leisure: { energy: -1, hunger: 3, coin: 0 },
   bond: { energy: -1, hunger: 3, coin: 0 },
   claim: { energy: -1, hunger: 3, coin: 0 },
+  equip: { energy: -1, hunger: 3, coin: 0 },
   store_day: { energy: -1, hunger: 3, coin: 0 },
   spend_day: { energy: -1, hunger: 3, coin: 0 },
   grow: { energy: -1, hunger: 3, coin: 0 },

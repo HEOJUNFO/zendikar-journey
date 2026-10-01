@@ -12,6 +12,7 @@ import { loremastersOf, recallBlocked, recallCount } from '../sim/loremaster.ts'
 import { bondBlocked, bondTargets, enteredToday, fetchTargets, fireTargets, firesOnBond, growBlocked, growLand, targetedBondEffect } from '../sim/abilities.ts';
 import { BOND_HOURS } from '../sim/actions.ts';
 import { CLAIM_HOURS, claimBlocked, itemsAt, itemsOf } from '../sim/items.ts';
+import { EQUIP_HOURS, equipBlocked, equipmentOf, equipTargets } from '../sim/equipment.ts';
 import { eonLand, eonsIn, spendBlocked, storeBlocked } from '../sim/eons.ts';
 import { castBlocked, harmful, learnBlocked, spellsTaughtAt } from '../sim/spells.ts';
 import { knownSecrets } from '../sim/knowledge.ts';
@@ -156,7 +157,7 @@ export function RegionCard(props: {
               </p>
             );
           })}
-          {itemsAt(world, r.id)
+          {itemsAt(state, world, r.id)
             .filter((x) => !state.items?.[x.id]?.owner)
             .map((x) => {
               const no = claimBlocked(state, world, p, x.id, state.minutes);
@@ -218,7 +219,7 @@ export function RegionCard(props: {
           ⚠ {c.label} <small>({formatClock(c.until)}까지{c.blocksTravel ? ', 오갈 수 없음' : ''}{c.tapped ? ', 쓸 수 없음' : ''})</small>
         </p>
       ))}
-      {itemsAt(world, r.id).map((x) => {
+      {(state ? itemsAt(state, world, r.id) : world.items.filter((x) => x.at === r.id)).map((x) => {
         const held = state?.items?.[x.id];
         const owner = held?.owner && state?.actors[held.owner];
         return (
@@ -318,7 +319,7 @@ export function PeopleList({ world, state, all }: { world: World; state: State; 
   );
 }
 
-export function PlayerCard({ world, state }: { world: World; state: State }) {
+export function PlayerCard({ world, state, busy, onAct }: { world: World; state: State; busy?: boolean; onAct?: (a: Action) => void }) {
   const p = player(state);
   if (!p) return null;
   return (
@@ -370,9 +371,24 @@ export function PlayerCard({ world, state }: { world: World; state: State }) {
       <p className="muted">
         길들인 것:{' '}
         {itemsOf(state, world, p.id)
-          .map((x) => `${x.name} (담긴 생명 ${state.items![x.id].counters})`)
+          .map((x) => {
+            const bearer = state.items![x.id].bearer;
+            return x.equip ? `${x.name} (${bearer ? `${bearer === p.id ? '내 몸' : shortName(state.actors[bearer]?.name ?? '')}에 매임` : '매지 않음'})` : `${x.name} (담긴 생명 ${state.items![x.id].counters})`;
+          })
           .join(', ') || '없음'}
       </p>
+      {onAct && equipmentOf(state, world, p).flatMap((x) =>
+        equipTargets(state, p).map((to) => {
+          const no = equipBlocked(state, world, p, x.id, to.id, state.minutes);
+          return (
+            <p key={`${x.id}-${to.id}`}>
+              <button disabled={busy || !!no || !!p.forced || p.boundUntil !== undefined} title={no ?? x.summary} onClick={() => onAct({ type: 'equip', item: x.id, to: to.id })}>
+                🪝 {x.name}을(를) {to.id === p.id ? '몸에' : `${shortName(to.name)}에게`} 매기 ({x.equip!.costText}, {EQUIP_HOURS}시간)
+              </button>
+            </p>
+          );
+        }),
+      )}
     </section>
   );
 }
