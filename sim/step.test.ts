@@ -4405,3 +4405,15 @@ test('the real Mold Shambler roams by Kazandu Refuge', () => {
   assert.equal(s?.region, 'loc-kazandu-refuge');
   assert.equal(npcDef(state, world, s.id)?.enterShatter?.kickerText, '{1}{G}');
 });
+
+test('the real Nimana Sell-Sword seeks work in the Free City of Nimana, a basic swamp on the coast of Guul Draz: an Ally for 40 coin', () => {
+  const world = loadWorld();
+  const state = newState(world, { seed: 1, mode: 'observer' });
+  const s = state.actors['chr-nimana-sell-sword'];
+  assert.equal(s?.region, 'loc-nimana');
+  assert.equal(region(world, 'loc-nimana').parent, 'loc-guul-draz');
+  assert.deepEqual(landTypes(region(world, 'loc-nimana')), ['swamp']);
+  const def = world.npcs.find((x) => x.id === 'chr-nimana-sell-sword')!;
+  assert.deepEqual(def.rally, [{ type: 'counter_self' }]);
+  assert.equal(hirePrice(def), 40);
+});

@@ -8,6 +8,7 @@ status: canon
 sources: [ZEN-215, ZEN-68, ZEN-41]
 tags: [섬, 해안, 암초, 청색]
 links:
+  - { to: loc-nimana, rel: 뱃길이 닿는 굴 드라즈의 항구 }
   - { to: loc-jwar-isle-refuge, rel: 안의 구역 }
   - { to: loc-ondu, rel: 붙어 있는 대륙 }
   - { to: cre-sphinx, rel: 사는 스핑크스 }
