@@ -4899,6 +4899,53 @@ test('the real Shatterskull Giant lives in Shatterskull Pass, over the Teeth of 
   assert.deepEqual(def.needs, ['energy', 'hunger']);
 });
 
+test('Timbermaw Larva: the first time a day it falls on someone, +1/+1 per Forest its controller holds until midnight', async () => {
+  const world = fixture([npc('chr-l', { ...npcSim('loc-a', 'social', [2, 2]), attack_pump: { land: 'forest', pt: [1, 1] } }), npc('chr-x', npcSim('loc-a', 'social', [0, 9])), npc('chr-y', npcSim('loc-a', 'social', [0, 9]))]);
+  const state = newState(world, { seed: 1, mode: 'observer' });
+  const [l, x, y] = [state.actors['chr-l'], state.actors['chr-x'], state.actors['chr-y']];
+  for (const a of [x, y]) a.tile = l.tile;
+  // Wild, with no forest: nothing.
+  clash(state, world, l, x, state.minutes);
+  assert.deepEqual(ptOf(l), [2, 2]);
+  // Its own forests count (once a day: the next day).
+  const s2 = newState(world, { seed: 1, mode: 'observer' });
+  const [l2, x2, y2] = [s2.actors['chr-l'], s2.actors['chr-x'], s2.actors['chr-y']];
+  for (const a of [x2, y2]) a.tile = l2.tile;
+  l2.bonds = ['loc-b'];
+  clash(s2, world, l2, x2, s2.minutes);
+  assert.deepEqual(ptOf(l2), [3, 3]);
+  assert.ok(texts(s2).some((t) => t.includes('부풀었다')));
+  clash(s2, world, l2, y2, s2.minutes + 60);
+  assert.deepEqual(ptOf(l2), [3, 3]); // once a day
+  // Struck back at (the defender) it doesn't swell; serving someone, its master's forests count.
+  const s3 = newState(world, { seed: 1, mode: 'observer' });
+  const [l3, x3] = [s3.actors['chr-l'], s3.actors['chr-x']];
+  x3.tile = l3.tile;
+  clash(s3, world, x3, l3, s3.minutes);
+  assert.deepEqual(ptOf(l3), [2, 2]);
+  const m = s3.actors['chr-y'];
+  m.tile = l3.tile;
+  m.bonds = ['loc-b'];
+  l3.master = m.id;
+  l3.bonds = [];
+  clash(s3, world, l3, x3, s3.minutes + 60);
+  assert.deepEqual(ptOf(l3), [3, 3]);
+  // Midnight: gone.
+  await advance(s3, world, 24, { planDay: async () => [] });
+  assert.equal(ptOf(l3)[0] <= 2, true);
+});
+
+test('the real Timbermaw Larva lurks in Oran-Rief: a hungry beast that swells per Forest', () => {
+  const world = loadWorld();
+  const state = newState(world, { seed: 1, mode: 'observer' });
+  const l = state.actors['cre-timbermaw-larva'];
+  assert.equal(l?.region, 'loc-oran-rief');
+  const def = npcDef(state, world, l.id)!;
+  assert.ok(def.beast);
+  assert.deepEqual(def.attackPump, { land: 'forest', pt: [1, 1] });
+  assert.deepEqual(ptOf(l), [2, 2]);
+});
+
 test('the real Oracle of Mul Daya lives in Riverroot, in the Guum Wilds of Bala Ged', () => {
   const world = loadWorld();
   const state = newState(world, { seed: 1, mode: 'observer' });

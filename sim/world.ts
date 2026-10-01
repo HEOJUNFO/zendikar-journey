@@ -338,6 +338,10 @@ export const CharacterSimSchema = z.strictObject({
   // "Gets +P/+T as long as an opponent has no cards in hand" (Guul Draz Specter): while a foe of
   // today standing with them holds no spell (user decision 2026-10-01).
   empty_hand_pump: z.tuple([z.number().int().min(0), z.number().int().min(0)]).optional(),
+  // "Whenever this attacks, it gets +P/+T until end of turn for each <land type> you control"
+  // (Timbermaw Larva: Forest): the first time each day it falls on someone in a fight, +P/+T
+  // until midnight per land of that type its controller holds (user decision 2026-10-01).
+  attack_pump: z.strictObject({ land: z.enum(LAND_TYPES), pt: PtSchema }).optional(),
   // "Whenever this deals combat damage to a player, that player discards a card": one it wounds
   // in a fight lets go of a spell, their pick (sim/discard.ts).
   discard_on_hit: z.boolean().default(false),
@@ -783,6 +787,7 @@ export type NpcDef = {
   extraCombat?: { cost: ManaCost; costText: string };
   pump?: { cost: ManaCost; costText: string; pt: [number, number] };
   emptyHandPump?: [number, number];
+  attackPump?: { land: LandType; pt: [number, number] };
   discardOnHit?: boolean;
   ally?: boolean;
   rally?: ({ type: 'damage_allies' | 'lose_life_allies' | 'reveal_discard' | 'counters_allies' | 'counter_self' } | { type: 'grant_allies'; ability: Ability } | { type: 'token_counter'; creature: string; pt: [number, number]; colors: Color[] })[];
@@ -993,7 +998,7 @@ export function buildWorld(entities: RawEntity[]): { world: World; errors: strin
         err(e.id, `sim 오류: ${issues(sim.error)}`);
         continue;
       }
-      const { knows_colors, activated, wins_at_life, extra_combat, pump, empty_hand_pump, discard_on_hit, landfall_token, landfall_seize, landfall_lose, landfall_grant, landfall_drain, enter_destroy, enter_drain, enter_draw, enter_search, enter_shatter, upkeep_return_land, extra_lands, reveal_top, tap_foe, tap_draw_allies, name, home_pos, ...rest } = sim.data;
+      const { knows_colors, activated, wins_at_life, extra_combat, pump, empty_hand_pump, attack_pump, discard_on_hit, landfall_token, landfall_seize, landfall_lose, landfall_grant, landfall_drain, enter_destroy, enter_drain, enter_draw, enter_search, enter_shatter, upkeep_return_land, extra_lands, reveal_top, tap_foe, tap_draw_allies, name, home_pos, ...rest } = sim.data;
 
       world.npcs.push({
         id: e.id,
@@ -1024,6 +1029,7 @@ export function buildWorld(entities: RawEntity[]): { world: World; errors: strin
         ...(extra_combat ? { extraCombat: { cost: parseManaCost(extra_combat.cost)!, costText: extra_combat.cost } } : {}),
         ...(pump ? { pump: { cost: parseManaCost(pump.cost)!, costText: pump.cost, pt: pump.pt } } : {}),
         ...(empty_hand_pump ? { emptyHandPump: empty_hand_pump } : {}),
+        ...(attack_pump ? { attackPump: attack_pump } : {}),
         ...(discard_on_hit ? { discardOnHit: true } : {}),
         activated: activated.map((x) => ({ ...x, cost: parseManaCost(x.cost)!, costText: x.cost })),
       });

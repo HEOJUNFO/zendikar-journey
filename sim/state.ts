@@ -71,6 +71,8 @@ export type Actor = {
   // The hour they last struck as the attacker (sim/combat.ts `clash`): "attacking creatures"
   // (Arrow Volley Trap).
   attackedAt?: number;
+  // The day their attack trigger last went off (Timbermaw Larva: once a day, sim/combat.ts).
+  attackPumped?: number;
   // Game day they last tamed an item: "an artifact entered under their control" (Baloth Cage Trap).
   claimed?: number;
   // Game day they last sought out a land with a fetch land: "searched their library" (Archive Trap).

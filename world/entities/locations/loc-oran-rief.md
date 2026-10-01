@@ -5,7 +5,7 @@ name: 오란리프, 광대숲
 name_en: Oran-Rief, the Vastwood
 summary: 타짐의 끝없이 자라는 산호 바위 숲. 거목의 뿌리가 바위 위로 아치를 이루고, 그 위 이끼 낀 턱에 엘프들이 산다. 이곳의 기운은 새로 태어난 것들을 북돋운다
 status: canon
-sources: [ZEN-221, ZEN-192, ZEN-162, ZEN-121]
+sources: [ZEN-221, ZEN-192, ZEN-162, ZEN-121, ZEN-189]
 tags: [숲, 거목, 산호바위, 엘프, 녹색]
 links:
   - { to: spl-demolish, rel: 생존주의자들이 아는 주문 }
@@ -13,6 +13,7 @@ links:
   - { to: loc-tazeem, rel: 바깥 지역 }
   - { to: loc-umara-gorge, rel: 곁의 강 협곡 }
   - { to: cre-vastwood-gorger, rel: 땅 밑에서 솟구치는 웜 }
+  - { to: cre-timbermaw-larva, rel: 나무 속의 애벌레 }
 map: { in: loc-tazeem, terrain: forest, color: G, pos: [-0.25, 0.1], tiles: 100 }   # 타짐 내륙 대부분 [배경] ([결정] 2026-10-01 80에서 키움)
 sim:
   nonbasic: true                          # 이름 있는 대지: 숲이 아니다
@@ -36,6 +37,7 @@ sim:
   - 카운터는 죽을 때까지 남는다. 되살아나면 사라진 뒤 새로 시작한다.
   - 오늘 새로 나온 녹색 생물이 없으면 쓸 수 없다 ([가공]).
 - 광대숲 포식자(`cre-vastwood-gorger`, ZEN-192)가 땅 밑에서 솟구쳐 사냥한다. "광대숲"(Vastwood)은 오란리프의 다른 이름이다 ([배경]). 그래서 이 땅의 한글 이름도 "오란리프, 광대숲"으로 한다 ([결정] 2026-09-30, 처음엔 "우거진 땅").
+- 팀버모 애벌레(`cre-timbermaw-larva`, ZEN-189)가 숲 북동쪽 고목들 속에 숨어 산다 (덤빌 때 조종하는 이의 숲마다 부풂).
 - 거대화(`spl-gigantiform`, ZEN-162)를 여기서 배운다. 한 생물을 기본 8/8, 돌진으로 키우는 오라다.
 - 플레이어도 NPC도 쓴다 ([결정] 2026-09-30). NPC는 오늘 녹색 생물이 나온 날 LLM이 짜는 하루에 "숲의 힘"(`grow`)이 열린다.
 

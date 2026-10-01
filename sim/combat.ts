@@ -13,6 +13,7 @@ import { doubleLife, gainLife, lifeOf } from './life.ts';
 import { actorColors, COLOR_LABELS, manaAvailable, payMana, planPayment } from './mana.ts';
 import { HUNT_HUNGER, KILL_FEED, KO_ACTIVITY, KO_HOURS } from './rules.ts';
 import { powersSealed } from './seal.ts';
+import { landsOfType } from './spells.ts';
 import { addLog, awayText, buryCount, hasAbility, needsOf, npcDef, outOfTime, present, protectedFrom, ptOf, random, together } from './state.ts';
 import type { Actor, State } from './state.ts';
 import { hasPowers, LAND_TYPE_LABELS, landTypes } from './world.ts';
@@ -215,6 +216,20 @@ export function refreshEmptyHand(state: State, world: World, a: Actor, t: number
   else delete a.emptyHand;
 }
 
+// "Whenever this attacks, it gets +P/+T until end of turn for each <land type> you control"
+// (Timbermaw Larva): the first time each day it falls on someone (the attacker of an exchange),
+// +P/+T until midnight for each land of that type its controller (master, or itself) holds,
+// not destroyed (user decision 2026-10-01: a turn is a day, it attacks once a day).
+export function attackPump(state: State, world: World, a: Actor, t: number) {
+  const ap = npcDef(state, world, a.id)?.attackPump;
+  if (!ap || a.attackPumped === gameDay(t) || powersSealed(state, world, a, t)) return;
+  a.attackPumped = gameDay(t);
+  const n = landsOfType(state, world, masterOf(state, a) ?? a, ap.land).length;
+  if (n <= 0) return;
+  a.pumps = [...(a.pumps ?? []), { pt: [ap.pt[0] * n, ap.pt[1] * n], until: untapTime(t) }];
+  addLog(state, { kind: 'effect', text: `${josa(shortName(a.name), '이', '가')} 덤벼들며 부풀었다: ${LAND_TYPE_LABELS[ap.land]} ${n}곳의 힘으로 자정까지 +${ap.pt[0] * n}/+${ap.pt[1] * n} (${ptOf(a).join('/')}).`, regions: [a.region], actors: [a.id], t });
+}
+
 export function clash(state: State, world: World, attacker: Actor, defender: Actor, t: number, unblocked: string | null = null) {
   // Foes are made as the blow falls: the specter sees an empty hand from the first exchange.
   // Not yet a foe: the attacker fell on them, a fight they defend.
@@ -224,6 +239,7 @@ export function clash(state: State, world: World, attacker: Actor, defender: Act
   addFoe(attacker, defender.id, t);
   refreshEmptyHand(state, world, attacker, t);
   refreshEmptyHand(state, world, defender, t);
+  attackPump(state, world, attacker, t);
   // Protection from a color: no damage from one of that color.
   const shielded = (from: Actor, to: Actor) => protectedFrom(to, actorColors(state, world, from), t);
   let [ap] = shielded(attacker, defender) ? [0] : ptOf(attacker);
