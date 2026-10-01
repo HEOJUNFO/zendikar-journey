@@ -5013,6 +5013,36 @@ test('a mold shambler arriving: with {1}{G} in its own mana it may break a noncr
   assert.equal(s.enteredDay, gameDay(state.minutes));
 });
 
+test('Goblin Ruinblaster arriving: kicked from its own mana ({R}), it may break a nonbasic land on its tile, and nothing else', async () => {
+  const blaster = { ...npcSim('loc-a', 'work', [2, 1]), mana: { R: 4 }, abilities: ['haste'], enter_shatter: { kicker: '{R}', nonbasic: true } };
+  const relic: RawEntity = { id: 'itm-r', kind: 'item', name: '유물', status: 'canon', sim: { cost: '{0}', at: 'loc-a', effects: [{ type: 'mana', amount: 1 }] } };
+  const named: RawEntity = { ...loc('loc-n', 50, 30, 'volcanic'), sim: { nonbasic: true } };
+  const world = fixture([relic, named, npc('chr-g', blaster), npc('chr-x', npcSim('loc-a', 'work'))]);
+  const state = newState(world, { seed: 1, mode: 'observer' });
+  const [g, x] = [state.actors['chr-g'], state.actors['chr-x']];
+  g.tile = x.tile = itemWhere(state, world, world.items[0])!.tile;
+  x.bonds = ['loc-b', 'loc-n'];
+  onEnter(state, world, g, state.minutes);
+  const c = state.choices!.find((y) => y.effect.type === 'shatter')!;
+  assert.deepEqual(c.candidates, ['land:loc-n']);
+  await advance(state, world, 1, { pick: async ({ options }) => options[0]?.id ?? null });
+  assert.ok(state.regions['loc-n']?.destroyed);
+  assert.ok(!state.regions['loc-b']?.destroyed);
+  assert.equal(manaAvailable(state, world, g, state.minutes).R, 3);
+  assert.ok(texts(state).some((l) => l.includes('폭탄')));
+});
+
+test('the real Goblin Ruinblaster runs the Teeth of Akoum: a speaking goblin shaman, hasty, kicker {R} for a nonbasic land', () => {
+  const world = loadWorld();
+  const state = newState(world, { seed: 1, mode: 'observer' });
+  const g = state.actors['chr-goblin-ruinblaster'];
+  assert.equal(g?.region, 'loc-teeth-of-akoum');
+  const def = npcDef(state, world, g.id)!;
+  assert.ok(!def.beast && hasAbility(g, 'haste', state.minutes));
+  assert.deepEqual(def.enterShatter, { kicker: { generic: 0, colored: { R: 1 } }, kickerText: '{R}', nonbasic: true });
+  assert.deepEqual(ptOf(g), [2, 1]);
+});
+
 test('the real Mold Shambler roams by Kazandu Refuge', () => {
   const world = loadWorld();
   const state = newState(world, { seed: 1, mode: 'observer' });

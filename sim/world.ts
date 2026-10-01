@@ -293,7 +293,8 @@ export const CharacterSimSchema = z.strictObject({
   // gives no mana that day (sim/abilities.ts `enterSearch`).
   // "Kicker …. When this enters, if it was kicked, destroy target noncreature permanent" (Mold
   // Shambler): on its first arrival of the day, paid from its own mana (sim/relics.ts).
-  enter_shatter: z.strictObject({ kicker: CostSchema.optional() }).optional(),
+  // `nonbasic`: only a land of a land card of its own (Goblin Ruinblaster: "destroy target nonbasic land").
+  enter_shatter: z.strictObject({ kicker: CostSchema.optional(), nonbasic: z.boolean().optional() }).optional(),
   // "When this enters, exile target <color> permanent" (Devout Lightcaster: black): sim/banish.ts.
   enter_exile: z.strictObject({ color: z.enum(COLORS) }).optional(),
   enter_search: z.strictObject({ types: z.array(z.enum(LAND_TYPES)).min(1), tapped: z.boolean().default(false) }).optional(),
@@ -838,7 +839,7 @@ export type NpcDef = {
   enterDestroy?: { kind?: CreatureType; kicker?: ManaCost; kickerText?: string };
   enterDrain?: { per: string };
   enterSearch?: { types: LandType[]; tapped: boolean };
-  enterShatter?: { kicker?: ManaCost; kickerText?: string };
+  enterShatter?: { kicker?: ManaCost; kickerText?: string; nonbasic?: boolean };
   enterExile?: { color: Color };
   enterDraw?: { count: number; discard?: number; kicker?: ManaCost; kickerText?: string };
   protection?: Color[];
@@ -1053,7 +1054,7 @@ export function buildWorld(entities: RawEntity[]): { world: World; errors: strin
         ...(enter_drain ? { enterDrain: enter_drain } : {}),
         ...(enter_search ? { enterSearch: enter_search } : {}),
         ...(enter_exile ? { enterExile: { color: enter_exile.color } } : {}),
-        ...(enter_shatter ? { enterShatter: enter_shatter.kicker ? { kicker: parseManaCost(enter_shatter.kicker)!, kickerText: enter_shatter.kicker } : {} } : {}),
+        ...(enter_shatter ? { enterShatter: { ...(enter_shatter.kicker ? { kicker: parseManaCost(enter_shatter.kicker)!, kickerText: enter_shatter.kicker } : {}), ...(enter_shatter.nonbasic ? { nonbasic: true } : {}) } } : {}),
         ...(upkeep_return_land ? { upkeepReturnLand: true } : {}),
         ...(extra_lands ? { extraLands: extra_lands } : {}),
         ...(reveal_top ? { revealTop: true } : {}),

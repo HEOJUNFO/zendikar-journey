@@ -623,13 +623,15 @@ async function choices(state: State, world: World, llm: Llm) {
       }
       continue;
     }
-    // Mold Shambler, arriving: which noncreature permanent on its tile it destroys (or none).
+    // Mold Shambler (Goblin Ruinblaster: a nonbasic land), arriving: which noncreature permanent on its tile it destroys (or none).
     if (c.effect.type === 'shatter') {
       if (by && !by.dead && npc && llm.pick) {
         const options = shatterOptions(state, world, by).filter((o) => c.candidates.includes(o.id));
         let pick: string | null = null;
         try {
-          pick = await llm.pick({ world, state, npc, what: `당신이 이곳에 들어섰다. 힘을 더 들여(${npcDef(state, world, by.id)?.enterShatter?.kickerText ?? ''}) 이 자리의 생물이 아닌 것 하나(마법물체, 부여마법, 땅: 땅은 7일 부서진다)를 무너뜨릴 수 있다. 무너뜨리지 않을 수도 있다`, options, optional: true });
+          const sh = npcDef(state, world, by.id)?.enterShatter;
+          const which = sh?.nonbasic ? '이름 있는 땅(기본 땅이 아닌 곳) 하나: 7일 부서진다' : '생물이 아닌 것 하나(마법물체, 부여마법, 땅: 땅은 7일 부서진다)';
+          pick = await llm.pick({ world, state, npc, what: `당신이 이곳에 들어섰다. 힘을 더 들여(${sh?.kickerText ?? ''}) 이 자리의 ${which}를 무너뜨릴 수 있다. 무너뜨리지 않을 수도 있다`, options, optional: true });
         } catch (e) {
           console.warn(`pick (shatter) for ${by.id} failed:`, e);
         }
