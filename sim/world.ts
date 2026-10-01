@@ -617,6 +617,12 @@ export const SpellSimSchema = z.strictObject({
         // "Destroy target artifact or land" (Demolish): after casting, the caster picks an artifact
         // on their tile, the land they stand in, or a land someone there holds (sim/relics.ts).
         z.strictObject({ type: z.literal('demolish') }),
+        // "Return target permanent you control to its owner's hand" (Narrow Escape): after casting,
+        // the caster picks a being of theirs on their tile (themselves too), a land they hold, an
+        // item of theirs or an aura they cast there; one must be picked (sim/escape.ts).
+        z.strictObject({ type: z.literal('return_own') }),
+        // "You gain N life": the caster.
+        z.strictObject({ type: z.literal('gain_life'), amount: z.number().int().positive() }),
         // "Destroy target non<color> creature. Its controller loses N life" (Hideous End): one on
         // the caster's tile not of that color (a card's; one with none, their lands'), no
         // planeswalker; whoever controls them (their master, or they themselves) loses the life

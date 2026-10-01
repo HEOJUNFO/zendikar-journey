@@ -20,6 +20,7 @@ import { knowledgeText } from './knowledge.ts';
 import { setOff, wandersDue, withPositions } from './wander.ts';
 import { cardLabel, discardOwed, handOf, letGo } from './discard.ts';
 import { applyShatter, crushRelic, demolish, demolishOptions, relicsHere, shatterOptions } from './relics.ts';
+import { applyEscape, escapeOptions } from './escape.ts';
 import { loremastersOf, recallBlocked, recallCount } from './loremaster.ts';
 import { biteable, readyBiter } from './bite.ts';
 import { crumble, sacrifice, sacrificeDefault } from './monument.ts';
@@ -624,6 +625,23 @@ async function choices(state: State, world: World, llm: Llm) {
       }
       if (!options.some((o) => o.id === pick)) pick = options[Math.floor(random(state) * options.length)].id;
       demolish(state, world, by, pick!, c.effect.spell, state.minutes);
+      continue;
+    }
+    // Narrow Escape: one of what they control to return; one must (with no usable answer, at random).
+    if (c.effect.type === 'escape') {
+      if (!by || by.dead || !npc) continue;
+      const options = escapeOptions(state, world, by);
+      if (!options.length) continue;
+      let pick: string | null = null;
+      if (llm.pick) {
+        try {
+          pick = await llm.pick({ world, state, npc, what: `${c.effect.spell}: 당신이 조종하는 것 하나를 거두어들인다. 자신이나 곁의 권속이면 몸에 붙은 힘이 떨어지는 대신 그날의 싸움에서 벗어나 같은 지역의 다른 곳으로 달아나고(토큰은 사라짐), 땅이면 유대를 거두어 다시 맺을 수 있고, 아이템이면 쌓인 것이 흩어지고, 오라면 다시 걸 수 있다`, options });
+        } catch (e) {
+          console.warn(`pick (escape) for ${by.id} failed:`, e);
+        }
+      }
+      if (!options.some((o) => o.id === pick)) pick = options[Math.floor(random(state) * options.length)].id;
+      applyEscape(state, world, by, pick!, c.effect.spell, state.minutes);
       continue;
     }
     // Kabira Evangel's rally: a color for the party's Allies to be protected from, or none.

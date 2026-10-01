@@ -447,6 +447,10 @@ function spellEffectText(e: SpellEffect) {
       return '같은 칸의 모두를 파괴 (시전자도, 플레인즈워커 빼고)';
     case 'demolish':
       return '그 칸의 마법물체나 땅 하나를 골라 파괴';
+    case 'return_own':
+      return '조종하는 것(자신·곁의 권속, 쥔 땅, 아이템, 건 오라) 하나를 되돌림';
+    case 'gain_life':
+      return `시전자가 생명 ${e.amount}을 얻음`;
   }
 }
 

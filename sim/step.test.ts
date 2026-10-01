@@ -42,6 +42,7 @@ import { applyQuell, upkeepQuell } from './quell.ts';
 import { upkeepWins } from './win.ts';
 import { allyJoined, hireMerc, hirePrice } from './allies.ts';
 import { askOptions, askText } from './asks.ts';
+import { applyEscape, escapeOptions } from './escape.ts';
 import type { Actor, State } from './state.ts';
 import { affectedRegions, buildWorld, descendantsOf, distance, landTypes, placeName, realmOf, region, travelHours, within } from './world.ts';
 import type { RawEntity } from './world.ts';
@@ -6084,4 +6085,74 @@ test('the real Molten Ravager rages on the Teeth of Akoum; only the Lullmage Men
   const l = state.actors['chr-lullmage-mentor'];
   assert.equal(followBlocked(state, world, r, l), null);
   assert.ok(followBlocked(state, world, r, state.actors['chr-kalitas'])?.includes('잠재움술사 스승 곁이 아니면'));
+});
+
+const escapeSpell: RawEntity = { id: 'spl-ne', kind: 'spell', name: '아슬아슬한 탈출', status: 'canon', sim: { cost: '{1}', speed: 'instant', learn_at: 'loc-a', target: 'self', effects: [{ type: 'return_own' }, { type: 'gain_life', amount: 4 }] } };
+const besideA: RawEntity = { id: 'loc-az', kind: 'location', name: '곁의 들', status: 'canon', map: { in: 'loc-a', terrain: 'grassland', tiles: 1 } };
+
+test('Narrow Escape by the player in a fight: they gain 4 life, pick themselves, and slip away to another area, stripped, no one\'s foe', async () => {
+  const world = fixture([escapeSpell, besideA, npc('chr-x', npcSim('loc-a', 'work', [1, 20]))]);
+  const state = character(world, 'loc-a');
+  const [p, x] = [state.actors[PLAYER_ID], state.actors['chr-x']];
+  x.tile = p.tile;
+  p.spells = ['spl-ne'];
+  p.bonds = ['loc-b'];
+  p.plusCounters = 2;
+  addFoe(x, p.id, state.minutes);
+  await act(state, world, { type: 'cast', spell: 'spl-ne', to: p.id, kick: false });
+  assert.equal(p.life, 24);
+  if (state.asks?.[0]?.effect.type !== 'escape') await act(state, world, { type: 'wait', hours: 1 });
+  const ask = state.asks![0];
+  assert.equal(ask.effect.type, 'escape');
+  assert.deepEqual(askOptions(state, world, ask).map((o) => o.pick), [`being:${PLAYER_ID}`, 'land:loc-b']);
+  await act(state, world, { type: 'choose', pick: `being:${PLAYER_ID}` });
+  assert.equal(p.region, 'loc-az');
+  assert.equal(p.plusCounters, undefined);
+  assert.ok(!x.foes?.ids.includes(p.id));
+  assert.deepEqual(p.bonds, ['loc-b']);
+});
+
+test('Narrow Escape: a retainer stays its master\'s, one seized goes free, a token is gone; a land is let go; an aura comes off, to be cast again', () => {
+  const world = fixture([escapeSpell, bigAura, besideA, lore('cre-w', 'creature'), npc('chr-c', npcSim('loc-a')), npc('chr-m', npcSim('loc-a')), npc('chr-s', npcSim('loc-a')), npc('chr-y', npcSim('loc-a')), npc('chr-x', npcSim('loc-a'))]);
+  const state = newState(world, { seed: 1, mode: 'observer' });
+  const [c, m, s, y, x] = ['chr-c', 'chr-m', 'chr-s', 'chr-y', 'chr-x'].map((id) => state.actors[id]);
+  for (const a of [m, s, y, x]) a.tile = c.tile;
+  const t = state.minutes;
+  bindRetainer(state, world, m, c, t, '설득');
+  m.plusCounters = 2;
+  addFoe(m, 'chr-y', t);
+  addFoe(y, 'chr-m', t);
+  s.master = c.id;
+  s.seized = true;
+  const [wolf] = spawnWild(state, world, 'cre-w', [2, 2], 1, 'loc-a', ['G'], c.tile);
+  wolf.master = c.id;
+  c.bonds = ['loc-b'];
+  castSpell(state, world, c, 'spl-g', 'chr-x', false, t);
+  assert.ok(c.used?.['spl-g'] !== undefined);
+  const ids = escapeOptions(state, world, c).map((o) => o.id);
+  for (const id of ['being:chr-c', 'being:chr-m', 'being:chr-s', `being:${wolf.id}`, 'land:loc-b', 'aura:chr-x:0']) assert.ok(ids.includes(id), id);
+  assert.ok(!ids.includes('being:chr-y'));
+  applyEscape(state, world, c, 'being:chr-m', '탈출', t);
+  assert.equal(m.master, 'chr-c');
+  assert.equal(m.plusCounters, undefined);
+  assert.equal(m.region, 'loc-az');
+  assert.ok(!y.foes?.ids.includes('chr-m'));
+  applyEscape(state, world, c, 'being:chr-s', '탈출', t);
+  assert.equal(s.master, undefined);
+  applyEscape(state, world, c, `being:${wolf.id}`, '탈출', t);
+  assert.ok(wolf.dead);
+  applyEscape(state, world, c, 'land:loc-b', '탈출', t);
+  assert.deepEqual(c.bonds, []);
+  applyEscape(state, world, c, 'aura:chr-x:0', '탈출', t);
+  assert.equal(x.auras, undefined);
+  assert.ok(!hasAbility(x, 'trample', t));
+  assert.equal(c.used?.['spl-g'], undefined);
+});
+
+test('the real Narrow Escape is taught in Kazandu: an instant, one of your own back, 4 life', () => {
+  const world = loadWorld();
+  const s = world.spells.find((x) => x.id === 'spl-narrow-escape')!;
+  assert.equal(s.learnAt, 'loc-kazandu');
+  assert.equal(s.speed, 'instant');
+  assert.deepEqual(s.effects.map((e) => e.type), ['return_own', 'gain_life']);
 });

@@ -12,6 +12,7 @@ import { grantAbility, spawnWild } from './abilities.ts';
 import { castEvents, destroyLand } from './step.ts';
 import { owesDiscard } from './discard.ts';
 import { crushOwed, demolishOptions, demolishOwed, relicsHere } from './relics.ts';
+import { escapeOptions, escapeOwed } from './escape.ts';
 import { harrowGive, harrowOwed } from './harrow.ts';
 import { remember } from './relations.ts';
 import { copyable, replicate } from './replicate.ts';
@@ -93,6 +94,7 @@ export function castBlocked(state: State, world: World, a: Actor, spellId: strin
   if (s.effects.some((e) => e.type === 'copy_target') && !copyable(target)) return `${josa(shortName(target.name), '은', '는')} 생물이 아니다 (플레인즈워커). 복제할 수 없다.`;
   if (s.effects.some((e) => e.type === 'destroy_relics') && !relicsHere(state, world, a.region, a.tile).length) return '여기엔 부술 마법물체도 부여마법도 없다.';
   if (s.effects.some((e) => e.type === 'demolish') && !demolishOptions(state, world, a).length) return '여기엔 부술 마법물체도 땅도 없다.';
+  if (s.effects.some((e) => e.type === 'return_own') && !escapeOptions(state, world, a).length) return '되돌릴 것이 없다.';
   if (s.effects.some((e) => e.type === 'harrow' || e.type === 'sacrifice_land') && !harrowGive(world, a).length) return `${josa(s.name, '은', '는')} 땅 하나를 내어 주어야 쓴다 (유대를 맺은 땅이 없다).`;
   if (s.target !== 'self' && !targetable(target, t, spellColors(s))) return untargetableText(target, t, spellColors(s));
   if (!planPayment(manaAvailable(state, world, a, t), s.cost))
@@ -278,6 +280,11 @@ export function resolveSpell(state: State, world: World, a: Actor, spellId: stri
     } else if (eff.type === 'demolish') {
       const owed = demolishOwed(state, world, a, s.name, t);
       if (owed) (state.choices ??= []).push(owed);
+    } else if (eff.type === 'return_own') {
+      const owed = escapeOwed(state, world, a, s.name, t);
+      if (owed) (state.choices ??= []).push(owed);
+    } else if (eff.type === 'gain_life') {
+      gainLife(state, a, eff.amount, t, s.name);
     } else if (eff.type === 'destroy_target') {
       // Whose it is, as it falls (a master lets go of the dead).
       const controller = masterOf(state, target) ?? target;

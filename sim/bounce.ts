@@ -34,7 +34,7 @@ export function bounceCandidates(state: State, world: World, regionId: string, t
 
 // Where one flung lands: another area of their region, or the region around the area they
 // are in; one they could go to (not the sea for those of the land, the sky only for flyers).
-function landing(state: State, world: World, a: Actor) {
+export function landing(state: State, world: World, a: Actor) {
   const here = region(world, a.region);
   const top = topOf(world, here);
   const places = [top, ...descendantsOf(world, top.id)].filter((r) => r.id !== here.id && !travelBlocked(state, world, a, r.id));
@@ -55,8 +55,8 @@ export function vanishToken(state: State, a: Actor, t: number, cause: string, ho
 
 // Leaving play and coming back (to a hand, a library): all that was on them falls away (+1/+1
 // counters, auras and what they gave, the day's boosts, wounds) and so does whoever controlled
-// them.
-export function shed(state: State, world: World, a: Actor, cause: string) {
+// them (`keepMaster`: back to their controller's own hand, Narrow Escape, they stay theirs).
+export function shed(state: State, world: World, a: Actor, cause: string, keepMaster = false) {
   const def = npcDef(state, world, a.id);
   const given = (a.auras ?? []).flatMap((x) => x.added ?? []);
   delete a.plusCounters;
@@ -69,7 +69,7 @@ export function shed(state: State, world: World, a: Actor, cause: string) {
   delete a.wounds;
   if (def) a.abilities = [...def.abilities];
   else if (given.length) a.abilities = a.abilities.filter((x) => !given.includes(x));
-  releaseRetainer(state, a, cause);
+  if (!keepMaster) releaseRetainer(state, a, cause);
 }
 
 export function bounce(state: State, world: World, a: Actor, t: number, cause: string) {
