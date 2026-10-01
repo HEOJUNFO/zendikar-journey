@@ -66,7 +66,7 @@ export function formatMana(mana: Mana) {
 
 // A creature's colors: as given, or those of its mana.
 export function creatureColors(def: NpcDef | undefined): Color[] {
-  return def?.colors ?? (Object.keys(def?.mana ?? {}) as Color[]);
+  return def?.colors ?? (Object.keys(def?.mana ?? {}).filter((c) => c !== 'C') as Color[]);
 }
 
 // A being's colors, as a card asks "shares a color with it" (Intimidate): a card's own, or

@@ -191,7 +191,8 @@ export const MapSchema = z.union([
 ]);
 
 // Mana a character holds, from its card: { B: 7 } for {5}{B}{B}.
-const ManaSchema = z.partialRecord(z.enum(COLORS), z.number().int().min(1));
+// A card's mana value in its colors; C: colorless (Stonework Puma {3}), no color of its own.
+const ManaSchema = z.partialRecord(z.enum([...COLORS, 'C']), z.number().int().min(1));
 
 // Power / toughness, as on the card. Combat damage piles up against toughness until the turn
 // ends; reaching it is death.

@@ -5,9 +5,10 @@ name: 동료
 name_en: Allies
 summary: 젠디카르의 원정대. 동료는 한 사람의 무리에 들어 함께 떠돌고 싸우며, 동료가 무리에 들 때마다 무리 안의 동료들이 힘을 낸다
 status: canon
-sources: [ZEN-139, ZEN-95, ZEN-134, ZEN-63, ZEN-64, ZEN-152, ZEN-191, ZEN-79, ZEN-166, ZEN-106]
+sources: [ZEN-139, ZEN-95, ZEN-134, ZEN-63, ZEN-64, ZEN-152, ZEN-191, ZEN-79, ZEN-166, ZEN-106, ZEN-207]
 tags: [규칙, 동료, 원정대]
 links:
+  - { to: cre-stonework-puma, rel: 열세 번째 동료 (무색 마법물체) }
   - { to: chr-nimana-sell-sword, rel: 열 번째 동료 }
   - { to: chr-joraga-bard, rel: 아홉 번째 동료 }
   - { to: chr-bala-ged-thief, rel: 여덟 번째 동료 }

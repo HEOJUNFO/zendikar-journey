@@ -6550,3 +6550,18 @@ test('the real Slaughter Cry is taught in the Tangled Vale: +3/+0 and first stri
   const e = s.effects[0];
   assert.ok(e.type === 'pump_target' && e.pt[0] === 3 && e.abilities.includes('first_strike'));
 });
+
+test('the real Stonework Puma walks the Makindi trails: a colorless artifact Ally, tamed or bought for 30 coin, unafraid of intimidation', () => {
+  const world = loadWorld();
+  const state = newState(world, { seed: 1, mode: 'observer' });
+  const p = state.actors['cre-stonework-puma'];
+  assert.equal(p?.region, 'loc-makindi');
+  const def = npcDef(state, world, p.id)!;
+  assert.ok(def.beast && def.ally && def.hireable && def.types?.includes('artifact'));
+  assert.equal(hirePrice(def), 30);
+  assert.deepEqual(actorColors(state, world, p), []);
+  assert.equal(manaCapacity(state, world, p).C, 3);
+  const boar = state.actors['cre-bladetusk-boar'];
+  assert.equal(intimidated(state, world, boar, p, state.minutes), false);
+  assert.equal(swayBlocked(state, world, p), null);
+});
