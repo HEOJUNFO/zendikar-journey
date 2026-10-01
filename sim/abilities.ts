@@ -6,6 +6,7 @@ import { landTapBlocked, tapLand } from './landtap.ts';
 import type { Color } from './mana.ts';
 import { itemsOnLandfall } from './items.ts';
 import { enterShatter } from './relics.ts';
+import { blazeLand } from './blaze.ts';
 import { gainLife, lifeOf, loseLife, setLife } from './life.ts';
 import { allyJoined } from './allies.ts';
 import { bindRetainer, masterOf, releaseRetainer, retainersOf } from './retainers.ts';
@@ -426,6 +427,8 @@ export function useAbility(state: State, world: World, beingId: string, abilityI
         t,
         scope: 'world',
       });
+    } else if (eff.type === 'blaze_land' && target) {
+      blazeLand(state, world, bs, target, t);
     } else if (eff.type === 'flashback' && target) {
       for (const id of bs.graveyard ?? []) {
         const s = spellDef(world, id);

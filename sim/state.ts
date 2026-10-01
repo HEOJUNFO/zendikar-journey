@@ -194,6 +194,9 @@ export type RegionState = {
   // Destroyed land: in ruins for everyone until `until` (a midnight, DESTROYED_DAYS on).
   // Saves from before it came back have no `until` (sim/step.ts `ruinsUntil`).
   destroyed?: { at: number; source: string; until?: number };
+  // A blaze counter (Obsidian Fireheart): it burns those bonded with it each 00:00, until the
+  // land is destroyed (sim/blaze.ts).
+  blaze?: { by: string; at: number };
 };
 
 export type LogKind =

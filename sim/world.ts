@@ -234,6 +234,9 @@ const AbilityEffectSchema = z.discriminatedUnion('type', [
   // battlefield" (Nissa Revane −7): every living one of that type serving no one, anywhere,
   // comes to the user's side as theirs (user decision 2026-10-01).
   z.strictObject({ type: z.literal('call_kind'), kind: z.enum(CREATURE_TYPES) }),
+  // "Put a blaze counter on target land without a blaze counter on it": the latest land the
+  // target holds that isn't burning; it burns those bonded with it each 00:00 (sim/blaze.ts).
+  z.strictObject({ type: z.literal('blaze_land') }),
 ]);
 export type AbilityEffect = z.infer<typeof AbilityEffectSchema>;
 

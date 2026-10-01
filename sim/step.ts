@@ -37,6 +37,7 @@ import { wanderHour, withPositions } from './wander.ts';
 import { anthemHour, upkeepSacrifice } from './monument.ts';
 import { upkeepQuell } from './quell.ts';
 import { upkeepTide } from './tide.ts';
+import { upkeepBlaze } from './blaze.ts';
 import { HIRE_HOURS, hireBlocked, hireMerc } from './allies.ts';
 import { bounceCandidates, joinedToday } from './bounce.ts';
 import { eventTile, fixedTile, homeTile, nearestTile, sameTile, tileCenter, tileLabel, tilesOf, tileSteps } from './tiles.ts';
@@ -114,6 +115,7 @@ function startDay(state: State, world: World, t: number) {
     upkeepWins(state, world, t);
     upkeepSacrifice(state, world, t);
     upkeepTide(state, world, t);
+    upkeepBlaze(state, world, t);
     upkeepQuell(state, world, t);
     upkeepPossessions(state, t);
   }
@@ -263,6 +265,8 @@ export function destroyLand(state: State, world: World, id: string, by: string[]
   state.regions[id] ??= { conditions: [] };
   if (state.regions[id].destroyed) return false;
   state.regions[id].destroyed = { at: t, source, until: ruinsUntil(t) };
+  // Its counters go with it: a burning land stops burning.
+  delete state.regions[id].blaze;
   addLog(state, {
     kind: 'condition',
     text: `${region(world, id).name}: 땅이 부서졌다. ${formatClock(ruinsUntil(t))}까지 이곳에서는 아무것도 얻을 수 없다.`,

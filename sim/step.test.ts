@@ -13,7 +13,7 @@ import { landSealed, powersSealed, sealedBy, sealToday, setSeal } from './seal.t
 import { castBlocked, castSpell, castTargets, readyCast } from './spells.ts';
 import { actorColors, COLORS, formatMana, manaAvailable, manaCapacity, parseManaCost, planPayment } from './mana.ts';
 import { MAX_TALKS_PER_DAY, usableAbilities, volleyShares, burnTargets } from './run.ts';
-import { eligibleGmEvents, moveHours, startTravel, travelBlocked } from './step.ts';
+import { destroyLand, eligibleGmEvents, moveHours, startTravel, travelBlocked } from './step.ts';
 import { gainLife, lifeOf } from './life.ts';
 import { awayText, hasAbility, here, needsOf, newState, npcDef, outOfTime, PLAYER_ID, present, ptOf, syncWorld, targetable, together } from './state.ts';
 import { foresightText } from './foresight.ts';
@@ -4464,4 +4464,33 @@ test('the real Nissa Revane bides in the Tangled Vale; the world\'s elves are th
   assert.deepEqual(npcDef(state, world, n.id)?.activated?.map((x) => x.loyalty), [1, 1, -7]);
   const elves = world.npcs.filter((x) => x.types?.includes('elf')).map((x) => x.id).sort();
   assert.deepEqual(elves, ['chr-joraga-bard', 'chr-turntimber-ranger']);
+});
+
+test('a blaze counter: the target\'s latest unburning land catches fire; all bonded with it lose 1 life each midnight, even after the fireheart dies, until the land is destroyed', async () => {
+  const heart = being('chr-f', { home: 'loc-a', abilities: [], pt: [4, 4], mana: { R: 4 }, activated: [{ id: 'blaze', name: '불씨 심기', cost: '{1}{R}{R}', effects: [{ type: 'blaze_land' }] }] });
+  const world = fixture([heart, npc('chr-x', npcSim('loc-a', 'work')), npc('chr-y', npcSim('loc-a', 'work'))]);
+  const state = newState(world, { seed: 1, mode: 'observer' });
+  const [f, x, y] = ['chr-f', 'chr-x', 'chr-y'].map((id) => state.actors[id]);
+  x.bonds = ['loc-a', 'loc-b'];
+  y.bonds = ['loc-b'];
+  assert.equal(useAbility(state, world, 'chr-f', 'blaze', 'chr-x', state.minutes), null);
+  assert.ok(state.regions['loc-b'].blaze);
+  assert.equal(state.regions['loc-a'].blaze, undefined);
+  // The fireheart dies; the land burns on.
+  (await import('./combat.ts')).die(state, f, state.minutes, '시험');
+  state.minutes = 1440 - 60;
+  await advance(state, world, 2);
+  assert.equal(lifeOf(x), 19);
+  assert.equal(lifeOf(y), 19);
+  // Destroyed, it stops.
+  destroyLand(state, world, 'loc-b', [], state.minutes, '시험');
+  assert.equal(state.regions['loc-b'].blaze, undefined);
+});
+
+test('the real Obsidian Fireheart burns in Valakut', () => {
+  const world = loadWorld();
+  const state = newState(world, { seed: 1, mode: 'observer' });
+  const f = state.actors['cre-obsidian-fireheart'];
+  assert.equal(f?.region, 'loc-valakut');
+  assert.deepEqual(npcDef(state, world, f.id)?.activated?.[0]?.effects, [{ type: 'blaze_land' }]);
 });

@@ -62,6 +62,8 @@ function describeEffect(e: GmDayInput['abilities'][number]['ability']['effects']
       return `they gain ${e.amount} life for each ${e.kind} serving them`;
     case 'call_kind':
       return `every ${e.kind} in the world serving no one comes to their side and serves them`;
+    case 'blaze_land':
+      return `the latest land the target is bonded with catches fire for good: everyone bonded with it loses 1 life every midnight`;
     case 'possess_next_turn':
       return `the target's whole next day (from midnight to midnight) is theirs: the target follows and serves them that day`;
   }

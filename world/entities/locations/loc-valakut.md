@@ -5,11 +5,12 @@ name: 발라쿠트, 녹아내리는 봉우리
 name_en: Valakut, the Molten Pinnacle
 summary: 온두의 섬 베이엔, 탈리브의 왕관 산맥의 최고봉인 거대한 화산. 붉게 녹아내리는 봉우리에서 불길이 치솟고, 산들이 한 사람 아래 모이면 그 불길이 온두와 그 섬들 어디로든 떨어진다
 status: canon
-sources: [ZEN-228, ZEN-135]
+sources: [ZEN-228, ZEN-135, ZEN-140]
 tags: [화산, 봉우리, 불, 적색]
 links:
   - { to: loc-beyeen, rel: 바깥 지역 (온두의 섬) }
   - { to: evt-lavaball-trap, rel: 숨은 함정 }
+  - { to: cre-obsidian-fireheart, rel: 용암에서 일어난 불의 정령 }
 map: { in: loc-beyeen, terrain: volcanic, color: R, pos: [0, 0.2], tiles: 10 }   # 베이엔의 탈리브 왕관 최고봉 [결정] 2026-09-30 (예전엔 아쿰)
 sim:
   nonbasic: true                          # 이름 있는 대지: 산이 아니다
@@ -33,6 +34,8 @@ sim:
   - 능력의 피해라서 죽일 수 있다. 싸움이 아니다.
   - 플레이어는 유대 맺기(또는 길 찾기)를 할 때 고르고, NPC는 유대가 맺어진 뒤 LLM이 고른다 (아무도 안 고를 수 있다).
 - **용암공 함정** (`evt-lavaball-trap`, ZEN-135): 누군가 발라쿠트와 그날 두 번째 이상으로 유대를 맺으면(페치로 다른 땅을 먼저 찾아온 날) 1시간 뒤 용암공이 떨어진다. 발라쿠트의 모두가 피해 4, 그 침입자가 그날 들인 땅 최근 두 곳(발라쿠트 포함)이 7일 동안 부서진다 ([결정] 2026-09-30 재배치).
+
+- 흑요석 불심장(`cre-obsidian-fireheart`, ZEN-140)이 용암 속에 깃든다 ([결정] 2026-10-01). 아침 LLM이 고른 이의 땅에 불씨를 박아, 그 땅과 이어진 이들이 밤마다 생명 1을 잃게 한다.
 
 ## 미정/질문
 

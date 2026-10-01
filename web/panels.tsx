@@ -213,6 +213,7 @@ export function RegionCard(props: {
           <small> · 지도에서 골라 들어간다</small>
         </p>
       )}
+      {state?.regions[r.id]?.blaze && <p className="cond">🔥 불타는 땅 <small>(이어진 이는 00:00마다 생명 1을 잃는다)</small></p>}
       {destroyed && <p className="cond">✕ 부서진 땅 <small>({formatClock(destroyed.until ?? ruinsUntil(destroyed.at))}까지 쓸 수 없음)</small></p>}
       {conds.map((c) => (
         <p key={c.label + c.until} className="cond">
