@@ -1,9 +1,9 @@
 // Retainers (world/entities/laws/law-retainers.md): characters who serve a master. What a
 // card calls "a creature you control". They follow their master about, join the master's
 // fights, and can be called on (a kicker taps one). Kalitas's risen vampires are his; the
-// player wins retainers by persuading someone in conversation. A beast that may follow
-// (`tamable`, the Felidar Sovereign) chooses whom to trust: the player who talks to it, or an
-// NPC who courts it (a "court" block); the LLM decides, as the beast.
+// player wins retainers by persuading someone in conversation. Every beast chooses whom to trust
+// (user decision 2026-10-01: how hard and what it takes is the LLM's to judge, as the beast): the
+// player who talks to it, or an NPC who courts it (a "court" block).
 import { formatClock, gameDay } from './clock.ts';
 import { addLog, awayText } from './state.ts';
 import type { Actor, State } from './state.ts';
@@ -50,8 +50,6 @@ export function controlsKind(state: State, world: World, owner: Actor, kind: str
 // Why `a` can't be won over as a retainer, or null.
 export function swayBlocked(state: State, world: World, a: Actor): string | null {
   if (a.dead || a.kind !== 'npc' || hasPowers(npcDef(state, world, a.id))) return `${josa(shortName(a.name), '은', '는')} 누구를 따를 존재가 아니다.`;
-  const def = npcDef(state, world, a.id);
-  if (def?.beast && !def.tamable) return '짐승은 말로 따르게 할 수 없다.';
   const m = masterOf(state, a);
   if (m) return `${josa(shortName(a.name), '은', '는')} 이미 ${shortName(m.name)}의 권속이다.`;
   return null;
@@ -85,7 +83,7 @@ export const COURT_HOURS = 2;
 // those who serve someone).
 export function courtTargets(state: State, world: World, a: Actor) {
   if (a.dead || a.master || npcDef(state, world, a.id)?.beast) return [];
-  return Object.values(state.actors).filter((x) => x.id !== a.id && npcDef(state, world, x.id)?.tamable && !followBlocked(state, world, x, a));
+  return Object.values(state.actors).filter((x) => x.id !== a.id && npcDef(state, world, x.id)?.beast && !followBlocked(state, world, x, a));
 }
 
 // Why `a` can't court `whoId` now, or null.

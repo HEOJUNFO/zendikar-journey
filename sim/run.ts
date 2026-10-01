@@ -880,7 +880,7 @@ async function choices(state: State, world: World, llm: Llm) {
       if (!llm.choose) continue;
       let pick: string | null = null;
       try {
-        pick = await llm.choose({ world, state, npc, candidates, optional: true, what: `${land.name}: 당신이 이곳에 들어섰다. 여기 있는 ${c.effect.kind ? CREATURE_TYPE_LABELS[c.effect.kind] : '이'} 가운데 하나를 골라 ${c.effect.kicker ? `힘(${c.effect.kicker})을 더 들여 ` : ''}파괴할 수 있다 (파괴된 이는 죽는다). 아무도 고르지 않을 수도 있다` });
+        pick = await llm.choose({ world, state, npc, candidates, optional: true, what: `${land.name}: 당신이 이곳에 들어섰다. 여기 있는 ${c.effect.flying ? '날 수 있는 ' : ''}${c.effect.kind ? CREATURE_TYPE_LABELS[c.effect.kind] : '이'} 가운데 하나를 골라 ${c.effect.kicker ? `힘(${c.effect.kicker})을 더 들여 ` : ''}파괴할 수 있다 (파괴된 이는 죽는다). 아무도 고르지 않을 수도 있다` });
       } catch (e) {
         console.warn(`choose (destroy) for ${c.by} failed:`, e);
       }
@@ -992,7 +992,7 @@ async function followChoice(state: State, world: World, llm: Llm, by: Actor, npc
   if (!llm.choose) return;
   let pick: string | null = null;
   try {
-    const what = `${shortName(suitor.name)}이(가) 두 시간 동안 당신 곁에 머물며 당신의 마음을 얻으려 했다. 그를 주인으로 인정해 따르고 섬길지(고른다), 아니면 아무도 고르지 않고 홀로 남을지 정한다. 따르는 것은 드물고 큰 일이다`;
+    const what = `${shortName(suitor.name)}이(가) 두 시간 동안 당신 곁에 머물며 당신의 마음을 얻으려 했다. 그를 주인으로 인정해 따르고 섬길지(고른다), 아니면 아무도 고르지 않고 홀로 남을지 정한다. 얼마나 쉽게 마음을 여는지, 무엇이 있어야 따르는지는 당신의 본성대로 판단한다`;
     pick = await llm.choose({ world, state, npc, candidates: [suitor], optional: true, what });
   } catch (e) {
     console.warn(`choose (follow) for ${by.id} failed:`, e);
@@ -1114,12 +1114,8 @@ async function talk(state: State, world: World, p: Actor, npcId: string, say: st
   const name = shortName(npc.name);
   addLog(state, { kind: 'speech', text: `${shortName(p.name)}: “${say}”`, regions: [p.region], actors: [p.id, npc.id] });
   let reply: Reply | null = null;
-  // A beast has no words. One that may follow someone still answers, in what it does.
+  // A beast has no words: it answers in what it does (and may come to follow them).
   const def = npcDef(state, world, npcId);
-  if (def?.beast && !def.tamable) {
-    addLog(state, { kind: 'speech', text: `${josa(name, '은', '는')} 대꾸 없이 낮게 으르렁거린다.`, regions: [p.region], actors: [npcId, p.id] });
-    return;
-  }
   if (llm.reply) {
     try {
       reply = await llm.reply({ world, state, npc, say, beast: !!def?.beast });
@@ -1175,7 +1171,8 @@ async function approach(state: State, world: World, me: Actor, p: Actor, llm: Ll
 async function attack(state: State, world: World, p: Actor, npcId: string, llm: Llm) {
   const target = state.actors[npcId];
   const npc = speakerDef(state, world, npcId)!;
-  const flies = (a: Actor) => hasAbility(a, 'fly', state.minutes);
+  // Reach (Oran-Rief Recluse) reaches a flyer as well as wings do.
+  const flies = (a: Actor) => hasAbility(a, 'fly', state.minutes) || (a === p && hasAbility(a, 'reach', state.minutes));
   // One who can't block the player (asleep, protection) can't fly from them either; prey of a
   // landwalker or an intimidator may (user decision 2026-10-01).
   const inescapable = unblockable(state, world, p, target, state.minutes, true);

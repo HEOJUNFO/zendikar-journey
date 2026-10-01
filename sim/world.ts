@@ -14,9 +14,9 @@ export const MAP_WIDTH = 2880;
 export const MAP_HEIGHT = 2160;
 
 // fly: can reach sky islands. aquatic: lives in the sea, and only there.
-export const ABILITIES = ['fly', 'aquatic', 'lifelink', 'vigilance', 'haste', 'trample', 'defender', 'shroud', 'swampwalk', 'forestwalk', 'islandwalk', 'indestructible', 'intimidate', 'first_strike', 'double_strike', 'cant_block', 'bite', 'deathtouch'] as const;
+export const ABILITIES = ['fly', 'aquatic', 'lifelink', 'vigilance', 'haste', 'trample', 'defender', 'shroud', 'swampwalk', 'forestwalk', 'islandwalk', 'indestructible', 'intimidate', 'first_strike', 'double_strike', 'cant_block', 'bite', 'deathtouch', 'reach'] as const;
 export type Ability = (typeof ABILITIES)[number];
-export const ABILITY_LABELS: Record<Ability, string> = { fly: '비행', aquatic: '물에 삶', lifelink: '생명연결', vigilance: '경계', haste: '속공', trample: '돌진', defender: '수비대', shroud: '방어막', swampwalk: '늪걷기', forestwalk: '숲걷기', islandwalk: '섬걷기', indestructible: '파괴불가', intimidate: '위협', first_strike: '선제공격', double_strike: '이중 타격', cant_block: '막지 못함', bite: '물어뜯기', deathtouch: '죽음의 손길' };
+export const ABILITY_LABELS: Record<Ability, string> = { fly: '비행', aquatic: '물에 삶', lifelink: '생명연결', vigilance: '경계', haste: '속공', trample: '돌진', defender: '수비대', shroud: '방어막', swampwalk: '늪걷기', forestwalk: '숲걷기', islandwalk: '섬걷기', indestructible: '파괴불가', intimidate: '위협', first_strike: '선제공격', double_strike: '이중 타격', cant_block: '막지 못함', bite: '물어뜯기', deathtouch: '죽음의 손길', reach: '도달' };
 // Creature types a card may name ("destroy target Angel"), and `artifact` for an artifact
 // creature (마법물체 생물: it may block an intimidating one).
 export const CREATURE_TYPES = ['angel', 'demon', 'artifact', 'elf', 'merfolk'] as const;
@@ -278,7 +278,7 @@ export const CharacterSimSchema = z.strictObject({
   // Or `{ kicker }`: "Kicker …. When this enters, if it was kicked, destroy target creature"
   // (Heartstabber Mosquito): anyone there but a planeswalker, if they can pay it from their own
   // mana (paid as the blow falls).
-  enter_destroy: z.union([z.enum(CREATURE_TYPES), z.strictObject({ kind: z.enum(CREATURE_TYPES).optional(), kicker: CostSchema.optional() })]).optional(),
+  enter_destroy: z.union([z.enum(CREATURE_TYPES), z.strictObject({ kind: z.enum(CREATURE_TYPES).optional(), kicker: CostSchema.optional(), flying: z.boolean().default(false) })]).optional(),
   // "When this enters, each opponent loses life equal to the number of <kind>s you control. You
   // gain life equal to the life lost this way" (Malakir Bloodwitch: Vampires). Everyone else
   // standing there (not their side) loses it; their controller gains it (sim/abilities.ts).
@@ -319,9 +319,9 @@ export const CharacterSimSchema = z.strictObject({
   // A beast: doesn't talk, hunts whoever stands with it when hungry, hunts a land out, and
   // holds only the hunting ground it last bonded with.
   beast: z.boolean().default(false),
-  // A beast that may choose to follow one who wins its trust (the Felidar Sovereign): the
-  // player by talking to it, an NPC by a "court" block. The LLM decides, as the beast.
-  tamable: z.boolean().default(false),
+  // Every beast may choose to follow one who wins its trust (user decision 2026-10-01: how hard,
+  // and what it takes, is the LLM's to judge, as the beast): the player by talking to it, an NPC by
+  // a "court" block (sim/retainers.ts).
   // "{T}: Prevent the next N damage that would be dealt to target player this turn" (Noble Vestige):
   // whoever controls it wards one on its tile until midnight (sim/vestige.ts).
   tap_shield: z.number().int().positive().optional(),
@@ -875,7 +875,6 @@ export type NpcDef = {
   abilities: Ability[];
   needs: Need[];
   beast?: boolean;
-  tamable?: boolean;
   followsOnly?: string;
   tapShield?: number;
   cantBlockUnless?: string;
@@ -906,7 +905,7 @@ export type NpcDef = {
   landfallDrain?: { life: number; counters: number };
   tapDrawAllies?: boolean;
   types?: CreatureType[];
-  enterDestroy?: { kind?: CreatureType; kicker?: ManaCost; kickerText?: string };
+  enterDestroy?: { kind?: CreatureType; kicker?: ManaCost; kickerText?: string; flying?: boolean };
   enterDrain?: { per: string };
   enterSearch?: { types: LandType[]; tapped: boolean };
   enterShatter?: { kicker?: ManaCost; kickerText?: string; nonbasic?: boolean; relics?: boolean };
@@ -1122,7 +1121,7 @@ export function buildWorld(entities: RawEntity[]): { world: World; errors: strin
         ...(landfall_grant.length ? { landfallGrant: landfall_grant } : {}),
         ...(landfall_life ? { landfallLife: landfall_life } : {}),
         ...(enter_destroy
-          ? { enterDestroy: typeof enter_destroy === 'string' ? { kind: enter_destroy } : { kind: enter_destroy.kind, ...(enter_destroy.kicker ? { kicker: parseManaCost(enter_destroy.kicker)!, kickerText: enter_destroy.kicker } : {}) } }
+          ? { enterDestroy: typeof enter_destroy === 'string' ? { kind: enter_destroy } : { kind: enter_destroy.kind, ...(enter_destroy.kicker ? { kicker: parseManaCost(enter_destroy.kicker)!, kickerText: enter_destroy.kicker } : {}), ...(enter_destroy.flying ? { flying: true } : {}) } }
           : {}),
         ...(enter_drain ? { enterDrain: enter_drain } : {}),
         ...(enter_search ? { enterSearch: enter_search } : {}),

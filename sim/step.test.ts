@@ -624,12 +624,15 @@ test('a hungry beast hunts the weakest one with it, feeds on a kill, and trample
   assert.ok(knockedOut(state.actors['chr-x']));
 });
 
-test('a beast only growls when spoken to', async () => {
+test('every beast answers in deeds when spoken to, and may come to follow (user decision 2026-10-01)', async () => {
   const world = fixture([beast([['00:00', '24:00', 'loc-a', 'leisure', '어슬렁', '🌳']])]);
   const state = character(world, 'loc-a');
-  await act(state, world, { type: 'talk', to: 'cre-b', say: '안녕' }, { reply: async () => ({ say: '말한다', attack: false }) });
-  assert.ok(texts(state).some((t) => t.includes('으르렁')));
-  assert.ok(!texts(state).some((t) => t.includes('말한다')));
+  state.actors['cre-b'].tile = state.actors[PLAYER_ID].tile;
+  let asBeast: boolean | undefined;
+  await act(state, world, { type: 'talk', to: 'cre-b', say: '안녕' }, { reply: async (x) => ((asBeast = x.beast), { say: '짐승이 코를 킁킁거리며 다가온다.', attack: false, follow: true }) });
+  assert.equal(asBeast, true);
+  assert.ok(texts(state).includes('짐승이 코를 킁킁거리며 다가온다.'));
+  assert.equal(state.actors['cre-b'].master, PLAYER_ID);
 });
 
 test('NPCs who meet talk, remember each other, and may fall out; their fight knocks out, not kills', async () => {
@@ -1527,7 +1530,7 @@ const felidar = (plan?: unknown[][]): RawEntity => planned({
     goal: 'g',
     needs: ['energy'],
     beast: true,
-    tamable: true,
+   
     abilities: ['vigilance', 'lifelink'],
     wins_at_life: 40,
     ...(plan ? { plan } : {}),
@@ -2750,7 +2753,7 @@ test('the real Caravan Hurda hauls for Goma Fada, for 50 coin; the walking city 
   assert.deepEqual(landTypes(region(world, 'loc-goma-fada')), ['mountain']); // a walking mountain
 });
 
-test('the real Pillarfield Ox grazes by the Goma Fada caravan: a stubborn 2/4 beast that never hunts and no one can take', () => {
+test('the real Pillarfield Ox grazes by the Goma Fada caravan: a stubborn 2/4 beast that never hunts', () => {
   const world = loadWorld();
   const state = newState(world, { seed: 1, mode: 'observer' });
   const ox = state.actors['cre-pillarfield-ox'];
@@ -2759,7 +2762,7 @@ test('the real Pillarfield Ox grazes by the Goma Fada caravan: a stubborn 2/4 be
   const def = npcDef(state, world, ox.id)!;
   assert.ok(def.beast);
   assert.ok(!def.needs.includes('hunger')); // it grazes: never hungry enough to fall on anyone
-  assert.ok(!def.hireable && !def.tamable);
+  assert.ok(!def.hireable);
   assert.deepEqual(actorColors(state, world, ox), ['W']);
 });
 
@@ -5044,7 +5047,7 @@ test('the real Lethargy Trap lies on the Soaring Seacliff', () => {
 });
 
 test('a living tsunami: at midnight its master gives back a land to keep it, or it collapses; a free one pays nothing', async () => {
-  const tsunami = { ...npcSim('loc-a', 'work', [4, 4]), needs: ['energy'], beast: true, tamable: true, abilities: ['fly'], upkeep_return_land: true };
+  const tsunami = { ...npcSim('loc-a', 'work', [4, 4]), needs: ['energy'], beast: true, abilities: ['fly'], upkeep_return_land: true };
   const world = fixture([npc('chr-w', tsunami), npc('chr-m', npcSim('loc-a', 'work'))]);
   const state = newState(world, { seed: 1, mode: 'observer' });
   const [w, m] = [state.actors['chr-w'], state.actors['chr-m']];
@@ -5069,7 +5072,7 @@ test('a living tsunami: at midnight its master gives back a land to keep it, or 
 });
 
 test('a living tsunami serving the player: theirs to give a land or let it go', async () => {
-  const tsunami = { ...npcSim('loc-a', 'work', [4, 4]), needs: ['energy'], beast: true, tamable: true, abilities: ['fly'], upkeep_return_land: true };
+  const tsunami = { ...npcSim('loc-a', 'work', [4, 4]), needs: ['energy'], beast: true, abilities: ['fly'], upkeep_return_land: true };
   const world = fixture([npc('chr-w', tsunami)]);
   const state = character(world, 'loc-a');
   const p = state.actors[PLAYER_ID];
@@ -5094,7 +5097,7 @@ test('the real Living Tsunami rises off the Silundi Coast', () => {
   assert.equal(w?.region, 'loc-silundi-coast');
   assert.ok(hasAbility(w, 'fly', state.minutes));
   const def = npcDef(state, world, w.id)!;
-  assert.ok(def.upkeepReturnLand && def.tamable && def.beast);
+  assert.ok(def.upkeepReturnLand && def.beast);
 });
 
 test('seastalkers in a fight: before the hour its controller may pay {2}{U} to bind a foe there who can\'t fly, until midnight', async () => {
@@ -5265,7 +5268,7 @@ test('the real Greenweaver Druid lives in Riverroot with the Mul Daya: an elf wh
 });
 
 test('Hellfire Mongrel: at 00:00, 2 damage to each on its tile but its side holding two spells or fewer (a knockout between NPCs)', () => {
-  const hound = { ...npcSim('loc-a', 'work', [2, 2]), needs: ['energy', 'hunger'], beast: true, tamable: true, mana: { R: 3 }, upkeep_burn: { damage: 2, max_hand: 2 } };
+  const hound = { ...npcSim('loc-a', 'work', [2, 2]), needs: ['energy', 'hunger'], beast: true, mana: { R: 3 }, upkeep_burn: { damage: 2, max_hand: 2 } };
   const world = fixture([npc('chr-h', hound), npc('chr-m', npcSim('loc-a', 'work', [1, 1])), npc('chr-x', npcSim('loc-a', 'work', [1, 2])), npc('chr-y', npcSim('loc-a', 'work', [1, 5])), npc('chr-z', npcSim('loc-a', 'work', [1, 5]))]);
   const state = character(world, 'loc-a');
   const [p, h, m, x, y, z] = [PLAYER_ID, 'chr-h', 'chr-m', 'chr-x', 'chr-y', 'chr-z'].map((id) => state.actors[id]);
@@ -5290,7 +5293,7 @@ test('the real Hellfire Mongrel roams Akoum: a hungry beast that may follow some
   const h = state.actors['cre-hellfire-mongrel'];
   assert.equal(h?.region, 'loc-akoum');
   const def = npcDef(state, world, h.id)!;
-  assert.ok(def.beast && def.tamable && def.needs.includes('hunger'));
+  assert.ok(def.beast && def.needs.includes('hunger'));
   assert.deepEqual(def.upkeepBurn, { damage: 2, maxHand: 2 });
 });
 
@@ -5978,7 +5981,7 @@ const mindlessNull = (): RawEntity => planned({
   kind: 'creature',
   name: '공허자',
   status: 'canon',
-  sim: { name: '공허자', pt: [2, 2], role: 'r', home: 'loc-a', persona: 'p', goal: 'g', needs: ['energy', 'hunger'], beast: true, tamable: true, follows_only: 'cre-v', cant_block_unless: 'cre-v' },
+  sim: { name: '공허자', pt: [2, 2], role: 'r', home: 'loc-a', persona: 'p', goal: 'g', needs: ['energy', 'hunger'], beast: true, follows_only: 'cre-v', cant_block_unless: 'cre-v' },
 });
 
 test('Mindless Null: a beast that follows only a vampire or one who keeps one; no one else may court it or talk it round', async () => {
@@ -6038,7 +6041,7 @@ test('the real Mindless Null drags its chains in the Ghet estate, following only
   const n = state.actors['cre-mindless-null'];
   assert.equal(n?.region, 'loc-ghet-estate');
   const def = npcDef(state, world, n.id)!;
-  assert.ok(def.beast && def.tamable && def.needs.includes('hunger'));
+  assert.ok(def.beast && def.needs.includes('hunger'));
   assert.equal(def.followsOnly, 'cre-vampire');
   assert.equal(def.cantBlockUnless, 'cre-vampire');
   const k = state.actors['chr-kalitas'];
@@ -6061,7 +6064,7 @@ test('Molten Ravager: {R} poured is +1/+0; at 0/4 it hits only with fire poured 
 });
 
 test('follows_only a character: a beast only that one, or one who keeps them, may court or talk round', () => {
-  const beast = { ...npcSim('loc-a', 'work', [0, 4]), needs: ['energy'], beast: true, tamable: true, follows_only: 'chr-l' };
+  const beast = { ...npcSim('loc-a', 'work', [0, 4]), needs: ['energy'], beast: true, follows_only: 'chr-l' };
   const world = fixture([npc('chr-r', beast), npc('chr-l', npcSim('loc-a')), npc('chr-m', npcSim('loc-a')), npc('chr-o', npcSim('loc-a'))]);
   const state = newState(world, { seed: 1, mode: 'observer' });
   const [r, l, m, o] = ['chr-r', 'chr-l', 'chr-m', 'chr-o'].map((id) => state.actors[id]);
@@ -6080,7 +6083,7 @@ test('the real Molten Ravager rages on the Teeth of Akoum; only the Lullmage Men
   const r = state.actors['cre-molten-ravager'];
   assert.equal(r?.region, 'loc-teeth-of-akoum');
   const def = npcDef(state, world, r.id)!;
-  assert.ok(def.beast && def.tamable && !def.needs.includes('hunger'));
+  assert.ok(def.beast && !def.needs.includes('hunger'));
   assert.deepEqual(def.pump?.pt, [1, 0]);
   assert.deepEqual(ptOf(r), [0, 4]);
   const l = state.actors['chr-lullmage-mentor'];
@@ -6207,4 +6210,57 @@ test('the real Noble Vestige lingers in Emeria: a flying spirit of hope who may 
   assert.equal(def.tapShield, 1);
   assert.ok(hasAbility(v, 'fly', state.minutes) && !def.beast && !def.needs.includes('hunger'));
   assert.equal(swayBlocked(state, world, v), null);
+});
+
+test('reach: a flyer set on by one with reach can\'t take to the air; the blow lands, and no one asks', async () => {
+  const flyer = { ...npcSim('loc-a', 'work', [2, 7]), abilities: ['fly'] };
+  const world = fixture([npc('chr-r', { ...npcSim('loc-a', 'work', [3, 3]), abilities: ['reach'] }), npc('chr-f', flyer)]);
+  const state = newState(world, { seed: 1, mode: 'observer' });
+  state.actors['chr-f'].tile = state.actors['chr-r'].tile;
+  addFoe(state.actors['chr-r'], 'chr-f', state.minutes);
+  const asked: string[] = [];
+  await advance(state, world, 2, { evade: async ({ npc }) => (asked.push(npc.id), true) });
+  assert.deepEqual(asked, []);
+  assert.ok(woundsOf(state.actors['chr-f'], state.minutes) > 0);
+  // The player with reach: the flyer is not asked either.
+  const w2 = fixture([npc('chr-f', flyer)]);
+  const s2 = character(w2, 'loc-a');
+  s2.actors[PLAYER_ID].abilities = ['reach'];
+  s2.actors['chr-f'].tile = s2.actors[PLAYER_ID].tile;
+  let evadeAsked = false;
+  await act(s2, w2, { type: 'attack', to: 'chr-f' }, { evade: async () => ((evadeAsked = true), true) });
+  assert.equal(evadeAsked, false);
+  assert.ok(!texts(s2).some((t) => t.includes('날아올라 공격을 피했다')));
+});
+
+test('a kicked enter-destroy on flyers (Oran-Rief Recluse): only one who can fly is to be picked', () => {
+  const recluse = { ...npcSim('loc-a', 'work', [1, 3]), mana: { G: 6 }, needs: ['energy'], beast: true, abilities: ['reach'], enter_destroy: { kicker: '{2}{G}', flying: true } };
+  const world = fixture([npc('chr-r', recluse), npc('chr-f', { ...npcSim('loc-a'), abilities: ['fly'] }), npc('chr-g', npcSim('loc-a'))]);
+  const state = newState(world, { seed: 1, mode: 'observer' });
+  const [r, f, g] = ['chr-r', 'chr-f', 'chr-g'].map((id) => state.actors[id]);
+  for (const a of [f, g]) a.tile = r.tile;
+  enterDestroy(state, world, r, state.minutes);
+  const c = state.choices!.find((x) => x.effect.type === 'destroy')!;
+  assert.deepEqual(c.candidates, ['chr-f']);
+  assert.equal((c.effect as { flying?: boolean }).flying, true);
+});
+
+test('every beast may be courted by an NPC, with no mark of its own (user decision 2026-10-01)', () => {
+  const world = fixture([beast([['00:00', '24:00', 'loc-a', 'leisure', '어슬렁', '🌳']]), npc('chr-m', npcSim('loc-a'))]);
+  const state = newState(world, { seed: 1, mode: 'observer' });
+  assert.ok(courtTargets(state, world, state.actors['chr-m']).some((x) => x.id === 'cre-b'));
+  assert.equal(swayBlocked(state, world, state.actors['cre-b']), null);
+});
+
+test('the real Oran-Rief Recluse lurks in the canopy of Oran-Rief: reach, and a kicked strike at flyers', () => {
+  const world = loadWorld();
+  const state = newState(world, { seed: 1, mode: 'observer' });
+  const r = state.actors['cre-oran-rief-recluse'];
+  assert.equal(r?.region, 'loc-oran-rief');
+  assert.ok(hasAbility(r, 'reach', state.minutes));
+  const def = npcDef(state, world, r.id)!;
+  assert.deepEqual(ptOf(r), [1, 3]);
+  assert.ok(def.beast && def.needs.includes('hunger'));
+  assert.equal(def.enterDestroy?.flying, true);
+  assert.equal(def.enterDestroy?.kickerText, '{2}{G}');
 });

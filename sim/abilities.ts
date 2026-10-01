@@ -789,15 +789,16 @@ export function enterDrain(state: State, world: World, a: Actor, t: number) {
 // the day (onEnter), whom of that type there (if anyone) to destroy is theirs to pick, after
 // the hour (state.choices). "Kicker …. When this enters, if it was kicked, destroy target
 // creature" (Heartstabber Mosquito): anyone there but a planeswalker (no creature), and only
-// if they can pay the kicker from their own mana ([결정] 2026-10-01, as the Sphinx's).
+// if they can pay the kicker from their own mana ([결정] 2026-10-01, as the Sphinx's). "Destroy
+// target creature with flying" (Oran-Rief Recluse, `flying`): only one who can fly.
 export function enterDestroy(state: State, world: World, a: Actor, t: number) {
   const ed = npcDef(state, world, a.id)?.enterDestroy;
   if (!ed || a.dead || powersSealed(state, world, a, t)) return;
   if (ed.kicker && !planPayment(manaAvailable(state, world, a, t), ed.kicker)) return;
   const candidates = present(state, a.region, a.tile)
-    .filter((x) => x.id !== a.id && (ed.kind ? (npcDef(state, world, x.id)?.types ?? []).includes(ed.kind) : npcDef(state, world, x.id)?.loyalty === undefined) && targetable(x, t, creatureColors(npcDef(state, world, a.id))))
+    .filter((x) => x.id !== a.id && (ed.kind ? (npcDef(state, world, x.id)?.types ?? []).includes(ed.kind) : npcDef(state, world, x.id)?.loyalty === undefined) && (!ed.flying || hasAbility(x, 'fly', t)) && targetable(x, t, creatureColors(npcDef(state, world, a.id))))
     .map((x) => x.id);
-  if (candidates.length) (state.choices ??= []).push({ by: a.id, land: a.region, effect: { type: 'destroy', kind: ed.kind, ...(ed.kickerText ? { kicker: ed.kickerText } : {}) }, candidates, optional: true, t });
+  if (candidates.length) (state.choices ??= []).push({ by: a.id, land: a.region, effect: { type: 'destroy', kind: ed.kind, ...(ed.kickerText ? { kicker: ed.kickerText } : {}), ...(ed.flying ? { flying: true } : {}) }, candidates, optional: true, t });
 }
 
 // Their pick lands: the one picked, still there, is destroyed.

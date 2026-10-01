@@ -5,7 +5,7 @@ name: 오란리프, 광대숲
 name_en: Oran-Rief, the Vastwood
 summary: 타짐의 끝없이 자라는 산호 바위 숲. 거목의 뿌리가 바위 위로 아치를 이루고, 그 위 이끼 낀 턱에 엘프들이 산다. 이곳의 기운은 새로 태어난 것들을 북돋운다
 status: canon
-sources: [ZEN-221, ZEN-192, ZEN-162, ZEN-121, ZEN-189, ZEN-163]
+sources: [ZEN-221, ZEN-192, ZEN-162, ZEN-121, ZEN-189, ZEN-163, ZEN-173]
 tags: [숲, 거목, 산호바위, 엘프, 녹색]
 links:
   - { to: cre-grazing-gladehart, rel: 남서쪽 빈터에서 풀을 뜯는 영양 }
@@ -15,6 +15,7 @@ links:
   - { to: loc-umara-gorge, rel: 곁의 강 협곡 }
   - { to: cre-vastwood-gorger, rel: 땅 밑에서 솟구치는 웜 }
   - { to: cre-timbermaw-larva, rel: 나무 속의 애벌레 }
+  - { to: cre-oran-rief-recluse, rel: 북동쪽 우듬지의 거미 }
 map: { in: loc-tazeem, terrain: forest, color: G, pos: [-0.25, 0.1], tiles: 100 }   # 타짐 내륙 대부분 [배경] ([결정] 2026-10-01 80에서 키움)
 sim:
   nonbasic: true                          # 이름 있는 대지: 숲이 아니다
@@ -43,6 +44,8 @@ sim:
 - 플레이어도 NPC도 쓴다 ([결정] 2026-09-30). NPC는 오늘 녹색 생물이 나온 날 LLM이 짜는 하루에 "숲의 힘"(`grow`)이 열린다.
 
 - 철거(`spl-demolish`, ZEN-121)를 여기서 배운다 (4시간, [결정] 2026-10-01). 이 자리의 마법물체 하나나 땅 하나를 부수는 적색 주문이다. 정착지를 믿지 않는 오란리프 생존주의자들의 주문이다 ([카드] 플레이버).
+
+- 오란리프 은둔거미(`cre-oran-rief-recluse`, ZEN-173)가 북동쪽 고목 우듬지의 거미줄 굴에 숨어 산다 ([결정] 2026-10-01). 도달이 있어 날짐승도 그를 피해 날아오르지 못하고, 힘을 더 모으면 들어서는 곳의 날짐승 하나를 끌어내린다.
 
 ## 미정/질문
 

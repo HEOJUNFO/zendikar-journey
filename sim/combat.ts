@@ -426,9 +426,10 @@ function extraCombat(state: State, world: World, a: Actor, foe: Actor, t: number
 // A flyer set on by one who can't fly may take to the air, as an NPC the player attacks (sim/run.ts
 // `attack`): 'evade' if they are out of `a`'s reach until midnight, 'ask' if they have yet to
 // answer (an NPC: the LLM, after the hour, sim/run.ts `evasions`; the player: a pick they owe,
-// sim/asks.ts), null if they stand.
+// sim/asks.ts), null if they stand. Reach (Oran-Rief Recluse) reaches into the sky: none flies
+// from one who has it (user decision 2026-10-01).
 function evasion(a: Actor, b: Actor, t: number): 'evade' | 'ask' | null {
-  if (!hasAbility(b, 'fly', t) || hasAbility(a, 'fly', t) || b.boundUntil !== undefined || down(b)) return null;
+  if (!hasAbility(b, 'fly', t) || hasAbility(a, 'fly', t) || hasAbility(a, 'reach', t) || b.boundUntil !== undefined || down(b)) return null;
   const e = b.evasions?.find((x) => x.from === a.id && x.until > t);
   return e ? (e.evade ? 'evade' : null) : 'ask';
 }
