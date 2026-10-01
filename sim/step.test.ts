@@ -3246,7 +3246,7 @@ test('the real Conqueror\'s Pledge is taught in Ondu: six Kor Soldiers, twelve k
   assert.equal(s.learnAt, 'loc-ondu');
   assert.equal(s.target, 'self');
   assert.equal(s.kicker?.manaText, '{6}');
-  assert.deepEqual(s.effects[0], { type: 'create_retainers', creature: 'cre-kor-soldier', count: 6, kicked_count: 12, pt: [1, 1], colors: ['W'] });
+  assert.deepEqual(s.effects[0], { type: 'create_retainers', creature: 'cre-kor-soldier', count: 6, kicked_count: 12, pt: [1, 1], colors: ['W'], types: ['kor'] });
 });
 
 const desecrate: RawEntity = {
