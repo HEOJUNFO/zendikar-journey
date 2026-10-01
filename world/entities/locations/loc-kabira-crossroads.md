@@ -5,12 +5,13 @@ name: 카비라 교차로
 name_en: Kabira Crossroads
 summary: 아게딤 섬의 고원 위, 탑들이 솟은 도시 카비라. 섬의 길들이 이곳에서 모이고 갈라진다
 status: canon
-sources: [ZEN-216]
+sources: [ZEN-216, ZEN-3]
 tags: [도시, 교차로, 길, 백색]
 links:
   - { to: loc-agadeem, rel: 바깥 지역 }
   - { to: loc-agadeem-crypt, rel: 길이 이어지는 묘역 }
   - { to: law-life, rel: 들어서면 생명 }
+  - { to: spl-bold-defense, rel: 배우는 주문 }
 map: { in: loc-agadeem, terrain: settlement, color: W, pos: [0.2, -0.4], tiles: 10 }
 sim:
   nonbasic: true                          # 이름 있는 대지: 평원이 아니다
@@ -31,6 +32,7 @@ sim:
 - **백색** 땅 ([카드] {T}: Add {W}): 유대를 맺으면 하루 마나 1을 얻는다. 이름 있는 대지라 평원으로 치지 않는다 (에메리아의 "평원 7개"에 들지 않는다).
 - **탭된 채 들어온다** ([카드]): 유대를 맺은 그날은 이 땅의 마나가 나오지 않는다. 다음 날 00:00부터 나온다.
 - **들어올 때 생명 2** ([카드]): 이 땅과 유대를 맺으면 생명 2를 얻는다. 그날은 생명을 얻은 날이 된다.
+- 대담한 방어(`spl-bold-defense`, ZEN-3)를 배운다 ([결정] 2026-10-01: 길이 모이는 곳의 원정대 주문, [가공]). 시전자와 곁의 권속이 자정까지 +1/+1 (킥커면 +2/+2, 선제공격).
 
 ## 미정/질문
 

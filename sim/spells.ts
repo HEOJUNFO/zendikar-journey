@@ -16,12 +16,12 @@ import { remember } from './relations.ts';
 import { copyable, replicate } from './replicate.ts';
 import { reactionSpell } from './counter.ts';
 import { controlledCreatures, creatureOf, retainersOf } from './retainers.ts';
-import { addLog, npcDef, present, ptOf, targetable, untargetableText } from './state.ts';
+import { addLog, npcDef, present, ptOf, targetable, together, untargetableText } from './state.ts';
 import type { Actor, State } from './state.ts';
 import { sealedBy, sealText } from './seal.ts';
 import { josa, shortName } from './text.ts';
 import { ABILITY_LABELS, LAND_TYPE_LABELS, landTypes, placeName, region, spellColors } from './world.ts';
-import type { LandType } from './world.ts';
+import type { Ability, LandType } from './world.ts';
 import type { SpellDef, World } from './world.ts';
 
 export function spellDef(world: World, id: string) {
@@ -241,20 +241,15 @@ export function castSpell(state: State, world: World, a: Actor, spellId: string,
       const kind = world.lore.find((l) => l.id === eff.creature)?.name ?? eff.creature;
       addLog(state, { kind: 'event', text: eff.until_midnight ? `${josa(shortName(a.name), '이', '가')} ${josa(kind, '을', '를')} 불러냈다 (${ptOf(born[0]).join('/')}${eff.abilities?.length ? `, ${eff.abilities.map((x) => ABILITY_LABELS[x]).join('·')}` : ''}, 권속, 자정에 사라진다).` : `${kind} ${n}명이 나타나 ${shortName(a.name)}에게 서약했다 (${eff.pt.join('/')}, 권속).`, regions: [a.region], actors: [a.id, ...born.map((b) => b.id)] });
     } else if (eff.type === 'pump_own') {
-      const until = untapTime(t);
-      target.pumps = [...(target.pumps ?? []), { pt: [...eff.pt], until }];
-      // What they have of their own stays theirs past midnight: only what they lacked is granted.
-      for (const ability of eff.abilities) {
-        if (target.abilities.includes(ability) && !target.granted?.some((g) => g.ability === ability)) continue;
-        target.granted = [...(target.granted ?? []).filter((g) => g.ability !== ability), { ability, until }];
-        if (!target.abilities.includes(ability)) target.abilities = [...target.abilities, ability];
-      }
-      addLog(state, { kind: 'effect', text: `${josa(shortName(target.name), '이', '가')} 자정까지 +${eff.pt[0]}/+${eff.pt[1]}${eff.abilities.length ? `, ${eff.abilities.map((x) => ABILITY_LABELS[x]).join('·')}` : ''}을 얻었다 (${ptOf(target).join('/')}).`, regions: [target.region], actors: [target.id], t });
+      boostTillMidnight(state, target, eff.pt, eff.abilities, t);
       // The other target(s): the caster's pick after the hour, one they must make.
       if (!free && eff.count > 1) {
         const others = castTargets(state, a, s).filter((x) => x.id !== target.id).map((x) => x.id);
         if (others.length) (state.choices ??= []).push({ by: a.id, land: a.region, effect: { type: 'cast', spell: s.id, free: true, second: true }, candidates: others, optional: false, t });
       }
+    } else if (eff.type === 'pump_controlled') {
+      const { pt, abilities } = kicked && eff.kicked ? eff.kicked : eff;
+      for (const x of controlledCreatures(state, world, a).filter((y) => together(y, a))) boostTillMidnight(state, x, pt, abilities, t);
     } else if (eff.type === 'copy_target') {
       replicate(state, world, a, target, kicked && eff.kicked_count ? eff.kicked_count : eff.count, t, s.name);
     } else if (eff.type === 'aura') {
@@ -275,6 +270,19 @@ export function castSpell(state: State, world: World, a: Actor, spellId: string,
     remember(target, a, `나에게 ${josa(s.name, '을', '를')} 걸었다`, t);
   }
   return true;
+}
+
+// +P/+T and abilities until midnight ("until end of turn"). What they have of their own stays
+// theirs past midnight: only what they lacked is granted.
+function boostTillMidnight(state: State, target: Actor, pt: readonly [number, number], abilities: readonly Ability[], t: number) {
+  const until = untapTime(t);
+  target.pumps = [...(target.pumps ?? []), { pt: [pt[0], pt[1]], until }];
+  for (const ability of abilities) {
+    if (target.abilities.includes(ability) && !target.granted?.some((g) => g.ability === ability)) continue;
+    target.granted = [...(target.granted ?? []).filter((g) => g.ability !== ability), { ability, until }];
+    if (!target.abilities.includes(ability)) target.abilities = [...target.abilities, ability];
+  }
+  addLog(state, { kind: 'effect', text: `${josa(shortName(target.name), '이', '가')} 자정까지 +${pt[0]}/+${pt[1]}${abilities.length ? `, ${abilities.map((x) => ABILITY_LABELS[x]).join('·')}` : ''}을 얻었다 (${ptOf(target).join('/')}).`, regions: [target.region], actors: [target.id], t });
 }
 
 // Day of Judgment: light falls on everyone on the caster's tile, the caster last; planeswalkers

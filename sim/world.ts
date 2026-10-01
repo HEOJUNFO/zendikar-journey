@@ -612,6 +612,15 @@ export const SpellSimSchema = z.strictObject({
         // (Windborne Charge): the caster's own on their tile (themselves and their retainers,
         // user decision 2026-10-01), until midnight; it needs N of them. The caster picks the
         // first as they cast, the rest after (a pick they owe, sim/spells.ts).
+        // "Creatures you control get +P/+T until end of turn; if kicked, instead +P'/+T' and
+        // <abilities>" (Bold Defense): the caster and their retainers on their tile (user decision
+        // 2026-10-01), until midnight.
+        z.strictObject({
+          type: z.literal('pump_controlled'),
+          pt: PtBonusSchema,
+          abilities: z.array(z.enum(ABILITIES)).default([]),
+          kicked: z.strictObject({ pt: PtBonusSchema, abilities: z.array(z.enum(ABILITIES)).default([]) }).optional(),
+        }),
         z.strictObject({ type: z.literal('pump_own'), count: z.number().int().positive(), pt: PtBonusSchema, abilities: z.array(z.enum(ABILITIES)).default([]) }),
         // "Counter target creature spell" (Summoner's Bane): cast only in answer to someone
         // joining another on the caster's tile; the joining comes to nothing (sim/counter.ts).

@@ -3024,6 +3024,32 @@ test('the real Windborne Charge is taught in Emeria', () => {
   assert.deepEqual(s.effects[0], { type: 'pump_own', count: 2, pt: [2, 2], abilities: ['fly'] });
 });
 
+test('Bold Defense: the caster and their retainers on their tile +1/+1 until midnight; kicked, +2/+2 and first strike', async () => {
+  const bold: RawEntity = { id: 'spl-bd', kind: 'spell', name: '대담한 방어', status: 'canon', sim: { cost: '{W}', speed: 'instant', learn_at: 'loc-a', target: 'self', kicker: { mana: '{1}' }, effects: [{ type: 'pump_controlled', pt: [1, 1], kicked: { pt: [2, 2], abilities: ['first_strike'] } }] } };
+  const world = fixture([bold, npc('chr-c', { ...npcSim('loc-a'), mana: { W: 4 } }), npc('chr-r', npcSim('loc-a')), npc('chr-f', npcSim('loc-a')), npc('chr-x', npcSim('loc-a'))]);
+  const state = newState(world, { seed: 1, mode: 'observer' });
+  const [c, r, f, x] = [state.actors['chr-c'], state.actors['chr-r'], state.actors['chr-f'], state.actors['chr-x']];
+  r.tile = x.tile = c.tile;
+  f.tile = tilesOf(world, 'loc-a').find((t) => !sameTile(t, c.tile))!;
+  r.master = f.master = c.id;
+  c.spells = ['spl-bd'];
+  castSpell(state, world, c, 'spl-bd', c.id, false, state.minutes);
+  assert.deepEqual([ptOf(c), ptOf(r), ptOf(f), ptOf(x)], [[2, 2], [2, 2], [1, 1], [1, 1]]); // far off, or not theirs: nothing
+  castSpell(state, world, c, 'spl-bd', c.id, true, state.minutes);
+  assert.deepEqual(ptOf(r), [4, 4]);
+  assert.ok(hasAbility(r, 'first_strike', state.minutes) && hasAbility(c, 'first_strike', state.minutes));
+  await advance(state, world, 19, { planDay: async () => [] });
+  assert.deepEqual(ptOf(r), [1, 1]);
+  assert.ok(!hasAbility(r, 'first_strike', state.minutes));
+});
+
+test('the real Bold Defense is taught at Kabira Crossroads', () => {
+  const world = loadWorld();
+  const s = world.spells.find((x) => x.id === 'spl-bold-defense')!;
+  assert.equal(s.learnAt, 'loc-kabira-crossroads');
+  assert.equal(s.kicker?.manaText, '{3}{W}');
+});
+
 test('the real Conqueror\'s Pledge is taught in Ondu: six Kor Soldiers, twelve kicked for {6}', () => {
   const world = loadWorld();
   const s = world.spells.find((x) => x.id === 'spl-conquerors-pledge')!;
