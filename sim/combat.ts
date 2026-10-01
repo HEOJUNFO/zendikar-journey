@@ -13,8 +13,8 @@ import { HUNT_HUNGER, KILL_FEED, KO_ACTIVITY, KO_HOURS } from './rules.ts';
 import { powersSealed } from './seal.ts';
 import { addLog, awayText, hasAbility, needsOf, npcDef, outOfTime, present, protectedFrom, ptOf, random, together } from './state.ts';
 import type { Actor, State } from './state.ts';
-import { hasPowers, landTypes } from './world.ts';
-import type { World } from './world.ts';
+import { hasPowers, LAND_TYPE_LABELS, landTypes } from './world.ts';
+import type { Ability, LandType, World } from './world.ts';
 import { josa, shortName } from './text.ts';
 
 export function woundsOf(a: Actor, t: number) {
@@ -123,13 +123,20 @@ export function foesOf(a: Actor, t: number) {
 }
 
 // One exchange. The defender turns hostile to the attacker.
-// Swampwalk ("can't be blocked as long as defending player controls a Swamp"): one bonded
-// with a swamp (a basic one) can't strike back at a swampwalker, nor fly from it.
-export function landwalked(world: World, attacker: Actor, defender: Actor, t: number) {
-  return hasAbility(attacker, 'swampwalk', t) && (defender.bonds ?? []).some((id) => {
-    const r = world.regions.find((x) => x.id === id);
-    return !!r && landTypes(r).includes('swamp');
-  });
+// Landwalk ("can't be blocked as long as defending player controls a Swamp/Forest"): one bonded
+// with a land of that type can't strike back at the landwalker, nor fly from it. The type it
+// walks, or null.
+const LANDWALK: Partial<Record<Ability, LandType>> = { swampwalk: 'swamp', forestwalk: 'forest' };
+export function landwalked(world: World, attacker: Actor, defender: Actor, t: number): LandType | null {
+  for (const [ability, type] of Object.entries(LANDWALK) as [Ability, LandType][]) {
+    if (!hasAbility(attacker, ability, t)) continue;
+    const bonded = (defender.bonds ?? []).some((id) => {
+      const r = world.regions.find((x) => x.id === id);
+      return !!r && landTypes(r).includes(type);
+    });
+    if (bonded) return type;
+  }
+  return null;
 }
 
 // Intimidate ("can't be blocked except by artifact creatures and/or creatures that share a
@@ -158,7 +165,8 @@ export function caughtAsleep(attacker: Actor, defender: Actor, t: number) {
 // Why the defender can't block the attacker (strike back, or fly from them), or null.
 export function unblockable(state: State, world: World, attacker: Actor, defender: Actor, t: number): string | null {
   if (caughtAsleep(attacker, defender, t)) return '잠든 채 덮쳐져';
-  if (landwalked(world, attacker, defender, t)) return '늪과 이어진 몸이라 늪을 걷는 적에게';
+  const walked = landwalked(world, attacker, defender, t);
+  if (walked) return `${LAND_TYPE_LABELS[walked]}과 이어진 몸이라 ${LAND_TYPE_LABELS[walked]}을 걷는 적에게`;
   // Protection from a color: one of that color can't block them.
   const shield = protectedFrom(attacker, actorColors(state, world, defender), t);
   if (shield) return `${COLOR_LABELS[shield]}색이라 ${COLOR_LABELS[shield]}색으로부터 보호받는 적에게`;

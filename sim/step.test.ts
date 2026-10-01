@@ -2551,7 +2551,32 @@ test('swampwalk: one bonded with a swamp can\'t strike back at it, nor fly from 
   // One with no swamp strikes back.
   f.bonds = [];
   x.bonds = [];
-  assert.equal(landwalked(world, w, x, state.minutes), false);
+  assert.equal(landwalked(world, w, x, state.minutes), null);
+});
+
+test('forestwalk: one bonded with a forest can\'t strike back at it; a swamp is no forest', async () => {
+  const guide = { ...npcSim('loc-a', 'work', [3, 3]), needs: ['energy'], beast: true, abilities: ['forestwalk'] };
+  const world = fixture([loc('loc-wood', 12, 10, 'forest'), loc('loc-swamp', 14, 10, 'swamp'), npc('chr-g', guide), npc('chr-x', npcSim('loc-a', 'work', [3, 9]))]);
+  const state = newState(world, { seed: 1, mode: 'observer' });
+  const [g, x] = [state.actors['chr-g'], state.actors['chr-x']];
+  x.bonds = ['loc-swamp'];
+  assert.equal(landwalked(world, g, x, state.minutes), null);
+  x.bonds = ['loc-wood'];
+  assert.equal(landwalked(world, g, x, state.minutes), 'forest');
+  addFoe(g, 'chr-x', state.minutes);
+  await advance(state, world, 1);
+  assert.equal(woundsOf(x, state.minutes), 3);
+  assert.equal(woundsOf(g, state.minutes), 0); // no blow back
+  assert.ok(texts(state).some((t) => t.includes('숲을 걷는 적에게 맞서지 못한다')));
+});
+
+test('the real Zendikar Farguide walks Bala Ged, forestwalking', () => {
+  const world = loadWorld();
+  const state = newState(world, { seed: 1, mode: 'observer' });
+  const g = state.actors['cre-zendikar-farguide'];
+  assert.equal(g?.region, 'loc-bala-ged');
+  assert.ok(hasAbility(g, 'forestwalk', state.minutes));
+  assert.ok(!npcDef(state, world, g.id)?.needs.includes('hunger'));
 });
 
 test('the real Bog Tatters drifts in Piranha Marsh, swampwalking', () => {
