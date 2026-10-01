@@ -9,7 +9,8 @@ import { sameTile } from './tiles.ts';
 import type { Tile } from './tiles.ts';
 import type { Actor, Choice, State } from './state.ts';
 import { josa, shortName } from './text.ts';
-import { region } from './world.ts';
+import { destroyLand } from './step.ts';
+import { placeName, region } from './world.ts';
 import type { World } from './world.ts';
 
 export type Relic = { id: string; label: string };
@@ -57,4 +58,33 @@ export function crushOwed(state: State, world: World, a: Actor, spell: string, l
   const relics = relicsHere(state, world, a.region, a.tile);
   if (left <= 0 || !relics.length) return null;
   return { by: a.id, land: a.region, effect: { type: 'crush', spell, left, first }, candidates: relics.map((r) => r.id), optional: !first, t };
+}
+
+// "Destroy target artifact or land" (Demolish): after casting, the caster picks one of the
+// artifacts standing on their tile (items that are no enchantment), the land they stand in, or
+// a land someone on their tile has bonded with (none destroyed already). One must be picked.
+export function demolishOptions(state: State, world: World, a: Actor): Relic[] {
+  const artifacts = relicsHere(state, world, a.region, a.tile).filter((r) => r.id.startsWith('item:') && world.items.find((x) => `item:${x.id}` === r.id)?.cardType !== 'enchantment');
+  const ids = [a.region, ...present(state, a.region, a.tile).flatMap((x) => x.bonds ?? [])];
+  const lands = [...new Set(ids)]
+    .map((id) => world.regions.find((r) => r.id === id))
+    .filter((r): r is NonNullable<typeof r> => !!r && !r.notLand && !state.regions[r.id]?.destroyed)
+    .map((r) => {
+      const holders = present(state, a.region, a.tile).filter((x) => x.bonds?.includes(r.id)).map((x) => shortName(x.name));
+      return { id: `land:${r.id}`, label: `${placeName(world, r)} (땅${r.id === a.region ? ', 지금 선 곳' : ''}${holders.length ? `, ${holders.join('·')}와 이어짐` : ''})` };
+    });
+  return [...artifacts, ...lands];
+}
+
+export function demolishOwed(state: State, world: World, a: Actor, spell: string, t: number): Choice | null {
+  const options = demolishOptions(state, world, a);
+  if (!options.length) return null;
+  return { by: a.id, land: a.region, effect: { type: 'demolish', spell }, candidates: options.map((o) => o.id), t };
+}
+
+// Destroys the picked one, if it is still to be had.
+export function demolish(state: State, world: World, a: Actor, pick: string, spell: string, t: number) {
+  if (!demolishOptions(state, world, a).some((o) => o.id === pick)) return false;
+  if (pick.startsWith('item:')) return crushRelic(state, world, pick, a, t);
+  return destroyLand(state, world, pick.slice('land:'.length), [a.id], t, spell);
 }

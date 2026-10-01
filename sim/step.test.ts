@@ -3535,6 +3535,47 @@ test('relic crush by the player: the first must go, the second they may let be',
   assert.equal(x.auras?.length, 1); // let be
 });
 
+const demolishSpell: RawEntity = { id: 'spl-dm', kind: 'spell', name: '철거', status: 'canon', sim: { cost: '{1}', learn_at: 'loc-a', target: 'self', effects: [{ type: 'demolish' }] } };
+
+test('demolish: an NPC picks an artifact here, the land here, or a land someone here holds; an aura is no pick', async () => {
+  const world = fixture([demolishSpell, bigAura, vessel, npc('chr-c', { ...npcSim('loc-a'), mana: { R: 1 } }), npc('chr-x', npcSim('loc-a'))]);
+  const state = newState(world, { seed: 1, mode: 'observer' });
+  const [c, x] = [state.actors['chr-c'], state.actors['chr-x']];
+  castSpell(state, world, x, 'spl-g', 'chr-x', false, state.minutes);
+  x.bonds = ['loc-b'];
+  c.spells = ['spl-dm'];
+  readyCast(state, world, c, 'spl-dm', state.minutes);
+  let seen: string[] = [];
+  await advance(state, world, 1, { pick: async ({ options }) => ((seen = options.map((o) => o.id)), 'land:loc-b') });
+  assert.deepEqual(seen, ['item:itm-v', 'land:loc-a', 'land:loc-b']);
+  assert.ok(state.regions['loc-b'].destroyed);
+  assert.equal(state.regions['loc-a']?.destroyed, undefined);
+  assert.equal(x.auras?.length, 1);
+});
+
+test('demolish by the player: one must go; the artifact standing here', async () => {
+  const world = fixture([demolishSpell, vessel]);
+  const state = character(world, 'loc-a');
+  const p = state.actors[PLAYER_ID];
+  p.spells = ['spl-dm'];
+  p.bonds = ['loc-a'];
+  await act(state, world, { type: 'cast', spell: 'spl-dm', to: p.id, kick: false });
+  await act(state, world, { type: 'wait', hours: 1 });
+  const ask = state.asks![0];
+  assert.equal(ask.effect.type, 'demolish');
+  assert.equal(askOptions(state, world, ask).some((o) => o.pick === null), false);
+  await act(state, world, { type: 'choose', pick: 'item:itm-v' });
+  assert.ok(state.items?.['itm-v']?.gone);
+  assert.equal(state.regions['loc-a']?.destroyed, undefined);
+});
+
+test('the real Demolish is taught in Oran-Rief', () => {
+  const world = loadWorld();
+  const s = world.spells.find((x) => x.id === 'spl-demolish')!;
+  assert.equal(s.learnAt, 'loc-oran-rief');
+  assert.deepEqual(s.effects, [{ type: 'demolish' }]);
+});
+
 test('the real Relic Crush is taught in Bala Ged', () => {
   const world = loadWorld();
   const s = world.spells.find((x) => x.id === 'spl-relic-crush')!;

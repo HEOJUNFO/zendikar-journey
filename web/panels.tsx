@@ -460,7 +460,7 @@ export function CharacterControls(props: {
   if (ask) {
     return (
       <div className="controls controls-player">
-        <p>{ask.effect.type === 'rally' ? '🔥' : ask.effect.type === 'evade' ? '🪽' : ask.effect.type === 'discard' ? '📜' : ask.effect.type === 'pilfer' ? '🗝️' : ask.effect.type === 'pour' ? '🩸' : ask.effect.type === 'sacrifice' ? '🗿' : ask.effect.type === 'crush' ? '💥' : ask.effect.type === 'quell' || ask.effect.type === 'quelled' ? '🗻' : ask.effect.type === 'cast' ? '✨' : '🤝'} {askText(state, world, ask)}</p>
+        <p>{ask.effect.type === 'rally' ? '🔥' : ask.effect.type === 'evade' ? '🪽' : ask.effect.type === 'discard' ? '📜' : ask.effect.type === 'pilfer' ? '🗝️' : ask.effect.type === 'pour' ? '🩸' : ask.effect.type === 'sacrifice' ? '🗿' : ask.effect.type === 'crush' || ask.effect.type === 'demolish' ? '💥' : ask.effect.type === 'quell' || ask.effect.type === 'quelled' ? '🗻' : ask.effect.type === 'cast' ? '✨' : '🤝'} {askText(state, world, ask)}</p>
         <div className="row">
           {askOptions(state, world, ask).map((o) => (
             <button key={o.pick ?? '-'} disabled={busy} onClick={() => onAct({ type: 'choose', pick: o.pick })}>

@@ -11,7 +11,7 @@ import { addCosts, formatMana, manaAvailable, manaCapacity, payMana, planPayment
 import { spawnWild } from './abilities.ts';
 import { destroyLand } from './step.ts';
 import { owesDiscard } from './discard.ts';
-import { crushOwed, relicsHere } from './relics.ts';
+import { crushOwed, demolishOptions, demolishOwed, relicsHere } from './relics.ts';
 import { remember } from './relations.ts';
 import { creatureOf, retainersOf } from './retainers.ts';
 import { addLog, npcDef, present, ptOf, targetable, untargetableText } from './state.ts';
@@ -64,6 +64,7 @@ export function castBlocked(state: State, world: World, a: Actor, spellId: strin
   if (s.effects.some((e) => e.type === 'destroy_land') && !landToDestroy(state, target))
     return `${josa(shortName(target.name), '은', '는')} 부술 땅을 쥐고 있지 않다.`;
   if (s.effects.some((e) => e.type === 'destroy_relics') && !relicsHere(state, world, a.region, a.tile).length) return '여기엔 부술 마법물체도 부여마법도 없다.';
+  if (s.effects.some((e) => e.type === 'demolish') && !demolishOptions(state, world, a).length) return '여기엔 부술 마법물체도 땅도 없다.';
   if (s.target !== 'self' && !targetable(target, t, spellColors(s))) return untargetableText(target, t, spellColors(s));
   if (!planPayment(manaAvailable(state, world, a, t), s.cost))
     return `마나가 모자라다 (${s.costText}, 지금 ${formatMana(manaAvailable(state, world, a, t))}).`;
@@ -178,6 +179,9 @@ export function castSpell(state: State, world: World, a: Actor, spellId: string,
       if (land) destroyLand(state, world, land, [a.id], t, s.id);
     } else if (eff.type === 'discard') {
       owesDiscard(state, world, target, s.name, t);
+    } else if (eff.type === 'demolish') {
+      const owed = demolishOwed(state, world, a, s.name, t);
+      if (owed) (state.choices ??= []).push(owed);
     } else if (eff.type === 'destroy_all') {
       judgment(state, world, a, s.name, t);
     } else if (eff.type === 'destroy_relics') {

@@ -513,6 +513,9 @@ export const SpellSimSchema = z.strictObject({
         // enchantment" (Relic Crush): items standing where the caster is, auras on those there.
         // The caster picks after casting, the first surely, the rest if they will (sim/relics.ts).
         z.strictObject({ type: z.literal('destroy_relics'), count: z.number().int().positive() }),
+        // "Destroy target artifact or land" (Demolish): after casting, the caster picks an artifact
+        // on their tile, the land they stand in, or a land someone there holds (sim/relics.ts).
+        z.strictObject({ type: z.literal('demolish') }),
         // "Destroy all creatures" (Day of Judgment): every being on the caster's tile, the caster
         // too (user decision 2026-10-01), not planeswalkers; the indestructible stand.
         z.strictObject({ type: z.literal('destroy_all') }),

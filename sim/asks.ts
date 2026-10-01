@@ -4,7 +4,7 @@
 // the air when one who can't fly sets on them.
 import { untapTime } from './clock.ts';
 import { applyDrainGrow, applyEnterDestroy } from './abilities.ts';
-import { crushOwed, crushRelic, relicsHere } from './relics.ts';
+import { crushOwed, crushRelic, demolish, demolishOptions, relicsHere } from './relics.ts';
 import { applyRally, rallyText, rallyWord } from './allies.ts';
 import { bindRetainer, refuse } from './retainers.ts';
 import { cardLabel, discardOwed, forgetCard, handOf, letGo } from './discard.ts';
@@ -33,6 +33,7 @@ export function askText(state: State, world: World, c: Choice) {
   }
   if (c.effect.type === 'cast') return `${world.spells.find((s) => s.id === (c.effect as { spell: string }).spell)?.name ?? ''}을(를) 하나 더, 값 없이 걸 수 있다. 누구에게?`;
   if (c.effect.type === 'sacrifice') return `${state.items?.[c.effect.item]?.name ?? c.effect.item}이(가) 오늘의 제물을 요구한다. 부리는 이 가운데 누구를 바칠까? (바친 이는 죽는다)`;
+  if (c.effect.type === 'demolish') return `${c.effect.spell}: 이 자리의 마법물체 하나나 땅 하나를 부순다 (땅은 7일 동안 누구에게도 아무것도 내주지 않는다). 무엇을?`;
   if (c.effect.type === 'crush') return `${c.effect.spell}: 이 자리의 마법물체나 부여마법을 ${c.effect.first ? '부순다. 무엇을?' : '하나 더 부술 수 있다. 무엇을?'}`;
   if (c.effect.type === 'drain_grow') return `땅의 타락한 마나가 흐른다. 누구에게서 생명 ${c.effect.life}을 빼앗아 +1/+1 카운터 ${c.effect.counters}을 얻을까?`;
   if (c.effect.type === 'quell') {
@@ -51,6 +52,10 @@ export function askOptions(state: State, world: World, c: Choice): { pick: strin
   if (c.effect.type === 'pilfer') {
     const target = state.actors[c.effect.target];
     return c.candidates.map((id) => ({ pick: id, label: cardLabel(world, target, id) }));
+  }
+  if (c.effect.type === 'demolish') {
+    const p = state.actors[c.by];
+    return p ? demolishOptions(state, world, p).map((o) => ({ pick: o.id as string | null, label: o.label })) : [];
   }
   if (c.effect.type === 'crush') {
     const relics = relicsHere(state, world, c.land, state.actors[c.by]?.tile);
@@ -116,6 +121,11 @@ export function answerAsk(state: State, world: World, pick: string | null, t: nu
     const shown = c.candidates.filter((x) => hand.includes(x));
     const card = pick && shown.includes(pick) ? pick : shown[0];
     if (card) forgetCard(state, world, target, card, t);
+  } else if (c.effect.type === 'demolish') {
+    // One must go: an answer that isn't one goes to the first.
+    const options = demolishOptions(state, world, p);
+    const id = pick && options.some((o) => o.id === pick) ? pick : options[0]?.id;
+    if (id) demolish(state, world, p, id, c.effect.spell, t);
   } else if (c.effect.type === 'crush') {
     // The first must go: an answer that isn't one goes to the first there.
     const relics = relicsHere(state, world, p.region, p.tile);

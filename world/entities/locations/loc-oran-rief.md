@@ -5,9 +5,10 @@ name: 오란리프, 광대숲
 name_en: Oran-Rief, the Vastwood
 summary: 타짐의 끝없이 자라는 산호 바위 숲. 거목의 뿌리가 바위 위로 아치를 이루고, 그 위 이끼 낀 턱에 엘프들이 산다. 이곳의 기운은 새로 태어난 것들을 북돋운다
 status: canon
-sources: [ZEN-221, ZEN-192, ZEN-162]
+sources: [ZEN-221, ZEN-192, ZEN-162, ZEN-121]
 tags: [숲, 거목, 산호바위, 엘프, 녹색]
 links:
+  - { to: spl-demolish, rel: 생존주의자들이 아는 주문 }
   - { to: spl-gigantiform, rel: 배우는 주문 }
   - { to: loc-tazeem, rel: 바깥 지역 }
   - { to: cre-vastwood-gorger, rel: 땅 밑에서 솟구치는 웜 }
@@ -36,6 +37,8 @@ sim:
 - 광대숲 포식자(`cre-vastwood-gorger`, ZEN-192)가 땅 밑에서 솟구쳐 사냥한다. "광대숲"(Vastwood)은 오란리프의 다른 이름이다 ([배경]). 그래서 이 땅의 한글 이름도 "오란리프, 광대숲"으로 한다 ([결정] 2026-09-30, 처음엔 "우거진 땅").
 - 거대화(`spl-gigantiform`, ZEN-162)를 여기서 배운다. 한 생물을 기본 8/8, 돌진으로 키우는 오라다.
 - 플레이어도 NPC도 쓴다 ([결정] 2026-09-30). NPC는 오늘 녹색 생물이 나온 날 LLM이 짜는 하루에 "숲의 힘"(`grow`)이 열린다.
+
+- 철거(`spl-demolish`, ZEN-121)를 여기서 배운다 (4시간, [결정] 2026-10-01). 이 자리의 마법물체 하나나 땅 하나를 부수는 적색 주문이다. 정착지를 믿지 않는 오란리프 생존주의자들의 주문이다 ([카드] 플레이버).
 
 ## 미정/질문
 

@@ -15,7 +15,7 @@ import { foresightText } from './foresight.ts';
 import { knowledgeText } from './knowledge.ts';
 import { setOff, wandersDue, withPositions } from './wander.ts';
 import { cardLabel, discardOwed, forgetCard, handOf, letGo } from './discard.ts';
-import { crushRelic, relicsHere } from './relics.ts';
+import { crushRelic, demolish, demolishOptions, relicsHere } from './relics.ts';
 import { loremastersOf, recallBlocked, recallCount } from './loremaster.ts';
 import { sacrifice } from './monument.ts';
 import { strandedText } from './stranded.ts';
@@ -529,6 +529,23 @@ async function choices(state: State, world: World, llm: Llm) {
     // What a thief turned up of someone's hand (candidates are spells and secrets).
     if (c.effect.type === 'pilfer') {
       if (by && !by.dead && npc) await pilferChoice(state, world, llm, by, npc, c as Choice & { effect: { type: 'pilfer' } });
+      continue;
+    }
+    // Demolish: an artifact or a land to destroy; one must go (with no usable answer, at random).
+    if (c.effect.type === 'demolish') {
+      if (!by || by.dead || !npc) continue;
+      const options = demolishOptions(state, world, by);
+      if (!options.length) continue;
+      let pick: string | null = null;
+      if (llm.pick) {
+        try {
+          pick = await llm.pick({ world, state, npc, what: `${c.effect.spell}: 이 자리의 마법물체 하나나 땅 하나를 골라 부순다 (땅은 7일 동안 누구에게도 아무것도 내주지 않는다)`, options });
+        } catch (e) {
+          console.warn(`pick (demolish) for ${by.id} failed:`, e);
+        }
+      }
+      if (!options.some((o) => o.id === pick)) pick = options[Math.floor(random(state) * options.length)].id;
+      demolish(state, world, by, pick!, c.effect.spell, state.minutes);
       continue;
     }
     // Relics to destroy (candidates are things, not people).
