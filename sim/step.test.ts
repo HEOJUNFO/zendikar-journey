@@ -4162,6 +4162,7 @@ test('the world as the lore lays it out: areas in areas, and the continents wher
     ['loc-magosi', 'loc-umara-gorge'],
     ['loc-kazandu-refuge', 'loc-kazandu'],
     ['loc-valakut', 'loc-crown-of-talib'],
+    ['loc-shatterskull-pass', 'loc-teeth-of-akoum'],
   ]) assert.equal(region(world, id).parent, parent, id);
   assert.equal(region(world, 'loc-teeth-of-akoum').parent, 'loc-akoum');
   // The Guum Wilds covers most of Bala Ged; Oran-Rief most of Tazeem.
@@ -4819,6 +4820,20 @@ test('an oracle of Mul Daya: its controller bonds with one more land a day; at m
   // One already theirs comes up: no use.
   p.topLand = { day: gameDay(state.minutes), land: 'loc-a' };
   assert.match((await act(state, world, { type: 'fetch', from: 'top', to: 'loc-a' })).error ?? '', /이미/);
+});
+
+test('the real Shatterskull Giant lives in Shatterskull Pass, over the Teeth of Akoum: a speaking 4/3 who eats', () => {
+  const world = loadWorld();
+  const state = newState(world, { seed: 1, mode: 'observer' });
+  const g = state.actors['cre-shatterskull-giant'];
+  assert.equal(g?.region, 'loc-shatterskull-pass');
+  assert.equal(placeName(world, region(world, 'loc-shatterskull-pass')), '아쿰 › 아쿰의 이빨 › 섀터스컬 고개');
+  assert.deepEqual(landTypes(region(world, 'loc-shatterskull-pass')), ['mountain']);
+  assert.equal(tilesOf(world, 'loc-shatterskull-pass').length, 10);
+  assert.deepEqual(ptOf(g), [4, 3]);
+  const def = npcDef(state, world, g.id)!;
+  assert.ok(!def.beast);
+  assert.deepEqual(def.needs, ['energy', 'hunger']);
 });
 
 test('the real Oracle of Mul Daya lives in Riverroot, in the Guum Wilds of Bala Ged', () => {

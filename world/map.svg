@@ -1030,6 +1030,16 @@
   <rect x="8784" y="1296" width="144" height="144" fill="#efe4c2" fill-opacity="0.95" stroke="#f4ecd8" stroke-width="3"/><path d="M8928 1296L8928 1440L8784 1440Z" fill="#3f7fcf" fill-opacity="0.95"/>
   <rect x="9072" y="1296" width="144" height="144" fill="#efe4c2" fill-opacity="0.95" stroke="#f4ecd8" stroke-width="3"/><path d="M9216 1296L9216 1440L9072 1440Z" fill="#3f7fcf" fill-opacity="0.95"/>
   <rect x="8928" y="864" width="144" height="144" fill="#efe4c2" fill-opacity="0.95" stroke="#f4ecd8" stroke-width="3"/><path d="M9072 864L9072 1008L8928 1008Z" fill="#3f7fcf" fill-opacity="0.95"/>
+  <rect x="8496" y="3168" width="144" height="144" fill="#cc4f34" fill-opacity="0.95" stroke="#f4ecd8" stroke-width="3"/>
+  <rect x="8496" y="3024" width="144" height="144" fill="#cc4f34" fill-opacity="0.95" stroke="#f4ecd8" stroke-width="3"/>
+  <rect x="8352" y="3168" width="144" height="144" fill="#cc4f34" fill-opacity="0.95" stroke="#f4ecd8" stroke-width="3"/>
+  <rect x="8640" y="3168" width="144" height="144" fill="#cc4f34" fill-opacity="0.95" stroke="#f4ecd8" stroke-width="3"/>
+  <rect x="8352" y="3024" width="144" height="144" fill="#cc4f34" fill-opacity="0.95" stroke="#f4ecd8" stroke-width="3"/>
+  <rect x="8640" y="3024" width="144" height="144" fill="#cc4f34" fill-opacity="0.95" stroke="#f4ecd8" stroke-width="3"/>
+  <rect x="8496" y="3312" width="144" height="144" fill="#cc4f34" fill-opacity="0.95" stroke="#f4ecd8" stroke-width="3"/>
+  <rect x="8496" y="2880" width="144" height="144" fill="#cc4f34" fill-opacity="0.95" stroke="#f4ecd8" stroke-width="3"/>
+  <rect x="8352" y="3312" width="144" height="144" fill="#cc4f34" fill-opacity="0.95" stroke="#f4ecd8" stroke-width="3"/>
+  <rect x="8640" y="3312" width="144" height="144" fill="#cc4f34" fill-opacity="0.95" stroke="#f4ecd8" stroke-width="3"/>
   <rect x="5184" y="6768" width="144" height="144" fill="#3f7fcf" fill-opacity="0.95" stroke="#f4ecd8" stroke-width="3"/>
   <rect x="5184" y="6912" width="144" height="144" fill="#3f7fcf" fill-opacity="0.95" stroke="#f4ecd8" stroke-width="3"/>
   <rect x="5040" y="6768" width="144" height="144" fill="#3f7fcf" fill-opacity="0.95" stroke="#f4ecd8" stroke-width="3"/>
@@ -1257,29 +1267,19 @@
   <rect x="5904" y="6768" width="144" height="144" fill="#cc4f34" fill-opacity="0.95" stroke="#f4ecd8" stroke-width="3"/>
   <rect x="6048" y="6336" width="144" height="144" fill="#cc4f34" fill-opacity="0.95" stroke="#f4ecd8" stroke-width="3"/>
   <rect x="6192" y="6768" width="144" height="144" fill="#cc4f34" fill-opacity="0.95" stroke="#f4ecd8" stroke-width="3"/>
-  <rect x="8640" y="3024" width="144" height="144" fill="#cc4f34" fill-opacity="0.95" stroke="#f4ecd8" stroke-width="3"/>
-  <rect x="8496" y="3024" width="144" height="144" fill="#cc4f34" fill-opacity="0.95" stroke="#f4ecd8" stroke-width="3"/>
   <rect x="8640" y="2880" width="144" height="144" fill="#cc4f34" fill-opacity="0.95" stroke="#f4ecd8" stroke-width="3"/>
-  <rect x="8640" y="3168" width="144" height="144" fill="#cc4f34" fill-opacity="0.95" stroke="#f4ecd8" stroke-width="3"/>
   <rect x="8784" y="3024" width="144" height="144" fill="#cc4f34" fill-opacity="0.95" stroke="#f4ecd8" stroke-width="3"/>
-  <rect x="8496" y="2880" width="144" height="144" fill="#cc4f34" fill-opacity="0.95" stroke="#f4ecd8" stroke-width="3"/>
-  <rect x="8496" y="3168" width="144" height="144" fill="#cc4f34" fill-opacity="0.95" stroke="#f4ecd8" stroke-width="3"/>
   <rect x="8784" y="2880" width="144" height="144" fill="#cc4f34" fill-opacity="0.95" stroke="#f4ecd8" stroke-width="3"/>
   <rect x="8784" y="3168" width="144" height="144" fill="#cc4f34" fill-opacity="0.95" stroke="#f4ecd8" stroke-width="3"/>
-  <rect x="8352" y="3024" width="144" height="144" fill="#cc4f34" fill-opacity="0.95" stroke="#f4ecd8" stroke-width="3"/>
   <rect x="8640" y="2736" width="144" height="144" fill="#cc4f34" fill-opacity="0.95" stroke="#f4ecd8" stroke-width="3"/>
-  <rect x="8640" y="3312" width="144" height="144" fill="#cc4f34" fill-opacity="0.95" stroke="#f4ecd8" stroke-width="3"/>
   <rect x="8928" y="3024" width="144" height="144" fill="#cc4f34" fill-opacity="0.95" stroke="#f4ecd8" stroke-width="3"/>
   <rect x="8352" y="2880" width="144" height="144" fill="#cc4f34" fill-opacity="0.95" stroke="#f4ecd8" stroke-width="3"/>
-  <rect x="8352" y="3168" width="144" height="144" fill="#cc4f34" fill-opacity="0.95" stroke="#f4ecd8" stroke-width="3"/>
   <rect x="8496" y="2736" width="144" height="144" fill="#cc4f34" fill-opacity="0.95" stroke="#f4ecd8" stroke-width="3"/>
-  <rect x="8496" y="3312" width="144" height="144" fill="#cc4f34" fill-opacity="0.95" stroke="#f4ecd8" stroke-width="3"/>
   <rect x="8784" y="2736" width="144" height="144" fill="#cc4f34" fill-opacity="0.95" stroke="#f4ecd8" stroke-width="3"/>
   <rect x="8784" y="3312" width="144" height="144" fill="#cc4f34" fill-opacity="0.95" stroke="#f4ecd8" stroke-width="3"/>
   <rect x="8928" y="2880" width="144" height="144" fill="#cc4f34" fill-opacity="0.95" stroke="#f4ecd8" stroke-width="3"/>
   <rect x="8928" y="3168" width="144" height="144" fill="#cc4f34" fill-opacity="0.95" stroke="#f4ecd8" stroke-width="3"/>
   <rect x="8352" y="2736" width="144" height="144" fill="#cc4f34" fill-opacity="0.95" stroke="#f4ecd8" stroke-width="3"/>
-  <rect x="8352" y="3312" width="144" height="144" fill="#cc4f34" fill-opacity="0.95" stroke="#f4ecd8" stroke-width="3"/>
   <rect x="8928" y="2736" width="144" height="144" fill="#cc4f34" fill-opacity="0.95" stroke="#f4ecd8" stroke-width="3"/>
   <rect x="8928" y="3312" width="144" height="144" fill="#cc4f34" fill-opacity="0.95" stroke="#f4ecd8" stroke-width="3"/>
   <rect x="8208" y="3024" width="144" height="144" fill="#cc4f34" fill-opacity="0.95" stroke="#f4ecd8" stroke-width="3"/>
@@ -1419,11 +1419,12 @@
   <text x="8323.2" y="4041" text-anchor="middle" class="area">뜨거운 호수</text>
   <text x="8884.8" y="8433" text-anchor="middle" class="area">바다 관문</text>
   <text x="9000" y="1204.1999999999998" text-anchor="middle" class="area">세지리 피난처</text>
+  <text x="8568" y="3220.2000000000003" text-anchor="middle" class="area">섀터스컬 고개</text>
   <text x="5236.799999999999" y="6906.599999999999" text-anchor="middle" class="area">실룬디 연안</text>
   <text x="9504" y="7929" text-anchor="middle" class="area">솟아오른 바다절벽</text>
   <text x="10656" y="5409" text-anchor="middle" class="area">탱글드 베일</text>
   <text x="6120" y="6676.200000000001" text-anchor="middle" class="area">흔들리는 봉우리</text>
-  <text x="8683.2" y="3115.7999999999997" text-anchor="middle" class="area">아쿰의 이빨</text>
+  <text x="8721.599999999999" y="3081" text-anchor="middle" class="area">아쿰의 이빨</text>
   <text x="7653.599999999999" y="10247.400000000001" text-anchor="middle" class="area">선더만</text>
   <text x="6624" y="6168.599999999999" text-anchor="middle" class="area">턴팀버 숲</text>
   <text x="9201.599999999999" y="7324.200000000001" text-anchor="middle" class="area">우마라 강 협곡</text>
