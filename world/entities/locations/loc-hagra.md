@@ -5,11 +5,12 @@ name: 하그라 늪
 name_en: Hagra Swamp
 summary: 굴 드라즈 대부분을 덮은 썩은 늪. 이끼 늘어진 나무가 해를 가리고 고인 물이 병든 초록빛으로 빛난다. 무너진 옛 저수조 폐허에 오우거 부족이 산다
 status: canon
-sources: [ZEN-95]
+sources: [ZEN-95, ZEN-94]
 tags: [늪, 폐허, 오우거, 저수조, 흑색]
 links:
   - { to: loc-guul-draz, rel: 바깥 지역 }
   - { to: chr-hagra-diabolist, rel: 폐허에 사는 오우거 주술사 }
+  - { to: cre-hagra-crocodile, rel: 저수조 폐허 물가에 사는 악어 }
 map: { in: loc-guul-draz, terrain: swamp, pos: [0.05, 0.2], tiles: 30 }   # 기본 늪: 흑 마나 [결정] 2026-09-30
 ---
 
@@ -24,6 +25,7 @@ map: { in: loc-guul-draz, terrain: swamp, pos: [0.05, 0.2], tiles: 30 }   # 기�
 - 굴 드라즈 안의 구역이다 (지형 `swamp`) ([결정] 2026-09-30: 카드 ZEN-95 의 이름에서, 사용자 요청으로 더함).
 - **늪**이다 ([결정] 2026-09-30: 처음엔 땅이 아닌 곳으로 두었다가 늪으로 치기로 함). 땅 카드는 없지만 기본 늪처럼: 유대를 맺으면 흑 마나 1을 내고, 늪 종류라 늪걷기의 늪이고 페치(습지 평원, 푸른 지하묘지)로 찾을 수 있다. 굴 드라즈, 게트 혈족의 영지에 이은 세 번째 늪이다.
 - 하그라 악마술사(`chr-hagra-diabolist`)가 폐허에 산다.
+- 하그라 악어(`cre-hagra-crocodile`, ZEN-94)가 동쪽 가장자리 저수조 폐허의 물가에 산다.
 
 ## 미정/질문
 

@@ -209,7 +209,10 @@ export function refreshEmptyHand(state: State, world: World, a: Actor, t: number
 
 export function clash(state: State, world: World, attacker: Actor, defender: Actor, t: number, unblocked: string | null = null) {
   // Foes are made as the blow falls: the specter sees an empty hand from the first exchange.
+  // Not yet a foe: the attacker fell on them, a fight they defend.
+  const setUpon = !foesOf(defender, t).includes(attacker.id);
   addFoe(defender, attacker.id, t);
+  if (setUpon) (defender.foes!.struck ??= []).push(attacker.id);
   addFoe(attacker, defender.id, t);
   refreshEmptyHand(state, world, attacker, t);
   refreshEmptyHand(state, world, defender, t);
@@ -395,8 +398,11 @@ export function hostileNpcs(state: State, world: World, t: number) {
     // Defender: they never strike first (they still strike back when struck).
     if (hasAbility(a, 'defender', t)) continue;
     // Their own foes, and (a retainer) whoever their master is fighting right here.
+    // "Can't block" (Hagra Crocodile): not one who fell on their master first; they only join the
+    // fights their master started (user decision 2026-10-01).
     const m = masterOf(state, a);
-    const theirs = [...foesOf(a, t), ...(m && together(m, a) ? foesOf(m, t) : [])];
+    const guards = m && together(m, a) ? foesOf(m, t).filter((id) => !hasAbility(a, 'cant_block', t) || !m.foes?.struck?.includes(id)) : [];
+    const theirs = [...foesOf(a, t), ...guards];
     let foe = present(state, a.region, a.tile).find((b) => theirs.includes(b.id) && b.id !== a.master && !down(b) && (evasion(a, b, t) !== 'evade' || !!unblockable(state, world, a, b, t, true)));
     const hunted = !foe && prey(state, world, a, t);
     if (hunted) {

@@ -8,7 +8,7 @@ import type { PlanDayInput } from './llm/planner.ts';
 import type { Action } from './actions.ts';
 import { startAction } from './actions.ts';
 import type { World } from './world.ts';
-import { addFoe, attackBlocked, clash, die, foesOf, intimidated, knockedOut, landwalked, unblockable, woundsOf } from './combat.ts';
+import { addFoe, attackBlocked, clash, die, foesOf, hostileNpcs, intimidated, knockedOut, landwalked, unblockable, woundsOf } from './combat.ts';
 import { landSealed, powersSealed, sealedBy, sealToday, setSeal } from './seal.ts';
 import { castBlocked, castSpell, castTargets, readyCast } from './spells.ts';
 import { actorColors, COLORS, formatMana, manaAvailable, manaCapacity, parseManaCost, planPayment } from './mana.ts';
@@ -3971,4 +3971,40 @@ test('one land in two places: bonding at the coast is bonding with the sea; an h
   const found = fetchTargets(state, world, p, 'loc-scalding-tarn').map((r) => r.id);
   assert.ok(found.includes('loc-silundi-sea') && !found.includes('loc-silundi-coast'));
   assert.ok(found.includes('loc-thunder-bay') && !found.includes('loc-sunder-offing'));
+});
+
+test('can\'t block: a retainer won\'t stand by its master against one who fell on them, only join the fights its master starts', () => {
+  const croc = { ...npcSim('loc-a', 'work', [3, 1]), needs: ['energy'], abilities: ['cant_block'] };
+  const world = fixture([npc('chr-c', croc), npc('chr-g', npcSim('loc-a', 'work', [1, 1])), npc('chr-m', npcSim('loc-a', 'work', [1, 20])), npc('chr-y', npcSim('loc-a', 'work', [1, 20])), npc('chr-z', npcSim('loc-a', 'work', [1, 20]))]);
+  const state = newState(world, { seed: 1, mode: 'observer' });
+  const [c, g, m, y, z] = ['chr-c', 'chr-g', 'chr-m', 'chr-y', 'chr-z'].map((id) => state.actors[id]);
+  for (const a of [c, g, y, z]) a.tile = m.tile;
+  c.master = 'chr-m';
+  g.master = 'chr-m'; // a retainer that can block, beside it
+  let t = state.minutes;
+  // y falls on the master: the one who can block stands by them, the crocodile doesn't.
+  clash(state, world, y, m, t);
+  assert.deepEqual(m.foes?.struck, ['chr-y']);
+  hostileNpcs(state, world, t + 60);
+  const struckBy = (id: string, foe: string) => state.log.some((e) => e.kind === 'combat' && e.actors[0] === id && e.actors[1] === foe);
+  assert.ok(struckBy('chr-g', 'chr-y'));
+  assert.ok(!struckBy('chr-c', 'chr-y'));
+  // The master falls on z: the crocodile joins in.
+  t += 120;
+  addFoe(m, 'chr-z', t);
+  clash(state, world, m, z, t);
+  assert.ok(!m.foes?.struck?.includes('chr-z'));
+  hostileNpcs(state, world, t + 60);
+  assert.ok(struckBy('chr-c', 'chr-z'));
+  assert.ok(!struckBy('chr-c', 'chr-y'));
+});
+
+test('the real Hagra Crocodile lurks in the Hagra swamp', () => {
+  const world = loadWorld();
+  const state = newState(world, { seed: 1, mode: 'observer' });
+  const c = state.actors['cre-hagra-crocodile'];
+  assert.equal(c?.region, 'loc-hagra');
+  assert.ok(hasAbility(c, 'cant_block', state.minutes));
+  assert.deepEqual(npcDef(state, world, c.id)?.landfall?.pt, [2, 2]);
+  assert.ok(npcDef(state, world, c.id)?.beast);
 });

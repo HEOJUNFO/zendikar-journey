@@ -91,7 +91,9 @@ export type Actor = {
   // Combat damage taken this turn; it wears off when the turn ends (00:00).
   wounds?: { day: number; amount: number };
   // Who they'll attack on sight this turn (they were attacked, or turned hostile).
-  foes?: { day: number; ids: string[] };
+  // `struck`: those of them who fell on them first (not yet foes when the blow fell): a fight they
+  // defend, not one they started (one who can't block won't join their master's, Hagra Crocodile).
+  foes?: { day: number; ids: string[]; struck?: string[] };
   // The color they sealed today (Iona, sim/seal.ts): their opponents can't cast spells of it.
   seal?: { day: number; color: Color };
   // The day a color of theirs is sealed against them (sim/seal.ts): none of their powers then.
