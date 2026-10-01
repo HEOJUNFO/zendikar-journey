@@ -2930,6 +2930,16 @@ test('intimidate: one who shares none of its colors can\'t strike back at it, bu
   assert.equal(intimidated(state, world, d, x, state.minutes), false);
 });
 
+test('the real Bladetusk Boar hunts the snowy canyons of Akoum, intimidating', () => {
+  const world = loadWorld();
+  const state = newState(world, { seed: 1, mode: 'observer' });
+  const b = state.actors['cre-bladetusk-boar'];
+  assert.equal(b?.region, 'loc-akoum');
+  assert.ok(hasAbility(b, 'intimidate', state.minutes));
+  assert.deepEqual(actorColors(state, world, b), ['R']);
+  assert.ok(npcDef(state, world, b.id)?.beast);
+});
+
 test('first strike: one who has it strikes first, and one it fells never strikes back; both have it, simultaneous', () => {
   const fs = (pt: [number, number]) => ({ ...npcSim('loc-a', 'work', pt), needs: ['energy'], abilities: ['first_strike'] });
   const world = fixture([npc('chr-s', fs([3, 3])), npc('chr-s2', fs([3, 3])), npc('chr-x', npcSim('loc-a', 'work', [3, 3])), npc('chr-y', npcSim('loc-a', 'work', [3, 3])), npc('chr-big', npcSim('loc-a', 'work', [2, 9]))]);
