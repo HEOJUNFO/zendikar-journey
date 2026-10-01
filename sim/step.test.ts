@@ -5037,8 +5037,10 @@ test('Archmage Ascension: a quest counter at midnight for two secrets a day; wit
   const got = drawKnowledge(state, world, o, 99, state.minutes, '시험');
   assert.ok(o.spells?.includes('spl-z'));
   assert.equal(state.items!['itm-r'].owner, o.id);
-  assert.equal(c.master, o.id);
+  // Brought to their side, not theirs (user decision 2026-10-01).
+  assert.equal(c.master, undefined);
   assert.equal(c.region, o.region);
+  assert.ok(sameTile(c.tile, o.tile));
   assert.equal(sv.master, c.id);
   // What stays a secret: none of those had; only they count as drawn.
   assert.ok(!got.some((x) => x.id === 'spell:spl-z' || x.id === 'item:itm-r' || x.id.startsWith('creature:chr-c:')));

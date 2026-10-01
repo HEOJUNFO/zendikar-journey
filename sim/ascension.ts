@@ -5,12 +5,14 @@
 // who came to know two secrets or more that day puts a counter on it (always, a boon). With six,
 // each secret they would come to know (at random, as ever) they have for real instead (user
 // decision 2026-10-01): a spell they learn on the spot; an item no one holds becomes theirs, as
-// if tamed; a creature of a card who serves no one is drawn to their side and serves them. A
+// if tamed; a creature of a card who serves no one is drawn to their side (only brought: it
+// doesn't serve them, user decision 2026-10-01; winning it over is theirs to do then). A
 // trap or what is to come today stays a secret (there is nothing to have). Had for real, it is
 // no draw (a replaced draw); what stays a secret is.
 import { gameDay } from './clock.ts';
 import { itemDef, itemOwner, takeItem } from './items.ts';
-import { bindRetainer } from './retainers.ts';
+import { onEnter } from './abilities.ts';
+import { remember } from './relations.ts';
 import { addLog, npcDef, outOfTime } from './state.ts';
 import type { Actor, State } from './state.ts';
 import { josa, shortName } from './text.ts';
@@ -75,9 +77,11 @@ export function obtain(state: State, world: World, a: Actor, secret: Secret, t: 
     const def = npcDef(state, world, id);
     if (!c || !def || c.dead || c.left || c.master || c.id === a.id || c.kind !== 'npc' || def.loyalty !== undefined || outOfTime(state, c, t)) return false;
     if (a.travel || !canStay(region(world, a.region), def.abilities)) return false;
-    addLog(state, { kind: 'event', text: `${cause}: ${josa(shortName(c.name), '이', '가')} ${shortName(a.name)}의 곁으로 이끌려 왔다.`, regions: [a.region, c.region], actors: [a.id, c.id], t });
+    addLog(state, { kind: 'event', text: `${cause}: ${josa(shortName(c.name), '이', '가')} ${shortName(a.name)}의 곁으로 이끌려 왔다. 섬기는 것은 아니다.`, regions: [a.region, c.region], actors: [a.id, c.id], t });
     Object.assign(c, { region: a.region, tile: a.tile, task: undefined, forced: undefined, travel: undefined });
-    bindRetainer(state, world, c, a, t, cause);
+    remember(c, a, `나를 그의 곁으로 이끌어 왔다 (${cause})`, t);
+    // Arriving somewhere: its powers on entering wake, as for one called forth.
+    onEnter(state, world, c, t);
     return true;
   }
   return false;
