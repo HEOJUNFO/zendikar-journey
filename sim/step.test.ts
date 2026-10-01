@@ -2633,6 +2633,19 @@ test('the real Caravan Hurda hauls for Goma Fada, for 50 coin; the walking city 
   assert.deepEqual(landTypes(region(world, 'loc-goma-fada')), ['mountain']); // a walking mountain
 });
 
+test('the real Pillarfield Ox grazes by the Goma Fada caravan: a stubborn 2/4 beast that never hunts and no one can take', () => {
+  const world = loadWorld();
+  const state = newState(world, { seed: 1, mode: 'observer' });
+  const ox = state.actors['cre-pillarfield-ox'];
+  assert.equal(ox?.region, 'loc-goma-fada');
+  assert.deepEqual(ptOf(ox), [2, 4]);
+  const def = npcDef(state, world, ox.id)!;
+  assert.ok(def.beast);
+  assert.ok(!def.needs.includes('hunger')); // it grazes: never hungry enough to fall on anyone
+  assert.ok(!def.hireable && !def.tamable);
+  assert.deepEqual(actorColors(state, world, ox), ['W']);
+});
+
 test('a wandering place walks toward the stop the LLM picks, carries those in it, and journeys to it are as long as it is far today', async () => {
   const caravan: RawEntity = {
     id: 'loc-car',
