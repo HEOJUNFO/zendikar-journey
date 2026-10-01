@@ -5,9 +5,10 @@ name: 리버루트
 name_en: Riverroot
 summary: 굼 밀림 깊은 곳, 거목 하나에 통째로 지은 멀 다야 엘프의 마을. 나무 아래에서 망자를 태우고, 동쪽에는 빛나는 이끼 늪이, 뿌리 밑에는 동굴과 땅속 호수가 있다
 status: canon
-sources: [ZEN-172]
+sources: [ZEN-172, ZEN-164]
 tags: [마을, 거목, 엘프, 멀 다야, 녹색]
 links:
+  - { to: chr-greenweaver-druid, rel: 조상의 흐름을 엮는 멀 다야 드루이드 }
   - { to: loc-guum-wilds, rel: 바깥 구역 }
   - { to: chr-oracle-of-mul-daya, rel: 사는 신탁자 }
 map: { in: loc-guum-wilds, terrain: forest, pos: [-0.35, -0.45], tiles: 10 }   # 기본 숲 [결정] 2026-10-01. 굼 밀림 북서쪽 깊은 곳 [가공] (가운데는 묻힌 유적)

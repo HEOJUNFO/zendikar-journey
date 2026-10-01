@@ -5031,6 +5031,37 @@ test('the real Grazing Gladehart grazes in Oran-Rief: a gentle beast, 2 life to 
   assert.equal(def.landfallLife, 2);
 });
 
+test('Greenweaver Druid: {G}{G} a day for whoever controls it, standing with them, awake, powers unsealed', () => {
+  const world = fixture([npc('chr-d', { ...npcSim('loc-a', 'work', [1, 1]), mana: { G: 3 }, types: ['elf'], tap_mana: { G: 2 } })]);
+  const state = character(world, 'loc-a');
+  const [p, d] = [state.actors[PLAYER_ID], state.actors['chr-d']];
+  const t = state.minutes;
+  assert.equal(manaCapacity(state, world, d, t).G, 5); // its own, with no master
+  d.master = p.id;
+  d.tile = p.tile;
+  assert.equal(manaCapacity(state, world, p, t).G, 2);
+  assert.equal(manaCapacity(state, world, d, t).G, 3);
+  d.tile = [p.tile![0] + 1, p.tile![1]];
+  assert.equal(manaCapacity(state, world, p, t).G ?? 0, 0); // not with them
+  d.tile = p.tile;
+  d.forced = { kind: 'sleep', activity: '기절', emoji: '😵', until: t + 60 };
+  assert.equal(manaCapacity(state, world, p, t).G ?? 0, 0); // knocked out
+  d.forced = undefined;
+  d.sealedOut = gameDay(t);
+  assert.equal(manaCapacity(state, world, p, t).G ?? 0, 0); // sealed
+});
+
+test('the real Greenweaver Druid lives in Riverroot with the Mul Daya: an elf who weaves {G}{G}', () => {
+  const world = loadWorld();
+  const state = newState(world, { seed: 1, mode: 'observer' });
+  const d = state.actors['chr-greenweaver-druid'];
+  assert.equal(d?.region, 'loc-riverroot');
+  const def = npcDef(state, world, d.id)!;
+  assert.ok(!def.beast && def.types?.includes('elf'));
+  assert.deepEqual(def.tapMana, { G: 2 });
+  assert.equal(manaCapacity(state, world, d, state.minutes).G, 5);
+});
+
 test('the real Merfolk Seastalkers lurk in Bojuka Bay, a basic island on the edge of the Guum Wilds in Bala Ged: islandwalk', () => {
   const world = loadWorld();
   const state = newState(world, { seed: 1, mode: 'observer' });
@@ -5201,7 +5232,7 @@ test('Nissa Revane: +1 calls an elf warrior to her side, +1 gains 2 life per elf
   assert.equal(state.actors['chr-h'].master, undefined);
 });
 
-test('the real Nissa Revane bides in the Tangled Vale; the world\'s elves are the ranger, the bard and the oracle', () => {
+test('the real Nissa Revane bides in the Tangled Vale; the world\'s elves are the ranger, the bard, the oracle and the druid', () => {
   const world = loadWorld();
   const state = newState(world, { seed: 1, mode: 'observer' });
   const n = state.actors['chr-nissa-revane'];
@@ -5209,7 +5240,7 @@ test('the real Nissa Revane bides in the Tangled Vale; the world\'s elves are th
   assert.equal(n.loyalty, 2);
   assert.deepEqual(npcDef(state, world, n.id)?.activated?.map((x) => x.loyalty), [1, 1, -7]);
   const elves = world.npcs.filter((x) => x.types?.includes('elf')).map((x) => x.id).sort();
-  assert.deepEqual(elves, ['chr-joraga-bard', 'chr-oracle-of-mul-daya', 'chr-turntimber-ranger']);
+  assert.deepEqual(elves, ['chr-greenweaver-druid', 'chr-joraga-bard', 'chr-oracle-of-mul-daya', 'chr-turntimber-ranger']);
 });
 
 test('a blaze counter: the target\'s latest unburning land catches fire; all bonded with it lose 1 life each midnight, even after the fireheart dies, until the land is destroyed', async () => {

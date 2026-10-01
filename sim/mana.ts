@@ -4,6 +4,9 @@
 // its holder tapped for an ability today), nor does a land that enters tapped on the day it
 // is bonded with.
 import { gameDay } from './clock.ts';
+import { KO_ACTIVITY } from './rules.ts';
+import { sameTile } from './tiles.ts';
+import type { Tile } from './tiles.ts';
 import type { State } from './state.ts';
 import type { NpcDef, World } from './world.ts';
 
@@ -80,6 +83,9 @@ export function actorColors(state: State, world: World, a: { id: string; bonds?:
 
 type Holder = {
   id: string;
+  region?: string;
+  tile?: Tile;
+  travel?: unknown;
   bonds?: string[];
   landfalls?: { day: number; regions: string[] };
   fallen?: string[];
@@ -111,6 +117,18 @@ export function manaCapacity(state: State, world: World, a: Holder, t?: number):
   for (const x of world.items) {
     if (state.items?.[x.id]?.owner !== a.id || state.items[x.id].gone) continue;
     for (const e of x.effects) if (e.type === 'mana') out[ANY_COLOR] = (out[ANY_COLOR] ?? 0) + e.amount;
+  }
+  // Creatures that tap for mana ("{T}: Add {G}{G}", Greenweaver Druid; `sim.tap_mana`): theirs
+  // to draw on whose they are (their master's, or their own), while they stand with them, awake
+  // and their powers not sealed (user decision 2026-10-01).
+  for (const d of [...world.npcs, ...Object.values(state.tokens ?? {})]) {
+    const [tap, x] = [d.tapMana, state.actors[d.id]];
+    if (!tap || !x || x.dead || x.forced?.activity === KO_ACTIVITY || (t !== undefined && x.sealedOut === gameDay(t))) continue;
+    const master = x.master ? state.actors[x.master] : undefined;
+    const controller = master && !master.dead ? master.id : x.id;
+    if (controller !== a.id) continue;
+    if (x.id !== a.id && (x.region !== a.region || !sameTile(x.tile, a.tile) || x.travel || a.travel)) continue;
+    for (const [c, n] of Object.entries(tap) as [Color, number][]) out[c] = (out[c] ?? 0) + n;
   }
   return out;
 }
