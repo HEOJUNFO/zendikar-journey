@@ -297,6 +297,9 @@ export const CharacterSimSchema = z.strictObject({
   // A beast that may choose to follow one who wins its trust (the Felidar Sovereign): the
   // player by talking to it, an NPC by a "court" block. The LLM decides, as the beast.
   tamable: z.boolean().default(false),
+  // "At the beginning of your upkeep, sacrifice this creature unless you return a land you
+  // control to its owner's hand" (Living Tsunami): while it serves someone (sim/tide.ts).
+  upkeep_return_land: z.boolean().default(false),
   // "At the beginning of your upkeep, if you have N or more life, you win the game": its
   // controller (its master; a beast alone is no player) wins at 00:00 (sim/win.ts).
   wins_at_life: z.number().int().min(1).optional(),
@@ -719,6 +722,7 @@ export type NpcDef = {
   needs: Need[];
   beast?: boolean;
   tamable?: boolean;
+  upkeepReturnLand?: boolean;
   winsAtLife?: number;
   extraCombat?: { cost: ManaCost; costText: string };
   pump?: { cost: ManaCost; costText: string; pt: [number, number] };
@@ -925,7 +929,7 @@ export function buildWorld(entities: RawEntity[]): { world: World; errors: strin
         err(e.id, `sim 오류: ${issues(sim.error)}`);
         continue;
       }
-      const { knows_colors, activated, wins_at_life, extra_combat, pump, empty_hand_pump, discard_on_hit, landfall_token, landfall_seize, landfall_lose, landfall_grant, landfall_drain, enter_destroy, enter_drain, enter_draw, enter_search, tap_draw_allies, name, home_pos, ...rest } = sim.data;
+      const { knows_colors, activated, wins_at_life, extra_combat, pump, empty_hand_pump, discard_on_hit, landfall_token, landfall_seize, landfall_lose, landfall_grant, landfall_drain, enter_destroy, enter_drain, enter_draw, enter_search, upkeep_return_land, tap_draw_allies, name, home_pos, ...rest } = sim.data;
 
       world.npcs.push({
         id: e.id,
@@ -944,6 +948,7 @@ export function buildWorld(entities: RawEntity[]): { world: World; errors: strin
           : {}),
         ...(enter_drain ? { enterDrain: enter_drain } : {}),
         ...(enter_search ? { enterSearch: enter_search } : {}),
+        ...(upkeep_return_land ? { upkeepReturnLand: true } : {}),
         ...(home_pos ? { homePos: home_pos } : {}),
         ...(enter_draw ? { enterDraw: { count: enter_draw.count, discard: enter_draw.discard, ...(enter_draw.kicker ? { kicker: parseManaCost(enter_draw.kicker)!, kickerText: enter_draw.kicker } : {}) } } : {}),
         ...(landfall_drain ? { landfallDrain: landfall_drain } : {}),

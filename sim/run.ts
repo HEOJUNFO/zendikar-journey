@@ -19,6 +19,7 @@ import { cardLabel, discardOwed, handOf, letGo } from './discard.ts';
 import { crushRelic, demolish, demolishOptions, relicsHere } from './relics.ts';
 import { loremastersOf, recallBlocked, recallCount } from './loremaster.ts';
 import { sacrifice } from './monument.ts';
+import { answerTide } from './tide.ts';
 import { strandedText } from './stranded.ts';
 import { bounce, bounceCandidates } from './bounce.ts';
 import { eventTile } from './tiles.ts';
@@ -609,6 +610,22 @@ async function choices(state: State, world: World, llm: Llm) {
           }
         }
         owed = answerReturnLand(state, world, by, pick, eff, state.minutes);
+      }
+      continue;
+    }
+    // Living Tsunami at midnight: which land its master gives back to keep it (or none: it goes).
+    if (c.effect.type === 'tide') {
+      if (by && !by.dead && npc) {
+        const options = c.candidates.filter((id) => (by.bonds ?? []).includes(id)).map((id) => ({ id, label: region(world, id).name }));
+        let pick: string | null = null;
+        if (llm.pick && options.length) {
+          try {
+            pick = await llm.pick({ world, state, npc, what: `당신을 섬기는 ${shortName(state.actors[c.effect.source]?.name ?? '')}이(가) 썰물에 무너지려 한다. 유대를 맺은 땅 하나를 내어 주면(다시 맺을 수 있다, 하루 한 땅) 남고, 내어 주지 않으면 흩어져 죽는다`, options, optional: true });
+          } catch (e) {
+            console.warn(`pick (tide) for ${by.id} failed:`, e);
+          }
+        }
+        answerTide(state, world, by, c.effect.source, pick, state.minutes);
       }
       continue;
     }

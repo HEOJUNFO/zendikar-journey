@@ -4242,3 +4242,57 @@ test('the real Lethargy Trap lies on the Soaring Seacliff', () => {
   assert.equal(ev?.region, 'loc-soaring-seacliff');
   assert.equal(ev?.attackers, 3);
 });
+
+test('a living tsunami: at midnight its master gives back a land to keep it, or it collapses; a free one pays nothing', async () => {
+  const tsunami = { ...npcSim('loc-a', 'work', [4, 4]), needs: ['energy'], beast: true, tamable: true, abilities: ['fly'], upkeep_return_land: true };
+  const world = fixture([npc('chr-w', tsunami), npc('chr-m', npcSim('loc-a', 'work'))]);
+  const state = newState(world, { seed: 1, mode: 'observer' });
+  const [w, m] = [state.actors['chr-w'], state.actors['chr-m']];
+  // Free: nothing at midnight.
+  state.minutes = 1440 - 60;
+  await advance(state, world, 2);
+  assert.equal(w.dead, undefined);
+  // Serving m with two lands: m gives back the forest.
+  w.master = 'chr-m';
+  m.bonds = ['loc-a', 'loc-b'];
+  state.minutes = 2 * 1440 - 60;
+  const offered: string[][] = [];
+  await advance(state, world, 2, { pick: async ({ options }) => (offered.push(options.map((o) => o.id)), 'loc-b') });
+  assert.deepEqual(offered, [['loc-a', 'loc-b']]);
+  assert.deepEqual(m.bonds, ['loc-a']);
+  assert.equal(w.dead, undefined);
+  // Next midnight m gives none: it collapses.
+  state.minutes = 3 * 1440 - 60;
+  await advance(state, world, 2, { pick: async () => null });
+  assert.ok(w.dead);
+  assert.ok(texts(state).some((l) => l.includes('썰물처럼 무너져')));
+});
+
+test('a living tsunami serving the player: theirs to give a land or let it go', async () => {
+  const tsunami = { ...npcSim('loc-a', 'work', [4, 4]), needs: ['energy'], beast: true, tamable: true, abilities: ['fly'], upkeep_return_land: true };
+  const world = fixture([npc('chr-w', tsunami)]);
+  const state = character(world, 'loc-a');
+  const p = state.actors[PLAYER_ID];
+  state.actors['chr-w'].master = PLAYER_ID;
+  p.bonds = ['loc-a'];
+  state.minutes = 1440 - 60;
+  await act(state, world, { type: 'wait', hours: 2 });
+  assert.equal(state.asks?.[0]?.effect.type, 'tide');
+  await act(state, world, { type: 'choose', pick: 'loc-a' });
+  assert.deepEqual(p.bonds, []);
+  assert.equal(state.actors['chr-w'].dead, undefined);
+  // No land left next midnight: it goes.
+  state.minutes = 2 * 1440 - 60;
+  await act(state, world, { type: 'wait', hours: 2 });
+  assert.ok(state.actors['chr-w'].dead);
+});
+
+test('the real Living Tsunami rises off the Silundi Coast', () => {
+  const world = loadWorld();
+  const state = newState(world, { seed: 1, mode: 'observer' });
+  const w = state.actors['cre-living-tsunami'];
+  assert.equal(w?.region, 'loc-silundi-coast');
+  assert.ok(hasAbility(w, 'fly', state.minutes));
+  const def = npcDef(state, world, w.id)!;
+  assert.ok(def.upkeepReturnLand && def.tamable && def.beast);
+});
