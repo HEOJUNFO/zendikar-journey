@@ -5,9 +5,10 @@ name: 굼 밀림
 name_en: Guum Wilds
 summary: 발라 게드의 대부분을 덮은 습한 우림. 거목 꼭대기에 멀 다야 엘프의 마을들이 걸려 있고, 그 깊은 곳에 거목 마을 리버루트가, 가운데에 묻힌 유적이, 땅속에 칼니 심장이, 동쪽 가장자리에 우멍 강 어귀의 보주카 만이 있다
 status: canon
-sources: [ZEN-172, ZEN-159, ZEN-98, ZEN-32]
+sources: [ZEN-172, ZEN-159, ZEN-98, ZEN-32, ZEN-91]
 tags: [우림, 밀림, 엘프, 멀 다야, 녹색]
 links:
+  - { to: spl-grim-discovery, rel: 가르치는 주문 (묻힌 유적의 음산한 발견) }
   - { to: spl-hideous-end, rel: 묻힌 유적의 우상에서 배우는 주문 (흉측한 최후) }
   - { to: loc-bala-ged, rel: 바깥 지역 }
   - { to: loc-riverroot, rel: 안의 구역 (멀 다야의 마을) }
@@ -36,6 +37,8 @@ map: { in: loc-bala-ged, terrain: forest, pos: [0.3, 0.05], tiles: 70 }   # 기�
 - 동쪽 깊은 곳에 야수조련사의 승천(`itm-beastmaster-ascension`, ZEN-159)이 서 있다: 부리는 것들이 덤빌 때마다 탐색이 쌓이고, 일곱이면 부리는 것 모두 +5/+5.
 
 - 서쪽 숲 바닥의 한 칸에 구덩이 함정(`evt-pitfall-trap`, ZEN-32)이 숨어 있다 ([결정] 2026-10-01). 그 칸에서 홀로 덤벼드는 자가 날지 못하면 독 가시 구덩이에 떨어져 죽는다.
+
+- 음산한 발견(`spl-grim-discovery`, ZEN-91)을 배울 수 있다 (4시간, [결정] 2026-10-01): 무덤의 생물 하나를 되살리고(자유롭게), 끊겼던 땅 하나를 손에 쥔다.
 
 ## 미정/질문
 

@@ -52,6 +52,7 @@ import { altarBlocked } from './altar.ts';
 import { applyHarrow } from './harrow.ts';
 import type { HarrowEffect } from './harrow.ts';
 import { applySacrament } from './sacrament.ts';
+import { applyDiscovery } from './discovery.ts';
 import type { SacramentEffect } from './sacrament.ts';
 import { shielded, tapBlocked, useTap } from './tapper.ts';
 import type { Actor, State } from './state.ts';
@@ -7011,4 +7012,35 @@ test('the real Goblin War Paint is taught on the Teeth of Akoum: +2/+2 and haste
   castSpell(state, world, g, 'spl-goblin-war-paint', g.id, false, state.minutes);
   assert.deepEqual(ptOf(g), [before[0] + 2, before[1] + 2]);
   assert.ok(hasAbility(g, 'haste', state.minutes));
+});
+
+const grimSpell: RawEntity = { id: 'spl-grim', kind: 'spell', name: '음산한 발견', status: 'canon', sim: { cost: '{0}', learn_at: 'loc-a', target: 'self', effects: [{ type: 'grim_discovery' }] } };
+
+test('Grim Discovery: one of their dead rises at home, free; a land they held once comes back to their hand', () => {
+  const world = fixture([grimSpell, npc('chr-c', npcSim('loc-a')), npc('chr-r', npcSim('loc-b'))]);
+  const state = newState(world, { seed: 1, mode: 'observer' });
+  const [c, r] = [state.actors['chr-c'], state.actors['chr-r']];
+  c.spells = ['spl-grim'];
+  assert.ok(castBlocked(state, world, c, 'spl-grim', 'chr-c', false, state.minutes)?.includes('무덤에'));
+  r.master = 'chr-c';
+  r.region = 'loc-a';
+  die(state, r, state.minutes, '시험');
+  bondLand(state, world, c, state.minutes, 'loc-b');
+  c.bonds = [];
+  castSpell(state, world, c, 'spl-grim', 'chr-c', false, state.minutes);
+  const picks = state.choices!.filter((x) => x.effect.type === 'discovery');
+  assert.deepEqual(picks.map((x) => (x.effect as { kind: string }).kind).sort(), ['creature', 'land']);
+  applyDiscovery(state, world, c, 'creature', 'chr-r', '음산한 발견', state.minutes);
+  assert.ok(!r.dead);
+  assert.equal(r.master, undefined);
+  assert.equal(r.region, 'loc-b'); // home
+  applyDiscovery(state, world, c, 'land', 'loc-b', '음산한 발견', state.minutes);
+  assert.deepEqual(c.handLands, ['loc-b']);
+});
+
+test('the real Grim Discovery is taught in the Guum Wilds', () => {
+  const world = loadWorld();
+  const s = world.spells.find((x) => x.id === 'spl-grim-discovery')!;
+  assert.equal(s.learnAt, 'loc-guum-wilds');
+  assert.deepEqual(s.effects.map((e) => e.type), ['grim_discovery']);
 });

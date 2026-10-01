@@ -678,6 +678,9 @@ export const SpellSimSchema = z.strictObject({
         // the caster picks a being of theirs on their tile (themselves too), a land they hold, an
         // item of theirs or an aura they cast there; one must be picked (sim/escape.ts).
         z.strictObject({ type: z.literal('return_own') }),
+        // "Choose one or both — return target creature card / land card from your graveyard to your
+        // hand" (Grim Discovery): after casting, the caster may pick of each (sim/discovery.ts).
+        z.strictObject({ type: z.literal('grim_discovery') }),
         // "Target creature gets +P/+T and gains <abilities> until end of turn" (Slaughter Cry): the
         // target (no planeswalker), until midnight.
         z.strictObject({ type: z.literal('pump_target'), pt: PtBonusSchema, abilities: z.array(z.enum(ABILITIES)).default([]) }),

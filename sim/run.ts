@@ -25,6 +25,7 @@ import { applyTorch } from './torch.ts';
 import { applyToll } from './toll.ts';
 import { applyShortcut } from './shortcut.ts';
 import { applySacrament } from './sacrament.ts';
+import { applyDiscovery, discoveryOptions } from './discovery.ts';
 import type { SacramentEffect } from './sacrament.ts';
 import { loremastersOf, recallBlocked, recallCount } from './loremaster.ts';
 import { biteable, readyBiter } from './bite.ts';
@@ -633,6 +634,21 @@ async function choices(state: State, world: World, llm: Llm) {
       }
       if (!options.some((o) => o.id === pick)) pick = options[Math.floor(random(state) * options.length)].id;
       demolish(state, world, by, pick!, c.effect.spell, state.minutes);
+      continue;
+    }
+    // Grim Discovery: of their graveyard, a creature to raise or a land to have in hand (or not).
+    if (c.effect.type === 'discovery') {
+      if (!by || by.dead || !npc || !llm.pick) continue;
+      const eff = c.effect;
+      const options = discoveryOptions(state, world, by, eff.kind);
+      if (!options.length) continue;
+      let pick: string | null = null;
+      try {
+        pick = await llm.pick({ world, state, npc, what: eff.kind === 'creature' ? `${eff.spell}: 당신의 무덤에 든 생물 하나를 되살릴 수 있다 (제 거처에서 눈을 뜨고, 누구도 섬기지 않는다). 누구를? 그만둘 수도 있다` : `${eff.spell}: 한때 이어졌다 끊긴 땅 하나를 손에 쥘 수 있다 (언제든 멀리서 그날의 땅으로 이을 수 있다). 어느 땅을? 그만둘 수도 있다`, options, optional: true });
+      } catch (e) {
+        console.warn(`pick (discovery) for ${by.id} failed:`, e);
+      }
+      applyDiscovery(state, world, by, eff.kind, pick, eff.spell, state.minutes);
       continue;
     }
     // Sadistic Sacrament: spells of the target's to exile, one at a time; they may stop.

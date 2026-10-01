@@ -13,6 +13,7 @@ import { applyTorch } from './torch.ts';
 import { applyToll } from './toll.ts';
 import { applyShortcut } from './shortcut.ts';
 import { applySacrament } from './sacrament.ts';
+import { applyDiscovery, discoveryOptions } from './discovery.ts';
 import { applyRally, applyWard, rallyText, rallyWord } from './allies.ts';
 import { COLOR_LABELS, COLORS } from './mana.ts';
 import { bindRetainer, refuse } from './retainers.ts';
@@ -51,6 +52,7 @@ export function askText(state: State, world: World, c: Choice) {
   if (c.effect.type === 'cast') return `${world.spells.find((s) => s.id === (c.effect as { spell: string }).spell)?.name ?? ''}을(를) 하나 더, 값 없이 걸 수 있다. 누구에게?`;
   if (c.effect.type === 'sacrifice') return `${state.items?.[c.effect.item]?.name ?? c.effect.item}이(가) 오늘의 제물을 요구한다. 부리는 이(당신 자신도) 가운데 누구를 바칠까? (바친 이는 죽는다) 아니면 그것을 무너뜨려 내놓는다.`;
   if (c.effect.type === 'demolish') return `${c.effect.spell}: 이 자리의 마법물체 하나나 땅 하나를 부순다 (땅은 7일 동안 누구에게도 아무것도 내주지 않는다). 무엇을?`;
+  if (c.effect.type === 'discovery') return c.effect.kind === 'creature' ? `${c.effect.spell}: 무덤에 든 생물 하나를 되살릴 수 있다 (제 거처에서 눈을 뜨고, 누구도 섬기지 않는다). 누구를?` : `${c.effect.spell}: 한때 이어졌다 끊긴 땅 하나를 손에 쥘 수 있다. 어느 땅을?`;
   if (c.effect.type === 'sacrament') return `${c.effect.spell}: ${shortName(state.actors[c.effect.target]?.name ?? '')}이(가) 아직 익히지 않은 주문 하나를 그의 앞날에서 도려낸다 (남은 수 ${c.effect.left}). 무엇을? 그만둘 수도 있다.`;
   if (c.effect.type === 'escape') return `${c.effect.spell}: 조종하는 것 하나를 거두어들인다 (자신·권속은 몸에 붙은 힘을 잃고 싸움에서 벗어나 다른 곳으로 달아나고, 땅은 다시 맺을 수 있고, 오라는 다시 걸 수 있다). 무엇을?`;
   if (c.effect.type === 'harrow') return c.effect.given ? `${c.effect.spell}: 아직 이어지지 않은 기본 땅 하나와 멀리서 유대를 맺는다 (남은 수 ${c.effect.left}). 어디와?` : `${c.effect.spell}: ${c.effect.left > 0 ? '먼저 ' : ''}유대를 맺은 땅 하나를 내어 준다 (다시 맺을 수 있다). 어느 땅을?`;
@@ -100,6 +102,10 @@ export function askOptions(state: State, world: World, c: Choice): { pick: strin
   if (c.effect.type === 'demolish') {
     const p = state.actors[c.by];
     return p ? demolishOptions(state, world, p).map((o) => ({ pick: o.id as string | null, label: o.label })) : [];
+  }
+  if (c.effect.type === 'discovery') {
+    const p = state.actors[c.by];
+    return [...(p ? discoveryOptions(state, world, p, c.effect.kind) : []).map((o) => ({ pick: o.id as string | null, label: o.label })), { pick: null, label: '그만둔다' }];
   }
   if (c.effect.type === 'sacrament') return [...c.candidates.map((id) => ({ pick: id as string | null, label: world.spells.find((s) => s.id === id)?.name ?? id })), { pick: null, label: '그만둔다' }];
   if (c.effect.type === 'escape') {
@@ -200,6 +206,8 @@ export function answerAsk(state: State, world: World, pick: string | null, t: nu
     const options = demolishOptions(state, world, p);
     const id = pick && options.some((o) => o.id === pick) ? pick : options[0]?.id;
     if (id) demolish(state, world, p, id, c.effect.spell, t);
+  } else if (c.effect.type === 'discovery') {
+    applyDiscovery(state, world, p, c.effect.kind, pick, c.effect.spell, t);
   } else if (c.effect.type === 'sacrament') {
     const next = applySacrament(state, world, p, c.effect, pick, t);
     if (next) (state.asks ??= []).unshift(next);
