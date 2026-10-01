@@ -5,10 +5,11 @@ name: 피라냐 습지
 name_en: Piranha Marsh
 summary: 굴 드라즈의 얽힌 나무 아래 고인 검푸른 늪. 잔잔한 물 밑에 이빨 드러낸 피라냐 떼가 도사린다
 status: canon
-sources: [ZEN-222, ZEN-84]
+sources: [ZEN-222, ZEN-84, ZEN-97]
 tags: [늪, 피라냐, 위험, 흑색]
 links:
   - { to: cre-bog-tatters, rel: 떠도는 망령 }
+  - { to: cre-heartstabber-mosquito, rel: 그늘을 나는 모기 }
   - { to: loc-guul-draz, rel: 바깥 지역 }
   - { to: law-life, rel: 생명을 앗는 땅 }
 map: { in: loc-guul-draz, terrain: swamp, color: B, pos: [0.3, 0.5], tiles: 10 }
@@ -36,6 +37,8 @@ sim:
   - 짐승도 고를 수 있다 ([결정] 2026-09-30). 모든 존재가 생명을 가지므로 누구든 잃는다 (2026-09-30).
 
 - 늪의 누더기(`cre-bog-tatters`, ZEN-84)가 떠돈다. 스스로 희생자를 찾아가 덤비는 망령이고, 늪과 유대를 맺은 자는 그를 막아내지 못한다.
+
+- 심장찌르개 모기(`cre-heartstabber-mosquito`, ZEN-97)가 늪 나무 그늘을 난다.
 
 ## 미정/질문
 

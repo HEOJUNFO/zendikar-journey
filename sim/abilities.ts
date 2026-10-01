@@ -664,14 +664,17 @@ export function enterDrain(state: State, world: World, a: Actor, t: number) {
 
 // "When this enters, destroy target <type>" (Halo Hunter: an Angel). On their first arrival of
 // the day (onEnter), whom of that type there (if anyone) to destroy is theirs to pick, after
-// the hour (state.choices).
+// the hour (state.choices). "Kicker …. When this enters, if it was kicked, destroy target
+// creature" (Heartstabber Mosquito): anyone there but a planeswalker (no creature), and only
+// if they can pay the kicker from their own mana ([결정] 2026-10-01, as the Sphinx's).
 export function enterDestroy(state: State, world: World, a: Actor, t: number) {
-  const kind = npcDef(state, world, a.id)?.enterDestroy;
-  if (!kind || a.dead || powersSealed(state, world, a, t)) return;
+  const ed = npcDef(state, world, a.id)?.enterDestroy;
+  if (!ed || a.dead || powersSealed(state, world, a, t)) return;
+  if (ed.kicker && !planPayment(manaAvailable(state, world, a, t), ed.kicker)) return;
   const candidates = present(state, a.region, a.tile)
-    .filter((x) => x.id !== a.id && (npcDef(state, world, x.id)?.types ?? []).includes(kind) && targetable(x, t, creatureColors(npcDef(state, world, a.id))))
+    .filter((x) => x.id !== a.id && (ed.kind ? (npcDef(state, world, x.id)?.types ?? []).includes(ed.kind) : npcDef(state, world, x.id)?.loyalty === undefined) && targetable(x, t, creatureColors(npcDef(state, world, a.id))))
     .map((x) => x.id);
-  if (candidates.length) (state.choices ??= []).push({ by: a.id, land: a.region, effect: { type: 'destroy', kind }, candidates, optional: true, t });
+  if (candidates.length) (state.choices ??= []).push({ by: a.id, land: a.region, effect: { type: 'destroy', kind: ed.kind, ...(ed.kickerText ? { kicker: ed.kickerText } : {}) }, candidates, optional: true, t });
 }
 
 // Their pick lands: the one picked, still there, is destroyed.
@@ -682,9 +685,20 @@ export function applyEnterDestroy(state: State, world: World, a: Actor, target: 
     addLog(state, { kind: 'effect', text: `${sealText(sealer, t)} ${josa(shortName(a.name), '은', '는')} 그 힘을 쓰지 못한다.`, regions: [a.region], actors: [a.id, sealer.id], t });
     return;
   }
+  // The kicker, paid as the blow falls; spent meanwhile, no blow.
+  const ed = npcDef(state, world, a.id)?.enterDestroy;
+  if (ed?.kicker) {
+    if (!planPayment(manaAvailable(state, world, a, t), ed.kicker)) {
+      addLog(state, { kind: 'effect', text: `${josa(shortName(a.name), '은', '는')} 힘(${ed.kickerText})이 모자라 ${josa(shortName(target.name), '을', '를')} 꿰뚫지 못했다.`, regions: [a.region], actors: [a.id, target.id], t });
+      return;
+    }
+    payMana(state, world, a, ed.kicker, t);
+  }
   addLog(state, {
     kind: 'event',
-    text: `${josa(shortName(a.name), '이', '가')} 들어서자마자 ${josa(shortName(target.name), '을', '를')} 덮쳐 파괴하려 한다.`,
+    text: ed?.kicker
+      ? `${josa(shortName(a.name), '이', '가')} 힘(${ed.kickerText})을 더 들여 들어서자마자 ${josa(shortName(target.name), '을', '를')} 꿰뚫어 파괴하려 한다.`
+      : `${josa(shortName(a.name), '이', '가')} 들어서자마자 ${josa(shortName(target.name), '을', '를')} 덮쳐 파괴하려 한다.`,
     regions: [a.region],
     actors: [a.id, target.id],
     t,

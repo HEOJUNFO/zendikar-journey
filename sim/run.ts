@@ -605,7 +605,7 @@ async function choices(state: State, world: World, llm: Llm) {
       if (!llm.choose) continue;
       let pick: string | null = null;
       try {
-        pick = await llm.choose({ world, state, npc, candidates, optional: true, what: `${land.name}: 당신이 이곳에 들어섰다. 여기 있는 ${CREATURE_TYPE_LABELS[c.effect.kind]} 가운데 하나를 골라 파괴할 수 있다 (파괴된 이는 죽는다). 아무도 고르지 않을 수도 있다` });
+        pick = await llm.choose({ world, state, npc, candidates, optional: true, what: `${land.name}: 당신이 이곳에 들어섰다. 여기 있는 ${c.effect.kind ? CREATURE_TYPE_LABELS[c.effect.kind] : '이'} 가운데 하나를 골라 ${c.effect.kicker ? `힘(${c.effect.kicker})을 더 들여 ` : ''}파괴할 수 있다 (파괴된 이는 죽는다). 아무도 고르지 않을 수도 있다` });
       } catch (e) {
         console.warn(`choose (destroy) for ${c.by} failed:`, e);
       }

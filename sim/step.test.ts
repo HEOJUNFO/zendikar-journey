@@ -3244,7 +3244,7 @@ test('the real Halo Hunter lairs in Tazeem below Emeria, intimidating, hunting I
   const h = state.actors['cre-halo-hunter'];
   assert.equal(h.region, 'loc-tazeem');
   assert.ok(hasAbility(h, 'intimidate', state.minutes));
-  assert.equal(npcDef(state, world, h.id)?.enterDestroy, 'angel');
+  assert.equal(npcDef(state, world, h.id)?.enterDestroy?.kind, 'angel');
   assert.deepEqual(npcDef(state, world, 'chr-iona')?.types, ['angel']);
 });
 
@@ -4007,4 +4007,37 @@ test('the real Hagra Crocodile lurks in the Hagra swamp', () => {
   assert.ok(hasAbility(c, 'cant_block', state.minutes));
   assert.deepEqual(npcDef(state, world, c.id)?.landfall?.pt, [2, 2]);
   assert.ok(npcDef(state, world, c.id)?.beast);
+});
+
+test('a kicked enter-destroy: with the kicker in its own mana, it may pick anyone there (no planeswalker) and pays as it strikes', () => {
+  const mosq = (mana: number) => ({ ...npcSim('loc-a', 'work', [2, 2]), needs: ['energy'], beast: true, abilities: ['fly'], mana: { B: mana }, enter_destroy: { kicker: '{2}{B}' } });
+  const world = fixture([npc('chr-m', mosq(4)), npc('chr-poor', mosq(2)), npc('chr-x', npcSim('loc-a', 'work', [1, 20]))]);
+  const state = character(world, 'loc-a');
+  const [m, poor, x, p] = ['chr-m', 'chr-poor', 'chr-x', PLAYER_ID].map((id) => state.actors[id]);
+  for (const a of [poor, x, p]) a.tile = m.tile;
+  const t = state.minutes;
+  state.choices = [];
+  enterDestroy(state, world, m, t);
+  const c = state.choices[0];
+  assert.deepEqual(c.effect, { type: 'destroy', kind: undefined, kicker: '{2}{B}' });
+  assert.ok(c.candidates.includes('chr-x') && c.candidates.includes(PLAYER_ID) && c.candidates.includes('chr-poor'));
+  // It strikes: the kicker is paid, the one picked dies.
+  applyEnterDestroy(state, world, m, x, t);
+  assert.ok(x.dead);
+  assert.ok(!planPayment(manaAvailable(state, world, m, t), parseManaCost('{2}{B}')!));
+  assert.ok(texts(state).some((l) => l.includes('힘({2}{B})을 더 들여')));
+  // One that can't pay the kicker picks no one.
+  state.choices = [];
+  enterDestroy(state, world, poor, t);
+  assert.equal(state.choices.length, 0);
+});
+
+test('the real Heartstabber Mosquito flies over the Piranha Marsh', () => {
+  const world = loadWorld();
+  const state = newState(world, { seed: 1, mode: 'observer' });
+  const m = state.actors['cre-heartstabber-mosquito'];
+  assert.equal(m?.region, 'loc-piranha-marsh');
+  assert.ok(hasAbility(m, 'fly', state.minutes));
+  assert.equal(npcDef(state, world, m.id)?.enterDestroy?.kickerText, '{2}{B}');
+  assert.equal(npcDef(state, world, m.id)?.enterDestroy?.kind, undefined);
 });

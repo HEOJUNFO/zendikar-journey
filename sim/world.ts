@@ -263,7 +263,10 @@ export const CharacterSimSchema = z.strictObject({
   // "When this enters, destroy target <type>" (Halo Hunter: an Angel): each time they arrive
   // in a land (or are brought there), they may destroy one of that type there
   // (sim/abilities.ts `enterDestroy`, picked by the LLM after the hour).
-  enter_destroy: z.enum(CREATURE_TYPES).optional(),
+  // Or `{ kicker }`: "Kicker …. When this enters, if it was kicked, destroy target creature"
+  // (Heartstabber Mosquito): anyone there but a planeswalker, if they can pay it from their own
+  // mana (paid as the blow falls).
+  enter_destroy: z.union([z.enum(CREATURE_TYPES), z.strictObject({ kind: z.enum(CREATURE_TYPES).optional(), kicker: CostSchema.optional() })]).optional(),
   // "When this enters, each opponent loses life equal to the number of <kind>s you control. You
   // gain life equal to the life lost this way" (Malakir Bloodwitch: Vampires). Everyone else
   // standing there (not their side) loses it; their controller gains it (sim/abilities.ts).
@@ -711,7 +714,7 @@ export type NpcDef = {
   landfallDrain?: { life: number; counters: number };
   tapDrawAllies?: boolean;
   types?: CreatureType[];
-  enterDestroy?: CreatureType;
+  enterDestroy?: { kind?: CreatureType; kicker?: ManaCost; kickerText?: string };
   enterDrain?: { per: string };
   enterDraw?: { count: number; discard?: number; kicker?: ManaCost; kickerText?: string };
   protection?: Color[];
@@ -912,7 +915,9 @@ export function buildWorld(entities: RawEntity[]): { world: World; errors: strin
         ...(landfall_seize ? { landfallSeize: true } : {}),
         ...(landfall_lose.length ? { landfallLose: landfall_lose } : {}),
         ...(landfall_grant.length ? { landfallGrant: landfall_grant } : {}),
-        ...(enter_destroy ? { enterDestroy: enter_destroy } : {}),
+        ...(enter_destroy
+          ? { enterDestroy: typeof enter_destroy === 'string' ? { kind: enter_destroy } : { kind: enter_destroy.kind, ...(enter_destroy.kicker ? { kicker: parseManaCost(enter_destroy.kicker)!, kickerText: enter_destroy.kicker } : {}) } }
+          : {}),
         ...(enter_drain ? { enterDrain: enter_drain } : {}),
         ...(home_pos ? { homePos: home_pos } : {}),
         ...(enter_draw ? { enterDraw: { count: enter_draw.count, discard: enter_draw.discard, ...(enter_draw.kicker ? { kicker: parseManaCost(enter_draw.kicker)!, kickerText: enter_draw.kicker } : {}) } } : {}),
