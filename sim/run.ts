@@ -21,6 +21,7 @@ import { setOff, wandersDue, withPositions } from './wander.ts';
 import { cardLabel, discardOwed, handOf, letGo } from './discard.ts';
 import { applyShatter, crushRelic, demolish, demolishOptions, relicsHere, shatterOptions } from './relics.ts';
 import { applyEscape, escapeOptions } from './escape.ts';
+import { applyTorch } from './torch.ts';
 import { applySacrament } from './sacrament.ts';
 import type { SacramentEffect } from './sacrament.ts';
 import { loremastersOf, recallBlocked, recallCount } from './loremaster.ts';
@@ -894,6 +895,20 @@ async function choices(state: State, world: World, llm: Llm) {
       }
       const target = candidates.find((x) => x.id === pick) ?? candidates[Math.floor(random(state) * candidates.length)];
       if (target) applyHook(state, world, source, target, state.minutes);
+      continue;
+    }
+    // Torch Slinger, arriving kicked: whom its controller has it throw its torch at, or no one.
+    if (c.effect.type === 'torch') {
+      const source = state.actors[c.effect.source];
+      if (!source || !llm.choose) continue;
+      let pick: string | null = null;
+      try {
+        pick = await llm.choose({ world, state, npc, candidates, optional: true, what: `${land.name}: ${source.id === by.id ? '당신' : shortName(source.name)}이(가) 이곳에 들어섰다. 힘을 더 들여 여기 있는 이 하나에게 타오르는 횃불을 던져 피해 ${npcDef(state, world, source.id)?.enterDamage?.amount ?? 2}를 줄 수 있다 (맞은 이는 적이 된다). 아무도 고르지 않을 수도 있다` });
+      } catch (e) {
+        console.warn(`choose (torch) for ${c.by} failed:`, e);
+      }
+      const target = candidates.find((x) => x.id === pick);
+      if (target) applyTorch(state, world, source, target, state.minutes);
       continue;
     }
     // Halo Hunter, arriving: which one of the kind he hunts (if any) he destroys.

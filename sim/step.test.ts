@@ -43,6 +43,7 @@ import { upkeepWins } from './win.ts';
 import { allyJoined, applyRally, hireMerc, hirePrice } from './allies.ts';
 import { askOptions, askText } from './asks.ts';
 import { applyEscape, escapeOptions } from './escape.ts';
+import { applyTorch, enterDamage } from './torch.ts';
 import { applyHarrow } from './harrow.ts';
 import type { HarrowEffect } from './harrow.ts';
 import { applySacrament } from './sacrament.ts';
@@ -6591,4 +6592,33 @@ test('the real Tajuru Archer lives in the Oran-Rief treetop village: an elf Ally
   assert.ok(def.ally && def.hireable && def.types?.includes('elf'));
   assert.equal(hirePrice(def), 30);
   assert.deepEqual(def.rally, [{ type: 'damage_fliers' }]);
+});
+
+test('Torch Slinger: arriving with {1}{R} to spare, its controller may have it throw a torch at one there for 2 (a knockout between NPCs); short of mana, nothing', () => {
+  const slinger = (mana: number) => ({ ...npcSim('loc-a', 'work', [2, 2]), mana: { R: mana }, enter_damage: { amount: 2, kicker: '{1}{R}' } });
+  const world = fixture([npc('chr-t', slinger(5)), npc('chr-poor', slinger(1)), npc('chr-x', npcSim('loc-a', 'work', [1, 2])), npc('chr-pw', { ...npcSim('loc-a'), loyalty: 3 })]);
+  const state = newState(world, { seed: 1, mode: 'observer' });
+  const [ts, poor, x, pw] = ['chr-t', 'chr-poor', 'chr-x', 'chr-pw'].map((id) => state.actors[id]);
+  for (const a of [poor, x, pw]) a.tile = ts.tile;
+  enterDamage(state, world, poor, state.minutes);
+  assert.equal(state.choices?.length ?? 0, 0);
+  enterDamage(state, world, ts, state.minutes);
+  const c = state.choices!.find((y) => y.effect.type === 'torch')!;
+  assert.equal(c.by, 'chr-t');
+  assert.ok(c.optional && c.candidates.includes('chr-x') && !c.candidates.includes('chr-pw'));
+  applyTorch(state, world, ts, x, state.minutes);
+  assert.ok(!x.dead && knockedOut(x));
+  assert.ok(texts(state).some((l) => l.includes('타오르는 횃불을 chr-x에게 내던졌다')));
+  assert.equal(manaAvailable(state, world, ts, state.minutes).R, 3);
+});
+
+test('the real Torch Slinger roams the dark woods of Ora Ondar: a talking goblin with a kicked torch', () => {
+  const world = loadWorld();
+  const state = newState(world, { seed: 1, mode: 'observer' });
+  const s = state.actors['chr-torch-slinger'];
+  assert.equal(s?.region, 'loc-ora-ondar');
+  const def = npcDef(state, world, s.id)!;
+  assert.equal(def.enterDamage?.amount, 2);
+  assert.equal(def.enterDamage?.kickerText, '{1}{R}');
+  assert.equal(swayBlocked(state, world, s), null);
 });

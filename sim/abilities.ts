@@ -1,6 +1,7 @@
 // Landfall (bonding with a land) and activated abilities, used as the morning LLM plans.
 import { enterExile } from './banish.ts';
 import { enterTap } from './hook.ts';
+import { enterDamage } from './torch.ts';
 import { gameDay, untapTime } from './clock.ts';
 import { addFoe, dealDamage, destroy, leavePlane } from './combat.ts';
 import { creatureColors, manaAvailable, payMana, planPayment } from './mana.ts';
@@ -73,7 +74,7 @@ export function bondTargets(state: State, world: World, a: Actor, regionId: stri
 }
 
 // The effect falls on `target`, if they are still there.
-export function applyBondEffect(state: State, world: World, a: Actor, regionId: string, eff: Exclude<ChoiceEffect, { type: 'cast' | 'follow' | 'rally' | 'seize' | 'pledge' | 'evade' | 'discard' | 'pilfer' | 'pour' | 'demolish' | 'escape' | 'sacrament' | 'sacrifice' | 'destroy' | 'drain_grow' | 'crush' | 'quell' | 'quelled' | 'return_lands' | 'search' | 'tide' | 'bind' | 'engulf' | 'harrow' | 'ward' | 'hook' | 'shatter' | 'counter' | 'counter_cast' | 'exile' | 'strike' }>, targetId: string | undefined, t: number) {
+export function applyBondEffect(state: State, world: World, a: Actor, regionId: string, eff: Exclude<ChoiceEffect, { type: 'cast' | 'follow' | 'rally' | 'seize' | 'pledge' | 'evade' | 'discard' | 'pilfer' | 'pour' | 'demolish' | 'escape' | 'torch' | 'sacrament' | 'sacrifice' | 'destroy' | 'drain_grow' | 'crush' | 'quell' | 'quelled' | 'return_lands' | 'search' | 'tide' | 'bind' | 'engulf' | 'harrow' | 'ward' | 'hook' | 'shatter' | 'counter' | 'counter_cast' | 'exile' | 'strike' }>, targetId: string | undefined, t: number) {
   const r = region(world, regionId);
   if (eff.type === 'damage') return mountainFire(state, world, a, r, eff.amount, targetId, t);
   const target = targetId ? bondTargets(state, world, a, regionId, eff).find((x) => x.id === targetId) : undefined;
@@ -686,7 +687,7 @@ export function applyDrainGrow(state: State, world: World, a: Actor, target: Act
 // once a day for balance (user decision 2026-09-30).
 export function onEnter(state: State, world: World, a: Actor, t: number) {
   const def = npcDef(state, world, a.id);
-  if (!def?.enterDestroy && !def?.enterDrain && !def?.enterDraw && !def?.enterSearch && !def?.enterShatter && !def?.enterExile && !def?.enterTap && !def?.enterReveal) return;
+  if (!def?.enterDestroy && !def?.enterDrain && !def?.enterDraw && !def?.enterSearch && !def?.enterShatter && !def?.enterExile && !def?.enterTap && !def?.enterDamage && !def?.enterReveal) return;
   if (a.dead || a.enteredDay === gameDay(t)) return;
   a.enteredDay = gameDay(t);
   enterDestroy(state, world, a, t);
@@ -696,6 +697,7 @@ export function onEnter(state: State, world: World, a: Actor, t: number) {
   enterShatter(state, world, a, t);
   enterExile(state, world, a, t);
   enterTap(state, world, a, t);
+  enterDamage(state, world, a, t);
   enterReveal(state, world, a, t);
 }
 
