@@ -27,6 +27,7 @@ import { answerAsk, askText, canServe } from './asks.ts';
 import { eonLand, eonsIn, spendBlocked, storeBlocked } from './eons.ts';
 import { castableSpells, castBlocked, castSpell, harmful, learnableSpells, spellDef } from './spells.ts';
 import { opponentsOf, sealsDue, setSeal } from './seal.ts';
+import { applyPump, pumpController, pumpMax, pumpsDue } from './pump.ts';
 import { COLORS } from './mana.ts';
 import type { Color } from './mana.ts';
 import { abilityBlocked, applyBondEffect, applyDrainGrow, applyEnterDestroy, enteredToday, fetchBlocked, fetchTargets, growBlocked, growLand, callForth } from './abilities.ts';
@@ -523,6 +524,8 @@ async function choices(state: State, world: World, llm: Llm) {
       }
       continue;
     }
+    // Pours are asked before the hour (`pumps`), not after.
+    if (c.effect.type === 'pour') continue;
     // What a thief turned up of someone's hand (candidates are spells and secrets).
     if (c.effect.type === 'pilfer') {
       if (by && !by.dead && npc) await pilferChoice(state, world, llm, by, npc, c as Choice & { effect: { type: 'pilfer' } });
@@ -711,6 +714,33 @@ async function seals(state: State, world: World, llm: Llm) {
   }
 }
 
+// Crypt Ripper and its like (sim/pump.ts): before an hour of fighting, how much mana its
+// controller pours into it. An NPC's by the LLM (with no usable answer: none); the player's, a
+// pick they owe.
+async function pumps(state: State, world: World, llm: Llm) {
+  for (const a of pumpsDue(state, world, state.minutes)) {
+    const max = pumpMax(state, world, a, state.minutes);
+    const by = pumpController(state, a);
+    const pump = npcDef(state, world, a.id)!.pump!;
+    const options = Array.from({ length: max + 1 }, (_, n) => ({ id: String(n), label: n ? `${pump.costText}×${n}: 자정까지 +${pump.pt[0] * n}/+${pump.pt[1] * n}` : '붓지 않는다 (마나를 아낀다)' }));
+    if (by.kind === 'player') {
+      if (!state.asks?.some((c) => c.effect.type === 'pour' && c.effect.source === a.id)) (state.asks ??= []).push({ by: by.id, land: a.region, effect: { type: 'pour', source: a.id }, candidates: options.map((o) => o.id), t: state.minutes });
+      continue;
+    }
+    const npc = speakerDef(state, world, by.id);
+    if (!npc || !llm.pick) continue;
+    let pick: string | null = null;
+    try {
+      const what = `${by.id === a.id ? '당신' : shortName(a.name)}의 싸움이 이어진다. 마나 ${pump.costText}를 낼 때마다 ${by.id === a.id ? '당신' : '그'}는 자정까지 +${pump.pt[0]}/+${pump.pt[1]} 커진다. 얼마나 부을지 고른다 (남은 마나는 주문 등에 쓸 수 있다)`;
+      pick = await llm.pick({ world, state, npc, what, options });
+    } catch (e) {
+      console.warn(`pick (pump) for ${by.id} failed:`, e);
+    }
+    const n = Number(pick);
+    if (Number.isInteger(n) && n > 0) applyPump(state, world, a, n, state.minutes);
+  }
+}
+
 function busy(state: State, p: Actor) {
   return !!(p.task || p.travel || p.forced || p.boundUntil !== undefined || outOfTime(state, p));
 }
@@ -879,7 +909,10 @@ async function prepare(state: State, world: World, llm: Llm): Promise<string | n
   });
   await Promise.all([...jobs, gmJob]);
   const missing = unplanned.filter((a) => a.schedule?.day !== day);
-  if (!missing.length) return null;
+  if (!missing.length) {
+    await pumps(state, world, llm);
+    return null;
+  }
   return `LLM이 ${missing.map((a) => shortName(a.name)).join(', ')}의 하루를 짜지 못해 세계가 멈췄다. 다시 진행하면 이어서 짠다.`;
 }
 

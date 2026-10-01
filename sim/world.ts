@@ -295,6 +295,9 @@ export const CharacterSimSchema = z.strictObject({
   // there is an additional combat phase" (Hellkite Charger): when they strike and can pay, they
   // do, and they (and their retainers who struck with them) strike once more that hour.
   extra_combat: z.strictObject({ cost: CostSchema }).optional(),
+  // "{B}: This creature gets +1/+1 until end of turn" (Crypt Ripper): before each hour it fights,
+  // its controller pours in what they will, each `cost` +`pt` until midnight (sim/pump.ts).
+  pump: z.strictObject({ cost: CostSchema, pt: PtSchema }).optional(),
   // An Ally (card type; sim/allies.ts): of Zendikar's expedition parties.
   ally: z.boolean().default(false),
   // "Whenever this or another Ally enters under your control, …": when an Ally joins their
@@ -667,6 +670,7 @@ export type NpcDef = {
   tamable?: boolean;
   winsAtLife?: number;
   extraCombat?: { cost: ManaCost; costText: string };
+  pump?: { cost: ManaCost; costText: string; pt: [number, number] };
   ally?: boolean;
   rally?: ({ type: 'damage_allies' | 'lose_life_allies' | 'reveal_discard' | 'counters_allies' | 'counter_self' } | { type: 'grant_allies'; ability: Ability } | { type: 'token_counter'; creature: string; pt: [number, number]; colors: Color[] })[];
   hireable?: boolean;
@@ -865,7 +869,7 @@ export function buildWorld(entities: RawEntity[]): { world: World; errors: strin
         err(e.id, `sim 오류: ${issues(sim.error)}`);
         continue;
       }
-      const { knows_colors, activated, wins_at_life, extra_combat, landfall_token, landfall_seize, landfall_lose, landfall_grant, landfall_drain, enter_destroy, enter_drain, enter_draw, tap_draw_allies, name, home_pos, ...rest } = sim.data;
+      const { knows_colors, activated, wins_at_life, extra_combat, pump, landfall_token, landfall_seize, landfall_lose, landfall_grant, landfall_drain, enter_destroy, enter_drain, enter_draw, tap_draw_allies, name, home_pos, ...rest } = sim.data;
 
       world.npcs.push({
         id: e.id,
@@ -886,6 +890,7 @@ export function buildWorld(entities: RawEntity[]): { world: World; errors: strin
         ...(landfall_drain ? { landfallDrain: landfall_drain } : {}),
         ...(tap_draw_allies ? { tapDrawAllies: true } : {}),
         ...(extra_combat ? { extraCombat: { cost: parseManaCost(extra_combat.cost)!, costText: extra_combat.cost } } : {}),
+        ...(pump ? { pump: { cost: parseManaCost(pump.cost)!, costText: pump.cost, pt: pump.pt } } : {}),
         activated: activated.map((x) => ({ ...x, cost: parseManaCost(x.cost)!, costText: x.cost })),
       });
     } else if (e.kind === 'event') {

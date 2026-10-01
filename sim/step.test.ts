@@ -21,6 +21,7 @@ import { withPositions } from './wander.ts';
 import { nodeAt } from '../web/view.ts';
 import { crushRelic, relicsHere } from './relics.ts';
 import { recallBlocked, recallCount } from './loremaster.ts';
+import { pumpMax, pumpsDue } from './pump.ts';
 import { drawKnowledge, handSize, huntKnowledge, knownSecrets, secretsOf } from './knowledge.ts';
 import { claimBlocked } from './items.ts';
 import { spendBlocked, storeBlocked } from './eons.ts';
@@ -2938,6 +2939,52 @@ test('the real Bladetusk Boar hunts the snowy canyons of Akoum, intimidating', (
   assert.ok(hasAbility(b, 'intimidate', state.minutes));
   assert.deepEqual(actorColors(state, world, b), ['R']);
   assert.ok(npcDef(state, world, b.id)?.beast);
+});
+
+test('a shade pours mana into itself before each hour of a fight, as much as the LLM will; +1/+1 each until midnight', async () => {
+  const shade = { ...npcSim('loc-a', 'work', [2, 2]), mana: { B: 4 }, needs: ['energy'], beast: true, abilities: ['haste'], pump: { cost: '{B}', pt: [1, 1] } };
+  const world = fixture([npc('chr-s', shade), npc('chr-x', npcSim('loc-a', 'work', [3, 9]))]);
+  const state = newState(world, { seed: 1, mode: 'observer' });
+  const [sh, x] = [state.actors['chr-s'], state.actors['chr-x']];
+  const t0 = state.minutes;
+  assert.equal(pumpMax(state, world, sh, t0), 4);
+  assert.deepEqual(pumpsDue(state, world, t0), []); // no fight, no pour
+  addFoe(sh, 'chr-x', t0);
+  const asked: string[][] = [];
+  await advance(state, world, 1, { pick: async ({ options }) => (asked.push(options.map((o) => o.id)), '3') });
+  assert.deepEqual(asked[0], ['0', '1', '2', '3', '4']);
+  assert.deepEqual(ptOf(sh), [5, 5]);
+  assert.equal(woundsOf(x, state.minutes), 5); // pumped before the blow
+  assert.ok(texts(state).some((l) => l.includes('부풀었다 (자정까지 +3/+3)')));
+  assert.equal(pumpMax(state, world, sh, state.minutes), 1);
+  // Midnight: the pump is gone.
+  await advance(state, world, 24, { pick: async () => '0' });
+  assert.deepEqual(ptOf(sh), [2, 2]);
+});
+
+test('the player who controls a shade picks how much to pour', async () => {
+  const shade = { ...npcSim('loc-a', 'work', [2, 2]), mana: { B: 4 }, needs: ['energy'], beast: true, pump: { cost: '{B}', pt: [1, 1] } };
+  const world = fixture([npc('chr-s', shade), npc('chr-x', npcSim('loc-a', 'work', [3, 9]))]);
+  const state = character(world, 'loc-a');
+  const sh = state.actors['chr-s'];
+  bindRetainer(state, world, sh, state.actors[PLAYER_ID], state.minutes, '설득');
+  addFoe(sh, 'chr-x', state.minutes);
+  await act(state, world, { type: 'wait', hours: 2 });
+  const ask = state.asks?.[0];
+  assert.equal(ask?.effect.type, 'pour');
+  assert.ok(askText(state, world, ask!).includes('얼마나 부을까'));
+  await act(state, world, { type: 'choose', pick: '2' });
+  assert.equal(sh.pumps?.reduce((n, p) => n + p.pt[0], 0), 2);
+});
+
+test('the real Crypt Ripper haunts the Crypt of Agadeem, hasty, pumping on black', () => {
+  const world = loadWorld();
+  const state = newState(world, { seed: 1, mode: 'observer' });
+  const r = state.actors['cre-crypt-ripper'];
+  assert.equal(r?.region, 'loc-agadeem-crypt');
+  assert.ok(hasAbility(r, 'haste', state.minutes));
+  assert.equal(npcDef(state, world, r.id)?.pump?.costText, '{B}');
+  assert.equal(pumpMax(state, world, r, state.minutes), 4);
 });
 
 test('first strike: one who has it strikes first, and one it fells never strikes back; both have it, simultaneous', () => {

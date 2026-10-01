@@ -11,7 +11,8 @@ import { cardLabel, discardOwed, forgetCard, handOf, letGo } from './discard.ts'
 import { sacrifice } from './monument.ts';
 import { applyQuell, permanentsOf, QUELL_KINDS, QUELL_LABELS, quellGive } from './quell.ts';
 import { castSpell } from './spells.ts';
-import { addLog, player, together } from './state.ts';
+import { addLog, npcDef, player, together } from './state.ts';
+import { applyPump } from './pump.ts';
 import type { Actor, Choice, State } from './state.ts';
 import { josa, shortName } from './text.ts';
 import { CREATURE_TYPE_LABELS } from './world.ts';
@@ -25,6 +26,11 @@ export function askText(state: State, world: World, c: Choice) {
   if (c.effect.type === 'evade') return `날지 못하는 ${josa(shortName(from?.name ?? ''), '이', '가')} 덤벼든다. 날아올라 피하면 자정까지 닿지 않는다`;
   if (c.effect.type === 'discard') return `${c.effect.cause}: 지닌 주문 ${c.effect.count ? `${c.effect.count}개를` : '하나를'} 잊어야 한다. 먼저 무엇을?`;
   if (c.effect.type === 'pilfer') return `${shortName(state.actors[c.effect.source]?.name ?? '')}의 손길에 ${shortName(state.actors[c.effect.target]?.name ?? '')}의 주문·비밀이 드러났다. 그가 잊을 하나를 고른다`;
+  if (c.effect.type === 'pour') {
+    const x = state.actors[c.effect.source];
+    const pump = x && npcDef(state, world, x.id)?.pump;
+    return `${shortName(x?.name ?? '')}의 싸움이 이어진다. 마나 ${pump?.costText ?? ''}를 낼 때마다 자정까지 +${pump?.pt[0]}/+${pump?.pt[1]}. 얼마나 부을까?`;
+  }
   if (c.effect.type === 'cast') return `${world.spells.find((s) => s.id === (c.effect as { spell: string }).spell)?.name ?? ''}을(를) 하나 더, 값 없이 걸 수 있다. 누구에게?`;
   if (c.effect.type === 'sacrifice') return `${state.items?.[c.effect.item]?.name ?? c.effect.item}이(가) 오늘의 제물을 요구한다. 부리는 이 가운데 누구를 바칠까? (바친 이는 죽는다)`;
   if (c.effect.type === 'crush') return `${c.effect.spell}: 이 자리의 마법물체나 부여마법을 ${c.effect.first ? '부순다. 무엇을?' : '하나 더 부술 수 있다. 무엇을?'}`;
@@ -41,6 +47,7 @@ export function askText(state: State, world: World, c: Choice) {
 // The answers they may give: a pick (someone's id), or null.
 export function askOptions(state: State, world: World, c: Choice): { pick: string | null; label: string }[] {
   if (c.effect.type === 'discard') return c.candidates.map((id) => ({ pick: id, label: world.spells.find((s) => s.id === id)?.name ?? id }));
+  if (c.effect.type === 'pour') return c.candidates.map((n) => ({ pick: n, label: n === '0' ? '붓지 않는다' : `${n}번 붓는다` }));
   if (c.effect.type === 'pilfer') {
     const target = state.actors[c.effect.target];
     return c.candidates.map((id) => ({ pick: id, label: cardLabel(world, target, id) }));
@@ -97,6 +104,10 @@ export function answerAsk(state: State, world: World, pick: string | null, t: nu
     // More owed (Mind Sludge): the next pick comes first.
     const next = discardOwed(state, world, p, c.effect.cause, t, (c.effect.count ?? 1) - 1);
     if (next) (state.asks ??= []).unshift(next);
+  } else if (c.effect.type === 'pour') {
+    const x = state.actors[c.effect.source];
+    const n = Number(pick);
+    if (x && Number.isInteger(n) && n > 0) applyPump(state, world, x, n, t);
   } else if (c.effect.type === 'pilfer') {
     // One must go: an answer that isn't one shown takes the first still held.
     const target = state.actors[c.effect.target];

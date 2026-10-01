@@ -108,7 +108,7 @@ export function knockedOut(a: Actor) {
 }
 
 // No one to fight: the unconscious and the dead.
-function down(a: Actor) {
+export function down(a: Actor) {
   return !!a.dead || knockedOut(a);
 }
 
