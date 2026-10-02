@@ -7185,6 +7185,32 @@ test('Ior Ruin Expedition by an NPC: offered in their plan once it has three cou
   assert.equal(m.knowledge?.length, 2);
 });
 
+test('Explorer\'s Scope: the first time its bearer attacks each day, a land of the world shows atop its owner\'s library; a new one they bond with from afar, tapped, not their land for the day', () => {
+  const scope: RawEntity = { id: 'itm-sc', kind: 'item', name: '망원경', status: 'canon', sim: { cost: '{0}', at: 'loc-a', equip: { cost: '{0}', attack_reveal: true } } };
+  const world = fixture([scope, npc('chr-o', npcSim('loc-a', 'work', [3, 3])), npc('chr-r', npcSim('loc-a', 'work', [3, 3])), npc('chr-v', npcSim('loc-a', 'work', [1, 9]))]);
+  const state = newState(world, { seed: 1, mode: 'observer' });
+  const [o, r, v] = ['chr-o', 'chr-r', 'chr-v'].map((id) => state.actors[id]);
+  for (const x of [r, v]) x.tile = o.tile;
+  r.master = o.id;
+  state.items = { 'itm-sc': { name: '망원경', owner: o.id, counters: 0, bearer: r.id } };
+  o.bonds = [];
+  clash(state, world, r, v, state.minutes);
+  assert.equal(o.bonds?.length, 1);
+  const land = o.bonds![0];
+  assert.ok(o.fetched?.includes(land));
+  assert.ok(o.landsTapped?.ids.includes(land));
+  assert.ok(!r.bonds?.length);
+  clash(state, world, r, v, state.minutes + 60);
+  assert.equal(o.bonds?.length, 1);
+});
+
+test('the real Explorer\'s Scope hangs at Kabira Crossroads: equip {1}, it looks ahead when its bearer attacks', () => {
+  const x = loadWorld().items.find((i) => i.id === 'itm-explorers-scope')!;
+  assert.equal(x.at, 'loc-kabira-crossroads');
+  assert.equal(x.equip?.attackReveal, true);
+  assert.equal(x.equip?.costText, '{1}');
+});
+
 const mapItem: RawEntity = { id: 'itm-map', kind: 'item', name: '지도', status: 'canon', sim: { cost: '{0}', at: 'loc-a', effects: [{ type: 'search_hand', cost: '{0}' }] } };
 
 test('Expedition Map: the player pores over it anywhere; it is gone and the land they pick, any of the world they don\'t hold, comes into their hand; a shuffle for a Cosi\'s Trickster there', async () => {

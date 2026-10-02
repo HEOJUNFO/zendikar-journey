@@ -15,6 +15,7 @@ import { instigate } from './instigator.ts';
 import { hooks } from './equipment.ts';
 import { shielded } from './tapper.ts';
 import { harrowOwed } from './harrow.ts';
+import { scopeOnAttack } from './scope.ts';
 import { doubleLife, gainLife, lifeOf } from './life.ts';
 import { actorColors, COLOR_LABELS, manaAvailable, parseManaCost, payMana, planPayment } from './mana.ts';
 import { HUNT_HUNGER, KILL_FEED, KO_ACTIVITY, KO_HOURS } from './rules.ts';
@@ -291,6 +292,7 @@ function onAttack(state: State, world: World, a: Actor, t: number) {
   a.attackDay = gameDay(t);
   attackPump(state, world, a, t);
   attackQuest(state, world, a, t);
+  scopeOnAttack(state, world, a, t);
 }
 
 export function clash(state: State, world: World, attacker: Actor, defender: Actor, t: number, unblocked: string | null = null) {

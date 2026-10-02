@@ -8,6 +8,7 @@ status: canon
 sources: [ZEN-201]
 tags: [마법물체, 지도, 무색, 탐험]
 links:
+  - { to: itm-explorers-scope, rel: 같은 교차로의 탐험가 물건 }
   - { to: loc-kabira-crossroads, rel: 놓인 곳 (길손들의 여관 탁자) }
   - { to: loc-ondu, rel: 플레이버의 온두 유물 사냥꾼 자바드 나스린 }
   - { to: chr-cosis-trickster, rel: 지도를 펼침 = 서고를 섞음 }

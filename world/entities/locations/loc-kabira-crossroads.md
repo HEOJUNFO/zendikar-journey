@@ -5,9 +5,10 @@ name: 카비라 교차로
 name_en: Kabira Crossroads
 summary: 아게딤 섬의 고원 위, 탑들이 솟은 도시 카비라. 섬의 길들이 이곳에서 모이고 갈라진다
 status: canon
-sources: [ZEN-216, ZEN-3, ZEN-15, ZEN-28, ZEN-30, ZEN-201]
+sources: [ZEN-216, ZEN-3, ZEN-15, ZEN-28, ZEN-30, ZEN-201, ZEN-202]
 tags: [도시, 교차로, 길, 백색]
 links:
+  - { to: itm-explorers-scope, rel: 탑 꼭대기 망루의 망원경 }
   - { to: itm-expedition-map, rel: 여관 탁자 위의 탐험 지도 }
   - { to: chr-ondu-cleric, rel: 원정대를 돌보는 코르 성직자 (동료) }
   - { to: spl-nimbus-wings, rel: 가르치는 주문 (구름 날개) }
@@ -40,6 +41,7 @@ sim:
 - 구름 날개(`spl-nimbus-wings`, ZEN-28)를 4시간 들여 배운다 ([결정] 2026-10-02): 하늘 폐허 에메리아를 꿈꾸는 탐험가들이 구하는 빛의 날개 오라 (+1/+2, 비행).
 - 북동쪽 치유소에 온두 성직자(`chr-ondu-cleric`, ZEN-30)가 산다 ([결정] 2026-10-02): 열여덟 번째 동료, 20코인. 무리에 동료가 들 때마다 주인이 동료 수만큼 생명을 얻는다.
 - 남동쪽 길손들의 여관 탁자 위에 탐험 지도(`itm-expedition-map`, ZEN-201)가 펼쳐져 있다 ([결정] 2026-10-02): 길들인 이가 {2}로 펼치면 세계의 땅 하나를 손에 쥔다.
+- 북서쪽 탑 꼭대기 망루에 탐험가의 망원경(`itm-explorers-scope`, ZEN-202)이 매달려 있다 ([결정] 2026-10-02): 맨 이가 덤빌 때 먼 땅과 이어지기도 한다.
 
 ## 미정/질문
 
