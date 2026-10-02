@@ -8,6 +8,7 @@ status: canon
 sources: [ZEN-45]
 tags: [인어, 마법사, 청색, 코시]
 links:
+  - { to: itm-expedition-map, rel: 지도를 펼침 = 서고를 섞음 }
   - { to: law-mana-colors, rel: 청색의 존재 }
   - { to: loc-sea-gate, rel: 사는 곳 (인어의 항구 도시) }
   - { to: cre-merfolk, rel: 인어 }

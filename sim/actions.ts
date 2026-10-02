@@ -17,6 +17,7 @@ import { SET_TRAP_HOURS, setTrapBlocked } from './snare.ts';
 import { HEX_HOURS, hexBlocked } from './hexmage.ts';
 import { FLING_HOURS, flingBlocked } from './fling.ts';
 import { EXPEDITION_HOURS, expeditionBlocked, expeditionOf, expeditionReward } from './expedition.ts';
+import { CHART_HOURS, chartBlocked, chartCost, chartOf } from './chart.ts';
 import { bondBlocked, bondTargets, FETCH_HOURS, fetchBlocked, firesOnBond, growBlocked, HAND, landDropBlocked, targetedBondEffect, TOP } from './abilities.ts';
 import { handBlocked, topBlocked } from './oracle.ts';
 import { CLAIM_HOURS, claimBlocked, itemDef } from './items.ts';
@@ -81,6 +82,9 @@ export const ActionSchema = z.discriminatedUnion('type', [
   // End the Ior Ruin Expedition you own (enough quest counters): it is gone, you come to know
   // secrets.
   z.object({ type: z.literal('expedition') }),
+  // Pore over the Expedition Map you own, paying its cost: it is gone, and a land of the world
+  // you pick comes into your hand.
+  z.object({ type: z.literal('chart') }),
   // Call down an angel with the Luminarch Ascension you own (enough quest counters): pay its cost.
   z.object({ type: z.literal('ascend') }),
   // Set a trap you hold where you stand, paying its card's cost (Trapmaker's Snare).
@@ -332,6 +336,13 @@ export function startAction(state: State, world: World, action: Action): string 
       if (why) return why;
       task = { kind: 'expedition', activity: `${expeditionOf(state, world, p)!.name}을(를) 마침`, emoji: '🗺️', until: until(EXPEDITION_HOURS) };
       text = `원정을 마치고 원정대가 찾아낸 것을 짚어 본다. ${expeditionReward(state, world, p).ko}.`;
+      break;
+    }
+    case 'chart': {
+      const why = chartBlocked(state, world, p, t);
+      if (why) return why;
+      task = { kind: 'chart', activity: `${chartOf(state, world, p)!.name}을(를) 펼침`, emoji: '🗺️', until: until(CHART_HOURS) };
+      text = `지도를 펼쳐 남들이 가 본 길을 짚어 본다 (${chartCost(state, world, p)}, 지도는 사라진다).`;
       break;
     }
     case 'fling': {

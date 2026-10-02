@@ -70,6 +70,8 @@ export type PlanDayInput = {
   altar?: { name: string; at: string; who: { id: string; text: string }[] };
   // An Ior Ruin Expedition they own with enough quest counters to end, and the secrets it brings.
   expedition?: { name: string; reward: string };
+  // An Expedition Map they own and could use now: its name and cost.
+  chart?: { name: string; cost: string };
   // A Luminarch Ascension they own that could call down a token now: its name and what it brings.
   ascend?: { name: string; cost: string; token: string };
   // Traps they hold and could set where they stand (Trapmaker's Snare): id, what it does, its cost.
@@ -97,7 +99,7 @@ export type PlanDayInput = {
 
 // Kinds of blocks they may plan: no meals without hunger, taming only if there is an item for
 // them to tame, keeping days only with a land that keeps them.
-function kindsFor(input: Pick<PlanDayInput, 'needs' | 'items' | 'equip' | 'days' | 'grow' | 'recall' | 'bite' | 'shield' | 'loot' | 'gale' | 'scout' | 'altar' | 'expedition' | 'ascend' | 'traps' | 'hex' | 'fling' | 'fetch' | 'learn' | 'cast' | 'court' | 'hire' | 'people'>) {
+function kindsFor(input: Pick<PlanDayInput, 'needs' | 'items' | 'equip' | 'days' | 'grow' | 'recall' | 'bite' | 'shield' | 'loot' | 'gale' | 'scout' | 'altar' | 'expedition' | 'chart' | 'ascend' | 'traps' | 'hex' | 'fling' | 'fetch' | 'learn' | 'cast' | 'court' | 'hire' | 'people'>) {
   return LIFE_KINDS.filter(
     (k) =>
       (k !== 'eat' || input.needs.includes('hunger')) &&
@@ -113,6 +115,7 @@ function kindsFor(input: Pick<PlanDayInput, 'needs' | 'items' | 'equip' | 'days'
       (k !== 'scout' || !!input.scout) &&
       (k !== 'altar' || !!input.altar?.who.length) &&
       (k !== 'expedition' || !!input.expedition) &&
+      (k !== 'chart' || !!input.chart) &&
       (k !== 'ascend' || !!input.ascend) &&
       (k !== 'set_trap' || !!input.traps?.length) &&
       (k !== 'hex' || !!input.hex?.targets.length) &&
@@ -243,6 +246,10 @@ Rules:
   }${
     kinds.includes('expedition')
       ? `\n- "expedition" takes 1 hour, anywhere: they end their ${input.expedition!.name} (it is gone for good) and, from what it found, ${input.expedition!.reward}. Each land they bond with adds to it, so they may also wait.`
+      : ''
+  }${
+    kinds.includes('chart')
+      ? `\n- "chart" takes 1 hour, anywhere: they pore over their ${input.chart!.name}, paying ${input.chart!.cost} (it is gone for good), and a land of the world they don't hold yet, their pick after the hour, comes into their hand: they may bond with it from afar as their land for the day whenever they will (a "fetch" block from their hand).`
       : ''
   }${
     kinds.includes('fling')

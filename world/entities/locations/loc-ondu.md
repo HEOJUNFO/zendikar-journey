@@ -5,9 +5,10 @@ name: 온두
 name_en: Ondu
 summary: 젠디카르 남서쪽의 섬 대륙. 바람 부는 고원을 마킨디 협곡이 가로지르고, 동쪽에 턴팀버 숲이, 그 가장자리에 그레이펠트 피난처가 있다. 남쪽 바다에 아게딤 섬과 즈와르 섬, 동쪽 앞바다에 베이엔 섬이 붙어 있다
 status: canon
-sources: [ZEN-212, ZEN-211, ZEN-214, ZEN-215, ZEN-227, ZEN-200, ZEN-2, ZEN-8, ZEN-124, ZEN-64, ZEN-65, ZEN-226, ZEN-228, ZEN-39, ZEN-111, ZEN-158]
+sources: [ZEN-212, ZEN-211, ZEN-214, ZEN-215, ZEN-227, ZEN-200, ZEN-2, ZEN-8, ZEN-124, ZEN-64, ZEN-65, ZEN-226, ZEN-228, ZEN-39, ZEN-111, ZEN-158, ZEN-201]
 tags: [대륙, 섬, 고원, 백색]
 links:
+  - { to: itm-expedition-map, rel: 온두 유물 사냥꾼의 말이 적힌 지도 }
   - { to: chr-sorin-markov, rel: 그레이펠트 가장자리를 거니는 옛 흡혈귀 }
   - { to: cre-world-queller, rel: 황무지에서 몸을 일으키는 화신 }
   - { to: loc-teetering-peaks, rel: 안의 구역 }

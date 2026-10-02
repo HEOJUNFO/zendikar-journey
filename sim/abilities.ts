@@ -83,7 +83,7 @@ export function bondTargets(state: State, world: World, a: Actor, regionId: stri
 }
 
 // The effect falls on `target`, if they are still there.
-export function applyBondEffect(state: State, world: World, a: Actor, regionId: string, eff: Exclude<ChoiceEffect, { type: 'cast' | 'follow' | 'rally' | 'seize' | 'pledge' | 'evade' | 'discard' | 'pilfer' | 'pour' | 'demolish' | 'escape' | 'torch' | 'lift' | 'outfit' | 'gem' | 'flood' | 'gust' | 'instigate' | 'brave' | 'lure' | 'toll' | 'shortcut' | 'discovery' | 'sacrament' | 'sacrifice' | 'destroy' | 'drain_grow' | 'crush' | 'quell' | 'quelled' | 'return_lands' | 'search' | 'tide' | 'bind' | 'engulf' | 'harrow' | 'ward' | 'hook' | 'shatter' | 'counter' | 'counter_cast' | 'exile' | 'strike' }>, targetId: string | undefined, t: number) {
+export function applyBondEffect(state: State, world: World, a: Actor, regionId: string, eff: Exclude<ChoiceEffect, { type: 'cast' | 'follow' | 'rally' | 'seize' | 'pledge' | 'evade' | 'discard' | 'pilfer' | 'pour' | 'demolish' | 'escape' | 'torch' | 'lift' | 'outfit' | 'gem' | 'flood' | 'gust' | 'instigate' | 'brave' | 'lure' | 'toll' | 'shortcut' | 'discovery' | 'sacrament' | 'sacrifice' | 'destroy' | 'drain_grow' | 'crush' | 'quell' | 'quelled' | 'return_lands' | 'search' | 'chart' | 'tide' | 'bind' | 'engulf' | 'harrow' | 'ward' | 'hook' | 'shatter' | 'counter' | 'counter_cast' | 'exile' | 'strike' }>, targetId: string | undefined, t: number) {
   const r = region(world, regionId);
   if (eff.type === 'damage') return mountainFire(state, world, a, r, eff.amount, targetId, t);
   const target = targetId ? bondTargets(state, world, a, regionId, eff).find((x) => x.id === targetId) : undefined;

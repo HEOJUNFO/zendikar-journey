@@ -32,6 +32,7 @@ import { bloodHasteHour } from './bloodghast.ts';
 import { bloodSeekHour } from './seeker.ts';
 import { ALTAR_HOURS, altarBlocked, altarOf, sacrificeAtAltar } from './altar.ts';
 import { EXPEDITION_HOURS, expeditionBlocked, finishExpedition } from './expedition.ts';
+import { CHART_HOURS, chartBlocked, useChart } from './chart.ts';
 import { bite, BITE_HOURS, biteBlocked } from './bite.ts';
 import { eraseFromWorld } from './erase.ts';
 import { addLog, alive, buriedToday, hasAbility, here, landUnusable, needsOf, npcDef, outOfTime, present, ptOf, random, together } from './state.ts';
@@ -103,7 +104,7 @@ export function step(state: State, placed: World) {
     actorHour(state, world, a, t);
     // A timed task done: the player's action, or an NPC's bonding, taming or keeping days.
     const done = a.task?.until !== undefined && a.task.until <= t + STEP_MINUTES && !a.travel;
-    const timed = ['bond', 'claim', 'equip', 'store_day', 'spend_day', 'grow', 'fetch', 'learn', 'cast', 'court', 'hire', 'recall', 'bite', 'shield', 'loot', 'scout', 'gale', 'altar', 'expedition', 'ascend', 'set_trap', 'hex', 'fling'];
+    const timed = ['bond', 'claim', 'equip', 'store_day', 'spend_day', 'grow', 'fetch', 'learn', 'cast', 'court', 'hire', 'recall', 'bite', 'shield', 'loot', 'scout', 'gale', 'altar', 'expedition', 'ascend', 'set_trap', 'hex', 'fling', 'chart'];
     if (done && (a.kind === 'player' || timed.includes(a.task!.kind))) {
       const at = t + STEP_MINUTES;
       if (a.task!.kind === 'bond') bondLand(state, world, a, at, a.region, a.task!.target);
@@ -118,6 +119,7 @@ export function step(state: State, placed: World) {
       if (a.task!.kind === 'shield' || a.task!.kind === 'loot' || a.task!.kind === 'scout' || a.task!.kind === 'gale') useTap(state, world, a, a.task!.kind, a.task!.who, at);
       if (a.task!.kind === 'altar') sacrificeAtAltar(state, world, a, a.task!.who, at);
       if (a.task!.kind === 'expedition') finishExpedition(state, world, a, at);
+      if (a.task!.kind === 'chart') useChart(state, world, a, at);
       if (a.task!.kind === 'ascend') ascend(state, world, a, at);
       if (a.task!.kind === 'set_trap' && a.task!.trap) setTrap(state, world, a, a.task!.trap, at);
       if (a.task!.kind === 'hex' && a.task!.who) hex(state, world, a, a.task!.who, at);
@@ -790,12 +792,13 @@ function npcTask(state: State, world: World, a: Actor, t: number): Task | undefi
     : block.kind === 'shield' || block.kind === 'loot' || block.kind === 'gale' || block.kind === 'scout' ? tapBlocked(state, world, a, block.kind, block.kind === 'scout' ? undefined : block.who, t, false)
     : block.kind === 'altar' ? altarBlocked(state, world, a, block.who, t, false)
     : block.kind === 'expedition' ? expeditionBlocked(state, world, a)
+    : block.kind === 'chart' ? chartBlocked(state, world, a, t)
     : block.kind === 'ascend' ? ascendBlocked(state, world, a, t)
     : block.kind === 'set_trap' ? setTrapBlocked(state, world, a, block.trap, t)
     : block.kind === 'hex' ? hexBlocked(state, world, a, block.who, t, false)
     : block.kind === 'fling' ? (torchesOf(state, world, a, t).length ? null : '던질 횃불이 없다.')
     : null;
-  const timed = ['bond', 'claim', 'equip', 'store_day', 'spend_day', 'grow', 'fetch', 'learn', 'cast', 'court', 'hire', 'recall', 'bite', 'shield', 'loot', 'scout', 'gale', 'altar', 'expedition', 'ascend', 'set_trap', 'hex', 'fling'];
+  const timed = ['bond', 'claim', 'equip', 'store_day', 'spend_day', 'grow', 'fetch', 'learn', 'cast', 'court', 'hire', 'recall', 'bite', 'shield', 'loot', 'scout', 'gale', 'altar', 'expedition', 'ascend', 'set_trap', 'hex', 'fling', 'chart'];
   if (!cannot && timed.includes(block.kind) && a.task?.kind === block.kind) return a.task;
   const task: Task =
     block.kind === 'work' && landUnusable(state, a.region)
@@ -812,6 +815,8 @@ function npcTask(state: State, world: World, a: Actor, t: number): Task | undefi
             ? { kind: 'recall', activity: block.activity, emoji: block.emoji, until: t + RECALL_HOURS * 60 }
           : block.kind === 'expedition'
             ? { kind: 'expedition', activity: block.activity, emoji: block.emoji, until: t + EXPEDITION_HOURS * 60 }
+          : block.kind === 'chart'
+            ? { kind: 'chart', activity: block.activity, emoji: block.emoji, until: t + CHART_HOURS * 60 }
           : block.kind === 'ascend'
             ? { kind: 'ascend', activity: block.activity, emoji: block.emoji, until: t + ASCEND_HOURS * 60 }
           : block.kind === 'set_trap'

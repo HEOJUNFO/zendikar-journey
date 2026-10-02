@@ -34,6 +34,7 @@ export const KIND_EFFECTS: Record<LifeKind, Effect> = {
   hex: { energy: -1, hunger: 3, coin: 0 },
   fling: { energy: -1, hunger: 3, coin: 0 },
   gale: { energy: -1, hunger: 3, coin: 0 },
+  chart: { energy: -1, hunger: 3, coin: 0 },
 };
 // Change per game hour while travelling between regions.
 export const TRAVEL_EFFECT: Effect = { energy: -3, hunger: 4, coin: 0 };

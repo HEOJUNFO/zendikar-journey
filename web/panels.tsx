@@ -13,6 +13,7 @@ import { biteBlocked, bitersOf } from '../sim/bite.ts';
 import { TAP_POWERS, tapBlocked, tappersOf } from '../sim/tapper.ts';
 import { altarBlocked, altarOf, altarVictims } from '../sim/altar.ts';
 import { expeditionBlocked, expeditionOf, expeditionReward } from '../sim/expedition.ts';
+import { chartBlocked, chartCost, chartOf } from '../sim/chart.ts';
 import { ascendBlocked, ascendText, ascensionOf } from '../sim/luminarch.ts';
 import { setTrapBlocked, trapsHeld } from '../sim/snare.ts';
 import { hexBlocked, hexNear } from '../sim/hexmage.ts';
@@ -739,6 +740,18 @@ export function CharacterControls(props: {
             onClick={() => onAct({ type: 'ascend' })}
           >
             천사 부르기
+          </button>
+        </div>
+      )}
+      {chartOf(state, world, p) && (
+        <div className="row">
+          <span className="muted">🗺️ {chartOf(state, world, p)!.name}:</span>
+          <button
+            disabled={busy || !!stuck || !!chartBlocked(state, world, p, state.minutes)}
+            title={chartBlocked(state, world, p, state.minutes) ?? `${chartCost(state, world, p)}를 치르고 지도를 펼침(사라짐): 아직 유대 없는 땅 하나를 골라 손에 쥔다`}
+            onClick={() => onAct({ type: 'chart' })}
+          >
+            지도 펼치기
           </button>
         </div>
       )}

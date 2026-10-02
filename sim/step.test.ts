@@ -53,6 +53,7 @@ import { bloodHasteHour } from './bloodghast.ts';
 import { bloodSeekHour } from './seeker.ts';
 import { altarBlocked } from './altar.ts';
 import { expeditionBlocked } from './expedition.ts';
+import { chartBlocked } from './chart.ts';
 import { ascendBlocked, upkeepUnhurt } from './luminarch.ts';
 import { reviveHour } from './revive.ts';
 import { punishHour } from './punish.ts';
@@ -7182,6 +7183,53 @@ test('Ior Ruin Expedition by an NPC: offered in their plan once it has three cou
   assert.deepEqual(offered?.expedition, { name: '원정', reward: 'come to know 2 hidden secrets of the world' });
   assert.ok(state.items['itm-exp'].gone);
   assert.equal(m.knowledge?.length, 2);
+});
+
+const mapItem: RawEntity = { id: 'itm-map', kind: 'item', name: '지도', status: 'canon', sim: { cost: '{0}', at: 'loc-a', effects: [{ type: 'search_hand', cost: '{0}' }] } };
+
+test('Expedition Map: the player pores over it anywhere; it is gone and the land they pick, any of the world they don\'t hold, comes into their hand; a shuffle for a Cosi\'s Trickster there', async () => {
+  const world = fixture([mapItem, altarItem, demolishSpell, npc('chr-t', { ...npcSim('loc-a', 'work', [1, 1]), shuffle_counter: true })]);
+  const state = character(world, 'loc-a');
+  const p = state.actors[PLAYER_ID];
+  assert.ok(chartBlocked(state, world, p, state.minutes)?.includes('지도가 없다'));
+  state.items = { 'itm-map': { name: '지도', owner: p.id, counters: 0 } };
+  p.bonds = ['loc-a'];
+  assert.equal(chartBlocked(state, world, p, state.minutes), null);
+  await act(state, world, { type: 'chart' });
+  if (state.asks?.[0]?.effect.type !== 'chart') await act(state, world, { type: 'wait', hours: 1 });
+  assert.ok(state.items['itm-map'].gone);
+  const ask = state.asks![0];
+  assert.deepEqual(ask.effect, { type: 'chart', item: '지도' });
+  assert.ok(!ask.candidates.includes('loc-a'));
+  assert.ok(ask.candidates.includes('loc-b'));
+  await act(state, world, { type: 'choose', pick: 'loc-b' });
+  assert.ok(p.handLands?.includes('loc-b'));
+  assert.ok(!p.bonds?.includes('loc-b'));
+  await act(state, world, { type: 'wait', hours: 1 });
+  assert.ok((state.actors['chr-t'].plusCounters ?? 0) >= 1);
+});
+
+test('Expedition Map by an NPC: offered in their plan, a chart block uses it and a land comes into their hand', async () => {
+  const plan = [
+    ['00:00', '06:00', 'loc-a', 'sleep', '잠', '😴'],
+    ['06:00', '07:00', 'loc-a', 'chart', '지도를 펼침', '🗺️'],
+    ['07:00', '24:00', 'loc-a', 'work', '일', '🔨'],
+  ];
+  const world = fixture([mapItem, altarItem, demolishSpell, npc('chr-m', { ...npcSim('loc-a'), plan })]);
+  const state = newState(world, { seed: 1, mode: 'observer' });
+  const m = state.actors['chr-m'];
+  state.items = { 'itm-map': { name: '지도', owner: m.id, counters: 0 } };
+  let offered: PlanDayInput | undefined;
+  await advance(state, world, 3, { planDay: async (input) => (input.id === 'chr-m' && (offered = input), planDay!(input)) });
+  assert.deepEqual(offered?.chart, { name: '지도', cost: '{0}' });
+  assert.ok(state.items['itm-map'].gone);
+  assert.equal(m.handLands?.length, 1);
+});
+
+test('the real Expedition Map lies at Kabira Crossroads: {1} to claim, {2} to find a land', () => {
+  const x = loadWorld().items.find((i) => i.id === 'itm-expedition-map')!;
+  assert.equal(x.at, 'loc-kabira-crossroads');
+  assert.deepEqual(x.effects, [{ type: 'search_hand', cost: '{2}' }]);
 });
 
 test('Khalni Heart Expedition: with three counters the player ends it; they pick basic lands to bond with from afar, tapped (no mana from them today)', async () => {

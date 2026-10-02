@@ -41,6 +41,7 @@ import { applyInstigate } from './instigator.ts';
 import { flingTargets, torchesOf } from './fling.ts';
 import type { GustEffect } from './owl.ts';
 import { applyGem, expeditionBlocked, expeditionOf, expeditionReward } from './expedition.ts';
+import { applyChart, chartBlocked, chartCost, chartOf } from './chart.ts';
 import { ascendBlocked, ascensionOf } from './luminarch.ts';
 import type { TapPower } from './tapper.ts';
 import { crumble, sacrifice, sacrificeDefault } from './monument.ts';
@@ -894,6 +895,22 @@ async function choices(state: State, world: World, llm: Llm) {
       }
       continue;
     }
+    // Expedition Map: which land of the world comes into its owner's hand (one must).
+    if (c.effect.type === 'chart') {
+      if (by && !by.dead && npc) {
+        const options = c.candidates.map((id) => ({ id, label: region(world, id).name }));
+        let pick: string | null = null;
+        if (llm.pick && options.length) {
+          try {
+            pick = await llm.pick({ world, state, npc, what: `${c.effect.item}에서 아직 유대가 없는 땅 하나로 가는 길을 찾아 손에 쥔다 (나중에 언제든 멀리서 그날의 땅으로 이을 수 있다). 어느 땅을?`, options, optional: false });
+          } catch (e) {
+            console.warn(`pick (chart) for ${by.id} failed:`, e);
+          }
+        }
+        applyChart(state, world, by, pick, c, state.minutes);
+      }
+      continue;
+    }
     // Kor Cartographer, arriving: which land of that type its controller seeks out (or none).
     if (c.effect.type === 'search') {
       if (by && !by.dead && npc) {
@@ -1487,6 +1504,7 @@ async function prepare(state: State, world: World, llm: Llm): Promise<string | n
           hex: hexInput(state, world, a),
           fling: flingInput(state, world, a),
           traps: trapsHeld(world, a).map((ev) => ({ id: ev.id, text: `${ev.name}: ${ev.summary} (${ev.cardCost?.text ?? ''})` })),
+          chart: chartBlocked(state, world, a, state.minutes) ? undefined : { name: chartOf(state, world, a)!.name, cost: chartCost(state, world, a) },
           expedition: expeditionBlocked(state, world, a) ? undefined : { name: expeditionOf(state, world, a)!.name, reward: expeditionReward(state, world, a).en },
           fetch: fetchInput(state, world, a),
           court: courtInput(state, world, a),

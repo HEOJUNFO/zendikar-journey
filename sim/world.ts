@@ -890,6 +890,9 @@ export const ItemSimSchema = z.strictObject({
         z.strictObject({ type: z.literal('mana'), amount: z.number().int().positive() }),
         // "<cost>, Sacrifice a creature: Draw N cards" (Carnage Altar): its owner, before it, offers
         // one who serves them (sim/altar.ts).
+        // "{2}, {T}, Sacrifice this: Search your library for a land card, put it into your hand"
+        // (Expedition Map): sim/chart.ts.
+        z.strictObject({ type: z.literal('search_hand'), cost: CostSchema }),
         z.strictObject({ type: z.literal('sacrifice_draw'), cost: CostSchema, draws: z.number().int().positive().default(1) }),
         // "When this enters, return N lands you control to their owner's hand": when tamed, the
         // tamer's bonds with N lands break (they may bond with them again).
