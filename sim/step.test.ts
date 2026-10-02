@@ -57,6 +57,7 @@ import { chartBlocked } from './chart.ts';
 import { applyMill } from './mill.ts';
 import { secretsHour } from './secrets.ts';
 import { relicHour } from './relic.ts';
+import { equipItem } from './equipment.ts';
 import { upkeepScute } from './scute.ts';
 import { tigerHour } from './tiger.ts';
 import { ascendBlocked, upkeepUnhurt } from './luminarch.ts';
@@ -7118,6 +7119,22 @@ test('the real Trusty Machete lies by the Oran-Rief survivalists\' camp: equip {
   assert.equal(x.at, 'loc-oran-rief');
   assert.deepEqual(x.equip?.pt, [2, 1]);
   assert.equal(x.equip?.costText, '{2}');
+});
+
+test('the real Spidersilk Net lies under the Oran-Rief recluse: equip {2}, +0/+2 and reach for its bearer', () => {
+  const world = loadWorld();
+  const x = world.items.find((i) => i.id === 'itm-spidersilk-net')!;
+  assert.equal(x.at, 'loc-oran-rief');
+  assert.deepEqual(x.equip?.pt, [0, 2]);
+  assert.deepEqual(x.equip?.abilities, ['reach']);
+  const state = newState(world, { seed: 1, mode: 'observer' });
+  const b = state.actors['chr-tajuru-archer'];
+  const before = ptOf(b);
+  state.items = { ...(state.items ?? {}), 'itm-spidersilk-net': { name: x.name, owner: b.id, counters: 0, carried: true } };
+  equipItem(state, world, b, 'itm-spidersilk-net', b.id, state.minutes, '시험');
+  anthemHour(state, world);
+  assert.deepEqual(ptOf(b), [before[0], before[1] + 2]);
+  assert.ok(hasAbility(b, 'reach', state.minutes));
 });
 
 test('the real Armament Master keeps the Kor camp in Makindi; the world\'s Kor are Kor now, the Pledge\'s soldiers too', () => {

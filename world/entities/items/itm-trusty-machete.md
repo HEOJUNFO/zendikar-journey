@@ -8,6 +8,7 @@ status: canon
 sources: [ZEN-209]
 tags: [마법물체, 장비, 무색, 원정]
 links:
+  - { to: itm-spidersilk-net, rel: 같은 오란리프의 장비 }
   - { to: law-permanents, rel: 마법물체 (장비) }
   - { to: loc-oran-rief, rel: 놓인 곳 (생존주의자들의 야영지) }
   - { to: itm-adventuring-gear, rel: 같은 탐험가의 장비 }

@@ -8,6 +8,7 @@ status: canon
 sources: [ZEN-173]
 tags: [거미, 짐승, 녹색]
 links:
+  - { to: itm-spidersilk-net, rel: 제 거미줄로 짠 그물 }
   - { to: law-mana-colors, rel: 녹색의 존재 }
   - { to: loc-oran-rief, rel: 숨어 사는 고목 우듬지 }
 sim:
