@@ -34,6 +34,8 @@ import { biteable, readyBiter } from './bite.ts';
 import { readyTapper, tapAmount, tapBlocked, tapTargetable } from './tapper.ts';
 import { altarOf } from './altar.ts';
 import { applyFlood, floodOptions } from './flood.ts';
+import { applyGust, gustOptions } from './owl.ts';
+import type { GustEffect } from './owl.ts';
 import { applyGem, expeditionBlocked, expeditionOf, expeditionReward } from './expedition.ts';
 import { ascendBlocked, ascensionOf } from './luminarch.ts';
 import type { TapPower } from './tapper.ts';
@@ -622,6 +624,25 @@ async function choices(state: State, world: World, llm: Llm) {
     // What a thief turned up of someone's hand (candidates are spells and secrets).
     if (c.effect.type === 'pilfer') {
       if (by && !by.dead && npc) await pilferChoice(state, world, llm, by, npc, c as Choice & { effect: { type: 'pilfer' } });
+      continue;
+    }
+    // Tempest Owl, arriving: up to three to tap there, one at a time (or none).
+    if (c.effect.type === 'gust') {
+      if (!by || by.dead || !npc || !llm.pick) continue;
+      let eff: GustEffect | undefined = c.effect;
+      while (eff) {
+        const owl = state.actors[eff.source];
+        const options = owl ? gustOptions(state, world, owl, state.minutes) : [];
+        if (!options.length) break;
+        let pick: string | null = null;
+        try {
+          pick = await llm.pick({ world, state, npc, what: `${shortName(owl!.name)}이(가) 들어섰다. ${eff.paid ? '' : '힘을 더 들여 '}폭풍으로 이 자리의 하나를 자정까지 묶거나, 누군가 쥔 땅을 흩어 오늘 그 땅의 마나를 못 쓰게 한다 (남은 수 ${eff.left}). 그만둘 수도 있다`, options, optional: true });
+        } catch (e) {
+          console.warn(`pick (gust) for ${by.id} failed:`, e);
+        }
+        const next = applyGust(state, world, by, eff, pick, state.minutes);
+        eff = next?.effect.type === 'gust' ? next.effect : undefined;
+      }
       continue;
     }
     // Spreading Seas: a land someone there holds for the sea to spread over; one must.

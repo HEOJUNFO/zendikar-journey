@@ -5,9 +5,10 @@ name: 우마라 강 협곡
 name_en: Umara River Gorge
 summary: 타짐을 남북으로 가르는 우마라 강의 깊은 협곡. 남쪽 할리마르에서 북쪽 끝까지 흐르는 강을 따라 나루터와 폭포가 이어지고, 그 가장 큰 폭포가 마고시다
 status: canon
-sources: [ZEN-218, ZEN-75, ZEN-141, ZEN-180]
+sources: [ZEN-218, ZEN-75, ZEN-141, ZEN-180, ZEN-72]
 tags: [강, 협곡, 폭포, 청색]
 links:
+  - { to: cre-tempest-owl, rel: 폭포 사이를 나는 올빼미 }
   - { to: cre-river-boa, rel: 물가 덤불의 보아뱀 }
   - { to: loc-north-hada, rel: 강 위쪽 고지대의 전초기지 }
   - { to: cre-umara-raptor, rel: 폭포 바위의 전령 매 }
@@ -29,6 +30,7 @@ map: { in: loc-tazeem, terrain: river, pos: [0.25, -0.15], tiles: 20 }   # 기�
 
 - 우마라 맹금(`cre-umara-raptor`, ZEN-75)이 북쪽 마고시 폭포 곁의 떠 있는 바위에 둥지를 틀었다 ([결정] 2026-10-01). 원정대의 전령 매로, 길들이거나 30코인에 살 수 있는 열다섯 번째 동료다.
 - 남동쪽 물가 덤불에 강 보아뱀(`cre-river-boa`, ZEN-180)이 똬리를 틀었다 ([결정] 2026-10-02): 섬걷기, {G}로 재생.
+- 북서쪽 마고시 폭포 곁 봉우리 사이를 폭풍 올빼미(`cre-tempest-owl`, ZEN-72)가 난다 ([결정] 2026-10-02): 비행, 들어설 때 주인이 {4}{U}를 내면 셋까지 탭.
 
 ## 미정/질문
 

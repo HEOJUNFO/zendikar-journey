@@ -45,6 +45,8 @@ import { askOptions, askText } from './asks.ts';
 import { applyEscape, enterReturn, escapeOptions } from './escape.ts';
 import { applyLift, enterGrant } from './aeronaut.ts';
 import { enterEquip, outfitOptions } from './outfitter.ts';
+import { applyGust, enterTapMany } from './owl.ts';
+import type { GustEffect } from './owl.ts';
 import { applyTorch, enterDamage } from './torch.ts';
 import { applyToll, enterSacrifice } from './toll.ts';
 import { applyShortcut, enterNoBlock } from './shortcut.ts';
@@ -6825,6 +6827,39 @@ test('the real Kor Skyfisher flies the cliffs of the Arid Mesa: a talking flying
   assert.ok(def.enterReturn && def.types?.includes('kor'));
   assert.deepEqual(ptOf(k), [2, 3]);
   assert.ok(hasAbility(k, 'fly', state.minutes));
+});
+
+test('Tempest Owl: arriving, its master pays {4}{U} and taps up to three there, one at a time: a being bound until midnight, a held land with no mana today; without the mana, nothing', () => {
+  const world = fixture([npc('chr-o', { ...npcSim('loc-a', 'work', [1, 2]), beast: true, abilities: ['fly'], enter_tap_many: { count: 3, kicker: '{1}' } }), npc('chr-m', npcSim('loc-a')), npc('chr-x', npcSim('loc-a')), npc('chr-y', npcSim('loc-a'))]);
+  const state = newState(world, { seed: 1, mode: 'observer' });
+  const [o, m, x, y] = ['chr-o', 'chr-m', 'chr-x', 'chr-y'].map((id) => state.actors[id]);
+  for (const a of [m, x, y]) a.tile = o.tile;
+  o.master = m.id;
+  y.bonds = ['loc-b'];
+  enterTapMany(state, world, o, state.minutes);
+  assert.equal(state.choices?.length ?? 0, 0);
+  m.bonds = ['loc-a'];
+  enterTapMany(state, world, o, state.minutes);
+  const c = state.choices!.find((ch) => ch.effect.type === 'gust')!;
+  assert.equal(c.by, 'chr-m');
+  assert.ok(c.optional && c.candidates.includes('being:chr-x') && c.candidates.includes('land:chr-y:loc-b') && !c.candidates.includes('being:chr-o'));
+  const next = applyGust(state, world, m, c.effect as GustEffect, 'being:chr-x', state.minutes)!;
+  assert.equal(x.boundUntil, untapTime(state.minutes));
+  assert.equal(manaAvailable(state, world, m, state.minutes).W ?? 0, 0);
+  const third = applyGust(state, world, m, next.effect as GustEffect, 'land:chr-y:loc-b', state.minutes);
+  assert.ok(y.landsTapped?.ids.includes('loc-b'));
+  assert.equal(manaAvailable(state, world, y, state.minutes).G ?? 0, 0);
+  assert.ok(third && (third.effect as GustEffect).left === 1);
+});
+
+test('the real Tempest Owl flies the falls of the Umara gorge', () => {
+  const world = loadWorld();
+  const state = newState(world, { seed: 1, mode: 'observer' });
+  const o = state.actors['cre-tempest-owl'];
+  assert.equal(o?.region, 'loc-umara-gorge');
+  const def = npcDef(state, world, o.id)!;
+  assert.equal(def.enterTapMany?.count, 3);
+  assert.equal(def.enterTapMany?.kickerText, '{4}{U}');
 });
 
 test('Turntimber Basilisk: bonding, its controller may catch one there in its gaze: foes today, and no flying away', () => {

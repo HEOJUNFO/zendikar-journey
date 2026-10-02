@@ -5,6 +5,7 @@ import { enterDamage } from './torch.ts';
 import { enterGrant } from './aeronaut.ts';
 import { enterEquip } from './outfitter.ts';
 import { enterReturn } from './escape.ts';
+import { enterTapMany } from './owl.ts';
 import { flooded } from './flood.ts';
 import { enterSacrifice } from './toll.ts';
 import { enterNoBlock } from './shortcut.ts';
@@ -82,7 +83,7 @@ export function bondTargets(state: State, world: World, a: Actor, regionId: stri
 }
 
 // The effect falls on `target`, if they are still there.
-export function applyBondEffect(state: State, world: World, a: Actor, regionId: string, eff: Exclude<ChoiceEffect, { type: 'cast' | 'follow' | 'rally' | 'seize' | 'pledge' | 'evade' | 'discard' | 'pilfer' | 'pour' | 'demolish' | 'escape' | 'torch' | 'lift' | 'outfit' | 'gem' | 'flood' | 'lure' | 'toll' | 'shortcut' | 'discovery' | 'sacrament' | 'sacrifice' | 'destroy' | 'drain_grow' | 'crush' | 'quell' | 'quelled' | 'return_lands' | 'search' | 'tide' | 'bind' | 'engulf' | 'harrow' | 'ward' | 'hook' | 'shatter' | 'counter' | 'counter_cast' | 'exile' | 'strike' }>, targetId: string | undefined, t: number) {
+export function applyBondEffect(state: State, world: World, a: Actor, regionId: string, eff: Exclude<ChoiceEffect, { type: 'cast' | 'follow' | 'rally' | 'seize' | 'pledge' | 'evade' | 'discard' | 'pilfer' | 'pour' | 'demolish' | 'escape' | 'torch' | 'lift' | 'outfit' | 'gem' | 'flood' | 'gust' | 'lure' | 'toll' | 'shortcut' | 'discovery' | 'sacrament' | 'sacrifice' | 'destroy' | 'drain_grow' | 'crush' | 'quell' | 'quelled' | 'return_lands' | 'search' | 'tide' | 'bind' | 'engulf' | 'harrow' | 'ward' | 'hook' | 'shatter' | 'counter' | 'counter_cast' | 'exile' | 'strike' }>, targetId: string | undefined, t: number) {
   const r = region(world, regionId);
   if (eff.type === 'damage') return mountainFire(state, world, a, r, eff.amount, targetId, t);
   const target = targetId ? bondTargets(state, world, a, regionId, eff).find((x) => x.id === targetId) : undefined;
@@ -744,6 +745,7 @@ export function onEnter(state: State, world: World, a: Actor, t: number) {
   enterGrant(state, world, a, t);
   enterEquip(state, world, a, t);
   enterReturn(state, world, a, t);
+  enterTapMany(state, world, a, t);
   enterReveal(state, world, a, t);
   enterPump(state, world, a, t);
   enterSacrifice(state, world, a, t);
