@@ -8,6 +8,7 @@ status: canon
 sources: [ZEN-64, ZEN-54]
 tags: [동료, 용병, 인어, 마법사, 청색, 비행]
 links:
+  - { to: chr-caller-of-gales, rel: 같은 연안의 인어 }
   - { to: law-allies, rel: 동료 }
   - { to: law-retainers, rel: 고용되어 섬김 }
   - { to: law-mana-colors, rel: 청색의 존재 }

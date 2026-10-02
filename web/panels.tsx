@@ -24,6 +24,7 @@ const TAP_UI: Record<TapPower, { emoji: string; self: string; other: string; tit
   shield: { emoji: '🕯️', self: '자신에게 가호', other: '가호', title: '오늘 받을 다음 피해를 막는다 (영혼은 자정까지 묶임)' },
   loot: { emoji: '📖', self: '학자의 이야기 듣기', other: '학자의 이야기', title: '숨은 것 하나를 알게 되고 주문 하나를 잊는다 (학자는 자정까지 묶임)' },
   scout: { emoji: '🧭', self: '길잡이와 길 찾기', other: '', title: '값을 치르고, 아직 유대 없는 기본 땅 하나와 멀리서 이어진다 (길잡이는 자정까지 묶임)' },
+  gale: { emoji: '🌬️', self: '돌풍으로 날기', other: '돌풍', title: '값을 치르고 자정까지 날게 한다 (부르는 이는 자정까지 묶임)' },
 };
 import { bondBlocked, bondTargets, enteredToday, fetchTargets, landDropBlocked, fireTargets, firesOnBond, growBlocked, growLand, targetedBondEffect } from '../sim/abilities.ts';
 import { BOND_HOURS } from '../sim/actions.ts';

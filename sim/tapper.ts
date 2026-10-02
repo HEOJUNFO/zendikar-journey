@@ -19,7 +19,7 @@ import { down } from './combat.ts';
 import { owesDiscard } from './discard.ts';
 import { drawKnowledge } from './knowledge.ts';
 import { creatureColors, manaAvailable, payMana, planPayment } from './mana.ts';
-import { searchTargets } from './abilities.ts';
+import { grantAbility, searchTargets } from './abilities.ts';
 import { retainersOf } from './retainers.ts';
 import { powersSealed } from './seal.ts';
 import { addLog, npcDef, outOfTime, targetable, together, untargetableText } from './state.ts';
@@ -27,18 +27,18 @@ import type { Actor, Choice, State } from './state.ts';
 import { josa, shortName } from './text.ts';
 import type { NpcDef, World } from './world.ts';
 
-export type TapPower = 'shield' | 'loot' | 'scout';
-export const TAP_POWERS: TapPower[] = ['shield', 'loot', 'scout'];
+export type TapPower = 'shield' | 'loot' | 'scout' | 'gale';
+export const TAP_POWERS: TapPower[] = ['shield', 'loot', 'scout', 'gale'];
 
 // Hours it takes.
 export const TAP_HOURS = 1;
 
 // How much of the power `def` has (0: none).
 function powerOf(def: NpcDef | undefined, power: TapPower) {
-  return (power === 'shield' ? def?.tapShield : power === 'loot' ? (def?.tapLoot ? 1 : 0) : def?.tapSearch ? 1 : 0) ?? 0;
+  return (power === 'shield' ? def?.tapShield : power === 'loot' ? (def?.tapLoot ? 1 : 0) : power === 'gale' ? (def?.tapGrant ? 1 : 0) : def?.tapSearch ? 1 : 0) ?? 0;
 }
 
-const NONE: Record<TapPower, string> = { shield: '가호를 걸 영혼이 없다.', loot: '부릴 학자가 없다.', scout: '부릴 길잡이가 없다.' };
+const NONE: Record<TapPower, string> = { shield: '가호를 걸 영혼이 없다.', loot: '부릴 학자가 없다.', scout: '부릴 길잡이가 없다.', gale: '돌풍을 부를 이가 없다.' };
 
 // Those with the power `a` controls: themselves (serving no one) and those who serve them.
 export function tappersOf(state: State, world: World, a: Actor, power: TapPower) {
@@ -81,6 +81,8 @@ export function tapBlocked(state: State, world: World, a: Actor, power: TapPower
   const colors = creatureColors(npcDef(state, world, w.id));
   if (!targetable(b, t, colors)) return untargetableText(b, t, colors);
   if (here && w.id !== b.id && !together(w, b)) return `${josa(shortName(b.name), '은', '는')} ${shortName(w.name)}의 곁에 없다.`;
+  const tg = power === 'gale' ? npcDef(state, world, w.id)?.tapGrant : undefined;
+  if (tg && !planPayment(manaAvailable(state, world, a, t), tg.cost)) return `마나가 모자라다 (${tg.costText}).`;
   return null;
 }
 
@@ -100,6 +102,16 @@ export function useTap(state: State, world: World, a: Actor, power: TapPower, wh
   }
   w.boundUntil = untapTime(t);
   const [x, y] = [shortName(w.name), shortName(b.name)];
+  if (power === 'gale') {
+    const tg = npcDef(state, world, w.id)!.tapGrant!;
+    if (!payMana(state, world, a, tg.cost, t)) {
+      w.boundUntil = undefined;
+      return;
+    }
+    addLog(state, { kind: 'status', text: `${josa(x, '이', '가')} 힘(${tg.costText})을 들여 돌풍을 불러 ${josa(y, '을', '를')} 하늘로 띄운다. ${josa(x, '은', '는')} 자정까지 묶인다.`, regions: [w.region], actors: [w.id, b.id, a.id], t });
+    grantAbility(state, b, tg.ability, untapTime(t), x, t);
+    return;
+  }
   if (power === 'shield') {
     const day = gameDay(t);
     b.shield = { day, amount: (b.shield?.day === day ? b.shield.amount : 0) + tapAmount(state, world, w, power) };

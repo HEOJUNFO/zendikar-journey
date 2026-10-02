@@ -1480,6 +1480,7 @@ async function prepare(state: State, world: World, llm: Llm): Promise<string | n
           bite: biteInput(state, a),
           shield: tapInput(state, world, a, 'shield'),
           loot: tapInput(state, world, a, 'loot'),
+          gale: tapInput(state, world, a, 'gale'),
           scout: tapBlocked(state, world, a, 'scout', a.id, state.minutes) ? undefined : tapInput(state, world, a, 'scout'),
           altar: altarInput(state, world, a),
           ascend: ascendInput(state, world, a),
@@ -1630,6 +1631,7 @@ function peopleInput(state: State, world: World, a: Actor): PlanDayInput['people
   const biter = readyBiter(state, a, state.minutes);
   const warden = readyTapper(state, world, a, 'shield', state.minutes);
   const scholar = readyTapper(state, world, a, 'loot', state.minutes);
+  const caller = readyTapper(state, world, a, 'gale', state.minutes);
   const out = Object.values(state.actors)
     .filter((x) => !x.dead && x.id !== a.id && !outOfTime(state, x))
     .map((x) => {
@@ -1643,6 +1645,7 @@ function peopleInput(state: State, world: World, a: Actor): PlanDayInput['people
         bite: !!biter && biteable(state, world, biter, x, state.minutes),
         shield: !!warden && tapTargetable(state, world, warden, x, state.minutes),
         loot: !!scholar && tapTargetable(state, world, scholar, x, state.minutes),
+        gale: !!caller && tapTargetable(state, world, caller, x, state.minutes),
       };
     });
   return out.length ? out : undefined;

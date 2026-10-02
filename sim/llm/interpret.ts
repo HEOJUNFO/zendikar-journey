@@ -101,7 +101,7 @@ export async function interpret({ world, state, text }: InterpretInput): Promise
     const w = readyTapper(state, world, p, power, state.minutes);
     if (!w) continue;
     const near = Object.values(state.actors).filter((x) => (x.id === w.id || together(w, x)) && tapTargetable(state, world, w, x, state.minutes));
-    const what = power === 'shield' ? `the next ${tapAmount(state, world, w, power)} damage that one would take today is prevented` : 'that one comes to know a hidden secret, then forgets a spell they hold';
+    const what = power === 'shield' ? `the next ${tapAmount(state, world, w, power)} damage that one would take today is prevented` : power === 'gale' ? 'they pay its cost and that one flies until midnight' : 'that one comes to know a hidden secret, then forgets a spell they hold';
     if (near.length) days.push(`- {"type":"${power}","to":"<person id>"}  (tap ${shortName(w.name)}: ${what}; leave "to" out for themselves; once a day; 1 hour. Who: ${near.map((x) => `${x.id} (${shortName(x.name)})`).join(', ')})`);
   }
   // One they control bearing Predatory Urge: bite someone standing with them.

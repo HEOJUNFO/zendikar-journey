@@ -12,6 +12,8 @@
 // bite: having one they control bearing Predatory Urge bite the block's `who` (going to them;
 // sim/bite.ts): the biter is tapped, the two deal each other their power.
 // scout: tapping a Frontier Guide they control to bond from afar with a basic land (sim/tapper.ts).
+// gale: tapping a Caller of Gales they control (paying its cost) so the block's `who` (themselves if
+// none) flies until midnight (sim/tapper.ts).
 // shield / loot: tapping a Noble Vestige (ward against the next damage today) or a Reckless
 // Scholar (draw, then discard) they control for the block's `who` (themselves if none; going to
 // them; sim/tapper.ts).
@@ -29,7 +31,7 @@
 // paying its cost), anywhere (sim/luminarch.ts).
 // attack: going after the block's `who` (wherever they are) and falling on them: they become
 // foes and fight from the next hour (sim/combat.ts), as the player's attack.
-export const LIFE_KINDS = ['sleep', 'eat', 'work', 'social', 'leisure', 'bond', 'claim', 'store_day', 'spend_day', 'grow', 'fetch', 'learn', 'cast', 'court', 'hire', 'attack', 'recall', 'equip', 'bite', 'shield', 'loot', 'scout', 'altar', 'expedition', 'ascend', 'set_trap', 'hex', 'fling'] as const;
+export const LIFE_KINDS = ['sleep', 'eat', 'work', 'social', 'leisure', 'bond', 'claim', 'store_day', 'spend_day', 'grow', 'fetch', 'learn', 'cast', 'court', 'hire', 'attack', 'recall', 'equip', 'bite', 'shield', 'loot', 'scout', 'altar', 'expedition', 'ascend', 'set_trap', 'hex', 'fling', 'gale'] as const;
 export type LifeKind = (typeof LIFE_KINDS)[number];
 
 // start/end are minutes of the game day, 0..1440, end exclusive.

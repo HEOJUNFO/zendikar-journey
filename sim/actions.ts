@@ -70,6 +70,8 @@ export const ActionSchema = z.discriminatedUnion('type', [
   // Have a Reckless Scholar you control tell `to` (yourself if none), one standing with it, what it
   // has heard: they come to know a secret, then let go of a spell. It is tapped until midnight.
   z.object({ type: z.literal('loot'), to: z.string().optional() }),
+  // Have a Caller of Gales you control (paying its cost) make `to` (yourself if none) fly until midnight.
+  z.object({ type: z.literal('gale'), to: z.string().optional() }),
   // Have a Frontier Guide you control find you the way to a basic land: pay its cost; it is tapped
   // until midnight, and you may bond from afar with a basic land you don't hold yet.
   z.object({ type: z.literal('scout') }),
@@ -301,15 +303,18 @@ export function startAction(state: State, world: World, action: Action): string 
       break;
     }
     case 'shield':
+    case 'gale':
     case 'loot': {
       const why = tapBlocked(state, world, p, action.type, action.to, t);
       if (why) return why;
       const b = state.actors[action.to ?? p.id];
       const w = readyTapper(state, world, p, action.type, t, b)!;
       const name = b.id === p.id ? '자신' : shortName(b.name);
-      task = action.type === 'shield' ? { kind: 'shield', activity: `${name}에게 가호`, emoji: '🕯️', until: until(TAP_HOURS), who: b.id } : { kind: 'loot', activity: `${name}에게 학자의 이야기`, emoji: '🧭', until: until(TAP_HOURS), who: b.id };
+      task = action.type === 'gale' ? { kind: 'gale', activity: `${name}에게 돌풍`, emoji: '🌬️', until: until(TAP_HOURS), who: b.id } : action.type === 'shield' ? { kind: 'shield', activity: `${name}에게 가호`, emoji: '🕯️', until: until(TAP_HOURS), who: b.id } : { kind: 'loot', activity: `${name}에게 학자의 이야기`, emoji: '🧭', until: until(TAP_HOURS), who: b.id };
       text =
-        action.type === 'shield'
+        action.type === 'gale'
+          ? `${josa(shortName(w.name), '이', '가')} 돌풍을 불러 ${name}을(를) 띄운다. 자정까지 날 수 있다.`
+          : action.type === 'shield'
           ? `${josa(shortName(w.name), '이', '가')} ${name}에게 희망의 빛을 드리운다. 오늘 받을 다음 피해 ${tapAmount(state, world, w, 'shield')}를 막는다.`
           : `${josa(shortName(w.name), '이', '가')} ${name}에게 주워들은 것을 늘어놓는다. 숨은 것 하나를 알게 되고, 주문 하나를 잊는다.`;
       break;

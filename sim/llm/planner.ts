@@ -62,6 +62,8 @@ export type PlanDayInput = {
   shield?: { who: string; amount: number };
   // A Reckless Scholar they control that could tell someone what it has heard today.
   loot?: { who: string; amount: number };
+  // A Caller of Gales they control that could make someone fly today.
+  gale?: { who: string; amount: number };
   // A Frontier Guide they control that could find them a basic land today.
   scout?: { who: string; amount: number };
   // A Carnage Altar they own: where it stands, and whom of theirs they could offer there.
@@ -90,12 +92,12 @@ export type PlanDayInput = {
   equip?: { text: string; who: { id: string; text: string }[] };
   // Others in the world and where each is now: whom they could seek out to talk with (not
   // beasts) or go after (attack), as the player may anyone standing with them.
-  people?: { id: string; at: string; text: string; talk: boolean; attack: boolean; bite?: boolean; shield?: boolean; loot?: boolean }[];
+  people?: { id: string; at: string; text: string; talk: boolean; attack: boolean; bite?: boolean; shield?: boolean; loot?: boolean; gale?: boolean }[];
 };
 
 // Kinds of blocks they may plan: no meals without hunger, taming only if there is an item for
 // them to tame, keeping days only with a land that keeps them.
-function kindsFor(input: Pick<PlanDayInput, 'needs' | 'items' | 'equip' | 'days' | 'grow' | 'recall' | 'bite' | 'shield' | 'loot' | 'scout' | 'altar' | 'expedition' | 'ascend' | 'traps' | 'hex' | 'fling' | 'fetch' | 'learn' | 'cast' | 'court' | 'hire' | 'people'>) {
+function kindsFor(input: Pick<PlanDayInput, 'needs' | 'items' | 'equip' | 'days' | 'grow' | 'recall' | 'bite' | 'shield' | 'loot' | 'gale' | 'scout' | 'altar' | 'expedition' | 'ascend' | 'traps' | 'hex' | 'fling' | 'fetch' | 'learn' | 'cast' | 'court' | 'hire' | 'people'>) {
   return LIFE_KINDS.filter(
     (k) =>
       (k !== 'eat' || input.needs.includes('hunger')) &&
@@ -107,6 +109,7 @@ function kindsFor(input: Pick<PlanDayInput, 'needs' | 'items' | 'equip' | 'days'
       (k !== 'recall' || !!input.recall) &&
       (k !== 'shield' || !!input.shield) &&
       (k !== 'loot' || !!input.loot) &&
+      (k !== 'gale' || !!input.gale) &&
       (k !== 'scout' || !!input.scout) &&
       (k !== 'altar' || !!input.altar?.who.length) &&
       (k !== 'expedition' || !!input.expedition) &&
@@ -157,6 +160,7 @@ export async function planDay(input: PlanDayInput): Promise<ScheduleBlock[] | nu
     (b.kind === 'bite' && !people.get(b.who ?? '')?.bite) ||
     (b.kind === 'shield' && !!b.who && b.who !== input.id && !people.get(b.who)?.shield) ||
     (b.kind === 'loot' && !!b.who && b.who !== input.id && !people.get(b.who)?.loot) ||
+    (b.kind === 'gale' && !!b.who && b.who !== input.id && !people.get(b.who)?.gale) ||
     (b.kind === 'set_trap' && !input.traps?.some((x) => x.id === b.trap)) ||
     (b.kind === 'hex' && !input.hex?.targets.some((x) => x.id === b.who)) ||
     (b.kind === 'fling' && !input.fling?.targets.some((x) => x.id === b.who)) ||
@@ -259,6 +263,10 @@ Rules:
   }${
     kinds.includes('scout')
       ? `\n- "scout" takes 1 hour, anywhere: ${input.scout!.who}, a frontier guide, is tapped (bound until midnight) and finds them the way to a basic land of the world they don't hold yet: they may bond with it from afar (not their land for the day; no mana from it today). It costs mana. Once a day.`
+      : ''
+  }${
+    kinds.includes('gale')
+      ? `\n- "gale" takes 1 hour; "who" is the id of one to lift (leave it out for themselves): ${input.gale!.who}, a caller of gales, goes with them to that one and is tapped (bound until midnight); they pay its cost and that one flies until midnight (can fly from those who can't, reach the sky ruins). Once a day.`
       : ''
   }${
     kinds.includes('loot')

@@ -3230,7 +3230,7 @@ test('the real Lullmage Mentor teaches in Sea Gate; the world\'s merfolk are the
   assert.equal(l?.region, 'loc-sea-gate');
   assert.deepEqual(npcDef(state, world, l.id)?.counterTokens, { creature: 'cre-merfolk', pt: [1, 1], colors: ['U'] });
   const merfolk = world.npcs.filter((x) => x.types?.includes('merfolk')).map((x) => x.id).sort();
-  assert.deepEqual(merfolk, ['chr-lullmage-mentor', 'chr-merfolk-seastalkers', 'chr-merfolk-wayfinder', 'chr-sea-gate-loremaster', 'chr-seascape-aerialist']);
+  assert.deepEqual(merfolk, ['chr-caller-of-gales', 'chr-lullmage-mentor', 'chr-merfolk-seastalkers', 'chr-merfolk-wayfinder', 'chr-sea-gate-loremaster', 'chr-seascape-aerialist']);
 });
 
 test('Cancel held by the player: a pick to answer, or let be', async () => {
@@ -7728,6 +7728,30 @@ test('Brave the Elements: the caster picks a color; their white ones there (them
   applyBrave(state, world, c, 'B', '원소를 무릅쓰고', state.minutes);
   assert.ok(protectedFrom(c, ['B'], state.minutes) && protectedFrom(w, ['B'], state.minutes));
   assert.ok(!protectedFrom(g, ['B'], state.minutes));
+});
+
+test('Caller of Gales: the player has the caller serving them lift one there for {1}{U}: it flies until midnight, the caller is bound', async () => {
+  const world = fixture([npc('chr-g', { ...npcSim('loc-a', 'work', [1, 1]), tap_grant: { ability: 'fly', cost: '{1}' } }), npc('chr-x', npcSim('loc-a'))]);
+  const state = character(world, 'loc-a');
+  const [p, g, x] = [state.actors[PLAYER_ID], state.actors['chr-g'], state.actors['chr-x']];
+  for (const a of [g, x]) a.tile = p.tile;
+  g.master = p.id;
+  assert.ok(tapBlocked(state, world, p, 'gale', 'chr-x', state.minutes)?.includes('마나'));
+  p.bonds = ['loc-a'];
+  assert.equal(tapBlocked(state, world, p, 'gale', 'chr-x', state.minutes), null);
+  await act(state, world, { type: 'gale', to: 'chr-x' });
+  assert.ok(texts(state).some((l) => l.includes('돌풍을 불러')));
+  assert.ok(x.granted?.some((gr) => gr.ability === 'fly'));
+});
+
+test('the real Caller of Gales lives on the Silundi Coast: a merfolk with a tap power of wings', () => {
+  const world = loadWorld();
+  const state = newState(world, { seed: 1, mode: 'observer' });
+  const c = state.actors['chr-caller-of-gales'];
+  assert.equal(c?.region, 'loc-silundi-coast');
+  const def = npcDef(state, world, c.id)!;
+  assert.equal(def.tapGrant?.costText, '{1}{U}');
+  assert.ok(def.types?.includes('merfolk'));
 });
 
 test('the real Nimbus Wings is taught at Kabira Crossroads: the one it is cast on gets +1/+2 and wings', () => {
