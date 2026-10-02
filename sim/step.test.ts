@@ -7930,6 +7930,26 @@ test('the real Primal Bellow is taught in Oran-Rief: {G}, an instant, +1/+1 for 
   assert.deepEqual(s.effects, [{ type: 'pump_per_land', land: 'forest' }]);
 });
 
+test('Shieldmate\'s Blessing: the one picked (the caster too) has the next 3 damage today prevented, adding to a ward already on them', () => {
+  const bless: RawEntity = { id: 'spl-sb', kind: 'spell', name: '방패동료의 축복', status: 'canon', sim: { cost: '{0}', speed: 'instant', learn_at: 'loc-a', target: 'any_here', effects: [{ type: 'ward', amount: 3 }] } };
+  const world = fixture([bless, npc('chr-c', npcSim('loc-a')), npc('chr-x', npcSim('loc-a', 'work', [1, 9]))]);
+  const state = newState(world, { seed: 1, mode: 'observer' });
+  const [c, x] = ['chr-c', 'chr-x'].map((id) => state.actors[id]);
+  x.tile = c.tile;
+  c.spells = ['spl-sb'];
+  castSpell(state, world, c, 'spl-sb', 'chr-x', false, state.minutes);
+  assert.equal(x.shield?.amount, 3);
+  dealDamage(state, world, x, 4, state.minutes, '시험');
+  assert.equal(woundsOf(x, state.minutes), 1);
+  assert.ok(!x.foes?.ids.includes('chr-c'));
+});
+
+test('the real Shieldmate\'s Blessing is taught in Makindi: {W}, an instant, a ward of 3', () => {
+  const s = loadWorld().spells.find((x) => x.id === 'spl-shieldmates-blessing')!;
+  assert.equal(s.learnAt, 'loc-makindi');
+  assert.deepEqual(s.effects, [{ type: 'ward', amount: 3 }]);
+});
+
 test('Nissa\'s Chosen: killed, it goes into no graveyard; seven days on it wakes at home, whole and serving no one; a token of it is simply gone', () => {
   const world = fixture([besideA, npc('chr-n', { ...npcSim('loc-az', 'work', [2, 3]), revives_after: 7 }), npc('chr-m', npcSim('loc-a')), npc('chr-k', npcSim('loc-a'))]);
   const state = newState(world, { seed: 1, mode: 'observer' });

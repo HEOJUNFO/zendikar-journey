@@ -5,9 +5,10 @@ name: 마킨디 협곡
 name_en: Makindi Trenches
 summary: 온두 본토를 가로지르는 높은 벽의 협곡 미로. 옛 코르 제국의 수도가 무너진 자리이고, 마나 섞인 바람이 협곡을 울리며, 코르가 벼랑에 밧줄을 걸고 산다
 status: canon
-sources: [ZEN-124, ZEN-203, ZEN-18, ZEN-78, ZEN-20, ZEN-26, ZEN-207, ZEN-1, ZEN-7, ZEN-17, ZEN-21]
+sources: [ZEN-124, ZEN-203, ZEN-18, ZEN-78, ZEN-20, ZEN-26, ZEN-207, ZEN-1, ZEN-7, ZEN-17, ZEN-21, ZEN-35]
 tags: [협곡, 코르, 폐허, 바람, 백색]
 links:
+  - { to: spl-shieldmates-blessing, rel: 배우는 주문 (방패동료의 축복) }
   - { to: chr-kor-outfitter, rel: 장비를 매어 주는 코르 채비사 }
   - { to: chr-kor-aeronaut, rel: 떠 있는 바위 사이를 나는 코르 병사 }
   - { to: chr-cliff-threader, rel: 서쪽 절벽의 정찰병 }
@@ -51,6 +52,7 @@ map: { in: loc-ondu, terrain: grassland, pos: [-0.2, 0.1], tiles: 70 }   # 기�
 - 절벽 타는 이(`chr-cliff-threader`, ZEN-7)가 서쪽 절벽 벽을 밧줄로 건넌다 ([결정] 2026-10-01). 산걷기를 지닌 말하는 코르 정찰병이다.
 - 북서쪽 떠 있는 바위들 사이를 코르 비행사(`chr-kor-aeronaut`, ZEN-17)가 갈고리 밧줄로 날아 건넌다 ([결정] 2026-10-02). 그날 처음 들어서는 곳에서 힘 {1}{W}를 더 모으면 곁의 하나를 끌어올려 자정까지 날게 한다.
 - 북동쪽 코르의 갈고리가 놓인 바위 곁에 코르 채비사(`chr-kor-outfitter`, ZEN-21)가 산다 ([결정] 2026-10-02). 그날 처음 들어서는 곳에서 함께하는 이의 장비를 값 없이 매어 준다.
+- 방패동료의 축복(`spl-shieldmates-blessing`, ZEN-35)을 배울 수 있다 (4시간). 대상이 오늘 받을 다음 피해 3을 막는다 ([결정] 2026-10-02).
 
 ## 미정/질문
 

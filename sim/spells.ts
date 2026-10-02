@@ -4,7 +4,7 @@
 // hold some by color (knows_colors) to cast by their powers (Chandra). A sealed color can't
 // be cast (sim/seal.ts).
 import { drawKnowledge, findTraps, huntKnowledge } from './knowledge.ts';
-import { formatClock, untapTime } from './clock.ts';
+import { formatClock, untapTime, gameDay } from './clock.ts';
 import { addFoe, dealDamage, destroy, die, woundsOf } from './combat.ts';
 import { gainLife, lifeOf, loseLife } from './life.ts';
 import { actorColors, addCosts, COLOR_LABELS, COLORS, formatMana, manaAvailable, manaCapacity, payMana, planPayment } from './mana.ts';
@@ -367,6 +367,11 @@ export function resolveSpell(state: State, world: World, a: Actor, spellId: stri
       const n = landsOfType(state, world, a, eff.land).length;
       if (n > 0) dealDamage(state, world, target, n, t, s.name, false, a);
       else addLog(state, { kind: 'status', text: `${josa(shortName(a.name), '은', '는')} ${josa(LAND_TYPE_LABELS[eff.land], '과', '와')} 이어져 있지 않아 아무 일도 없었다.`, regions: [a.region], actors: [a.id], t });
+    } else if (eff.type === 'ward') {
+      const day = gameDay(t);
+      const ward = { day, amount: (target.shield?.day === day ? target.shield.amount : 0) + eff.amount };
+      target.shield = ward;
+      addLog(state, { kind: 'status', text: `${josa(shortName(target.name), '이', '가')} ${s.name}의 빛에 감싸였다 (오늘 받을 다음 피해 ${ward.amount}을 막는다).`, regions: [target.region], actors: [target.id, a.id], t });
     } else if (eff.type === 'pump_per_land') {
       const n = landsOfType(state, world, a, eff.land).length;
       if (n > 0) {

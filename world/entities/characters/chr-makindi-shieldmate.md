@@ -8,6 +8,7 @@ status: canon
 sources: [ZEN-26, ZEN-1]
 tags: [코르, 병사, 동료, 백색, 방패]
 links:
+  - { to: spl-shieldmates-blessing, rel: 방패동료들의 축복 }
   - { to: law-mana-colors, rel: 백색의 존재 }
   - { to: loc-makindi, rel: 지키는 협곡 }
   - { to: law-allies, rel: 동료 }

@@ -738,6 +738,9 @@ export const SpellSimSchema = z.strictObject({
         // "Target creature gets +1/+1 until end of turn for each <land type> you control" (Primal
         // Bellow): the caster's lands of that type.
         z.strictObject({ type: z.literal('pump_per_land'), land: z.enum(LAND_TYPES) }),
+        // "Prevent the next N damage that would be dealt to any target this turn" (Shieldmate's
+        // Blessing): a ward on the target until midnight, as Noble Vestige's (`Actor.shield`).
+        z.strictObject({ type: z.literal('ward'), amount: z.number().int().positive() }),
         // "Destroy target artifact or enchantment and up to one other target artifact or
         // enchantment" (Relic Crush): items standing where the caster is, auras on those there.
         // The caster picks after casting, the first surely, the rest if they will (sim/relics.ts).

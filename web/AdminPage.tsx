@@ -457,6 +457,8 @@ function spellEffectText(e: SpellEffect) {
       return '조종하는 것(자신·곁의 권속, 쥔 땅, 아이템, 건 오라) 하나를 되돌림';
     case 'return_nonland':
       return '같은 칸의 땅 아닌 것(존재, 아이템, 오라) 하나를 되돌림 (남의 존재는 내동댕이쳐져 1시간 기절)';
+    case 'ward':
+      return `대상 하나가 오늘 받을 다음 피해 ${e.amount}을 막음`;
     case 'pump_per_land':
       return `대상 하나 자정까지 시전자가 쥔 ${e.land}마다 +1/+1`;
     case 'weaken_target':
