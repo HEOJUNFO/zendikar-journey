@@ -8,6 +8,7 @@ status: canon
 sources: [ZEN-174]
 tags: [인간, 전사, 동료, 용병, 녹색]
 links:
+  - { to: itm-trusty-machete, rel: 야영지 곁의 마체테 }
   - { to: law-mana-colors, rel: 녹색의 존재 }
   - { to: loc-oran-rief, rel: 사는 숲 (서쪽 깊은 곳의 야영지) }
   - { to: law-allies, rel: 동료 }

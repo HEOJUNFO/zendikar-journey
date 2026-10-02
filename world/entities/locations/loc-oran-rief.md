@@ -5,9 +5,10 @@ name: 오란리프, 광대숲
 name_en: Oran-Rief, the Vastwood
 summary: 타짐의 끝없이 자라는 산호 바위 숲. 거목의 뿌리가 바위 위로 아치를 이루고, 그 위 이끼 낀 턱에 엘프들이 산다. 이곳의 기운은 새로 태어난 것들을 북돋운다
 status: canon
-sources: [ZEN-221, ZEN-192, ZEN-162, ZEN-121, ZEN-189, ZEN-163, ZEN-173, ZEN-185, ZEN-174, ZEN-176]
+sources: [ZEN-221, ZEN-192, ZEN-162, ZEN-121, ZEN-189, ZEN-163, ZEN-173, ZEN-185, ZEN-174, ZEN-176, ZEN-209]
 tags: [숲, 거목, 산호바위, 엘프, 녹색]
 links:
+  - { to: itm-trusty-machete, rel: 생존주의자 야영지의 마체테 }
   - { to: chr-oran-rief-survivalist, rel: 서쪽 깊은 곳의 생존꾼 욘 바스렐 (동료) }
   - { to: chr-tajuru-archer, rel: 우듬지 타주루 마을의 궁수 }
   - { to: cre-grazing-gladehart, rel: 남서쪽 빈터에서 풀을 뜯는 영양 }
@@ -53,6 +54,7 @@ sim:
 
 - 타주루 궁수(`chr-tajuru-archer`, ZEN-185)가 북동쪽 우듬지에 매단 타주루 마을에 산다 ([결정] 2026-10-01 설정대로: 타주루 엘프는 오란리프 우듬지 마을에 산다 [배경]). 열네 번째 동료로, 무리가 늘 때마다 날 수 있는 이를 쏜다.
 - 서쪽 깊은 곳 야영지에 오란리프 생존꾼 욘 바스렐(`chr-oran-rief-survivalist`, ZEN-174)이 산다 ([결정] 2026-10-02): 열아홉 번째 동료, 20코인. 동료가 들 때마다 +1/+1 카운터.
+- 서쪽 깊은 곳 생존주의자들의 야영지 곁에 믿음직한 마체테(`itm-trusty-machete`, ZEN-209)가 있다 ([결정] 2026-10-02): 장비, 맨 이 +2/+1.
 
 ## 미정/질문
 

@@ -54,6 +54,14 @@ export function anthemHour(state: State, world: World) {
       want.set(y.id, { pt: [w.pt[0] + ea.pt[0] * n, w.pt[1] + ea.pt[1] * n], abilities: w.abilities });
     }
   }
+  // "Equipped creature gets +P/+T" (Trusty Machete): its bearer.
+  for (const x of world.items) {
+    const s = state.items?.[x.id];
+    const b = x.equip?.pt && s?.bearer && !s.gone ? state.actors[s.bearer] : undefined;
+    if (!b || b.dead) continue;
+    const w = want.get(b.id) ?? { pt: [0, 0], abilities: [] };
+    want.set(b.id, { pt: [w.pt[0] + x.equip!.pt![0], w.pt[1] + x.equip!.pt![1]], abilities: w.abilities });
+  }
   // "As long as this is equipped, it has double strike" (Kor Duelist): while it bears any.
   for (const x of alive(state)) {
     const eg = npcDef(state, world, x.id)?.equippedGrant;

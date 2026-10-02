@@ -7100,6 +7100,26 @@ test('Kor Duelist: double strike while it bears any Equipment, gone at the next 
   assert.ok(!hasAbility(d, 'double_strike', state.minutes));
 });
 
+test('Trusty Machete: its bearer gets +2/+1, counted each hour; taken off, gone at the next', () => {
+  const machete: RawEntity = { id: 'itm-mc', kind: 'item', name: '마체테', status: 'canon', sim: { cost: '{0}', at: 'loc-a', equip: { cost: '{0}', pt: [2, 1] } } };
+  const world = fixture([machete, npc('chr-b', npcSim('loc-a', 'work', [1, 1]))]);
+  const state = newState(world, { seed: 1, mode: 'observer' });
+  const b = state.actors['chr-b'];
+  state.items = { 'itm-mc': { name: '마체테', owner: b.id, counters: 0, carried: true, bearer: b.id } };
+  anthemHour(state, world);
+  assert.deepEqual(ptOf(b), [3, 2]);
+  delete state.items['itm-mc'].bearer;
+  anthemHour(state, world);
+  assert.deepEqual(ptOf(b), [1, 1]);
+});
+
+test('the real Trusty Machete lies by the Oran-Rief survivalists\' camp: equip {2}, +2/+1', () => {
+  const x = loadWorld().items.find((i) => i.id === 'itm-trusty-machete')!;
+  assert.equal(x.at, 'loc-oran-rief');
+  assert.deepEqual(x.equip?.pt, [2, 1]);
+  assert.equal(x.equip?.costText, '{2}');
+});
+
 test('the real Armament Master keeps the Kor camp in Makindi; the world\'s Kor are Kor now, the Pledge\'s soldiers too', () => {
   const world = loadWorld();
   const state = newState(world, { seed: 1, mode: 'observer' });

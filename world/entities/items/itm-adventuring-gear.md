@@ -8,6 +8,7 @@ status: canon
 sources: [ZEN-195]
 tags: [마법물체, 장비, 무색, 원정, 상륙]
 links:
+  - { to: itm-trusty-machete, rel: 같은 탐험가의 장비 }
   - { to: law-permanents, rel: 마법물체 (장비) }
   - { to: loc-kazandu, rel: 놓여 있는 곳 (원정대의 밀림) }
   - { to: itm-trailblazers-boots, rel: 같은 탐험가의 장비 }
