@@ -44,6 +44,7 @@ import { reviveHour } from './revive.ts';
 import { punishHour } from './punish.ts';
 import { bloodchiefHour } from './bloodchief.ts';
 import { bloodchiefDrain, upkeepBloodchief } from './bloodascension.ts';
+import { tricksterHour } from './trickster.ts';
 import { SET_TRAP_HOURS, setTrap, setTrapBlocked } from './snare.ts';
 import { HEX_HOURS, hex, hexBlocked } from './hexmage.ts';
 import { FLING_HOURS, fling, torchesOf } from './fling.ts';
@@ -80,6 +81,7 @@ export function step(state: State, placed: World) {
   punishHour(state, placed, t);
   bloodchiefHour(state, placed, t);
   bloodchiefDrain(state, placed, t);
+  tricksterHour(state, placed, t);
   const world = withPositions(state, placed);
   startDay(state, world, t);
   markSealed(state, world, t);

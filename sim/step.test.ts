@@ -20,7 +20,7 @@ import { actorColors, ANY_COLOR, COLORS, formatMana, manaAvailable, manaCapacity
 import { MAX_TALKS_PER_DAY, canPledge, usableAbilities, volleyShares, burnTargets } from './run.ts';
 import { destroyLand, eligibleGmEvents, moveHours, startTravel, step, travelBlocked } from './step.ts';
 import { gainLife, lifeOf, loseLife } from './life.ts';
-import { awayText, buriedToday, buryCount, hasAbility, here, needsOf, newState, npcDef, outOfTime, PLAYER_ID, present, protectedFrom, ptOf, syncWorld, targetable, together } from './state.ts';
+import { awayText, buriedToday, buryCount, hasAbility, markSearched, here, needsOf, newState, npcDef, outOfTime, PLAYER_ID, present, protectedFrom, ptOf, syncWorld, targetable, together } from './state.ts';
 import { foresightText } from './foresight.ts';
 import { nodeAt } from '../web/view.ts';
 import { crushRelic, relicsHere } from './relics.ts';
@@ -63,6 +63,7 @@ import { applyInstigate } from './instigator.ts';
 import { bloodchiefHour } from './bloodchief.ts';
 import { bloodchiefDrain, upkeepBloodchief } from './bloodascension.ts';
 import { applyBrave } from './allies.ts';
+import { tricksterHour } from './trickster.ts';
 import { withPositions } from './wander.ts';
 import { applyHarrow } from './harrow.ts';
 import type { HarrowEffect } from './harrow.ts';
@@ -3230,7 +3231,7 @@ test('the real Lullmage Mentor teaches in Sea Gate; the world\'s merfolk are the
   assert.equal(l?.region, 'loc-sea-gate');
   assert.deepEqual(npcDef(state, world, l.id)?.counterTokens, { creature: 'cre-merfolk', pt: [1, 1], colors: ['U'] });
   const merfolk = world.npcs.filter((x) => x.types?.includes('merfolk')).map((x) => x.id).sort();
-  assert.deepEqual(merfolk, ['chr-caller-of-gales', 'chr-lullmage-mentor', 'chr-merfolk-seastalkers', 'chr-merfolk-wayfinder', 'chr-sea-gate-loremaster', 'chr-seascape-aerialist']);
+  assert.deepEqual(merfolk, ['chr-caller-of-gales', 'chr-cosis-trickster', 'chr-lullmage-mentor', 'chr-merfolk-seastalkers', 'chr-merfolk-wayfinder', 'chr-sea-gate-loremaster', 'chr-seascape-aerialist']);
 });
 
 test('Cancel held by the player: a pick to answer, or let be', async () => {
@@ -7752,6 +7753,16 @@ test('the real Caller of Gales lives on the Silundi Coast: a merfolk with a tap 
   const def = npcDef(state, world, c.id)!;
   assert.equal(def.tapGrant?.costText, '{1}{U}');
   assert.ok(def.types?.includes('merfolk'));
+});
+
+test('Cosi\'s Trickster: another in its land seeking a land from afar is a +1/+1 counter; one in another land or its master is not', () => {
+  const world = fixture([besideA, npc('chr-t', { ...npcSim('loc-a', 'work', [1, 1]), shuffle_counter: true }), npc('chr-m', npcSim('loc-a')), npc('chr-x', npcSim('loc-az')), npc('chr-far', npcSim('loc-b'))]);
+  const state = newState(world, { seed: 1, mode: 'observer' });
+  const [tr, m, x, far] = ['chr-t', 'chr-m', 'chr-x', 'chr-far'].map((id) => state.actors[id]);
+  tr.master = m.id;
+  for (const a of [m, x, far]) markSearched(state, a, state.minutes);
+  tricksterHour(state, world, state.minutes);
+  assert.equal(tr.plusCounters, 1);
 });
 
 test('the real Nimbus Wings is taught at Kabira Crossroads: the one it is cast on gets +1/+2 and wings', () => {

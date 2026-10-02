@@ -7,7 +7,7 @@
 // the LLM's (sim/run.ts), the player's picks they owe (sim/asks.ts).
 import { gameDay } from './clock.ts';
 import { bondLand } from './abilities.ts';
-import { addLog } from './state.ts';
+import { addLog, markSearched } from './state.ts';
 import type { Actor, Choice, State } from './state.ts';
 import { josa, shortName, toward } from './text.ts';
 import { landTypes, placeName, region } from './world.ts';
@@ -54,7 +54,7 @@ export function applyHarrow(state: State, world: World, a: Actor, eff: HarrowEff
   }
   addLog(state, { kind: 'status', text: `${eff.spell}: ${josa(shortName(a.name), '이', '가')} 다시 그려진 땅을 따라 ${toward(region(world, id).name)} 이어졌다.`, regions: [a.region, id], actors: [a.id], t });
   a.fetched = [...(a.fetched ?? []), id];
-  a.searched = gameDay(t);
+  markSearched(state, a, t);
   bondLand(state, world, a, t, id);
   if (eff.tapped) {
     const day = gameDay(t);

@@ -359,6 +359,8 @@ export type State = {
   fogs?: { region: string; tile?: Tile; until: number; by: string }[];
   // Each one's graveyard count as last seen (Bloodchief Ascension, sim/bloodascension.ts).
   buriedSeen?: Record<string, { day: number; count: number }>;
+  // Library searches (seeking out a land from afar) since the hour began (Cosi's Trickster).
+  shuffles?: { id: string; region: string }[];
   // Deaths since the hour began: who and where (Blade of the Bloodchief, sim/bloodchief.ts).
   deaths?: { id: string; region: string; tile?: Tile }[];
   // Life gained since the hour began: who and where (sim/punish.ts).
@@ -591,6 +593,13 @@ export function outOfTime(state: State, a: Actor, t = state.minutes) {
 }
 
 // `n` more went into `a`'s graveyard at `t` (sim/state.ts `buried`).
+// `a` searched their library (sought out a land from afar) at `t`: the day's mark, and for those
+// who answer it (Cosi's Trickster, sim/trickster.ts).
+export function markSearched(state: State, a: Actor, t: number) {
+  a.searched = gameDay(t);
+  (state.shuffles ??= []).push({ id: a.id, region: a.region });
+}
+
 // `a` lost life or took damage at `t` (Luminarch Ascension's day, Bloodchief Ascension's tally).
 export function markHurt(a: Actor, amount: number, t: number) {
   const day = gameDay(t);

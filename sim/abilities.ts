@@ -29,7 +29,7 @@ import { drawKnowledge } from './knowledge.ts';
 import { owesDiscard } from './discard.ts';
 import { landSealed, powersSealed, sealText } from './seal.ts';
 import { eraseFromWorld } from './erase.ts';
-import { addLog, buryCount, hasAbility, npcDef, outOfTime, present, ptOf, random, targetable, together, untargetableText } from './state.ts';
+import { addLog, buryCount, hasAbility, markSearched, npcDef, outOfTime, present, ptOf, random, targetable, together, untargetableText } from './state.ts';
 import { nearestTile } from './tiles.ts';
 import type { Tile } from './tiles.ts';
 import type { Actor, Choice, ChoiceEffect, State } from './state.ts';
@@ -344,7 +344,7 @@ export function fetchLand(state: State, world: World, a: Actor, fromId: string, 
     t,
   });
   a.fetched = [...(a.fetched ?? []), toId];
-  a.searched = gameDay(t);
+  markSearched(state, a, t);
   bondLand(state, world, a, t, toId, target);
 }
 
@@ -796,7 +796,7 @@ export function applySearch(state: State, world: World, a: Actor, landId: string
     t,
   });
   a.fetched = [...(a.fetched ?? []), landId];
-  a.searched = gameDay(t);
+  markSearched(state, a, t);
   bondLand(state, world, a, t, landId);
   if (search.tapped) {
     const day = gameDay(t);

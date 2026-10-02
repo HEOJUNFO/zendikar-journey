@@ -5,9 +5,10 @@ name: 인어
 name_en: Merfolk (blue token)
 summary: 잠재움술사의 가르침을 따라 모여드는 젊은 인어. 무효화의 노래가 울릴 때마다 하나씩 그 노래를 부른 이의 곁에 든다
 status: canon
-sources: [ZEN-54, ZEN-43]
+sources: [ZEN-54, ZEN-43, ZEN-45]
 tags: [인어, 청색, 토큰]
 links:
+  - { to: chr-cosis-trickster, rel: 코시를 따르는 인어 마법사 }
   - { to: chr-caller-of-gales, rel: 인어 마법사 }
   - { to: law-mana-colors, rel: 청색의 존재 }
   - { to: law-retainers, rel: 무효화한 이의 권속 }
