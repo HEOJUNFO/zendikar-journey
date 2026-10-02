@@ -678,6 +678,13 @@ export const SpellSimSchema = z.strictObject({
         // the caster picks a being of theirs on their tile (themselves too), a land they hold, an
         // item of theirs or an aura they cast there; one must be picked (sim/escape.ts).
         z.strictObject({ type: z.literal('return_own') }),
+        // "Return target nonland permanent to its owner's hand" (Into the Roil): after casting, the
+        // caster picks anyone's on their tile, no land: a being (one not theirs is flung, as
+        // Whiplash Trap flings), an item someone owns, an aura (sim/escape.ts `any`).
+        z.strictObject({ type: z.literal('return_nonland') }),
+        // "Draw N cards" (if kicked, with if_kicked): the caster comes to know N secrets
+        // (sim/knowledge.ts).
+        z.strictObject({ type: z.literal('draw'), count: z.number().int().positive(), if_kicked: z.boolean().default(false) }),
         // "Choose one or both — return target creature card / land card from your graveyard to your
         // hand" (Grim Discovery): after casting, the caster may pick of each (sim/discovery.ts).
         z.strictObject({ type: z.literal('grim_discovery') }),

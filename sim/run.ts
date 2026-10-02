@@ -669,21 +669,22 @@ async function choices(state: State, world: World, llm: Llm) {
       }
       continue;
     }
-    // Narrow Escape: one of what they control to return; one must (with no usable answer, at random).
+    // Narrow Escape: one of what they control to return (Into the Roil: anyone's there, no land); one must (with no usable answer, at random).
     if (c.effect.type === 'escape') {
       if (!by || by.dead || !npc) continue;
-      const options = escapeOptions(state, world, by);
+      const any = c.effect.any;
+      const options = escapeOptions(state, world, by, any);
       if (!options.length) continue;
       let pick: string | null = null;
       if (llm.pick) {
         try {
-          pick = await llm.pick({ world, state, npc, what: `${c.effect.spell}: 당신이 조종하는 것 하나를 거두어들인다. 자신이나 곁의 권속이면 몸에 붙은 힘이 떨어지는 대신 그날의 싸움에서 벗어나 같은 지역의 다른 곳으로 달아나고(토큰은 사라짐), 땅이면 유대를 거두어 다시 맺을 수 있고, 아이템이면 쌓인 것이 흩어지고, 오라면 다시 걸 수 있다`, options });
+          pick = await llm.pick({ world, state, npc, what: any ? `${c.effect.spell}: 이 자리의 땅 아닌 것 하나를 뒤틀림 물살로 되돌린다. 남의 존재면 몸에 붙은 힘(카운터·오라·그날의 힘·상처)이 떨어지고 섬기던 이에게서 풀려나 같은 지역의 다른 곳으로 내동댕이쳐져 1시간 정신을 잃고(토큰은 사라짐), 자신이나 곁의 권속이면 그날의 싸움에서 벗어나 다른 곳으로 달아나고, 아이템이면 쌓인 것이 흩어지고 매인 것이 풀리고, 오라면 떨어진다(건 이는 다시 걸 수 있다)` : `${c.effect.spell}: 당신이 조종하는 것 하나를 거두어들인다. 자신이나 곁의 권속이면 몸에 붙은 힘이 떨어지는 대신 그날의 싸움에서 벗어나 같은 지역의 다른 곳으로 달아나고(토큰은 사라짐), 땅이면 유대를 거두어 다시 맺을 수 있고, 아이템이면 쌓인 것이 흩어지고, 오라면 다시 걸 수 있다`, options });
         } catch (e) {
           console.warn(`pick (escape) for ${by.id} failed:`, e);
         }
       }
       if (!options.some((o) => o.id === pick)) pick = options[Math.floor(random(state) * options.length)].id;
-      applyEscape(state, world, by, pick!, c.effect.spell, state.minutes);
+      applyEscape(state, world, by, pick!, c.effect.spell, state.minutes, any);
       continue;
     }
     // Kabira Evangel's rally: a color for the party's Allies to be protected from, or none.

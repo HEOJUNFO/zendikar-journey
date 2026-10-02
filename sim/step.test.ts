@@ -6172,6 +6172,73 @@ test('the real Narrow Escape is taught in Kazandu: an instant, one of your own b
   assert.deepEqual(s.effects.map((e) => e.type), ['return_own', 'gain_life']);
 });
 
+const roilSpell: RawEntity = { id: 'spl-roil', kind: 'spell', name: '뒤틀림 속으로', status: 'canon', sim: { cost: '{1}', speed: 'instant', learn_at: 'loc-a', target: 'self', kicker: { mana: '{1}' }, effects: [{ type: 'return_nonland' }, { type: 'draw', count: 1, if_kicked: true }] } };
+
+test('Into the Roil: anyone\'s nonland thing there; another\'s being is flung (stripped, freed, stunned), an aura comes off for its caster to cast again; kicked, a secret', () => {
+  const world = fixture([roilSpell, bigAura, besideA, npc('chr-c', { ...npcSim('loc-a'), mana: { U: 4 } }), npc('chr-m', npcSim('loc-a')), npc('chr-y', npcSim('loc-a')), npc('chr-x', npcSim('loc-a')), npc('chr-z', { ...npcSim('loc-a'), abilities: ['shroud'] })]);
+  const state = newState(world, { seed: 1, mode: 'observer' });
+  const [c, m, y, x, z] = ['chr-c', 'chr-m', 'chr-y', 'chr-x', 'chr-z'].map((id) => state.actors[id]);
+  for (const a of [m, y, x, z]) a.tile = c.tile;
+  const t = state.minutes;
+  bindRetainer(state, world, y, m, t, '설득');
+  y.plusCounters = 2;
+  addFoe(y, 'chr-x', t);
+  addFoe(x, 'chr-y', t);
+  c.spells = ['spl-roil'];
+  c.bonds = ['loc-b'];
+  m.spells = ['spl-g'];
+  castSpell(state, world, m, 'spl-g', 'chr-x', false, t);
+  assert.ok(castSpell(state, world, c, 'spl-roil', c.id, true, t));
+  assert.ok(state.log.some((e) => e.text.startsWith('뒤틀림 속으로:') && e.actors?.includes('chr-c')));
+  const owed = state.choices!.find((ch) => ch.effect.type === 'escape')!;
+  assert.deepEqual(owed.effect, { type: 'escape', spell: '뒤틀림 속으로', any: true });
+  const ids = escapeOptions(state, world, c, true).map((o) => o.id);
+  for (const id of ['being:chr-c', 'being:chr-m', 'being:chr-y', 'being:chr-x', 'aura:chr-x:0']) assert.ok(ids.includes(id), id);
+  assert.ok(!ids.includes('being:chr-z'));
+  assert.ok(!ids.some((id) => id.startsWith('land:')));
+  applyEscape(state, world, c, 'being:chr-y', '뒤틀림 속으로', t, true);
+  assert.equal(y.master, undefined);
+  assert.equal(y.plusCounters, undefined);
+  assert.equal(y.region, 'loc-az');
+  assert.equal(y.forced?.kind, 'sleep');
+  assert.ok(!x.foes?.ids.includes('chr-y'));
+  assert.ok(y.relations?.['chr-c']);
+  assert.ok(m.used?.['spl-g'] !== undefined);
+  applyEscape(state, world, c, 'aura:chr-x:0', '뒤틀림 속으로', t, true);
+  assert.equal(x.auras, undefined);
+  assert.equal(m.used?.['spl-g'], undefined);
+  // Unkicked: no secret.
+  const before = state.log.length;
+  delete c.used;
+  castSpell(state, world, c, 'spl-roil', c.id, false, t);
+  assert.ok(!state.log.slice(before).some((e) => e.text.startsWith('뒤틀림 속으로:')));
+});
+
+test('Into the Roil by the player: the pick is theirs, no land among them; the NPC picked is flung away', async () => {
+  const world = fixture([roilSpell, besideA, npc('chr-x', npcSim('loc-a', 'work', [1, 20]))]);
+  const state = character(world, 'loc-a');
+  const [p, x] = [state.actors[PLAYER_ID], state.actors['chr-x']];
+  x.tile = p.tile;
+  p.spells = ['spl-roil'];
+  p.bonds = ['loc-b'];
+  await act(state, world, { type: 'cast', spell: 'spl-roil', to: p.id, kick: false });
+  if (state.asks?.[0]?.effect.type !== 'escape') await act(state, world, { type: 'wait', hours: 1 });
+  const ask = state.asks![0];
+  assert.equal(ask.effect.type, 'escape');
+  assert.deepEqual(askOptions(state, world, ask).map((o) => o.pick).sort(), ['being:chr-x', `being:${PLAYER_ID}`]);
+  await act(state, world, { type: 'choose', pick: 'being:chr-x' });
+  assert.equal(x.region, 'loc-az');
+});
+
+test('the real Into the Roil is taught on the Silundi Coast: an instant, kicker {1}{U}, a nonland thing back and a secret if kicked', () => {
+  const world = loadWorld();
+  const s = world.spells.find((x) => x.id === 'spl-into-the-roil')!;
+  assert.equal(s.learnAt, 'loc-silundi-coast');
+  assert.equal(s.speed, 'instant');
+  assert.ok(s.kicker?.mana);
+  assert.deepEqual(s.effects.map((e) => e.type), ['return_nonland', 'draw']);
+});
+
 const vestige = (plan?: unknown[][]) => npc('chr-v', { ...npcSim('loc-a', 'work', [1, 2]), mana: { W: 3 }, needs: ['energy'], abilities: ['fly'], tap_shield: 1, ...(plan ? { plan } : {}) });
 
 test('Noble Vestige: the player taps the spirit they keep to ward themselves; the next 1 damage today is prevented, and the ward is gone at midnight', async () => {

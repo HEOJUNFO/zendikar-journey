@@ -3,7 +3,7 @@
 // blocks of their LLM-planned day (whom a spell falls on, the LLM picks as it is cast), and
 // hold some by color (knows_colors) to cast by their powers (Chandra). A sealed color can't
 // be cast (sim/seal.ts).
-import { huntKnowledge } from './knowledge.ts';
+import { drawKnowledge, huntKnowledge } from './knowledge.ts';
 import { formatClock, untapTime } from './clock.ts';
 import { addFoe, dealDamage, destroy } from './combat.ts';
 import { gainLife, lifeOf, loseLife } from './life.ts';
@@ -100,6 +100,7 @@ export function castBlocked(state: State, world: World, a: Actor, spellId: strin
   if (s.effects.some((e) => e.type === 'destroy_relics') && !relicsHere(state, world, a.region, a.tile).length) return '여기엔 부술 마법물체도 부여마법도 없다.';
   if (s.effects.some((e) => e.type === 'demolish') && !demolishOptions(state, world, a).length) return '여기엔 부술 마법물체도 땅도 없다.';
   if (s.effects.some((e) => e.type === 'return_own') && !escapeOptions(state, world, a).length) return '되돌릴 것이 없다.';
+  if (s.effects.some((e) => e.type === 'return_nonland') && !escapeOptions(state, world, a, true).length) return '여기엔 되돌릴 것이 없다 (땅이 아닌 지속물).';
   if (s.effects.some((e) => e.type === 'grim_discovery') && !discoveryOwed(state, world, a, s.name, t).length) return '무덤에 되돌릴 생물도 땅도 없다.';
   if (s.effects.some((e) => e.type === 'harrow' || e.type === 'sacrifice_land') && !harrowGive(world, a).length) return `${josa(s.name, '은', '는')} 땅 하나를 내어 주어야 쓴다 (유대를 맺은 땅이 없다).`;
   if (s.target !== 'self' && !targetable(target, t, spellColors(s))) return untargetableText(target, t, spellColors(s));
@@ -302,9 +303,11 @@ export function resolveSpell(state: State, world: World, a: Actor, spellId: stri
       if (owed) (state.choices ??= []).push(owed);
     } else if (eff.type === 'grim_discovery') {
       for (const owed of discoveryOwed(state, world, a, s.name, t)) (state.choices ??= []).push(owed);
-    } else if (eff.type === 'return_own') {
-      const owed = escapeOwed(state, world, a, s.name, t);
+    } else if (eff.type === 'return_own' || eff.type === 'return_nonland') {
+      const owed = escapeOwed(state, world, a, s.name, t, eff.type === 'return_nonland');
       if (owed) (state.choices ??= []).push(owed);
+    } else if (eff.type === 'draw' && (!eff.if_kicked || kicked)) {
+      drawKnowledge(state, world, a, eff.count, t, s.name);
     } else if (eff.type === 'gain_life') {
       gainLife(state, a, eff.amount, t, s.name);
     } else if (eff.type === 'destroy_target') {
