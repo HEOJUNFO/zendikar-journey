@@ -9,6 +9,7 @@ import { remember } from './relations.ts';
 import { controlsKind, masterOf, releaseRetainer, retainersOf } from './retainers.ts';
 import { releaseItems } from './items.ts';
 import { owesDiscard } from './discard.ts';
+import { gembladesHit } from './expedition.ts';
 import { hooks } from './equipment.ts';
 import { shielded } from './tapper.ts';
 import { harrowOwed } from './harrow.ts';
@@ -378,6 +379,8 @@ export function clash(state: State, world: World, attacker: Actor, defender: Act
       if (!controller.dead) doubleLife(state, controller, t, `${shortName(x.name)}의 ${aura.name}`);
     }
   }
+  // Quest for the Gemblades: combat damage to a creature (no planeswalker).
+  for (const [x, dealt, to] of [[attacker, dealtA, defender], [defender, dealtD, attacker]] as const) if (dealt > 0 && to.loyalty === undefined) gembladesHit(state, world, x, t);
   // "Deals combat damage to a player, that player discards a card": one who holds a spell lets one go.
   for (const [x, dealt, to] of [[attacker, dealtA, defender], [defender, dealtD, attacker]] as const) {
     if (dealt > 0 && !to.dead && to.spells?.length && npcDef(state, world, x.id)?.discardOnHit && !powersSealed(state, world, x, t)) owesDiscard(state, world, to, `${shortName(x.name)}의 손길`, t);

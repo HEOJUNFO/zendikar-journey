@@ -33,7 +33,7 @@ import { loremastersOf, recallBlocked, recallCount } from './loremaster.ts';
 import { biteable, readyBiter } from './bite.ts';
 import { readyTapper, tapAmount, tapBlocked, tapTargetable } from './tapper.ts';
 import { altarOf } from './altar.ts';
-import { expeditionBlocked, expeditionOf, expeditionReward } from './expedition.ts';
+import { applyGem, expeditionBlocked, expeditionOf, expeditionReward } from './expedition.ts';
 import { ascendBlocked, ascensionOf } from './luminarch.ts';
 import type { TapPower } from './tapper.ts';
 import { crumble, sacrifice, sacrificeDefault } from './monument.ts';
@@ -963,6 +963,21 @@ async function choices(state: State, world: World, llm: Llm) {
       }
       const target = candidates.find((x) => x.id === pick);
       if (target) applyToll(state, world, source, target, state.minutes);
+      continue;
+    }
+    // Quest for the Gemblades, ended: who gets the counters (one must; with no answer, at random).
+    if (c.effect.type === 'gem') {
+      if (!npc) continue;
+      let pick: string | null = null;
+      if (llm.choose) {
+        try {
+          pick = await llm.choose({ world, state, npc, candidates, optional: false, what: `${c.effect.item}: 곁의 하나(당신 자신도)에게 +1/+1 카운터 ${c.effect.amount}을 영영 준다. 누구에게?` });
+        } catch (e) {
+          console.warn(`choose (gem) for ${c.by} failed:`, e);
+        }
+      }
+      const target = candidates.find((x) => x.id === pick) ?? candidates[Math.floor(random(state) * candidates.length)];
+      if (target) applyGem(state, by, target, c.effect.item, c.effect.amount, state.minutes);
       continue;
     }
     // Kor Outfitter, arriving: which of their equipment its controller has it put on whom, or none.

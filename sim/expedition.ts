@@ -9,7 +9,8 @@
 // their plan.
 import { harrowOwed } from './harrow.ts';
 import { drawKnowledge } from './knowledge.ts';
-import { addLog } from './state.ts';
+import { addLog, here, ptOf, together } from './state.ts';
+import { masterOf } from './retainers.ts';
 import type { Actor, State } from './state.ts';
 import { josa, shortName } from './text.ts';
 import type { ItemDef, World } from './world.ts';
@@ -22,9 +23,10 @@ function powerOf(x: ItemDef) {
   return undefined;
 }
 
-// The expedition `a` owns, if any.
+// The expedition `a` owns, if any (one ready to end first).
 export function expeditionOf(state: State, world: World, a: Actor) {
-  return world.items.find((x) => powerOf(x) && state.items?.[x.id]?.owner === a.id && !state.items[x.id].gone);
+  const theirs = world.items.filter((x) => powerOf(x) && state.items?.[x.id]?.owner === a.id && !state.items[x.id].gone);
+  return theirs.find((x) => state.items![x.id].counters >= powerOf(x)!.counters) ?? theirs[0];
 }
 
 // Why `a` can't end an expedition now, or null.
@@ -33,7 +35,8 @@ export function expeditionBlocked(state: State, world: World, a: Actor): string 
   if (!x) return '마칠 원정이 없다.';
   const need = powerOf(x)!.counters;
   const have = state.items![x.id].counters;
-  if (have < need) return `${x.name}의 탐색 카운터가 모자라다 (${have}/${need}, 땅과 유대를 맺을 때마다 하나).`;
+  const how = x.effects.some((e) => e.type === 'quest_combat') ? '부리는 생물이 생물에게 싸움 피해를 줄 때마다' : '땅과 유대를 맺을 때마다';
+  if (have < need) return `${x.name}의 탐색 카운터가 모자라다 (${have}/${need}, ${how} 하나).`;
   return null;
 }
 
@@ -42,8 +45,8 @@ export function expeditionReward(state: State, world: World, a: Actor) {
   const x = expeditionOf(state, world, a);
   const e = x && powerOf(x);
   if (!e) return { ko: '', en: '' };
-  const ko = [e.draws ? `숨은 것 ${e.draws}가지를 알게 된다` : '', e.lands ? `아직 유대 없는 기본 땅 ${e.lands}까지와 멀리서 이어진다 (탭된 채, 오늘은 마나 없음)` : ''].filter(Boolean).join(', ');
-  const en = [e.draws ? `come to know ${e.draws} hidden secrets of the world` : '', e.lands ? `bond from afar with up to ${e.lands} basic lands of the world they don't hold yet (tapped: no mana from them today; not their land for the day)` : ''].filter(Boolean).join(', and ');
+  const ko = [e.draws ? `숨은 것 ${e.draws}가지를 알게 된다` : '', e.lands ? `아직 유대 없는 기본 땅 ${e.lands}까지와 멀리서 이어진다 (탭된 채, 오늘은 마나 없음)` : '', e.plus_counters ? `곁의 하나에게 +1/+1 카운터 ${e.plus_counters}을 준다` : ''].filter(Boolean).join(', ');
+  const en = [e.draws ? `come to know ${e.draws} hidden secrets of the world` : '', e.lands ? `bond from afar with up to ${e.lands} basic lands of the world they don't hold yet (tapped: no mana from them today; not their land for the day)` : '', e.plus_counters ? `give ${e.plus_counters} +1/+1 counters, for good, to one standing with them (themselves too), picked after the hour` : ''].filter(Boolean).join(', and ');
   return { ko, en };
 }
 
@@ -60,4 +63,26 @@ export function finishExpedition(state: State, world: World, a: Actor, t: number
   if (e.draws) drawKnowledge(state, world, a, e.draws, t, x.name);
   const owed = e.lands ? harrowOwed(state, world, a, { type: 'harrow', spell: x.name, left: e.lands, given: true, tapped: true }, t) : null;
   if (owed) (state.choices ??= []).push(owed);
+  // Quest for the Gemblades: +1/+1 counters on one there (their pick after the hour; one must).
+  const candidates = e.plus_counters ? here(state, a).filter((y) => y.loyalty === undefined).map((y) => y.id) : [];
+  if (candidates.length) (state.choices ??= []).push({ by: a.id, land: a.region, effect: { type: 'gem', item: x.name, amount: e.plus_counters! }, candidates, t });
+}
+
+// The gem's counters land on `target` (if they still stand with `a`).
+export function applyGem(state: State, a: Actor, target: Actor, item: string, amount: number, t: number) {
+  if (target.dead || !together(a, target) || target.loyalty !== undefined) return;
+  target.plusCounters = (target.plusCounters ?? 0) + amount;
+  addLog(state, { kind: 'effect', text: `${item}: ${josa(shortName(target.name), '이', '가')} 보석 칼날의 힘을 받아 +1/+1 카운터 ${amount}을 얻었다 (${ptOf(target).join('/')}).`, regions: [target.region], actors: [target.id, a.id], t });
+}
+
+// Quest for the Gemblades (`quest_combat`): one `x`'s owner controls dealt combat damage to a
+// creature: a quest counter (always, a boon).
+export function gembladesHit(state: State, world: World, x: Actor, t: number) {
+  const owner = masterOf(state, x) ?? x;
+  for (const it of world.items) {
+    const st = state.items?.[it.id];
+    if (!it.effects.some((e) => e.type === 'quest_combat') || !st || st.gone || st.owner !== owner.id) continue;
+    st.counters += 1;
+    addLog(state, { kind: 'effect', text: `${shortName(owner.name)}의 ${it.name}에 탐색 카운터가 하나 쌓였다 (${st.counters}): ${shortName(x.name)}의 칼날이 피를 보았다.`, regions: [x.region], actors: [owner.id, x.id], t });
+  }
 }

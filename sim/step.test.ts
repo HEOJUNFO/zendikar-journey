@@ -7169,6 +7169,33 @@ test('the real Luminarch Ascension stands in Emeria: a 4/4 flying angel for {1}{
   assert.ok(world.lore.some((l) => l.id === 'cre-angel'));
 });
 
+test('Quest for the Gemblades: each blow one of the owner\'s lands in a fight is a quest counter; ended, the owner picks one there for four +1/+1 counters', async () => {
+  const gem: RawEntity = { id: 'itm-gem', kind: 'item', name: '보석칼날 탐색', status: 'canon', sim: { card_type: 'enchantment', cost: '{0}', at: 'loc-a', effects: [{ type: 'quest_combat' }, { type: 'expedition', counters: 1, plus_counters: 4 }] } };
+  const world = fixture([gem, altarItem, demolishSpell, npc('chr-r', npcSim('loc-a', 'work', [2, 9])), npc('chr-x', npcSim('loc-a', 'work', [1, 9]))]);
+  const state = character(world, 'loc-a');
+  const [p, r, x] = [state.actors[PLAYER_ID], state.actors['chr-r'], state.actors['chr-x']];
+  for (const a of [r, x]) a.tile = p.tile;
+  r.master = p.id;
+  state.items = { 'itm-gem': { name: '보석칼날 탐색', owner: p.id, counters: 0 } };
+  assert.ok(expeditionBlocked(state, world, p)?.includes('싸움 피해'));
+  clash(state, world, r, x, state.minutes);
+  assert.ok(state.items['itm-gem'].counters >= 1);
+  await act(state, world, { type: 'expedition' });
+  if (state.asks?.[0]?.effect.type !== 'gem') await act(state, world, { type: 'wait', hours: 1 });
+  assert.ok(state.items['itm-gem'].gone);
+  const ask = state.asks![0];
+  assert.equal(ask.effect.type, 'gem');
+  await act(state, world, { type: 'choose', pick: 'chr-r' });
+  assert.equal(r.plusCounters, 4);
+});
+
+test('the real Quest for the Gemblades stands in a crystal cave of Ora Ondar', () => {
+  const world = loadWorld();
+  const x = world.items.find((i) => i.id === 'itm-quest-for-the-gemblades')!;
+  assert.equal(x.at, 'loc-ora-ondar');
+  assert.deepEqual(x.effects, [{ type: 'quest_combat' }, { type: 'expedition', counters: 1, plus_counters: 4 }]);
+});
+
 test('the real Ior Ruin Expedition stands by Glasspool, a lake of Akoum and a basic island', () => {
   const world = loadWorld();
   const x = world.items.find((i) => i.id === 'itm-ior-ruin-expedition')!;
