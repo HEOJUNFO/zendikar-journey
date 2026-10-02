@@ -53,6 +53,7 @@ import { bloodSeekHour } from './seeker.ts';
 import { altarBlocked } from './altar.ts';
 import { expeditionBlocked } from './expedition.ts';
 import { ascendBlocked, upkeepUnhurt } from './luminarch.ts';
+import { reviveHour } from './revive.ts';
 import { applyHarrow } from './harrow.ts';
 import type { HarrowEffect } from './harrow.ts';
 import { applySacrament } from './sacrament.ts';
@@ -5689,7 +5690,7 @@ test('the real Nissa Revane bides in the Tangled Vale; the world\'s elves are th
   assert.equal(n.loyalty, 2);
   assert.deepEqual(npcDef(state, world, n.id)?.activated?.map((x) => x.loyalty), [1, 1, -7]);
   const elves = world.npcs.filter((x) => x.types?.includes('elf')).map((x) => x.id).sort();
-  assert.deepEqual(elves, ['chr-frontier-guide', 'chr-greenweaver-druid', 'chr-joraga-bard', 'chr-oracle-of-mul-daya', 'chr-tajuru-archer', 'chr-turntimber-ranger']);
+  assert.deepEqual(elves, ['chr-frontier-guide', 'chr-greenweaver-druid', 'chr-joraga-bard', 'chr-oracle-of-mul-daya', 'chr-tajuru-archer', 'chr-turntimber-ranger', 'cre-nissas-chosen'].sort());
 });
 
 test('a blaze counter: the target\'s latest unburning land catches fire; all bonded with it lose 1 life each midnight, even after the fireheart dies, until the land is destroyed', async () => {
@@ -7261,6 +7262,37 @@ test('Marsh Casualties: the target and their retainers there get -1/-1 until mid
   delete c.used;
   castSpell(state, world, c, 'spl-mc', 'chr-m', true, state.minutes);
   assert.deepEqual(ptOf(m), [1, 1]);
+});
+
+test('Nissa\'s Chosen: killed, it goes into no graveyard; seven days on it wakes at home, whole and serving no one; a token of it is simply gone', () => {
+  const world = fixture([besideA, npc('chr-n', { ...npcSim('loc-az', 'work', [2, 3]), revives_after: 7 }), npc('chr-m', npcSim('loc-a')), npc('chr-k', npcSim('loc-a'))]);
+  const state = newState(world, { seed: 1, mode: 'observer' });
+  const [n, m, k] = ['chr-n', 'chr-m', 'chr-k'].map((id) => state.actors[id]);
+  Object.assign(n, { region: 'loc-a', tile: m.tile, master: m.id, plusCounters: 2 });
+  const t = state.minutes;
+  die(state, n, t, '시험', k);
+  assert.ok(n.dead);
+  assert.ok(!m.fallen?.includes('chr-n') && !k.fallen?.includes('chr-n'));
+  reviveHour(state, world, t + 6 * 24 * 60);
+  assert.ok(n.dead);
+  reviveHour(state, world, t + 7 * 24 * 60);
+  assert.equal(n.dead, undefined);
+  assert.equal(n.region, 'loc-az');
+  assert.equal(n.master, undefined);
+  assert.equal(n.plusCounters, undefined);
+  assert.equal(lifeOf(n), 20);
+});
+
+test('the real Nissa\'s Chosen lives in the Tangled Vale by Nissa: a talking elf who wakes again seven days after dying', () => {
+  const world = loadWorld();
+  const state = newState(world, { seed: 1, mode: 'observer' });
+  const c = state.actors['cre-nissas-chosen'];
+  assert.equal(c?.region, 'loc-tangled-vale');
+  const def = npcDef(state, world, c.id)!;
+  assert.equal(def.revivesAfter, 7);
+  assert.ok(def.types?.includes('elf'));
+  assert.equal(c.revives, 7);
+  assert.equal(swayBlocked(state, world, c), null);
 });
 
 test('the real Nimbus Wings is taught at Kabira Crossroads: the one it is cast on gets +1/+2 and wings', () => {

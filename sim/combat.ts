@@ -102,7 +102,10 @@ export function die(state: State, a: Actor, t: number, cause: string, by?: Actor
   // as in MTG), nor the player.
   const killer = by && (masterOf(state, by) ?? by);
   const m = a.master ? state.actors[a.master] : killer;
-  if (m && a.kind !== 'player' && !state.tokens?.[a.id]) {
+  // Nissa's Chosen: into no graveyard; it wakes at home some days on (sim/revive.ts).
+  const revives = !!a.revives && a.kind !== 'player' && !state.tokens?.[a.id];
+  if (revives) a.reviveAt = t + a.revives! * 24 * 60;
+  if (m && a.kind !== 'player' && !state.tokens?.[a.id] && !revives) {
     m.fallen = [...(m.fallen ?? []), a.id];
     buryCount(m, 1, t);
   }
@@ -115,7 +118,7 @@ export function die(state: State, a: Actor, t: number, cause: string, by?: Actor
   if (a.kind === 'player') state.over = { at: t, cause };
   addLog(state, {
     kind: 'death',
-    text: `${josa(shortName(a.name), '이', '가')} 죽었다 (${cause}).`,
+    text: `${josa(shortName(a.name), '이', '가')} 죽었다 (${cause}).${revives ? ` 무덤에 들지 않고, ${a.revives}일 뒤 거처에서 다시 눈을 뜬다.` : ''}`,
     regions: [a.region],
     actors: [a.id],
   });

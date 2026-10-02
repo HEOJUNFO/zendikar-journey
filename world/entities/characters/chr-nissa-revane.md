@@ -11,7 +11,7 @@ links:
   - { to: law-planeswalkers, rel: 플레인즈워커 }
   - { to: law-mana-colors, rel: 녹색의 존재 }
   - { to: loc-tangled-vale, rel: 나고 자란 조라가의 골짜기 }
-  - { to: cre-nissas-chosen, rel: 부르는 엘프 전사 }
+  - { to: cre-nissas-chosen, rel: 부르는 엘프 전사 (같은 골짜기에 하나가 산다) }
   - { to: chr-sorin-markov, rel: 함께 우긴의 눈으로 가게 될 이 }
 sim:
   home: loc-tangled-vale # [배경] 조라가의 본거지 ([결정] 2026-10-01)

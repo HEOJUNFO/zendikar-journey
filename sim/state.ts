@@ -197,6 +197,10 @@ export type Actor = {
   // What they think of others, latest impression each (sim/relations.ts).
   relations?: Record<string, { name: string; text: string; t: number }>;
   dead?: { at: number; cause: string };
+  // Nissa's Chosen (sim/revive.ts): dying, they go to no graveyard and wake at home after `revives`
+  // days (at `reviveAt`).
+  revives?: number;
+  reviveAt?: number;
   // Hour of their last combat exchange (one per hour).
   lastClash?: number;
   pace: Pace;
@@ -519,6 +523,7 @@ function npcActor(npc: NpcDef): Actor {
     abilities: [...npc.abilities],
     needs: [...npc.needs],
     ...(npc.protection?.length ? { protection: [...npc.protection] } : {}),
+    ...(npc.revivesAfter ? { revives: npc.revivesAfter } : {}),
   };
 }
 
