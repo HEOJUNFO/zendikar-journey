@@ -5,7 +5,7 @@ name: 지속물
 name_en: Permanents
 summary: 세계에 남아 누군가에게 속한 것들. 땅, 걸어 둔 마법, 마법 물건, 그리고 인물
 status: canon
-sources: [ZEN-160, ZEN-200, ZEN-86, ZEN-199, ZEN-179, ZEN-39, ZEN-48, ZEN-49, ZEN-14, ZEN-167, ZEN-25, ZEN-143, ZEN-177, ZEN-70, ZEN-208]
+sources: [ZEN-160, ZEN-200, ZEN-86, ZEN-199, ZEN-179, ZEN-39, ZEN-48, ZEN-49, ZEN-14, ZEN-167, ZEN-25, ZEN-143, ZEN-177, ZEN-70, ZEN-208, ZEN-155]
 tags: [규칙]
 links:
   - { to: cre-world-queller, rel: 새벽마다 지속물을 희생시킴 }
@@ -14,6 +14,7 @@ links:
   - { to: evt-cobra-trap, rel: 지속물이 부서질 때 }
   - { to: itm-eternity-vessel, rel: 마법물체 }
   - { to: itm-ior-ruin-expedition, rel: 부여마법 }
+  - { to: itm-zektar-shrine-expedition, rel: 부여마법 }
   - { to: itm-trailblazers-boots, rel: 마법물체 (장비) }
   - { to: spl-spreading-seas, rel: 땅에 붙는 오라 }
   - { to: itm-quest-for-the-gemblades, rel: 부여마법 }

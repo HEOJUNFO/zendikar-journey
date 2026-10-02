@@ -8,6 +8,7 @@ status: canon
 sources: [ZEN-49]
 tags: [부여마법, 원정, 청색, 탐색, 상륙]
 links:
+  - { to: itm-zektar-shrine-expedition, rel: 같은 원정 }
   - { to: itm-quest-for-the-gemblades, rel: 같은 마치는 법 }
   - { to: law-permanents, rel: 부여마법 }
   - { to: law-mana-colors, rel: 청색 }

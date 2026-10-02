@@ -5,9 +5,10 @@ name: 불의 정령
 name_en: Elemental (red token)
 summary: 화산의 불길과 번개가 엉겨 잠시 모습을 얻은 정령. 부른 이를 따라 모든 것을 짓밟고 달려들다가, 하루가 끝나면 흩어진다
 status: canon
-sources: [ZEN-123]
+sources: [ZEN-123, ZEN-155]
 tags: [정령, 적색, 토큰]
 links:
+  - { to: itm-zektar-shrine-expedition, rel: 성소의 불길에서 솟구치는 정령 }
   - { to: law-mana-colors, rel: 적색의 존재 }
   - { to: law-retainers, rel: 부른 이의 권속 }
   - { to: spl-elemental-appeal, rel: 불러내는 주문 }

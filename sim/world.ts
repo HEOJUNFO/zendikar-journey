@@ -906,7 +906,9 @@ export const ItemSimSchema = z.strictObject({
         // ends it and comes to know M secrets, or bonds from afar with up to M basic lands,
         // tapped (sim/expedition.ts).
         // `plus_counters`: "put four +1/+1 counters on target creature" (Quest for the Gemblades).
-        z.strictObject({ type: z.literal('expedition'), counters: z.number().int().positive(), draws: z.number().int().positive().optional(), lands: z.number().int().positive().optional(), plus_counters: z.number().int().positive().optional() }).refine((e) => !!e.draws || !!e.lands || !!e.plus_counters, '보상(draws, lands, plus_counters)이 있어야 한다'),
+        // `token`: "create a 7/1 red Elemental with trample and haste. Exile it at the next end step"
+        // (Zektar Shrine Expedition): it serves the owner, gone at midnight.
+        z.strictObject({ type: z.literal('expedition'), counters: z.number().int().positive(), draws: z.number().int().positive().optional(), lands: z.number().int().positive().optional(), plus_counters: z.number().int().positive().optional(), token: z.strictObject({ creature: z.string(), pt: z.tuple([z.number().int().positive(), z.number().int().positive()]), colors: z.array(z.enum(COLORS)).default([]), abilities: z.array(z.enum(ABILITIES)).default([]), until_midnight: z.boolean().default(false) }).optional() }).refine((e) => !!e.draws || !!e.lands || !!e.plus_counters || !!e.token, '보상(draws, lands, plus_counters, token)이 있어야 한다'),
         // "Whenever a creature you control deals combat damage to a creature, you may put a quest
         // counter on this" (Quest for the Gemblades): sim/expedition.ts `gembladesHit`.
         z.strictObject({ type: z.literal('quest_combat') }),

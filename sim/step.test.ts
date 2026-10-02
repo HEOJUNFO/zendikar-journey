@@ -7269,6 +7269,27 @@ test('the real Quest for the Gemblades stands in a crystal cave of Ora Ondar', (
   assert.deepEqual(x.effects, [{ type: 'quest_combat' }, { type: 'expedition', counters: 1, plus_counters: 4 }]);
 });
 
+test('Zektar Shrine Expedition: ended, a 7/1 trampling, hasty elemental comes to serve its owner until midnight', async () => {
+  const item: RawEntity = { id: 'itm-zse', kind: 'item', name: '성소 원정', status: 'canon', sim: { card_type: 'enchantment', cost: '{0}', at: 'loc-a', effects: [{ type: 'landfall_quest' }, { type: 'expedition', counters: 3, token: { creature: 'cre-fire', pt: [7, 1], colors: ['R'], abilities: ['trample', 'haste'], until_midnight: true } }] } };
+  const world = fixture([item, altarItem, demolishSpell, lore('cre-fire', 'creature')]);
+  const state = character(world, 'loc-a');
+  const p = state.actors[PLAYER_ID];
+  state.items = { 'itm-zse': { name: '성소 원정', owner: p.id, counters: 3 } };
+  await act(state, world, { type: 'expedition' });
+  assert.ok(state.items['itm-zse'].gone);
+  const fire = Object.values(state.actors).find((x) => x.master === p.id && state.tokens?.[x.id])!;
+  assert.deepEqual(ptOf(fire), [7, 1]);
+  assert.ok(hasAbility(fire, 'trample', state.minutes) && hasAbility(fire, 'haste', state.minutes));
+  assert.equal(state.tokens![fire.id].vanishAt, untapTime(state.minutes));
+});
+
+test('the real Zektar Shrine Expedition stands high in Shatterskull Pass', () => {
+  const world = loadWorld();
+  const x = world.items.find((i) => i.id === 'itm-zektar-shrine-expedition')!;
+  assert.equal(x.at, 'loc-shatterskull-pass');
+  assert.ok(x.effects.some((e) => e.type === 'expedition' && e.token?.creature === 'cre-fire-elemental'));
+});
+
 test('the real Ior Ruin Expedition stands by Glasspool, a lake of Akoum and a basic island', () => {
   const world = loadWorld();
   const x = world.items.find((i) => i.id === 'itm-ior-ruin-expedition')!;

@@ -8,6 +8,9 @@
 // Harrow's, sim/harrow.ts). The player uses it by an action, an NPC by an `expedition` block in
 // their plan.
 import { harrowOwed } from './harrow.ts';
+import { spawnWild } from './abilities.ts';
+import { untapTime } from './clock.ts';
+import { ABILITY_LABELS } from './world.ts';
 import { drawKnowledge } from './knowledge.ts';
 import { addLog, here, ptOf, together } from './state.ts';
 import { masterOf } from './retainers.ts';
@@ -45,8 +48,8 @@ export function expeditionReward(state: State, world: World, a: Actor) {
   const x = expeditionOf(state, world, a);
   const e = x && powerOf(x);
   if (!e) return { ko: '', en: '' };
-  const ko = [e.draws ? `숨은 것 ${e.draws}가지를 알게 된다` : '', e.lands ? `아직 유대 없는 기본 땅 ${e.lands}까지와 멀리서 이어진다 (탭된 채, 오늘은 마나 없음)` : '', e.plus_counters ? `곁의 하나에게 +1/+1 카운터 ${e.plus_counters}을 준다` : ''].filter(Boolean).join(', ');
-  const en = [e.draws ? `come to know ${e.draws} hidden secrets of the world` : '', e.lands ? `bond from afar with up to ${e.lands} basic lands of the world they don't hold yet (tapped: no mana from them today; not their land for the day)` : '', e.plus_counters ? `give ${e.plus_counters} +1/+1 counters, for good, to one standing with them (themselves too), picked after the hour` : ''].filter(Boolean).join(', and ');
+  const ko = [e.draws ? `숨은 것 ${e.draws}가지를 알게 된다` : '', e.lands ? `아직 유대 없는 기본 땅 ${e.lands}까지와 멀리서 이어진다 (탭된 채, 오늘은 마나 없음)` : '', e.plus_counters ? `곁의 하나에게 +1/+1 카운터 ${e.plus_counters}을 준다` : '', e.token ? `${e.token.pt.join('/')} ${world.lore.find((l) => l.id === e.token!.creature)?.name ?? e.token.creature}이(가) 곁에 나 섬긴다${e.token.until_midnight ? ' (자정에 사라짐)' : ''}` : ''].filter(Boolean).join(', ');
+  const en = [e.draws ? `come to know ${e.draws} hidden secrets of the world` : '', e.lands ? `bond from afar with up to ${e.lands} basic lands of the world they don't hold yet (tapped: no mana from them today; not their land for the day)` : '', e.plus_counters ? `give ${e.plus_counters} +1/+1 counters, for good, to one standing with them (themselves too), picked after the hour` : '', e.token ? `have a ${e.token.pt.join('/')} ${world.lore.find((l) => l.id === e.token!.creature)?.name ?? e.token.creature}${e.token.abilities.length ? ` (${e.token.abilities.join(', ')})` : ''} serve them at their side${e.token.until_midnight ? ', gone at midnight' : ''}` : ''].filter(Boolean).join(', and ');
   return { ko, en };
 }
 
@@ -63,6 +66,13 @@ export function finishExpedition(state: State, world: World, a: Actor, t: number
   if (e.draws) drawKnowledge(state, world, a, e.draws, t, x.name);
   const owed = e.lands ? harrowOwed(state, world, a, { type: 'harrow', spell: x.name, left: e.lands, given: true, tapped: true }, t) : null;
   if (owed) (state.choices ??= []).push(owed);
+  // Zektar Shrine Expedition: a creature token serving them at their side.
+  if (e.token) {
+    const [b] = spawnWild(state, world, e.token.creature, [e.token.pt[0], e.token.pt[1]], 1, a.region, e.token.colors, a.tile, e.token.abilities);
+    b.master = a.id;
+    if (e.token.until_midnight) state.tokens![b.id].vanishAt = untapTime(t);
+    addLog(state, { kind: 'event', text: `${x.name}: 성소의 불길에서 ${josa(shortName(b.name), '이', '가')} 솟구쳐 ${shortName(a.name)} 곁에 섰다 (${e.token.pt.join('/')}${e.token.abilities.length ? `, ${e.token.abilities.map((ab) => ABILITY_LABELS[ab]).join('·')}` : ''}${e.token.until_midnight ? ', 자정에 사라진다' : ''}).`, regions: [a.region], actors: [a.id, b.id], t });
+  }
   // Quest for the Gemblades: +1/+1 counters on one there (their pick after the hour; one must).
   const candidates = e.plus_counters ? here(state, a).filter((y) => y.loyalty === undefined).map((y) => y.id) : [];
   if (candidates.length) (state.choices ??= []).push({ by: a.id, land: a.region, effect: { type: 'gem', item: x.name, amount: e.plus_counters! }, candidates, t });
