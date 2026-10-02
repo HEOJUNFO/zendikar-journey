@@ -8,6 +8,7 @@ status: canon
 sources: [ZEN-22, ZEN-1]
 tags: [코르, 성직자, 캄사, 백색]
 links:
+  - { to: chr-kor-skyfisher, rel: 같은 메사의 코르 }
   - { to: law-mana-colors, rel: 백색의 존재 }
   - { to: loc-arid-mesa, rel: 순례하는 메사 }
   - { to: chr-devout-lightcaster, rel: 같은 메사의 캄사 사제 }

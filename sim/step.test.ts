@@ -42,7 +42,7 @@ import { applyQuell, upkeepQuell } from './quell.ts';
 import { upkeepWins } from './win.ts';
 import { allyJoined, applyRally, hireMerc, hirePrice } from './allies.ts';
 import { askOptions, askText } from './asks.ts';
-import { applyEscape, escapeOptions } from './escape.ts';
+import { applyEscape, enterReturn, escapeOptions } from './escape.ts';
 import { applyLift, enterGrant } from './aeronaut.ts';
 import { enterEquip, outfitOptions } from './outfitter.ts';
 import { applyTorch, enterDamage } from './torch.ts';
@@ -6763,6 +6763,33 @@ test('the real Kor Outfitter lives in the Makindi Trenches by the Grappling Hook
   const def = npcDef(state, world, o.id)!;
   assert.ok(def.enterEquip && def.types?.includes('kor'));
   assert.equal(swayBlocked(state, world, o), null);
+});
+
+test('Kor Skyfisher: arriving, its master must return one of theirs (the Narrow Escape pick); a land returned may be bonded again', () => {
+  const world = fixture([besideA, npc('chr-s', { ...npcSim('loc-a', 'work', [2, 3]), abilities: ['fly'], enter_return: true }), npc('chr-m', npcSim('loc-a'))]);
+  const state = newState(world, { seed: 1, mode: 'observer' });
+  const [sf, m] = [state.actors['chr-s'], state.actors['chr-m']];
+  sf.tile = m.tile;
+  sf.master = m.id;
+  m.bonds = ['loc-b'];
+  enterReturn(state, world, sf, state.minutes);
+  const c = state.choices!.find((y) => y.effect.type === 'escape')!;
+  assert.equal(c.by, 'chr-m');
+  assert.ok(!c.optional);
+  for (const id of ['being:chr-m', 'being:chr-s', 'land:loc-b']) assert.ok(c.candidates.includes(id), id);
+  applyEscape(state, world, m, 'land:loc-b', '코르 하늘낚시꾼', state.minutes);
+  assert.deepEqual(m.bonds, []);
+});
+
+test('the real Kor Skyfisher flies the cliffs of the Arid Mesa: a talking flying Kor who returns one of its controller\'s things', () => {
+  const world = loadWorld();
+  const state = newState(world, { seed: 1, mode: 'observer' });
+  const k = state.actors['chr-kor-skyfisher'];
+  assert.equal(k?.region, 'loc-arid-mesa');
+  const def = npcDef(state, world, k.id)!;
+  assert.ok(def.enterReturn && def.types?.includes('kor'));
+  assert.deepEqual(ptOf(k), [2, 3]);
+  assert.ok(hasAbility(k, 'fly', state.minutes));
 });
 
 test('Turntimber Basilisk: bonding, its controller may catch one there in its gaze: foes today, and no flying away', () => {

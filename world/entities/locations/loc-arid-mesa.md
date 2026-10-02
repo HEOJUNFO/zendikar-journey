@@ -5,9 +5,10 @@ name: 메마른 메사
 name_en: Arid Mesa
 summary: 온두의 아쿰 쪽 끝, 층층이 깎인 거대한 탁상지가 늘어선 메마른 땅. 먼지 낀 금빛 하늘 아래 검은 가시덤불이 엉켜 있고, 오래된 길이 산과 평원으로 갈라져 나간다
 status: canon
-sources: [ZEN-211, ZEN-212, ZEN-229, ZEN-24, ZEN-10, ZEN-22]
+sources: [ZEN-211, ZEN-212, ZEN-229, ZEN-24, ZEN-10, ZEN-22, ZEN-23]
 tags: [메사, 황무지, 길, 페치]
 links:
+  - { to: chr-kor-skyfisher, rel: 절벽 사이를 나는 코르 하늘낚시꾼 }
   - { to: chr-kor-sanctifiers, rel: 순례하는 코르 정화자들 }
   - { to: spl-landbind-ritual, rel: 배우는 주문 }
   - { to: loc-ondu, rel: 바깥 지역 }
@@ -39,4 +40,4 @@ sim:
 - 지금 찾을 수 있는 땅: 아쿰 (산), 온두 (평원).
 - 플레이어는 버튼, NPC는 LLM이 짠 하루의 `fetch` 블록으로 길 찾기를 쓴다 ([결정] 2026-09-30, ZEN-229 때 정함: 페치랜드는 NPC도 쓴다).
 - 캄사의 코르 사제 독실한 빛술사(`chr-devout-lightcaster`, ZEN-10)가 산다: 흑색으로부터 보호, 들어설 때 그 칸의 흑색 지속물 하나를 추방.
-
+- 서쪽 밧줄이 걸린 절벽 사이를 코르 하늘낚시꾼(`chr-kor-skyfisher`, ZEN-23)이 활공체로 난다 ([결정] 2026-10-02). 그날 처음 들어서는 곳에서 그를 조종하는 이가 제 것 하나를 거두어들여야 한다.

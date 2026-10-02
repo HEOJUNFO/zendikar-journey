@@ -18,6 +18,8 @@
 // it falls away, it goes free of whoever controlled it, lands in another area, stunned an hour; a
 // planeswalker comes back with its loyalty anew. An aura's caster may cast it again.
 import { addLog, npcDef, outOfTime, present, targetable } from './state.ts';
+import { masterOf } from './retainers.ts';
+import { powersSealed } from './seal.ts';
 import type { Actor, Choice, State } from './state.ts';
 import { bounce, landing, shed, vanishToken } from './bounce.ts';
 import { itemDef, itemWhere, unequip } from './items.ts';
@@ -119,4 +121,14 @@ export function applyEscape(state: State, world: World, a: Actor, pick: string, 
     addLog(state, { kind: 'status', text: whose ? `${spell}: ${josa(shortName(a.name), '이', '가')} ${shortName(x.name)}에게 걸린 ${josa(au.name, '을', '를')} 걷어 냈다. ${josa(shortName(whose.name), '은', '는')} 그것을 다시 걸 수 있다.` : `${spell}: ${josa(shortName(a.name), '이', '가')} ${shortName(x.name)}에게 건 ${josa(au.name, '을', '를')} 거두어들였다. 다시 걸 수 있다.`, regions: [a.region], actors: [a.id, x.id], t });
   }
   return true;
+}
+
+// Kor Skyfisher (`sim.enter_return`): "When this enters, return a permanent you control to its
+// owner's hand." On its first arrival of the day (sim/abilities.ts `onEnter`), its controller
+// (master, or itself) must return one of what they control, as Narrow Escape's pick (user decision
+// 2026-10-02: as the card, every day; the skyfisher itself may be the one).
+export function enterReturn(state: State, world: World, a: Actor, t: number) {
+  if (!npcDef(state, world, a.id)?.enterReturn || a.dead || powersSealed(state, world, a, t)) return;
+  const owed = escapeOwed(state, world, masterOf(state, a) ?? a, shortName(a.name), t);
+  if (owed) (state.choices ??= []).push(owed);
 }

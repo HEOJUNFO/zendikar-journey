@@ -324,6 +324,9 @@ export const CharacterSimSchema = z.strictObject({
   // (Kor Outfitter): its controller, there with it, may put one of their equipment on themselves or
   // one who serves them there, for nothing (sim/outfitter.ts).
   enter_equip: z.boolean().default(false),
+  // "When this enters, return a permanent you control to its owner's hand" (Kor Skyfisher): its
+  // controller must return one of theirs, as Narrow Escape's pick (sim/escape.ts `enterReturn`).
+  enter_return: z.boolean().default(false),
   // "When this enters, reveal the top N cards of your library. Put all <type> cards revealed this way
   // into your hand" (Merfolk Wayfinder): lands in hand, to bond with from afar (sim/oracle.ts).
   enter_reveal: z.strictObject({ count: z.number().int().positive(), land_type: z.enum(LAND_TYPES) }).optional(),
@@ -1024,6 +1027,7 @@ export type NpcDef = {
   enterDamage?: { amount: number; kicker?: ManaCost; kickerText?: string };
   enterGrant?: { ability: Ability; kicker: ManaCost; kickerText: string };
   enterEquip?: boolean;
+  enterReturn?: boolean;
   enterReveal?: { count: number; type: LandType };
   enterDraw?: { count: number; discard?: number; kicker?: ManaCost; kickerText?: string };
   protection?: Color[];
@@ -1221,7 +1225,7 @@ export function buildWorld(entities: RawEntity[]): { world: World; errors: strin
         err(e.id, `sim 오류: ${issues(sim.error)}`);
         continue;
       }
-      const { knows_colors, activated, wins_at_life, extra_combat, pump, empty_hand_pump, attack_pump, discard_on_hit, landfall_token, landfall_seize, landfall_lose, landfall_grant, landfall_life, landfall_drain, landfall_lure, landfall_return, drain_on_join, haste_low_life, enter_destroy, enter_drain, enter_draw, enter_search, enter_shatter, enter_exile, enter_tap, enter_damage, enter_grant, enter_equip, enter_pump, enter_sacrifice, enter_no_block, enter_reveal, upkeep_return_land, extra_lands, reveal_top, tap_foe, tap_draw_allies, engulf, tap_mana, upkeep_burn, counter_tokens, follows_only, cant_block_unless, tap_shield, tap_loot, tap_search, equip_anthem, hit_sacrifice_land, name, home_pos, ...rest } = sim.data;
+      const { knows_colors, activated, wins_at_life, extra_combat, pump, empty_hand_pump, attack_pump, discard_on_hit, landfall_token, landfall_seize, landfall_lose, landfall_grant, landfall_life, landfall_drain, landfall_lure, landfall_return, drain_on_join, haste_low_life, enter_destroy, enter_drain, enter_draw, enter_search, enter_shatter, enter_exile, enter_tap, enter_damage, enter_grant, enter_equip, enter_return, enter_pump, enter_sacrifice, enter_no_block, enter_reveal, upkeep_return_land, extra_lands, reveal_top, tap_foe, tap_draw_allies, engulf, tap_mana, upkeep_burn, counter_tokens, follows_only, cant_block_unless, tap_shield, tap_loot, tap_search, equip_anthem, hit_sacrifice_land, name, home_pos, ...rest } = sim.data;
 
       world.npcs.push({
         id: e.id,
@@ -1247,6 +1251,7 @@ export function buildWorld(entities: RawEntity[]): { world: World; errors: strin
         ...(enter_sacrifice ? { enterSacrifice: { kicker: parseManaCost(enter_sacrifice.kicker)!, kickerText: enter_sacrifice.kicker } } : {}),
         ...(enter_pump ? { enterPump: { pt: enter_pump.pt, kicker: parseManaCost(enter_pump.kicker)!, kickerText: enter_pump.kicker } } : {}),
         ...(enter_equip ? { enterEquip: true } : {}),
+        ...(enter_return ? { enterReturn: true } : {}),
         ...(enter_grant ? { enterGrant: { ability: enter_grant.ability, kicker: parseManaCost(enter_grant.kicker)!, kickerText: enter_grant.kicker } } : {}),
         ...(enter_damage ? { enterDamage: { amount: enter_damage.amount, ...(enter_damage.kicker ? { kicker: parseManaCost(enter_damage.kicker)!, kickerText: enter_damage.kicker } : {}) } } : {}),
         ...(enter_reveal ? { enterReveal: { count: enter_reveal.count, type: enter_reveal.land_type } } : {}),

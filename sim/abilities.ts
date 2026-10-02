@@ -4,6 +4,7 @@ import { enterTap } from './hook.ts';
 import { enterDamage } from './torch.ts';
 import { enterGrant } from './aeronaut.ts';
 import { enterEquip } from './outfitter.ts';
+import { enterReturn } from './escape.ts';
 import { enterSacrifice } from './toll.ts';
 import { enterNoBlock } from './shortcut.ts';
 import { landfallReturn } from './bloodghast.ts';
@@ -726,6 +727,7 @@ export function onEnter(state: State, world: World, a: Actor, t: number) {
   enterDamage(state, world, a, t);
   enterGrant(state, world, a, t);
   enterEquip(state, world, a, t);
+  enterReturn(state, world, a, t);
   enterReveal(state, world, a, t);
   enterPump(state, world, a, t);
   enterSacrifice(state, world, a, t);
