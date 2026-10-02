@@ -8,6 +8,7 @@ status: canon
 sources: [ZEN-27]
 tags: [주문, 백색, 순간마법, 되돌림, 생명]
 links:
+  - { to: spl-trapfinders-trick, rel: 같은 함정꾼 아르하나의 말 }
   - { to: chr-kor-skyfisher, rel: 같은 되돌림 (들어설 때) }
   - { to: law-mana-colors, rel: 백색 마법 }
   - { to: loc-kazandu, rel: 배우는 곳 (카잔두의 함정꾼) }

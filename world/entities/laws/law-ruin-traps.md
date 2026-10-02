@@ -5,9 +5,10 @@ name: 폐허와 험지의 함정
 name_en: Traps of the Wilds
 summary: 젠디카르의 폐허와 험지에는 침입자에게 반응하는 고대의 함정이 숨어 있다
 status: canon
-sources: [ZEN-146, ZEN-135, ZEN-105, ZEN-160, ZEN-184, ZEN-41, ZEN-2, ZEN-156, ZEN-77, ZEN-32]
+sources: [ZEN-146, ZEN-135, ZEN-105, ZEN-160, ZEN-184, ZEN-41, ZEN-2, ZEN-156, ZEN-77, ZEN-32, ZEN-73]
 tags: [함정, 탐험]
 links:
+  - { to: spl-trapfinders-trick, rel: 숨은 함정을 찾아내는 주문 }
   - { to: evt-runeflare-trap, rel: 비밀을 한꺼번에 알게 된 이를 태우는 함정 }
   - { to: evt-summoning-trap, rel: 거절당한 이에게 생물을 불러내는 함정 }
   - { to: evt-whiplash-trap, rel: 무리를 불린 이 곁의 것들을 내동댕이치는 함정 }

@@ -3,7 +3,7 @@
 // blocks of their LLM-planned day (whom a spell falls on, the LLM picks as it is cast), and
 // hold some by color (knows_colors) to cast by their powers (Chandra). A sealed color can't
 // be cast (sim/seal.ts).
-import { drawKnowledge, huntKnowledge } from './knowledge.ts';
+import { drawKnowledge, findTraps, huntKnowledge } from './knowledge.ts';
 import { formatClock, untapTime } from './clock.ts';
 import { addFoe, dealDamage, destroy, die, woundsOf } from './combat.ts';
 import { gainLife, lifeOf, loseLife } from './life.ts';
@@ -337,6 +337,8 @@ export function resolveSpell(state: State, world: World, a: Actor, spellId: stri
     } else if (eff.type === 'harrow') {
       const owed = harrowOwed(state, world, a, { type: 'harrow', spell: s.name, left: eff.count, given: false }, t);
       if (owed) (state.choices ??= []).push(owed);
+    } else if (eff.type === 'find_traps') {
+      findTraps(state, world, a, t, s.name);
     } else if (eff.type === 'fog') {
       state.fogs = [...(state.fogs ?? []).filter((f) => f.until > t), { region: a.region, ...(a.tile ? { tile: a.tile } : {}), until: untapTime(t), by: a.id }];
       addLog(state, { kind: 'event', text: `${s.name}: 끈적한 초록 수액이 그 자리를 뒤덮는다. 자정까지 짓밟는 힘이 없는 이의 주먹과 칼은 아무도 다치게 하지 못한다.`, regions: [a.region], actors: [a.id], t });

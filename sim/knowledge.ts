@@ -14,7 +14,7 @@ import { addLog, outOfTime, random } from './state.ts';
 import { hirePrice } from './allies.ts';
 import type { Actor, State } from './state.ts';
 import { josa, shortName } from './text.ts';
-import { placeName, region } from './world.ts';
+import { descendantsOf, placeName, region } from './world.ts';
 import type { EventDef, World } from './world.ts';
 
 export type Secret = { id: string; text: string; day?: number };
@@ -154,6 +154,27 @@ export function huntKnowledge(state: State, world: World, a: Actor, n: number, t
     t,
   });
   return kept;
+}
+
+// Trapfinder's Trick (spell `find_traps`, user decision 2026-10-02): every trap hidden in the land
+// `a` stands in and the areas within it (no morning event) becomes known to them: where it lies
+// and what sets it off. Not a draw. Returns what they found.
+export function findTraps(state: State, world: World, a: Actor, t: number, cause: string) {
+  const area = new Set([a.region, ...descendantsOf(world, a.region).map((r) => r.id)]);
+  const known = new Set(knownSecrets(a, t).map((k) => k.id));
+  const traps = new Set(world.events.filter((ev) => ev.trigger !== 'gm' && area.has(ev.region)).map((ev) => `trap:${ev.id}`));
+  const found = secretsOf(state, world, t).filter((s) => traps.has(s.id) && !known.has(s.id));
+  a.knowledge = [...knownSecrets(a, t), ...found];
+  addLog(state, {
+    kind: 'effect',
+    text: found.length
+      ? `${cause}: ${josa(shortName(a.name), '이', '가')} ${region(world, a.region).name}에 숨은 함정 ${found.length}가지를 찾아냈다.${a.kind === 'player' ? found.map((s) => `\n· ${s.text}`).join('') : ''}`
+      : `${cause}: ${josa(shortName(a.name), '은', '는')} ${region(world, a.region).name}에서 새로 찾아낸 함정이 없다.`,
+    regions: [a.region],
+    actors: [a.id],
+    t,
+  });
+  return found;
 }
 
 // For their prompts.

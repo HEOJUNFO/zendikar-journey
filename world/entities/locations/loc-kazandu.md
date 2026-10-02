@@ -5,9 +5,10 @@ name: 카잔두
 name_en: Kazandu
 summary: 무라사 대부분을 덮은 무너진 땅. 땅이 꺼지고 솟기를 되풀이하는 밀림 사이로 수정 기둥이 솟고, 그 한가운데에 원정대가 쉬어 가는 카잔두 피난처가 있다
 status: canon
-sources: [ZEN-217, ZEN-169, ZEN-27, ZEN-161]
+sources: [ZEN-217, ZEN-169, ZEN-27, ZEN-161, ZEN-73]
 tags: [밀림, 붕괴 지대, 녹색]
 links:
+  - { to: spl-trapfinders-trick, rel: 가르치는 주문 (함정꾼의 요령) }
   - { to: chr-frontier-guide, rel: 우듬지 길의 타주루 길잡이 }
   - { to: loc-murasa, rel: 바깥 지역 }
   - { to: loc-kazandu-refuge, rel: 안의 구역 (피난처) }
@@ -27,6 +28,7 @@ map: { in: loc-murasa, terrain: forest, pos: [0.05, 0.05], tiles: 50 }   # 기�
 - 아슬아슬한 탈출(`spl-narrow-escape`, ZEN-27)을 배울 수 있다 (4시간): 카잔두의 함정꾼들이 쓰는 백색 순간마법 ([결정] 2026-10-01).
 
 - 변경의 길잡이(`chr-frontier-guide`, ZEN-161)가 북동쪽 우듬지의 나뭇가지 길을 누빈다 ([결정] 2026-10-01 설정대로: 타주루 씨족이 지키는 카잔두 우듬지 길 [배경]). 함께하는 이를 아직 유대 없는 기본 땅으로 이어 주는 엘프 정찰병이다.
+- 함정꾼의 요령(`spl-trapfinders-trick`, ZEN-73)을 4시간 들여 배운다 ([결정] 2026-10-02): 선 땅과 그 구역에 숨은 함정을 모두 찾아낸다.
 
 ## 미정/질문
 

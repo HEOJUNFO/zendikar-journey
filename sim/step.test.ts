@@ -7526,6 +7526,23 @@ test('the real Tanglesap is taught in the Tangled Vale', () => {
   assert.deepEqual(s.effects, [{ type: 'fog' }]);
 });
 
+test('the real Trapfinder\'s Trick, cast in the Guum Wilds, finds its traps and Riverroot\'s, not those of Bala Ged\'s mainland', () => {
+  const world = loadWorld();
+  const state = newState(world, { seed: 1, mode: 'observer' });
+  const s = world.spells.find((x) => x.id === 'spl-trapfinders-trick')!;
+  assert.equal(s.learnAt, 'loc-kazandu');
+  const c = state.actors['chr-bala-ged-thief'];
+  assert.equal(c.region, 'loc-guum-wilds');
+  c.knowledge = [];
+  c.spells = [s.id];
+  c.bonds = ['loc-guum-wilds', 'loc-riverroot'];
+  castSpell(state, world, c, s.id, c.id, false, state.minutes);
+  const ids = (c.knowledge ?? []).map((k) => k.id);
+  assert.ok(ids.includes('trap:evt-pitfall-trap') && ids.includes('trap:evt-summoning-trap'));
+  assert.ok(!ids.includes('trap:evt-baloth-cage-trap'));
+  assert.ok(ids.every((id) => id.startsWith('trap:')));
+});
+
 test('the real Nimbus Wings is taught at Kabira Crossroads: the one it is cast on gets +1/+2 and wings', () => {
   const world = loadWorld();
   const s = world.spells.find((x) => x.id === 'spl-nimbus-wings')!;

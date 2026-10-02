@@ -760,6 +760,10 @@ export const SpellSimSchema = z.strictObject({
         // "Prevent all combat damage that would be dealt this turn by creatures without trample"
         // (Tanglesap): on the caster's tile, until midnight (sim/combat.ts `fogged`).
         z.strictObject({ type: z.literal('fog') }),
+        // "Target player reveals their hand and discards all Trap cards" (Trapfinder's Trick): in
+        // this world, the caster finds every trap hidden in the land they stand in and its areas
+        // (sim/knowledge.ts `findTraps`).
+        z.strictObject({ type: z.literal('find_traps') }),
         z.strictObject({ type: z.literal('damage_grounded'), amount: z.number().int().positive() }),
         // "Reveal the top N cards of your library. Put all creature cards revealed this way into
         // your hand and the rest into your graveyard" (Beast Hunt): N unknown secrets turn up; the

@@ -459,6 +459,8 @@ function spellEffectText(e: SpellEffect) {
       return '같은 칸의 땅 아닌 것(존재, 아이템, 오라) 하나를 되돌림 (남의 존재는 내동댕이쳐져 1시간 기절)';
     case 'weaken_controlled':
       return `대상과 곁의 그 권속들 자정까지 ${e.pt.join('/')}${e.kicked_pt ? ` (킥커 시 ${e.kicked_pt.join('/')})` : ''}`;
+    case 'find_traps':
+      return '시전자가 선 땅과 그 구역에 숨은 함정을 모두 앎';
     case 'fog':
       return '그 칸에서 자정까지 돌진 없는 이의 싸움 피해를 막음';
     case 'flood_land':
