@@ -58,6 +58,7 @@ import { reviveHour } from './revive.ts';
 import { punishHour } from './punish.ts';
 import { applyFlood } from './flood.ts';
 import { setTrapBlocked } from './snare.ts';
+import { hex, hexBlocked, hexNear } from './hexmage.ts';
 import { withPositions } from './wander.ts';
 import { applyHarrow } from './harrow.ts';
 import type { HarrowEffect } from './harrow.ts';
@@ -7576,6 +7577,45 @@ test('the real Trapfinder\'s Trick, cast in the Guum Wilds, finds its traps and 
   assert.ok(ids.includes('trap:evt-pitfall-trap') && ids.includes('trap:evt-summoning-trap'));
   assert.ok(!ids.includes('trap:evt-baloth-cage-trap'));
   assert.ok(ids.every((id) => id.startsWith('trap:')));
+});
+
+test('Vampire Hexmage: the player has the hexmage serving them sacrifice herself: one there loses its +1/+1 counters, a planeswalker its loyalty (gone), an item its counters', async () => {
+  const quest: RawEntity = { id: 'itm-q', kind: 'item', name: '승천', status: 'canon', sim: { card_type: 'enchantment', cost: '{0}', at: 'loc-a', effects: [{ type: 'quest_unhurt' }] } };
+  const world = fixture([quest, npc('chr-h', { ...npcSim('loc-a', 'work', [2, 1]), abilities: ['first_strike'], sac_uncounter: true }), npc('chr-x', npcSim('loc-a')), npc('chr-pw', { ...npcSim('loc-a'), loyalty: 4 })]);
+  const state = character(world, 'loc-a');
+  const [p, h, x, pw] = [state.actors[PLAYER_ID], state.actors['chr-h'], state.actors['chr-x'], state.actors['chr-pw']];
+  for (const a of [h, x, pw]) a.tile = p.tile;
+  h.master = p.id;
+  x.plusCounters = 3;
+  assert.ok(hexNear(state, world, p, state.minutes).some((o) => o.id === 'being:chr-x'));
+  await act(state, world, { type: 'hex', to: 'being:chr-x' });
+  assert.equal(x.plusCounters, undefined);
+  assert.ok(h.dead);
+  // Another hexmage for the planeswalker, and the item.
+  const w2 = fixture([quest, npc('chr-h', { ...npcSim('loc-a', 'work', [2, 1]), sac_uncounter: true }), npc('chr-pw', { ...npcSim('loc-a'), loyalty: 4 })]);
+  const s2 = newState(w2, { seed: 1, mode: 'observer' });
+  const [h2, pw2] = [s2.actors['chr-h'], s2.actors['chr-pw']];
+  pw2.tile = h2.tile;
+  assert.equal(hexBlocked(s2, w2, h2, 'being:chr-pw', s2.minutes), null);
+  hex(s2, w2, h2, 'being:chr-pw', s2.minutes);
+  assert.ok(pw2.left && h2.dead);
+  const w3 = fixture([quest, npc('chr-h', { ...npcSim('loc-a', 'work', [2, 1]), sac_uncounter: true })]);
+  const s3 = newState(w3, { seed: 1, mode: 'observer' });
+  const h3 = s3.actors['chr-h'];
+  s3.items = { 'itm-q': { name: '승천', owner: 'chr-h', counters: 3 } };
+  h3.tile = itemWhere(s3, w3, w3.items[0])!.tile;
+  hex(s3, w3, h3, 'item:itm-q', s3.minutes);
+  assert.equal(s3.items['itm-q'].counters, 0);
+});
+
+test('the real Vampire Hexmage lives in Malakir: a talking vampire with first strike', () => {
+  const world = loadWorld();
+  const state = newState(world, { seed: 1, mode: 'observer' });
+  const h = state.actors['chr-vampire-hexmage'];
+  assert.equal(h?.region, 'loc-malakir');
+  const def = npcDef(state, world, h.id)!;
+  assert.ok(def.sacUncounter && def.creature === 'cre-vampire');
+  assert.ok(hasAbility(h, 'first_strike', state.minutes));
 });
 
 test('the real Nimbus Wings is taught at Kabira Crossroads: the one it is cast on gets +1/+2 and wings', () => {

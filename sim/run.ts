@@ -36,6 +36,7 @@ import { altarOf } from './altar.ts';
 import { applyFlood, floodOptions } from './flood.ts';
 import { applyGust, gustOptions } from './owl.ts';
 import { eventDefOf, trapsHeld } from './snare.ts';
+import { hexmagesOf, hexTargets } from './hexmage.ts';
 import type { GustEffect } from './owl.ts';
 import { applyGem, expeditionBlocked, expeditionOf, expeditionReward } from './expedition.ts';
 import { ascendBlocked, ascensionOf } from './luminarch.ts';
@@ -1454,6 +1455,7 @@ async function prepare(state: State, world: World, llm: Llm): Promise<string | n
           scout: tapBlocked(state, world, a, 'scout', a.id, state.minutes) ? undefined : tapInput(state, world, a, 'scout'),
           altar: altarInput(state, world, a),
           ascend: ascendInput(state, world, a),
+          hex: hexInput(state, world, a),
           traps: trapsHeld(world, a).map((ev) => ({ id: ev.id, text: `${ev.name}: ${ev.summary} (${ev.cardCost?.text ?? ''})` })),
           expedition: expeditionBlocked(state, world, a) ? undefined : { name: expeditionOf(state, world, a)!.name, reward: expeditionReward(state, world, a).en },
           fetch: fetchInput(state, world, a),
@@ -1502,6 +1504,14 @@ function equipInput(state: State, world: World, a: Actor): PlanDayInput['equip']
     text: `${gear.name} (${gear.summary}; costs ${gear.equip.costText}; the bearer has ${gives}${gear.equip.lure ? ', and whoever they fall on cannot fly off' : ''}${bearer ? `; now on ${shortName(state.actors[bearer]?.name ?? bearer)}` : ''})`,
     who: who.map((x) => ({ id: x.id, text: x.id === a.id ? 'themselves' : `${shortName(x.name)}, who serves them` })),
   };
+}
+
+// What a Vampire Hexmage they control could strip there, for their plan.
+function hexInput(state: State, world: World, a: Actor): PlanDayInput['hex'] {
+  const h = hexmagesOf(state, world, a).find((x) => !outOfTime(state, x));
+  if (!h) return undefined;
+  const targets = hexTargets(state, world, h, state.minutes).map((o) => ({ id: o.id, text: o.label }));
+  return targets.length ? { who: shortName(h.name), targets } : undefined;
 }
 
 // A Luminarch Ascension they own that could call a token down now, for their plan.

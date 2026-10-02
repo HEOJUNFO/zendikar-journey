@@ -15,6 +15,7 @@ import { altarBlocked, altarOf, altarVictims } from '../sim/altar.ts';
 import { expeditionBlocked, expeditionOf, expeditionReward } from '../sim/expedition.ts';
 import { ascendBlocked, ascendText, ascensionOf } from '../sim/luminarch.ts';
 import { setTrapBlocked, trapsHeld } from '../sim/snare.ts';
+import { hexBlocked, hexNear } from '../sim/hexmage.ts';
 import type { TapPower } from '../sim/tapper.ts';
 
 // The buttons for a creature's power on someone (sim/tapper.ts).
@@ -690,6 +691,16 @@ export function CharacterControls(props: {
           >
             기억 빌리기
           </button>
+        </div>
+      )}
+      {hexNear(state, world, p, state.minutes).length > 0 && (
+        <div className="row">
+          <span className="muted">🩸 주술사의 저주 (그녀는 죽는다):</span>
+          {hexNear(state, world, p, state.minutes).map((o) => (
+            <button key={o.id} className="danger" disabled={busy || !!stuck || !!hexBlocked(state, world, p, o.id, state.minutes)} title={hexBlocked(state, world, p, o.id, state.minutes) ?? `${o.label}의 카운터를 모두 없앤다`} onClick={() => onAct({ type: 'hex', to: o.id })}>
+              {o.label}
+            </button>
+          ))}
         </div>
       )}
       {trapsHeld(world, p).length > 0 && (

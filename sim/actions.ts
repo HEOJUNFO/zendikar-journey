@@ -14,6 +14,7 @@ import { readyTapper, TAP_HOURS, tapAmount, tapBlocked } from './tapper.ts';
 import { ALTAR_HOURS, altarBlocked } from './altar.ts';
 import { ASCEND_HOURS, ascendBlocked, ascendText, ascensionOf } from './luminarch.ts';
 import { SET_TRAP_HOURS, setTrapBlocked } from './snare.ts';
+import { HEX_HOURS, hexBlocked } from './hexmage.ts';
 import { EXPEDITION_HOURS, expeditionBlocked, expeditionOf, expeditionReward } from './expedition.ts';
 import { bondBlocked, bondTargets, FETCH_HOURS, fetchBlocked, firesOnBond, growBlocked, HAND, landDropBlocked, targetedBondEffect, TOP } from './abilities.ts';
 import { handBlocked, topBlocked } from './oracle.ts';
@@ -81,6 +82,9 @@ export const ActionSchema = z.discriminatedUnion('type', [
   z.object({ type: z.literal('ascend') }),
   // Set a trap you hold where you stand, paying its card's cost (Trapmaker's Snare).
   z.object({ type: z.literal('set_trap'), trap: z.string() }),
+  // Have a Vampire Hexmage you control, standing with you, sacrifice itself to strip `to` ("being:<id>"
+  // or "item:<id>") of its counters.
+  z.object({ type: z.literal('hex'), to: z.string() }),
   // Hire a mercenary here: pay their price and they serve you for good (sim/allies.ts).
   z.object({ type: z.literal('hire'), to: z.string() }),
   // Answer the pick you owe (an Ally's rally in your party): someone's id, or null for no one.
@@ -320,6 +324,13 @@ export function startAction(state: State, world: World, action: Action): string 
       if (why) return why;
       task = { kind: 'expedition', activity: `${expeditionOf(state, world, p)!.name}을(를) 마침`, emoji: '🗺️', until: until(EXPEDITION_HOURS) };
       text = `원정을 마치고 원정대가 찾아낸 것을 짚어 본다. ${expeditionReward(state, world, p).ko}.`;
+      break;
+    }
+    case 'hex': {
+      const why = hexBlocked(state, world, p, action.to, t);
+      if (why) return why;
+      task = { kind: 'hex', activity: '흡혈귀 주술사의 저주', emoji: '🩸', until: until(HEX_HOURS), who: action.to };
+      text = '흡혈귀 주술사가 제 피를 바쳐 저주를 걸려 한다. 그녀는 죽는다.';
       break;
     }
     case 'set_trap': {

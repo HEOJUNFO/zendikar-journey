@@ -72,6 +72,8 @@ export type PlanDayInput = {
   ascend?: { name: string; cost: string; token: string };
   // Traps they hold and could set where they stand (Trapmaker's Snare): id, what it does, its cost.
   traps?: { id: string; text: string }[];
+  // What a Vampire Hexmage they control could strip of counters (target ids and what they are).
+  hex?: { who: string; targets: { id: string; text: string }[] };
   // Lands they could seek out today by giving up a fetch land they hold (Arid Mesa...).
   fetch?: { id: string; text: string }[];
   // Spells they could learn (where each is taught), and spells they hold and could pay for.
@@ -91,7 +93,7 @@ export type PlanDayInput = {
 
 // Kinds of blocks they may plan: no meals without hunger, taming only if there is an item for
 // them to tame, keeping days only with a land that keeps them.
-function kindsFor(input: Pick<PlanDayInput, 'needs' | 'items' | 'equip' | 'days' | 'grow' | 'recall' | 'bite' | 'shield' | 'loot' | 'scout' | 'altar' | 'expedition' | 'ascend' | 'traps' | 'fetch' | 'learn' | 'cast' | 'court' | 'hire' | 'people'>) {
+function kindsFor(input: Pick<PlanDayInput, 'needs' | 'items' | 'equip' | 'days' | 'grow' | 'recall' | 'bite' | 'shield' | 'loot' | 'scout' | 'altar' | 'expedition' | 'ascend' | 'traps' | 'hex' | 'fetch' | 'learn' | 'cast' | 'court' | 'hire' | 'people'>) {
   return LIFE_KINDS.filter(
     (k) =>
       (k !== 'eat' || input.needs.includes('hunger')) &&
@@ -108,6 +110,7 @@ function kindsFor(input: Pick<PlanDayInput, 'needs' | 'items' | 'equip' | 'days'
       (k !== 'expedition' || !!input.expedition) &&
       (k !== 'ascend' || !!input.ascend) &&
       (k !== 'set_trap' || !!input.traps?.length) &&
+      (k !== 'hex' || !!input.hex?.targets.length) &&
       (k !== 'fetch' || !!input.fetch?.length) &&
       (k !== 'learn' || !!input.learn?.length) &&
       (k !== 'cast' || !!input.cast?.length) &&
@@ -152,6 +155,7 @@ export async function planDay(input: PlanDayInput): Promise<ScheduleBlock[] | nu
     (b.kind === 'shield' && !!b.who && b.who !== input.id && !people.get(b.who)?.shield) ||
     (b.kind === 'loot' && !!b.who && b.who !== input.id && !people.get(b.who)?.loot) ||
     (b.kind === 'set_trap' && !input.traps?.some((x) => x.id === b.trap)) ||
+    (b.kind === 'hex' && !input.hex?.targets.some((x) => x.id === b.who)) ||
     (b.kind === 'altar' && (b.regionId !== input.altar?.at || !input.altar?.who.some((x) => x.id === b.who)));
   if (blocks?.some(bad)) blocks = null;
   if (!blocks) console.warn(`Unusable plan for ${input.name}:`, content);
@@ -231,6 +235,10 @@ Rules:
   }${
     kinds.includes('expedition')
       ? `\n- "expedition" takes 1 hour, anywhere: they end their ${input.expedition!.name} (it is gone for good) and, from what it found, ${input.expedition!.reward}. Each land they bond with adds to it, so they may also wait.`
+      : ''
+  }${
+    kinds.includes('hex')
+      ? `\n- "hex" takes 1 hour and needs "who": one of the targets; ${input.hex!.who}, a vampire hexmage standing with them, sacrifices itself (it dies; the target must be on their tile then) to strip every counter from it: a being's +1/+1 counters, a planeswalker's loyalty (it leaves the plane), an item's counters. Only when, in character, it is worth her life. Targets: ${input.hex!.targets.map((x) => `"${x.id}" (${x.text})`).join(', ')}.`
       : ''
   }${
     kinds.includes('set_trap')
