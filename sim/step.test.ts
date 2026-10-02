@@ -7545,6 +7545,18 @@ test('the real Ondu Cleric hires out at Kabira Crossroads for 20 coin; as it joi
   assert.equal(lifeOf(m), life + 3);
 });
 
+test('the real Oran-Rief Survivalist camps deep in the west of Oran-Rief: an Ally for 20 coin, a +1/+1 counter as each Ally joins', () => {
+  const world = loadWorld();
+  const state = newState(world, { seed: 1, mode: 'observer' });
+  const s = state.actors['chr-oran-rief-survivalist'];
+  assert.equal(s?.region, 'loc-oran-rief');
+  const def = npcDef(state, world, s.id)!;
+  assert.ok(def.ally && def.hireable);
+  assert.equal(hirePrice(def), 20);
+  bindRetainer(state, world, s, state.actors['chr-reckless-scholar'], state.minutes, '고용');
+  assert.equal(s.plusCounters, 1);
+});
+
 test('the real Highland Berserker hires out on the Teeth of Akoum for 20 coin; joining a party, its Allies strike first today', () => {
   const world = loadWorld();
   const state = newState(world, { seed: 1, mode: 'observer' });

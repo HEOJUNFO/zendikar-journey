@@ -8,6 +8,7 @@ status: canon
 sources: [ZEN-163]
 tags: [영양, 짐승, 녹색]
 links:
+  - { to: chr-oran-rief-survivalist, rel: 플레이버의 욘 바스렐 }
   - { to: law-mana-colors, rel: 녹색의 존재 }
   - { to: loc-oran-rief, rel: 풀을 뜯는 숲 }
 sim:
@@ -39,4 +40,4 @@ sim:
 
 ## 미정/질문
 
-- 욘 바스렐(오란리프 생존꾼): 그 카드가 나오면.
+- 욘 바스렐(오란리프 생존꾼): ZEN-174 `chr-oran-rief-survivalist` 로 반영 (2026-10-02).

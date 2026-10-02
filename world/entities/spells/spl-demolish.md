@@ -8,6 +8,7 @@ status: canon
 sources: [ZEN-121]
 tags: [주문, 적색, 집중마법, 파괴, 대지 파괴]
 links:
+  - { to: chr-oran-rief-survivalist, rel: 플레이버의 욘 바스렐 }
   - { to: law-mana-colors, rel: 적색 마법 }
   - { to: loc-oran-rief, rel: 배우는 곳 }
   - { to: law-permanents, rel: 마법물체와 대지를 부숨 }
@@ -39,4 +40,4 @@ sim:
 
 ## 미정/질문
 
-- 욘 바스렐 자신: 그 카드가 나오면.
+- 욘 바스렐 자신: ZEN-174 `chr-oran-rief-survivalist` 로 반영 (2026-10-02).
