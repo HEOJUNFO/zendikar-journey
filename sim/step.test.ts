@@ -7056,3 +7056,15 @@ test('the real Hedron Scrabbler crawls the hedron fields of Akoum: a colorless a
   bondLand(state, world, h, state.minutes, 'loc-akoum');
   assert.deepEqual(ptOf(h), [2, 2]);
 });
+
+test('the real Highland Berserker hires out on the Teeth of Akoum for 20 coin; joining a party, its Allies strike first today', () => {
+  const world = loadWorld();
+  const state = newState(world, { seed: 1, mode: 'observer' });
+  const b = state.actors['chr-highland-berserker'];
+  assert.equal(b?.region, 'loc-teeth-of-akoum');
+  const def = npcDef(state, world, b.id)!;
+  assert.ok(def.ally && def.hireable);
+  assert.equal(hirePrice(def), 20);
+  bindRetainer(state, world, b, state.actors['chr-reckless-scholar'], state.minutes, '고용');
+  assert.ok(hasAbility(b, 'first_strike', state.minutes));
+});

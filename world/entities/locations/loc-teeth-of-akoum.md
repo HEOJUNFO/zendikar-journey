@@ -5,9 +5,10 @@ name: 아쿰의 이빨
 name_en: Teeth of Akoum
 summary: 아쿰 북쪽을 가로지르는 눈 덮인 산맥. 용이 사냥하고 카르간 부족과 고블린 둥지가 산비탈에 매달리며, 그 아래 깊은 곳에 우긴의 눈이 잠들어 있다
 status: canon
-sources: [ZEN-120, ZEN-131, ZEN-152, ZEN-118, ZEN-148, ZEN-127, ZEN-136, ZEN-138, ZEN-198, ZEN-129]
+sources: [ZEN-120, ZEN-131, ZEN-152, ZEN-118, ZEN-148, ZEN-127, ZEN-136, ZEN-138, ZEN-198, ZEN-129, ZEN-132]
 tags: [산맥, 산, 용, 고블린, 적색]
 links:
+  - { to: chr-highland-berserker, rel: 고원의 광전사 용병 }
   - { to: spl-goblin-war-paint, rel: 배우는 주문 (고블린 전투 물감) }
   - { to: itm-carnage-altar, rel: 북서쪽 폐허의 제단 }
   - { to: spl-magma-rift, rel: 배우는 주문 (용암 균열) }
@@ -43,6 +44,8 @@ map: { in: loc-akoum, terrain: rocky, pos: [0, -0.72], tiles: 40 }   # 기본 �
 - 북서쪽 무너진 석조 계단 꼭대기에 살육의 제단(`itm-carnage-altar`, ZEN-198)이 서 있다 ([결정] 2026-10-01). 길들인 이가 그 앞에서 {3}을 치르고 권속 하나를 바치면 숨은 것 하나를 알게 된다.
 
 - 고블린 전투 물감(`spl-goblin-war-paint`, ZEN-129)을 배울 수 있다 (4시간, [결정] 2026-10-01): +2/+2와 속공을 주는 고블린 둥지의 오라.
+
+- 고원의 광전사(`chr-highland-berserker`, ZEN-132)가 북동쪽 눈 덮인 고원에서 일거리를 찾는다 ([결정] 2026-10-01). 20코인의 열여섯 번째 동료로, 동료가 들 때마다 무리 모두에게 선제공격을 준다.
 
 ## 미정/질문
 
