@@ -45,7 +45,7 @@ import { EQUIP_HOURS, equipBlocked, equipItem, equipmentOf, syncEquipment } from
 import { nowhereHour } from './nowhere.ts';
 import { reviveHour } from './revive.ts';
 import { punishHour } from './punish.ts';
-import { bloodchiefHour } from './bloodchief.ts';
+import { bloodchiefHour, gravelordHour, takeDeaths } from './bloodchief.ts';
 import { bloodchiefDrain, upkeepBloodchief } from './bloodascension.ts';
 import { tricksterHour } from './trickster.ts';
 import { SET_TRAP_HOURS, setTrap, setTrapBlocked } from './snare.ts';
@@ -82,7 +82,9 @@ export function step(state: State, placed: World) {
   nowhereHour(state, t);
   reviveHour(state, placed, t);
   punishHour(state, placed, t);
-  bloodchiefHour(state, placed, t);
+  const deaths = takeDeaths(state);
+  bloodchiefHour(state, placed, t, deaths);
+  gravelordHour(state, placed, t, deaths);
   bloodchiefDrain(state, placed, t);
   tricksterHour(state, placed, t);
   secretsHour(state, placed, t);

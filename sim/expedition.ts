@@ -38,7 +38,7 @@ export function expeditionBlocked(state: State, world: World, a: Actor): string 
   if (!x) return '마칠 원정이 없다.';
   const need = powerOf(x)!.counters;
   const have = state.items![x.id].counters;
-  const how = x.effects.some((e) => e.type === 'quest_combat') ? '부리는 생물이 생물에게 싸움 피해를 줄 때마다' : '땅과 유대를 맺을 때마다';
+  const how = x.effects.some((e) => e.type === 'quest_combat') ? '부리는 생물이 생물에게 싸움 피해를 줄 때마다' : x.effects.some((e) => e.type === 'death_quest') ? '내가 선 땅에서 누가 죽을 때마다' : '땅과 유대를 맺을 때마다';
   if (have < need) return `${x.name}의 탐색 카운터가 모자라다 (${have}/${need}, ${how} 하나).`;
   return null;
 }
@@ -71,7 +71,7 @@ export function finishExpedition(state: State, world: World, a: Actor, t: number
     const [b] = spawnWild(state, world, e.token.creature, [e.token.pt[0], e.token.pt[1]], 1, a.region, e.token.colors, a.tile, e.token.abilities);
     b.master = a.id;
     if (e.token.until_midnight) state.tokens![b.id].vanishAt = untapTime(t);
-    addLog(state, { kind: 'event', text: `${x.name}: 성소의 불길에서 ${josa(shortName(b.name), '이', '가')} 솟구쳐 ${shortName(a.name)} 곁에 섰다 (${e.token.pt.join('/')}${e.token.abilities.length ? `, ${e.token.abilities.map((ab) => ABILITY_LABELS[ab]).join('·')}` : ''}${e.token.until_midnight ? ', 자정에 사라진다' : ''}).`, regions: [a.region], actors: [a.id, b.id], t });
+    addLog(state, { kind: 'event', text: `${x.name}: ${josa(shortName(b.name), '이', '가')} 솟구쳐 ${shortName(a.name)} 곁에 섰다 (${e.token.pt.join('/')}${e.token.abilities.length ? `, ${e.token.abilities.map((ab) => ABILITY_LABELS[ab]).join('·')}` : ''}${e.token.until_midnight ? ', 자정에 사라진다' : ''}).`, regions: [a.region], actors: [a.id, b.id], t });
   }
   // Quest for the Gemblades: +1/+1 counters on one there (their pick after the hour; one must).
   const candidates = e.plus_counters ? here(state, a).filter((y) => y.loyalty === undefined).map((y) => y.id) : [];

@@ -63,7 +63,7 @@ import { applyFlood } from './flood.ts';
 import { setTrapBlocked } from './snare.ts';
 import { hex, hexBlocked, hexNear } from './hexmage.ts';
 import { applyInstigate } from './instigator.ts';
-import { bloodchiefHour } from './bloodchief.ts';
+import { bloodchiefHour, gravelordHour, takeDeaths } from './bloodchief.ts';
 import { bloodchiefDrain, upkeepBloodchief } from './bloodascension.ts';
 import { applyBrave } from './allies.ts';
 import { tricksterHour } from './trickster.ts';
@@ -7479,6 +7479,32 @@ test('the real Quest for Pure Flame stands in Valakut: four counters to double t
   const x = loadWorld().items.find((i) => i.id === 'itm-quest-for-pure-flame')!;
   assert.equal(x.at, 'loc-valakut');
   assert.deepEqual(x.effects, [{ type: 'damage_quest', counters: 4 }]);
+});
+
+test('Quest for the Gravelord: each death in its owner\'s land a counter (not elsewhere); with three the player ends it and a 5/5 Zombie Giant serves them', async () => {
+  const item: RawEntity = { id: 'itm-qg', kind: 'item', name: '무덤군주 탐색', status: 'canon', sim: { card_type: 'enchantment', cost: '{0}', at: 'loc-a', effects: [{ type: 'death_quest' }, { type: 'expedition', counters: 3, token: { creature: 'cre-zg', pt: [5, 5], colors: ['B'] } }] } };
+  const world = fixture([item, altarItem, demolishSpell, lore('cre-zg', 'creature'), npc('chr-d', npcSim('loc-a')), npc('chr-e', npcSim('loc-a')), npc('chr-far', npcSim('loc-b'))]);
+  const state = character(world, 'loc-a');
+  const p = state.actors[PLAYER_ID];
+  state.items = { 'itm-qg': { name: '무덤군주 탐색', owner: p.id, counters: 0 } };
+  for (const id of ['chr-d', 'chr-e', 'chr-far']) die(state, state.actors[id], state.minutes, '시험');
+  const deaths = takeDeaths(state);
+  gravelordHour(state, world, state.minutes, deaths);
+  assert.equal(state.items['itm-qg'].counters, 2);
+  assert.ok((await act(state, world, { type: 'expedition' })).error?.includes('죽을 때마다'));
+  state.items['itm-qg'].counters = 3;
+  await act(state, world, { type: 'expedition' });
+  assert.ok(state.items['itm-qg'].gone);
+  const giant = Object.values(state.actors).find((x) => x.master === p.id && !x.dead);
+  assert.ok(giant);
+  assert.deepEqual(ptOf(giant!), [5, 5]);
+});
+
+test('the real Quest for the Gravelord stands in the Agadeem crypt: three deaths for a 5/5 Zombie Giant', () => {
+  const x = loadWorld().items.find((i) => i.id === 'itm-quest-for-the-gravelord')!;
+  assert.equal(x.at, 'loc-agadeem-crypt');
+  assert.ok(x.effects.some((e) => e.type === 'death_quest'));
+  assert.ok(x.effects.some((e) => e.type === 'expedition' && e.counters === 3 && e.token?.creature === 'cre-zombie-giant'));
 });
 
 test('Khalni Heart Expedition: with three counters the player ends it; they pick basic lands to bond with from afar, tapped (no mana from them today)', async () => {

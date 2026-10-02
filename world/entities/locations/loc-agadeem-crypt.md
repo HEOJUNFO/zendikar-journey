@@ -5,9 +5,10 @@ name: 아게딤의 묘실
 name_en: Crypt of Agadeem
 summary: 아게딤 섬의 땅 밑에 잠든 고대 도시 아게딤의 묘역. 부서진 석조 기둥 사이로 보랏빛이 흘러넘치고, 섬기던 이를 잃은 자의 망자들이 이곳에서 힘이 된다
 status: canon
-sources: [ZEN-212, ZEN-216, ZEN-86, ZEN-85, ZEN-109]
+sources: [ZEN-212, ZEN-216, ZEN-86, ZEN-85, ZEN-109, ZEN-108]
 tags: [폐허, 묘역, 지하, 흑색]
 links:
+  - { to: itm-quest-for-the-gravelord, rel: 묘지의 무덤군주 탐색 }
   - { to: spl-desecrated-earth, rel: 배우는 주문 }
   - { to: cre-crypt-ripper, rel: 깃든 그늘 }
   - { to: evt-ravenous-trap, rel: 숨은 함정 }
@@ -38,6 +39,7 @@ sim:
 
 - 그늘 묘실 찢개(`cre-crypt-ripper`, ZEN-85)가 깃들어 있다 ([결정] 2026-10-01). 산 자를 덮치고, 싸울 때 흑 마나를 부어 커진다.
 - 묘실 깊은 곳 한 칸에 탐식의 함정(`evt-ravenous-trap`, ZEN-109)이 숨어 있다 ([결정] 2026-10-01). 그날 무덤에 셋 이상(잊은 주문, 섬기다 죽은 권속)을 보낸 이가 들어서면 그의 무덤을 모두 삼킨다.
+- 남서쪽 번개 치는 묘지에 무덤군주 탐색(`itm-quest-for-the-gravelord`, ZEN-108)이 서 있다 ([결정] 2026-10-02): 주인이 선 땅에서 죽음이 셋이면 5/5 좀비 거인을 일으킨다.
 
 ## 미정/질문
 

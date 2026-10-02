@@ -8,6 +8,7 @@ status: canon
 sources: [ZEN-155]
 tags: [부여마법, 원정, 적색, 탐색, 상륙, 정령]
 links:
+  - { to: itm-quest-for-the-gravelord, rel: 같은 마치는 법 (토큰) }
   - { to: law-permanents, rel: 부여마법 }
   - { to: law-mana-colors, rel: 적색 }
   - { to: loc-shatterskull-pass, rel: 서 있는 곳 (검은 돌 산맥 높은 곳의 성소) }

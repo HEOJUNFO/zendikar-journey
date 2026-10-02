@@ -922,6 +922,9 @@ export const ItemSimSchema = z.strictObject({
         // "Whenever a source you control deals damage to an opponent, a quest counter; remove N and
         // sacrifice: your sources deal double damage this turn" (Quest for Pure Flame): sim/pureflame.ts.
         z.strictObject({ type: z.literal('damage_quest'), counters: z.number().int().positive() }),
+        // "Whenever a creature dies, you may put a quest counter on this" (Quest for the Gravelord):
+        // deaths in its owner's land (sim/bloodchief.ts `gravelordHour`); ended as an expedition.
+        z.strictObject({ type: z.literal('death_quest') }),
         z.strictObject({ type: z.literal('sacrifice_draw'), cost: CostSchema, draws: z.number().int().positive().default(1) }),
         // "When this enters, return N lands you control to their owner's hand": when tamed, the
         // tamer's bonds with N lands break (they may bond with them again).
