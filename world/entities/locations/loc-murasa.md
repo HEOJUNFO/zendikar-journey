@@ -5,9 +5,10 @@ name: 무라사
 name_en: Murasa
 summary: 타짐 남쪽 먼 바다의 거목 대륙. 뒤틀린 거목이 벼랑 끝까지 뻗고, 깊은 협곡 사이로 잿빛 호수가 고여 있다
 status: canon
-sources: [ZEN-217, ZEN-220, ZEN-139, ZEN-157, ZEN-134, ZEN-53, ZEN-128]
+sources: [ZEN-217, ZEN-220, ZEN-139, ZEN-157, ZEN-134, ZEN-53, ZEN-128, ZEN-182]
 tags: [대륙, 숲, 거목, 협곡, 녹색]
 links:
+  - { to: cre-scute-mob, rel: 풀밭 언덕의 딱정벌레 떼 }
   - { to: chr-goblin-shortcutter, rel: 남서쪽 고개의 지름길꾼 }
   - { to: loc-kazuul-cliffs, rel: 안의 구역 }
   - { to: chr-murasa-pyromancer, rel: 떠도는 용병 }
@@ -39,6 +40,7 @@ map: { x: 1350, y: 1800, terrain: forest, size: continent, tiles: 140 }   # [결
 - 무라사로 드는 길목의 절벽 카주울의 절벽(`loc-kazuul-cliffs`, 기본 산)이 안의 구역이다. 미노타우로스 용병 카주울 전쟁군주(`chr-kazuul-warlord`, ZEN-134)가 산다 ([결정] 2026-09-30).
 
 - 고블린 지름길꾼(`chr-goblin-shortcutter`, ZEN-128)이 남서쪽 바위 고개를 내달린다 ([결정] 2026-10-01). 들어서는 곳마다 누군가를 휘저어 놓아 그날 누구도 막아 주지 못하게 하는 말하는 고블린이다.
+- 북동쪽 풀밭 언덕에 딱정벌레 떼(`cre-scute-mob`, ZEN-182)가 산다 ([결정] 2026-10-02): 땅 다섯 이상을 쥔 이를 따르면 밤마다 +1/+1 카운터 넷.
 
 ## 미정/질문
 

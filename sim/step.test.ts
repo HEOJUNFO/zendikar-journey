@@ -57,6 +57,7 @@ import { chartBlocked } from './chart.ts';
 import { applyMill } from './mill.ts';
 import { secretsHour } from './secrets.ts';
 import { relicHour } from './relic.ts';
+import { upkeepScute } from './scute.ts';
 import { ascendBlocked, upkeepUnhurt } from './luminarch.ts';
 import { reviveHour } from './revive.ts';
 import { punishHour } from './punish.ts';
@@ -7360,6 +7361,32 @@ test('the real Kraken Hatchling crawls on the Bojuka Bay shore: a 0/4 beast, not
   assert.deepEqual(ptOf(k), [0, 4]);
   assert.ok(!hasAbility(k, 'aquatic', state.minutes));
   assert.equal(npcDef(state, world, k.id)?.beast, true);
+});
+
+test('Scute Mob: at 00:00, four +1/+1 counters if whoever controls it holds five lands or more (not broken); otherwise nothing', () => {
+  const world = fixture([npc('cre-s', { ...npcSim('loc-a', 'work', [1, 1]), needs: ['energy'], beast: true, upkeep_grow: { lands: 5, counters: 4 } }), npc('chr-m', npcSim('loc-a'))]);
+  const state = newState(world, { seed: 1, mode: 'observer' });
+  const [sc, m] = ['cre-s', 'chr-m'].map((id) => state.actors[id]);
+  const lands = world.regions.filter((r) => !r.notLand && !r.oneLandWith).map((r) => r.id);
+  assert.ok(lands.length >= 5);
+  sc.master = m.id;
+  m.bonds = lands.slice(0, 4);
+  upkeepScute(state, world, state.minutes);
+  assert.deepEqual(ptOf(sc), [1, 1]);
+  m.bonds = lands.slice(0, 5);
+  upkeepScute(state, world, state.minutes);
+  assert.deepEqual(ptOf(sc), [5, 5]);
+  state.regions[lands[0]] = { ...(state.regions[lands[0]] ?? {}), destroyed: { at: state.minutes, source: '시험', until: state.minutes + 999 } };
+  upkeepScute(state, world, state.minutes);
+  assert.deepEqual(ptOf(sc), [5, 5]);
+});
+
+test('the real Scute Mob swarms the Murasa hills: a beast that grows on five lands', () => {
+  const world = loadWorld();
+  const state = newState(world, { seed: 1, mode: 'observer' });
+  const sc = state.actors['cre-scute-mob'];
+  assert.equal(sc?.region, 'loc-murasa');
+  assert.deepEqual(npcDef(state, world, sc.id)?.upkeepGrow, { lands: 5, counters: 4 });
 });
 
 test('the real Explorer\'s Scope hangs at Kabira Crossroads: equip {1}, it looks ahead when its bearer attacks', () => {

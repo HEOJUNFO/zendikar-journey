@@ -486,6 +486,9 @@ export const CharacterSimSchema = z.strictObject({
   haste_low_life: z.number().int().positive().optional(),
   // "Landfall — target player mills N cards" (Hedron Crab): sim/mill.ts.
   landfall_mill: z.number().int().positive().optional(),
+  // "At the beginning of your upkeep, if you control N or more lands, put M +1/+1 counters on this"
+  // (Scute Mob): sim/scute.ts.
+  upkeep_grow: z.strictObject({ lands: z.number().int().positive(), counters: z.number().int().positive() }).optional(),
   // "As long as an opponent has N or less life, this gets +P/+T and has <abilities>" (Guul Draz
   // Vampire): the same scent, sim/bloodghast.ts.
   low_life_boost: z.strictObject({ at: z.number().int().positive(), pt: z.tuple([z.number().int().min(0), z.number().int().min(0)]), abilities: z.array(z.enum(ABILITIES)).default([]) }).optional(),
@@ -1153,6 +1156,7 @@ export type NpcDef = {
   drainOnJoin?: number;
   hasteLowLife?: number;
   landfallMill?: number;
+  upkeepGrow?: { lands: number; counters: number };
   lowLifeBoost?: { at: number; pt: [number, number]; abilities: Ability[] };
   tapDrawAllies?: boolean;
   types?: CreatureType[];
@@ -1373,7 +1377,7 @@ export function buildWorld(entities: RawEntity[]): { world: World; errors: strin
         err(e.id, `sim 오류: ${issues(sim.error)}`);
         continue;
       }
-      const { knows_colors, activated, wins_at_life, extra_combat, pump, empty_hand_pump, attack_pump, discard_on_hit, landfall_token, landfall_seize, landfall_lose, landfall_grant, landfall_life, landfall_mana, revives_after, regenerate, sac_uncounter, instigate, shuffle_counter, attack_gift, landfall_drain, landfall_lure, landfall_return, drain_on_join, haste_low_life, low_life_boost, landfall_mill, enter_destroy, enter_drain, enter_draw, enter_search, enter_shatter, enter_exile, enter_tap, enter_damage, enter_grant, enter_equip, enter_return, enter_tap_many, enter_pump, enter_rally, enter_sacrifice, enter_no_block, enter_reveal, upkeep_return_land, extra_lands, reveal_top, tap_foe, tap_draw_allies, engulf, tap_mana, upkeep_burn, counter_tokens, follows_only, cant_block_unless, tap_shield, tap_grant, tap_loot, tap_search, equip_anthem, equipped_grant, hit_sacrifice_land, name, home_pos, ...rest } = sim.data;
+      const { knows_colors, activated, wins_at_life, extra_combat, pump, empty_hand_pump, attack_pump, discard_on_hit, landfall_token, landfall_seize, landfall_lose, landfall_grant, landfall_life, landfall_mana, revives_after, regenerate, sac_uncounter, instigate, shuffle_counter, attack_gift, landfall_drain, landfall_lure, landfall_return, drain_on_join, haste_low_life, low_life_boost, landfall_mill, upkeep_grow, enter_destroy, enter_drain, enter_draw, enter_search, enter_shatter, enter_exile, enter_tap, enter_damage, enter_grant, enter_equip, enter_return, enter_tap_many, enter_pump, enter_rally, enter_sacrifice, enter_no_block, enter_reveal, upkeep_return_land, extra_lands, reveal_top, tap_foe, tap_draw_allies, engulf, tap_mana, upkeep_burn, counter_tokens, follows_only, cant_block_unless, tap_shield, tap_grant, tap_loot, tap_search, equip_anthem, equipped_grant, hit_sacrifice_land, name, home_pos, ...rest } = sim.data;
 
       world.npcs.push({
         id: e.id,
@@ -1438,6 +1442,7 @@ export function buildWorld(entities: RawEntity[]): { world: World; errors: strin
         ...(drain_on_join ? { drainOnJoin: drain_on_join } : {}),
         ...(haste_low_life ? { hasteLowLife: haste_low_life } : {}),
         ...(landfall_mill ? { landfallMill: landfall_mill } : {}),
+        ...(upkeep_grow ? { upkeepGrow: upkeep_grow } : {}),
         ...(low_life_boost ? { lowLifeBoost: low_life_boost } : {}),
         ...(tap_draw_allies ? { tapDrawAllies: true } : {}),
         ...(extra_combat ? { extraCombat: { cost: parseManaCost(extra_combat.cost)!, costText: extra_combat.cost } } : {}),

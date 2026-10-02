@@ -5,9 +5,10 @@ name: 고블린 지름길꾼
 name_en: Goblin Shortcutter
 summary: 무라사의 원정대에 붙어 지름길을 안내하는 고블린 정찰병. 짐을 주렁주렁 매달고 내달리며, 들어서는 곳마다 누군가를 휘저어 놓는다
 status: canon
-sources: [ZEN-128]
+sources: [ZEN-128, ZEN-182]
 tags: [고블린, 정찰병, 적색]
 links:
+  - { to: cre-scute-mob, rel: 생존 규칙 781의 딱정벌레 }
   - { to: law-mana-colors, rel: 적색의 존재 }
   - { to: loc-murasa, rel: 지름길을 아는 대륙 }
 sim:
