@@ -54,6 +54,13 @@ export function anthemHour(state: State, world: World) {
       want.set(y.id, { pt: [w.pt[0] + ea.pt[0] * n, w.pt[1] + ea.pt[1] * n], abilities: w.abilities });
     }
   }
+  // "As long as this is equipped, it has double strike" (Kor Duelist): while it bears any.
+  for (const x of alive(state)) {
+    const eg = npcDef(state, world, x.id)?.equippedGrant;
+    if (!eg?.length || !Object.values(state.items ?? {}).some((s) => s.bearer === x.id && !s.gone)) continue;
+    const w = want.get(x.id) ?? { pt: [0, 0], abilities: [] };
+    want.set(x.id, { pt: w.pt, abilities: [...new Set([...w.abilities, ...eg])] });
+  }
   for (const a of alive(state)) {
     const w = want.get(a.id);
     if (!w && !a.anthem) continue;

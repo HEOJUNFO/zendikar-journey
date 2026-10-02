@@ -7051,13 +7051,28 @@ test('Armament Master: each Equipment on it gives the other Kor its controller h
   assert.deepEqual(ptOf(k), [1, 1]);
 });
 
+test('Kor Duelist: double strike while it bears any Equipment, gone at the next hour once taken off', () => {
+  const world = fixture([hook, npc('chr-d', { ...npcSim('loc-a', 'work', [1, 1]), types: ['kor'], equipped_grant: ['double_strike'] }), npc('chr-m', npcSim('loc-a'))]);
+  const state = newState(world, { seed: 1, mode: 'observer' });
+  const d = state.actors['chr-d'];
+  d.master = 'chr-m';
+  anthemHour(state, world);
+  assert.ok(!hasAbility(d, 'double_strike', state.minutes));
+  state.items = { 'itm-h': { name: '갈고리', owner: 'chr-m', counters: 0, carried: true, bearer: 'chr-d' } };
+  anthemHour(state, world);
+  assert.ok(hasAbility(d, 'double_strike', state.minutes));
+  delete state.items['itm-h'].bearer;
+  anthemHour(state, world);
+  assert.ok(!hasAbility(d, 'double_strike', state.minutes));
+});
+
 test('the real Armament Master keeps the Kor camp in Makindi; the world\'s Kor are Kor now, the Pledge\'s soldiers too', () => {
   const world = loadWorld();
   const state = newState(world, { seed: 1, mode: 'observer' });
   const a = state.actors['chr-armament-master'];
   assert.equal(a?.region, 'loc-makindi');
   assert.deepEqual(npcDef(state, world, a.id)?.equipAnthem, { kind: 'kor', pt: [2, 2] });
-  for (const id of ['chr-devout-lightcaster', 'chr-kor-cartographer', 'chr-kor-hookmaster', 'chr-makindi-shieldmate', 'chr-kor-sanctifiers', 'chr-armament-master'])
+  for (const id of ['chr-kor-duelist', 'chr-devout-lightcaster', 'chr-kor-cartographer', 'chr-kor-hookmaster', 'chr-makindi-shieldmate', 'chr-kor-sanctifiers', 'chr-armament-master'])
     assert.ok(npcDef(state, world, id)?.types?.includes('kor'), id);
   const pledge = world.spells.find((s) => s.id === 'spl-conquerors-pledge')!.effects[0];
   assert.ok(pledge.type === 'create_retainers' && pledge.types?.includes('kor'));

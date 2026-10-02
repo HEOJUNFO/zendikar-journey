@@ -373,6 +373,9 @@ export const CharacterSimSchema = z.strictObject({
   // "Other <type> creatures you control get +P/+T for each Equipment attached to this" (Armament
   // Master: Kor, +2/+2): recounted every hour (sim/monument.ts `anthemHour`).
   equip_anthem: z.strictObject({ kind: z.enum(CREATURE_TYPES), pt: PtBonusSchema }).optional(),
+  // "As long as this is equipped, it has <abilities>" (Kor Duelist: double strike): sim/monument.ts
+  // `anthemHour`, recounted every hour.
+  equipped_grant: z.array(z.enum(ABILITIES)).default([]),
   // "Whenever this creature deals damage to an opponent, sacrifice a land" (Ruinous Minotaur): each
   // exchange it deals someone damage in, whoever controls it gives up a land they hold (sim/harrow.ts).
   hit_sacrifice_land: z.boolean().default(false),
@@ -1092,6 +1095,7 @@ export type NpcDef = {
   tapLoot?: boolean;
   tapSearch?: { cost: ManaCost; costText: string; types: LandType[] };
   equipAnthem?: { kind: CreatureType; pt: [number, number] };
+  equippedGrant?: Ability[];
   hitSacrificeLand?: boolean;
   cantBlockUnless?: string;
   upkeepReturnLand?: boolean;
@@ -1351,7 +1355,7 @@ export function buildWorld(entities: RawEntity[]): { world: World; errors: strin
         err(e.id, `sim 오류: ${issues(sim.error)}`);
         continue;
       }
-      const { knows_colors, activated, wins_at_life, extra_combat, pump, empty_hand_pump, attack_pump, discard_on_hit, landfall_token, landfall_seize, landfall_lose, landfall_grant, landfall_life, landfall_mana, revives_after, regenerate, sac_uncounter, instigate, shuffle_counter, attack_gift, landfall_drain, landfall_lure, landfall_return, drain_on_join, haste_low_life, low_life_boost, landfall_mill, enter_destroy, enter_drain, enter_draw, enter_search, enter_shatter, enter_exile, enter_tap, enter_damage, enter_grant, enter_equip, enter_return, enter_tap_many, enter_pump, enter_rally, enter_sacrifice, enter_no_block, enter_reveal, upkeep_return_land, extra_lands, reveal_top, tap_foe, tap_draw_allies, engulf, tap_mana, upkeep_burn, counter_tokens, follows_only, cant_block_unless, tap_shield, tap_grant, tap_loot, tap_search, equip_anthem, hit_sacrifice_land, name, home_pos, ...rest } = sim.data;
+      const { knows_colors, activated, wins_at_life, extra_combat, pump, empty_hand_pump, attack_pump, discard_on_hit, landfall_token, landfall_seize, landfall_lose, landfall_grant, landfall_life, landfall_mana, revives_after, regenerate, sac_uncounter, instigate, shuffle_counter, attack_gift, landfall_drain, landfall_lure, landfall_return, drain_on_join, haste_low_life, low_life_boost, landfall_mill, enter_destroy, enter_drain, enter_draw, enter_search, enter_shatter, enter_exile, enter_tap, enter_damage, enter_grant, enter_equip, enter_return, enter_tap_many, enter_pump, enter_rally, enter_sacrifice, enter_no_block, enter_reveal, upkeep_return_land, extra_lands, reveal_top, tap_foe, tap_draw_allies, engulf, tap_mana, upkeep_burn, counter_tokens, follows_only, cant_block_unless, tap_shield, tap_grant, tap_loot, tap_search, equip_anthem, equipped_grant, hit_sacrifice_land, name, home_pos, ...rest } = sim.data;
 
       world.npcs.push({
         id: e.id,
@@ -1401,6 +1405,7 @@ export function buildWorld(entities: RawEntity[]): { world: World; errors: strin
         ...(tap_loot ? { tapLoot: true } : {}),
         ...(tap_search ? { tapSearch: { cost: parseManaCost(tap_search.cost)!, costText: tap_search.cost, types: tap_search.types } } : {}),
         ...(equip_anthem ? { equipAnthem: equip_anthem } : {}),
+        ...(equipped_grant.length ? { equippedGrant: equipped_grant } : {}),
         ...(hit_sacrifice_land ? { hitSacrificeLand: true } : {}),
         ...(cant_block_unless ? { cantBlockUnless: cant_block_unless } : {}),
         ...(counter_tokens ? { counterTokens: { creature: counter_tokens.creature, pt: [...counter_tokens.pt], colors: [...counter_tokens.colors] } } : {}),
