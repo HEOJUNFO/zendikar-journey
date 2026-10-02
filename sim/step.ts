@@ -30,7 +30,7 @@ import { markSealed } from './seal.ts';
 import { handSize } from './knowledge.ts';
 import { recall, RECALL_HOURS, recallBlocked } from './loremaster.ts';
 import { TAP_HOURS, tapBlocked, useTap } from './tapper.ts';
-import { bloodHasteHour } from './bloodghast.ts';
+import { bloodHasteHour, upkeepBleed } from './bloodghast.ts';
 import { bloodSeekHour } from './seeker.ts';
 import { ALTAR_HOURS, altarBlocked, altarOf, sacrificeAtAltar } from './altar.ts';
 import { EXPEDITION_HOURS, expeditionBlocked, finishExpedition } from './expedition.ts';
@@ -171,6 +171,7 @@ function startDay(state: State, world: World, t: number) {
     upkeepBlaze(state, world, t);
     upkeepScorch(state, world, t);
     upkeepScute(state, world, t);
+    upkeepBleed(state, world, t);
     upkeepOracle(state, world, t);
     upkeepQuest(state, world, t);
     upkeepUnhurt(state, world, t);

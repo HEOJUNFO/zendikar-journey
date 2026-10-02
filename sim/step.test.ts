@@ -49,7 +49,7 @@ import type { GustEffect } from './owl.ts';
 import { applyTorch, enterDamage } from './torch.ts';
 import { applyToll, enterSacrifice } from './toll.ts';
 import { applyShortcut, enterNoBlock } from './shortcut.ts';
-import { bloodHasteHour } from './bloodghast.ts';
+import { bloodHasteHour, upkeepBleed } from './bloodghast.ts';
 import { bloodSeekHour } from './seeker.ts';
 import { altarBlocked } from './altar.ts';
 import { expeditionBlocked } from './expedition.ts';
@@ -7193,6 +7193,30 @@ test('the real Guul Draz Vampire lurks in Guul Draz: a vampire on the scent at 1
   assert.equal(v?.region, 'loc-guul-draz');
   assert.deepEqual(npcDef(state, world, v.id)?.lowLifeBoost, { at: 10, pt: [2, 1], abilities: ['intimidate'] });
   assert.equal(creatureOf(state, world, v.id), 'cre-vampire');
+});
+
+test('Vampire Lacerator: at 00:00 its controller loses 1 life, unless a foe of the day just ended was at 10 life or less', () => {
+  const world = fixture([vampireKind(), npc('chr-l', { ...npcSim('loc-a', 'work', [2, 2]), creature: 'cre-vampire', upkeep_bleed: { life: 1, unless_at: 10 } }), npc('chr-m', npcSim('loc-a')), npc('chr-x', npcSim('loc-a'))]);
+  const state = newState(world, { seed: 1, mode: 'observer' });
+  const [l, m, x] = ['chr-l', 'chr-m', 'chr-x'].map((id) => state.actors[id]);
+  l.master = m.id;
+  const midnight = untapTime(state.minutes);
+  upkeepBleed(state, world, midnight);
+  assert.equal(lifeOf(m), 19);
+  assert.equal(lifeOf(l), 20);
+  addFoe(m, 'chr-x', midnight + 60);
+  x.life = 9;
+  upkeepBleed(state, world, untapTime(midnight + 60));
+  assert.equal(lifeOf(m), 19);
+});
+
+test('the real Vampire Lacerator lives in Malakir: a vampire who bleeds without blood', () => {
+  const world = loadWorld();
+  const state = newState(world, { seed: 1, mode: 'observer' });
+  const l = state.actors['chr-vampire-lacerator'];
+  assert.equal(l?.region, 'loc-malakir');
+  assert.deepEqual(npcDef(state, world, l.id)?.upkeepBleed, { life: 1, unlessAt: 10 });
+  assert.equal(creatureOf(state, world, l.id), 'cre-vampire');
 });
 
 test('the real Bloodghast drifts in the Guul Draz mists: a vampire that can\'t block, swift on the scent, back from the grave on landfall', () => {

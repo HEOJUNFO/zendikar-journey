@@ -6,7 +6,7 @@
 // land (always: it only helps, [가공]), as Emeria brings one back.
 import { allyJoined } from './allies.ts';
 import { foesOf } from './combat.ts';
-import { lifeOf } from './life.ts';
+import { lifeOf, loseLife } from './life.ts';
 import { masterOf } from './retainers.ts';
 import { powersSealed } from './seal.ts';
 import { addLog, alive, npcDef, ptOf } from './state.ts';
@@ -68,5 +68,20 @@ export function landfallReturn(state: State, world: World, holder: Actor, t: num
     holder.fallen = holder.fallen!.filter((x) => x !== id);
     allyJoined(state, world, back, holder, t);
     addLog(state, { kind: 'event', text: `${shortName(holder.name)}이(가) 땅과 이어지자, 무덤에서 ${josa(shortName(back.name), '이', '가')} 피를 흩날리며 되살아나 그 곁에 섰다.`, regions: [holder.region], actors: [back.id, holder.id], t });
+  }
+}
+
+// Vampire Lacerator (`sim.upkeep_bleed`): "At the beginning of your upkeep, you lose 1 life unless
+// an opponent has 10 or less life." At 00:00 whoever controls it (its master, or itself) loses that
+// much, unless one of the foes of the day just ended was at that life or below then (the same
+// scent). One who lets it bleed long enough dies of it, no one's doing.
+export function upkeepBleed(state: State, world: World, t: number) {
+  for (const a of alive(state)) {
+    const b = npcDef(state, world, a.id)?.upkeepBleed;
+    if (!b || powersSealed(state, world, a, t)) continue;
+    if (onScent(state, a, b.unlessAt, t - 1)) continue;
+    const controller = masterOf(state, a) ?? a;
+    addLog(state, { kind: 'effect', text: `새벽 전, 피를 먹지 못한 ${josa(shortName(a.name), '이', '가')} 제 몸의 상처에서 피를 흘린다: ${josa(shortName(controller.name), '이', '가')} 생명 ${b.life}을 잃는다.`, regions: [a.region], actors: [a.id, controller.id], t });
+    loseLife(state, controller, b.life, t, `${shortName(a.name)}의 상처`);
   }
 }
