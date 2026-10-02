@@ -5,9 +5,10 @@ name: 하그라 저수조
 name_en: Hagra Cistern
 summary: 말라키르 곁의 거대한 분지. 무너진 옛 저수조가 썩은 늪이 되어 피라냐 들끓는 습지로 가득하고, 고인 물이 병든 초록빛으로 빛난다. 폐허에 오우거 부족이 산다
 status: canon
-sources: [ZEN-95, ZEN-94]
+sources: [ZEN-95, ZEN-94, ZEN-101]
 tags: [늪, 폐허, 오우거, 저수조, 흑색]
 links:
+  - { to: spl-marsh-casualties, rel: 가르치는 주문 (늪에 붙들림) }
   - { to: loc-guul-draz, rel: 바깥 지역 }
   - { to: loc-piranha-marsh, rel: 안의 구역 (피라냐 습지) }
   - { to: loc-malakir, rel: 곁의 흡혈귀 도시 }
@@ -29,6 +30,7 @@ map: { in: loc-guul-draz, terrain: swamp, pos: [0.2, 0.1], tiles: 30 }   # 기�
 - **늪**이다 ([결정] 2026-09-30: 처음엔 땅이 아닌 곳으로 두었다가 늪으로 치기로 함). 땅 카드는 없지만 기본 늪처럼: 유대를 맺으면 흑 마나 1을 내고, 늪 종류라 늪걷기의 늪이고 페치(습지 평원, 푸른 지하묘지)로 찾을 수 있다. 굴 드라즈, 게트 혈족의 영지에 이은 세 번째 늪이다.
 - 하그라 악마술사(`chr-hagra-diabolist`)가 폐허에 산다.
 - 하그라 악어(`cre-hagra-crocodile`, ZEN-94)가 동쪽 가장자리 저수조 폐허의 물가에 산다.
+- 늪지의 사상자(`spl-marsh-casualties`, ZEN-101)를 4시간 들여 배운다 ([결정] 2026-10-02): 곁의 한 사람과 그 권속들이 자정까지 -1/-1 (킥커 {3}이면 -2/-2), 약한 이는 늪에 삼켜진다.
 
 ## 미정/질문
 

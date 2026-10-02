@@ -7239,6 +7239,38 @@ test('Journey to Nowhere on the player: they can only wait, out of the world, wh
   assert.ok(p.nowhere);
 });
 
+const marshSpell: RawEntity = { id: 'spl-mc', kind: 'spell', name: '늪지의 사상자', status: 'canon', sim: { cost: '{0}', speed: 'sorcery', learn_at: 'loc-a', target: 'other_here', kicker: { mana: '{3}' }, effects: [{ type: 'weaken_controlled', pt: [-1, -1], kicked_pt: [-2, -2] }] } };
+
+test('Marsh Casualties: the target and their retainers there get -1/-1 until midnight (kicked -2/-2); one whose toughness falls to nothing or to their wounds dies, NPCs too', () => {
+  const world = fixture([marshSpell, npc('chr-c', { ...npcSim('loc-a'), mana: { B: 5 } }), npc('chr-m', npcSim('loc-a', 'work', [3, 3])), npc('chr-r', npcSim('loc-a', 'work', [2, 2])), npc('chr-w', npcSim('loc-a', 'work', [1, 1])), npc('chr-away', npcSim('loc-a', 'work', [1, 1]))]);
+  const state = newState(world, { seed: 1, mode: 'observer' });
+  const [c, m, r, w, away] = ['chr-c', 'chr-m', 'chr-r', 'chr-w', 'chr-away'].map((id) => state.actors[id]);
+  for (const a of [m, r, w]) a.tile = c.tile;
+  away.tile = tilesOf(world, 'loc-a').find((tl) => !sameTile(tl, c.tile)) ?? c.tile;
+  for (const x of [r, w, away]) x.master = m.id;
+  r.wounds = { day: gameDay(state.minutes), amount: 1 };
+  c.spells = ['spl-mc'];
+  castSpell(state, world, c, 'spl-mc', 'chr-m', false, state.minutes);
+  assert.deepEqual(ptOf(m), [2, 2]);
+  assert.ok(r.dead);
+  assert.ok(w.dead);
+  if (!sameTile(away.tile, c.tile)) assert.ok(!away.dead && ptOf(away)[1] === 1);
+  assert.ok(m.foes?.ids.includes('chr-c'));
+  expireGranted(state, untapTime(state.minutes));
+  assert.deepEqual(ptOf(m), [3, 3]);
+  delete c.used;
+  castSpell(state, world, c, 'spl-mc', 'chr-m', true, state.minutes);
+  assert.deepEqual(ptOf(m), [1, 1]);
+});
+
+test('the real Marsh Casualties is taught in Hagra: a black sorcery, kicker {3}', () => {
+  const world = loadWorld();
+  const s = world.spells.find((x) => x.id === 'spl-marsh-casualties')!;
+  assert.equal(s.learnAt, 'loc-hagra');
+  assert.equal(s.speed, 'sorcery');
+  assert.deepEqual(s.effects, [{ type: 'weaken_controlled', pt: [-1, -1], kicked_pt: [-2, -2] }]);
+});
+
 test('the real Journey to Nowhere is taught in Emeria: a white enchantment, a sorcery', () => {
   const world = loadWorld();
   const s = world.spells.find((x) => x.id === 'spl-journey-to-nowhere')!;

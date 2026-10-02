@@ -457,6 +457,8 @@ function spellEffectText(e: SpellEffect) {
       return '조종하는 것(자신·곁의 권속, 쥔 땅, 아이템, 건 오라) 하나를 되돌림';
     case 'return_nonland':
       return '같은 칸의 땅 아닌 것(존재, 아이템, 오라) 하나를 되돌림 (남의 존재는 내동댕이쳐져 1시간 기절)';
+    case 'weaken_controlled':
+      return `대상과 곁의 그 권속들 자정까지 ${e.pt.join('/')}${e.kicked_pt ? ` (킥커 시 ${e.kicked_pt.join('/')})` : ''}`;
     case 'exile_until':
       return '대상 생물을 어디에도 없는 곳으로 (시전자가 지닌 이 부여마법이 사라지면 돌아옴)';
     case 'draw':

@@ -778,6 +778,10 @@ export const SpellSimSchema = z.strictObject({
           abilities: z.array(z.enum(ABILITIES)).default([]),
           kicked: z.strictObject({ pt: PtBonusSchema, abilities: z.array(z.enum(ABILITIES)).default([]) }).optional(),
         }),
+        // "Creatures target player controls get -P/-T until end of turn; if kicked, -P'/-T'"
+        // (Marsh Casualties): the target and their retainers on the caster's tile (no
+        // planeswalker), until midnight; one whose toughness falls to 0 or below their wounds dies.
+        z.strictObject({ type: z.literal('weaken_controlled'), pt: z.tuple([z.number().int().max(0), z.number().int().max(0)]), kicked_pt: z.tuple([z.number().int().max(0), z.number().int().max(0)]).optional() }),
         z.strictObject({ type: z.literal('pump_own'), count: z.number().int().positive(), pt: PtBonusSchema, abilities: z.array(z.enum(ABILITIES)).default([]) }),
         // "Counter target creature spell" (Summoner's Bane): cast only in answer to someone
         // joining another on the caster's tile; the joining comes to nothing (sim/counter.ts).
