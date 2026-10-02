@@ -7706,6 +7706,31 @@ test('the real Mire Blight is taught in the Piranha Marsh: {B}, an aura that doo
   assert.deepEqual(s.effects.map((e) => e.type === 'aura' && e.doom_on_damage), [true]);
 });
 
+test('Primal Bellow: the one picked (the caster too) gets +1/+1 until midnight for each forest the caster holds; none, nothing', () => {
+  const bellow: RawEntity = { id: 'spl-pb', kind: 'spell', name: '태고의 포효', status: 'canon', sim: { cost: '{0}', speed: 'instant', learn_at: 'loc-a', target: 'any_here', effects: [{ type: 'pump_per_land', land: 'forest' }] } };
+  const world = fixture([bellow, npc('chr-c', npcSim('loc-a')), npc('chr-x', npcSim('loc-a', 'work', [1, 1]))]);
+  const state = newState(world, { seed: 1, mode: 'observer' });
+  const [c, x] = ['chr-c', 'chr-x'].map((id) => state.actors[id]);
+  x.tile = c.tile;
+  c.spells = ['spl-pb'];
+  const forests = world.regions.filter((r) => landTypes(r).includes('forest') && !r.oneLandWith).map((r) => r.id);
+  c.bonds = [];
+  castSpell(state, world, c, 'spl-pb', 'chr-x', false, state.minutes);
+  assert.deepEqual(ptOf(x), [1, 1]);
+  assert.ok(forests.length >= 1);
+  c.bonds = forests.slice(0, 2);
+  delete c.used;
+  castSpell(state, world, c, 'spl-pb', 'chr-x', false, state.minutes);
+  assert.deepEqual(ptOf(x), [1 + c.bonds.length, 1 + c.bonds.length]);
+  assert.ok(!x.foes?.ids.includes('chr-c'));
+});
+
+test('the real Primal Bellow is taught in Oran-Rief: {G}, an instant, +1/+1 for each forest', () => {
+  const s = loadWorld().spells.find((x) => x.id === 'spl-primal-bellow')!;
+  assert.equal(s.learnAt, 'loc-oran-rief');
+  assert.deepEqual(s.effects, [{ type: 'pump_per_land', land: 'forest' }]);
+});
+
 test('Nissa\'s Chosen: killed, it goes into no graveyard; seven days on it wakes at home, whole and serving no one; a token of it is simply gone', () => {
   const world = fixture([besideA, npc('chr-n', { ...npcSim('loc-az', 'work', [2, 3]), revives_after: 7 }), npc('chr-m', npcSim('loc-a')), npc('chr-k', npcSim('loc-a'))]);
   const state = newState(world, { seed: 1, mode: 'observer' });

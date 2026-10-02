@@ -729,6 +729,9 @@ export const SpellSimSchema = z.strictObject({
         // "Deals damage to any target equal to the number of <land type>s you control" (Spire
         // Barrage: Mountains): as many as the caster holds of that type, not destroyed.
         z.strictObject({ type: z.literal('damage_per_land'), land: z.enum(LAND_TYPES) }),
+        // "Target creature gets +1/+1 until end of turn for each <land type> you control" (Primal
+        // Bellow): the caster's lands of that type.
+        z.strictObject({ type: z.literal('pump_per_land'), land: z.enum(LAND_TYPES) }),
         // "Destroy target artifact or enchantment and up to one other target artifact or
         // enchantment" (Relic Crush): items standing where the caster is, auras on those there.
         // The caster picks after casting, the first surely, the rest if they will (sim/relics.ts).

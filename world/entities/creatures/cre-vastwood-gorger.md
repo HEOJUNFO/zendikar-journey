@@ -8,6 +8,7 @@ status: canon
 sources: [ZEN-192]
 tags: [짐승, 웜, 녹색]
 links:
+  - { to: spl-primal-bellow, rel: 같은 항해사 차디르의 말 }
   - { to: law-mana-colors, rel: 녹색의 존재 }
   - { to: loc-oran-rief, rel: 사는 곳 }
 sim:

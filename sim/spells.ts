@@ -99,7 +99,7 @@ export function castBlocked(state: State, world: World, a: Actor, spellId: strin
   if (need && castTargets(state, a, s).length < need) return `${josa(s.name, '은', '는')} 대상이 ${need === 2 ? '둘' : need}이 있어야 한다 (곁의 자신과 권속).`;
   const doom = destroyBarred(world, state, s, target);
   if (doom) return doom;
-  if (s.effects.some((e) => e.type === 'pump_target' || e.type === 'weaken_target' || (e.type === 'aura' && e.doom_on_damage)) && target.loyalty !== undefined) return `${josa(shortName(target.name), '은', '는')} 생물이 아니다 (플레인즈워커).`;
+  if (s.effects.some((e) => e.type === 'pump_target' || e.type === 'pump_per_land' || e.type === 'weaken_target' || (e.type === 'aura' && e.doom_on_damage)) && target.loyalty !== undefined) return `${josa(shortName(target.name), '은', '는')} 생물이 아니다 (플레인즈워커).`;
   if (s.effects.some((e) => e.type === 'copy_target') && !copyable(target)) return `${josa(shortName(target.name), '은', '는')} 생물이 아니다 (플레인즈워커). 복제할 수 없다.`;
   if (s.effects.some((e) => e.type === 'destroy_relics') && !relicsHere(state, world, a.region, a.tile).length) return '여기엔 부술 마법물체도 부여마법도 없다.';
   if (s.effects.some((e) => e.type === 'demolish') && !demolishOptions(state, world, a).length) return '여기엔 부술 마법물체도 땅도 없다.';
@@ -367,6 +367,12 @@ export function resolveSpell(state: State, world: World, a: Actor, spellId: stri
       const n = landsOfType(state, world, a, eff.land).length;
       if (n > 0) dealDamage(state, world, target, n, t, s.name, false, a);
       else addLog(state, { kind: 'status', text: `${josa(shortName(a.name), '은', '는')} ${josa(LAND_TYPE_LABELS[eff.land], '과', '와')} 이어져 있지 않아 아무 일도 없었다.`, regions: [a.region], actors: [a.id], t });
+    } else if (eff.type === 'pump_per_land') {
+      const n = landsOfType(state, world, a, eff.land).length;
+      if (n > 0) {
+        boostTillMidnight(state, target, [n, n], [], t);
+        addLog(state, { kind: 'status', text: `${josa(shortName(target.name), '이', '가')} ${LAND_TYPE_LABELS[eff.land]} ${n}곳의 힘으로 포효하며 부풀었다 (자정까지 +${n}/+${n}, ${ptOf(target).join('/')}).`, regions: [target.region], actors: [target.id, a.id], t });
+      } else addLog(state, { kind: 'status', text: `${josa(shortName(a.name), '은', '는')} ${josa(LAND_TYPE_LABELS[eff.land], '과', '와')} 이어져 있지 않아 아무 일도 없었다.`, regions: [a.region], actors: [a.id], t });
     } else if (eff.type === 'hunt_creatures') {
       huntKnowledge(state, world, target, eff.count, t, s.name);
     } else if (eff.type === 'gain_life_per_land') {
