@@ -8,6 +8,7 @@ status: canon
 sources: [ZEN-11]
 tags: [새, 백색, 토큰, 하늘]
 links:
+  - { to: cre-welkin-tern, rel: 같은 새 (천공 제비갈매기) }
   - { to: cre-tempest-owl, rel: 같은 새 (폭풍 올빼미) }
   - { to: law-mana-colors, rel: 백색의 존재 }
   - { to: law-retainers, rel: 천사의 권속 }

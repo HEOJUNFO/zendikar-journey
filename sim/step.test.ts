@@ -7696,6 +7696,23 @@ test('the real Trailblazer\'s Boots hang at Sea Gate: equipment for nonbasic lan
   assert.deepEqual(x.equip?.abilities, ['nonbasic_landwalk']);
 });
 
+test('block only fliers (Welkin Tern): one on foot falling on it gets no blow back (it may fly off); a flyer does', () => {
+  const world = fixture([npc('chr-t', { ...npcSim('loc-a', 'work', [2, 1]), abilities: ['fly', 'block_only_fliers'] }), npc('chr-g', npcSim('loc-a')), npc('chr-f', { ...npcSim('loc-a'), abilities: ['fly'] })]);
+  const state = newState(world, { seed: 1, mode: 'observer' });
+  const [tern, g, f] = ['chr-t', 'chr-g', 'chr-f'].map((id) => state.actors[id]);
+  assert.ok(unblockable(state, world, g, tern, state.minutes));
+  assert.equal(unblockable(state, world, g, tern, state.minutes, true), null);
+  assert.equal(unblockable(state, world, f, tern, state.minutes), null);
+});
+
+test('the real Welkin Tern nests on the sky hedrons of north Tazeem', () => {
+  const world = loadWorld();
+  const state = newState(world, { seed: 1, mode: 'observer' });
+  const t = state.actors['cre-welkin-tern'];
+  assert.equal(t?.region, 'loc-tazeem');
+  assert.ok(hasAbility(t, 'fly', state.minutes) && hasAbility(t, 'block_only_fliers', state.minutes));
+});
+
 test('mountainwalk: one bonded with a mountain can\'t strike back at it; one with none can', () => {
   const world = fixture([npc('chr-c', { ...npcSim('loc-a', 'work', [2, 1]), abilities: ['mountainwalk'] }), npc('chr-x', npcSim('loc-a')), npc('chr-y', npcSim('loc-a'))]);
   const state = newState(world, { seed: 1, mode: 'observer' });

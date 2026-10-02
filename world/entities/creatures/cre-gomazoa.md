@@ -8,6 +8,7 @@ status: canon
 sources: [ZEN-46]
 tags: [해파리, 짐승, 청색, 하늘]
 links:
+  - { to: cre-welkin-tern, rel: 같은 하늘의 제비갈매기 }
   - { to: law-mana-colors, rel: 청색의 존재 }
   - { to: loc-tazeem, rel: 떠도는 하늘 }
 sim:

@@ -227,6 +227,8 @@ export function unblockable(state: State, world: World, attacker: Actor, defende
   // "Can't be blocked" (Aether Figment): no one strikes back; a flyer may still fly off (as from
   // a landwalker).
   if (!flight && hasAbility(attacker, 'unblockable', t)) return '막을 수 없는 적에게';
+  // "Can block only creatures with flying" (Welkin Tern): not one on foot (it may still fly off).
+  if (!flight && hasAbility(defender, 'block_only_fliers', t) && !hasAbility(attacker, 'fly', t)) return '하늘에서만 싸우는 몸이라 땅을 딛은 적에게';
   const walked = !flight && landwalked(world, attacker, defender, t, state);
   if (walked) return `${LAND_TYPE_LABELS[walked]}과 이어진 몸이라 ${LAND_TYPE_LABELS[walked]}을 걷는 적에게`;
   // Nonbasic landwalk (Trailblazer's Boots): one bonded with a land of a land card of its own.
@@ -525,7 +527,7 @@ export function hostileNpcs(state: State, world: World, t: number) {
     const unless = npcDef(state, world, a.id)?.cantBlockUnless;
     const cantBlock = hasAbility(a, 'cant_block', t) || (!!unless && !!m && !controlsKind(state, world, m, unless));
     // One that can't be blocked (Aether Figment): no one stands against it for its master.
-    const unblockedBy = (id: string) => !!m?.foes?.struck?.includes(id) && !!state.actors[id] && hasAbility(state.actors[id], 'unblockable', t);
+    const unblockedBy = (id: string) => !!m?.foes?.struck?.includes(id) && !!state.actors[id] && (hasAbility(state.actors[id], 'unblockable', t) || (hasAbility(a, 'block_only_fliers', t) && !hasAbility(state.actors[id], 'fly', t)));
     const guards = m && together(m, a) ? foesOf(m, t).filter((id) => !unblockedBy(id) && (defender ? !!m.foes?.struck?.includes(id) : !cantBlock || !m.foes?.struck?.includes(id))) : [];
     const theirs = defender ? guards : [...foesOf(a, t), ...guards];
     let foe = present(state, a.region, a.tile).find((b) => theirs.includes(b.id) && b.id !== a.master && !down(b) && (evasion(a, b, t) !== 'evade' || !!unblockable(state, world, a, b, t, true)));
