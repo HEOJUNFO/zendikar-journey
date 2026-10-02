@@ -58,6 +58,7 @@ import { applyMill } from './mill.ts';
 import { secretsHour } from './secrets.ts';
 import { relicHour } from './relic.ts';
 import { upkeepScute } from './scute.ts';
+import { tigerHour } from './tiger.ts';
 import { ascendBlocked, upkeepUnhurt } from './luminarch.ts';
 import { reviveHour } from './revive.ts';
 import { punishHour } from './punish.ts';
@@ -7387,6 +7388,41 @@ test('the real Scute Mob swarms the Murasa hills: a beast that grows on five lan
   const sc = state.actors['cre-scute-mob'];
   assert.equal(sc?.region, 'loc-murasa');
   assert.deepEqual(npcDef(state, world, sc.id)?.upkeepGrow, { lands: 5, counters: 4 });
+});
+
+test('Scythe Tiger: come to serve, its master gives up a land to keep it (the player picks); refusing, it leaves; no land, it leaves at once', async () => {
+  const tiger = (id: string) => npc(id, { ...npcSim('loc-a', 'work', [3, 2]), needs: ['energy'], beast: true, abilities: ['shroud'], join_toll: true });
+  const world = fixture([tiger('cre-t'), tiger('cre-u'), tiger('cre-v'), npc('chr-m', npcSim('loc-a'))]);
+  const state = character(world, 'loc-a');
+  const p = state.actors[PLAYER_ID];
+  const [tg, u, v, m] = ['cre-t', 'cre-u', 'cre-v', 'chr-m'].map((id) => state.actors[id]);
+  p.bonds = ['loc-a', 'loc-b'];
+  bindRetainer(state, world, tg, p, state.minutes, '시험');
+  tigerHour(state, world, state.minutes);
+  const ask = state.asks!.find((y) => y.effect.type === 'toll_land')!;
+  assert.deepEqual(ask.candidates, ['loc-a', 'loc-b']);
+  await act(state, world, { type: 'choose', pick: 'loc-b' });
+  assert.equal(tg.master, p.id);
+  assert.deepEqual(p.bonds, ['loc-a']);
+  tigerHour(state, world, state.minutes + 60);
+  assert.ok(!state.asks?.some((y) => y.effect.type === 'toll_land'));
+  bindRetainer(state, world, u, p, state.minutes, '시험');
+  tigerHour(state, world, state.minutes);
+  await act(state, world, { type: 'choose', pick: null });
+  assert.equal(u.master, undefined);
+  m.bonds = [];
+  bindRetainer(state, world, v, m, state.minutes, '시험');
+  tigerHour(state, world, state.minutes);
+  assert.equal(v.master, undefined);
+});
+
+test('the real Scythe Tiger prowls Turntimber: a shrouded beast that asks a land', () => {
+  const world = loadWorld();
+  const state = newState(world, { seed: 1, mode: 'observer' });
+  const tg = state.actors['cre-scythe-tiger'];
+  assert.equal(tg?.region, 'loc-turntimber-grove');
+  assert.ok(hasAbility(tg, 'shroud', state.minutes));
+  assert.equal(npcDef(state, world, tg.id)?.joinToll, true);
 });
 
 test('the real Explorer\'s Scope hangs at Kabira Crossroads: equip {1}, it looks ahead when its bearer attacks', () => {

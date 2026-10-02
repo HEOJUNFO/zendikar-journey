@@ -46,6 +46,7 @@ import { applyMill } from './mill.ts';
 import { applySecrets, secretsBlocked, secretsOf } from './secrets.ts';
 import { flameBlocked, flameOf } from './pureflame.ts';
 import { applyRelic, relicOptions } from './relic.ts';
+import { answerTigerToll } from './tiger.ts';
 import { ascendBlocked, ascensionOf } from './luminarch.ts';
 import type { TapPower } from './tapper.ts';
 import { crumble, sacrifice, sacrificeDefault } from './monument.ts';
@@ -881,6 +882,22 @@ async function choices(state: State, world: World, llm: Llm) {
         }
       }
       answerCounterCast(state, world, by, eff, pick === eff.caster, state.minutes);
+      continue;
+    }
+    // Scythe Tiger come to serve: which land its master gives up to keep it (or none: it leaves).
+    if (c.effect.type === 'toll_land') {
+      if (by && !by.dead && npc) {
+        const options = c.candidates.filter((id) => (by.bonds ?? []).includes(id)).map((id) => ({ id, label: region(world, id).name }));
+        let pick: string | null = null;
+        if (llm.pick && options.length) {
+          try {
+            pick = await llm.pick({ world, state, npc, what: `${shortName(state.actors[c.effect.source]?.name ?? '')}이(가) 당신 곁에 들려 한다. 유대를 맺은 땅 하나를 내어 주면(다시 맺을 수 있다, 하루 한 땅) 남고, 내어 주지 않으면 떠난다`, options, optional: true });
+          } catch (e) {
+            console.warn(`pick (toll_land) for ${by.id} failed:`, e);
+          }
+        }
+        answerTigerToll(state, world, by, c.effect.source, pick, state.minutes);
+      }
       continue;
     }
     // Living Tsunami at midnight: which land its master gives back to keep it (or none: it goes).

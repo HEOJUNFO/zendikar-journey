@@ -5,9 +5,10 @@ name: 턴팀버 숲
 name_en: Turntimber Grove
 summary: 온두 남쪽, 나무들이 나선처럼 비틀려 자라는 숲. 금빛 햇살이 비틀린 줄기 사이로 스며들고, 그 기운이 곁의 이를 북돋운다
 status: canon
-sources: [ZEN-227, ZEN-187, ZEN-191, ZEN-160, ZEN-175, ZEN-190]
+sources: [ZEN-227, ZEN-187, ZEN-191, ZEN-160, ZEN-175, ZEN-190, ZEN-183]
 tags: [숲, 나선 나무, 녹색]
 links:
+  - { to: cre-scythe-tiger, rel: 낙엽 속의 낫 호랑이 }
   - { to: cre-turntimber-basilisk, rel: 북쪽 깊은 곳의 바실리스크 }
   - { to: evt-cobra-trap, rel: 무너진 무덤에 도사린 함정 }
   - { to: chr-turntimber-ranger, rel: 늑대를 타고 누비는 엘프 정찰병 }
@@ -43,6 +44,7 @@ sim:
 - 포식 충동(`spl-predatory-urge`, ZEN-175)을 여기서 배운다 (4시간, [결정] 2026-10-01). 걸린 이가 하루 한 번 곁의 하나와 서로 물어뜯는 녹색 오라다. 최상위 포식자 발로스의 숲이라 [가공].
 
 - 턴팀버 바실리스크(`cre-turntimber-basilisk`, ZEN-190)가 북쪽 깊은 곳 고목 사이에 도사린다 ([결정] 2026-10-01). 죽음의 손길을 지닌 짐승으로, 땅을 차지할 때마다 하나를 눈으로 사로잡아 맞서게 한다.
+- 동쪽 낙엽이 깊게 쌓인 고목 사이에 낫 호랑이(`cre-scythe-tiger`, ZEN-183)가 산다 ([결정] 2026-10-02): 방어막, 섬기려면 땅 하나를 받는다.
 
 ## 미정/질문
 

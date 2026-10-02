@@ -17,6 +17,7 @@ import { applyChart } from './chart.ts';
 import { applyMill } from './mill.ts';
 import { applySecrets } from './secrets.ts';
 import { applyRelic, relicOptions } from './relic.ts';
+import { answerTigerToll } from './tiger.ts';
 import { applyFlood, floodOptions } from './flood.ts';
 import { applyGust, gustOptions } from './owl.ts';
 import { applyInstigate } from './instigator.ts';
@@ -95,6 +96,7 @@ export function askText(state: State, world: World, c: Choice) {
     const on = !target || target.id === e.caster ? '' : ` ${shortName(target.name)}에게`;
     return `${shortName(state.actors[e.caster]?.name ?? '')}이(가)${on} ${cast?.name ?? ''}을(를) 걸려 한다 (${cast?.summary ?? ''}). ${s.name}(${s.costText})로 무효화할까?`;
   }
+  if (c.effect.type === 'toll_land') return `${shortName(state.actors[c.effect.source]?.name ?? '')}이(가) 곁에 들려 한다. 유대를 맺은 땅 하나를 내어 주면(다시 맺을 수 있다) 남고, 내어 주지 않으면 떠난다. 어느 땅을?`;
   if (c.effect.type === 'tide') return `나를 섬기는 ${shortName(state.actors[c.effect.source]?.name ?? '')}이(가) 썰물에 무너지려 한다. 유대를 맺은 땅 하나를 내어 주면(다시 맺을 수 있다) 남는다. 어느 땅을?`;
   if (c.effect.type === 'chart') return `${c.effect.item}에서 아직 유대가 없는 땅 하나로 가는 길을 찾아 손에 쥔다 (나중에 언제든 멀리서 그날의 땅으로 이을 수 있다). 어느 땅을?`;
   if (c.effect.type === 'search') return `${shortName(state.actors[c.effect.source]?.name ?? '')}이(가) 잊힌 길을 안다. 아직 유대가 없는 땅 하나와 멀리서 유대를 맺을 수 있다 (하루 한 땅에 들지 않고, 오늘은 마나를 내지 않는다). 어느 땅과?`;
@@ -169,6 +171,7 @@ export function askOptions(state: State, world: World, c: Choice): { pick: strin
     return source && ex ? banishOptions(state, world, source, ex.color, state.minutes).filter((o) => c.candidates.includes(o.id)).map((o) => ({ pick: o.id as string | null, label: o.label })) : [];
   }
   if (c.effect.type === 'counter_cast') return [{ pick: c.effect.caster, label: `무효화한다 (${answerName(world, c.effect.spell).costText})` }, { pick: null, label: '두고 본다' }];
+  if (c.effect.type === 'toll_land') return [...c.candidates.map((id) => ({ pick: id as string | null, label: region(world, id).name })), { pick: null, label: '내어 주지 않는다 (떠난다)' }];
   if (c.effect.type === 'tide') return [...c.candidates.map((id) => ({ pick: id as string | null, label: region(world, id).name })), { pick: null, label: '내어 주지 않는다 (흩어진다)' }];
   if (c.effect.type === 'chart') return c.candidates.map((id) => ({ pick: id as string | null, label: region(world, id).name }));
   if (c.effect.type === 'search') return [...c.candidates.map((id) => ({ pick: id as string | null, label: region(world, id).name })), { pick: null, label: '맺지 않는다' }];
@@ -302,6 +305,8 @@ export function answerAsk(state: State, world: World, pick: string | null, t: nu
     answerCounterCast(state, world, p, c.effect, pick === c.effect.caster, t);
   } else if (c.effect.type === 'counter') {
     answerCounter(state, world, p, c.effect, pick === c.effect.joiner, t);
+  } else if (c.effect.type === 'toll_land') {
+    answerTigerToll(state, world, p, c.effect.source, pick, t);
   } else if (c.effect.type === 'tide') {
     answerTide(state, world, p, c.effect.source, pick, t);
   } else if (c.effect.type === 'chart') {
