@@ -7,7 +7,7 @@ import { sameTile } from './tiles.ts';
 import { attackQuest } from './ascension.ts';
 import { formatClock, gameDay, STEP_MINUTES, untapTime } from './clock.ts';
 import { remember } from './relations.ts';
-import { controlsKind, masterOf, releaseRetainer, retainersOf } from './retainers.ts';
+import { controlsKind, creatureOf, masterOf, releaseRetainer, retainersOf } from './retainers.ts';
 import { releaseItems } from './items.ts';
 import { owesDiscard } from './discard.ts';
 import { gembladesHit } from './expedition.ts';
@@ -233,6 +233,9 @@ export function unblockable(state: State, world: World, attacker: Actor, defende
   if (!flight && hasAbility(defender, 'block_only_fliers', t) && !hasAbility(attacker, 'fly', t)) return '하늘에서만 싸우는 몸이라 땅을 딛은 적에게';
   const walked = !flight && landwalked(world, attacker, defender, t, state);
   if (walked) return `${LAND_TYPE_LABELS[walked]}과 이어진 몸이라 ${LAND_TYPE_LABELS[walked]}을 걷는 적에게`;
+  // Equipment that keeps a kind off (Blazing Torch: vampires won't stand against its fire).
+  const ward = !flight && world.items.find((x) => x.equip?.unblockableBy?.length && state.items?.[x.id]?.bearer === attacker.id && !state.items[x.id].gone && x.equip.unblockableBy.includes(creatureOf(state, world, defender.id) ?? ''));
+  if (ward) return `${ward.name}의 불길이 두려워`;
   // Nonbasic landwalk (Trailblazer's Boots): one bonded with a land of a land card of its own.
   if (!flight && hasAbility(attacker, 'nonbasic_landwalk', t) && (defender.bonds ?? []).some((id) => world.regions.find((r) => r.id === id)?.nonbasic)) return '이름 있는 땅과 이어진 몸이라 어디든 걸어온 적에게';
   // Protection from a color: one of that color can't block them.

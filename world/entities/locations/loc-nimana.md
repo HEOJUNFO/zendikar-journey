@@ -5,9 +5,10 @@ name: 니마나 자유 도시
 name_en: Free City of Nimana
 summary: 굴 드라즈 남동쪽 해안에 사람이 세운 항구 도시. 이름과 달리 노예상이 들어오는 항구이자 굴 드라즈 물산을 내보내는 곳이고, 세상으로 스며드는 흡혈귀가 거의 다 이곳을 지난다. 수상한 재주꾼과 용병이 일거리를 찾는다
 status: canon
-sources: [ZEN-106]
+sources: [ZEN-106, ZEN-197]
 tags: [도시, 항구, 사람, 용병, 흑색]
 links:
+  - { to: itm-blazing-torch, rel: 성문 길의 횃불 }
   - { to: loc-guul-draz, rel: 바깥 지역 }
   - { to: loc-ghet-estate, rel: 도시를 손에 넣으려는 게트 혈족 }
   - { to: loc-jwar-isle, rel: 뱃길이 닿는 섬 }
@@ -25,6 +26,7 @@ map: { in: loc-guul-draz, terrain: swamp, pos: [0.6, 0.8], tiles: 10 }   # 기�
 - **기본 늪**처럼 친다 ([결정] 2026-10-01, 말라키르처럼): 유대를 맺으면 흑 마나 1을 내고, 늪 종류라 늪걷기의 늪이고 페치로 찾을 수 있다.
 - 자리: 남동쪽 해안(`pos: [0.6, 0.8]`). 해안 도시는 [배경], 방위는 설정에 없어 즈와르 섬 뱃길 쪽으로 [가공].
 - 니마나 용병검사(`chr-nimana-sell-sword`, ZEN-106)가 일거리를 찾는다.
+- 한가운데 성문 길에 타오르는 횃불(`itm-blazing-torch`, ZEN-197)이 걸려 있다 ([결정] 2026-10-02): 맨 이 앞에서 흡혈귀가 물러서고, 던지면 피해 2.
 
 ## 미정/질문
 

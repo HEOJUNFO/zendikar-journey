@@ -74,6 +74,8 @@ export type PlanDayInput = {
   traps?: { id: string; text: string }[];
   // What a Vampire Hexmage they control could strip of counters (target ids and what they are).
   hex?: { who: string; targets: { id: string; text: string }[] };
+  // A Blazing Torch of theirs someone bears, ready to throw: its name, the bearer, and whom it could hit.
+  fling?: { name: string; bearer: string; damage: number; targets: { id: string; text: string }[] };
   // Lands they could seek out today by giving up a fetch land they hold (Arid Mesa...).
   fetch?: { id: string; text: string }[];
   // Spells they could learn (where each is taught), and spells they hold and could pay for.
@@ -93,7 +95,7 @@ export type PlanDayInput = {
 
 // Kinds of blocks they may plan: no meals without hunger, taming only if there is an item for
 // them to tame, keeping days only with a land that keeps them.
-function kindsFor(input: Pick<PlanDayInput, 'needs' | 'items' | 'equip' | 'days' | 'grow' | 'recall' | 'bite' | 'shield' | 'loot' | 'scout' | 'altar' | 'expedition' | 'ascend' | 'traps' | 'hex' | 'fetch' | 'learn' | 'cast' | 'court' | 'hire' | 'people'>) {
+function kindsFor(input: Pick<PlanDayInput, 'needs' | 'items' | 'equip' | 'days' | 'grow' | 'recall' | 'bite' | 'shield' | 'loot' | 'scout' | 'altar' | 'expedition' | 'ascend' | 'traps' | 'hex' | 'fling' | 'fetch' | 'learn' | 'cast' | 'court' | 'hire' | 'people'>) {
   return LIFE_KINDS.filter(
     (k) =>
       (k !== 'eat' || input.needs.includes('hunger')) &&
@@ -111,6 +113,7 @@ function kindsFor(input: Pick<PlanDayInput, 'needs' | 'items' | 'equip' | 'days'
       (k !== 'ascend' || !!input.ascend) &&
       (k !== 'set_trap' || !!input.traps?.length) &&
       (k !== 'hex' || !!input.hex?.targets.length) &&
+      (k !== 'fling' || !!input.fling?.targets.length) &&
       (k !== 'fetch' || !!input.fetch?.length) &&
       (k !== 'learn' || !!input.learn?.length) &&
       (k !== 'cast' || !!input.cast?.length) &&
@@ -156,6 +159,7 @@ export async function planDay(input: PlanDayInput): Promise<ScheduleBlock[] | nu
     (b.kind === 'loot' && !!b.who && b.who !== input.id && !people.get(b.who)?.loot) ||
     (b.kind === 'set_trap' && !input.traps?.some((x) => x.id === b.trap)) ||
     (b.kind === 'hex' && !input.hex?.targets.some((x) => x.id === b.who)) ||
+    (b.kind === 'fling' && !input.fling?.targets.some((x) => x.id === b.who)) ||
     (b.kind === 'altar' && (b.regionId !== input.altar?.at || !input.altar?.who.some((x) => x.id === b.who)));
   if (blocks?.some(bad)) blocks = null;
   if (!blocks) console.warn(`Unusable plan for ${input.name}:`, content);
@@ -235,6 +239,10 @@ Rules:
   }${
     kinds.includes('expedition')
       ? `\n- "expedition" takes 1 hour, anywhere: they end their ${input.expedition!.name} (it is gone for good) and, from what it found, ${input.expedition!.reward}. Each land they bond with adds to it, so they may also wait.`
+      : ''
+  }${
+    kinds.includes('fling')
+      ? `\n- "fling" takes 1 hour and needs "who": one standing with ${input.fling!.bearer}, who bears their ${input.fling!.name}; ${input.fling!.bearer} throws it (bound until midnight; the torch is gone) and that one takes ${input.fling!.damage} damage (it may kill). Whom it could hit now: ${input.fling!.targets.map((x) => `"${x.id}" (${x.text})`).join(', ')}.`
       : ''
   }${
     kinds.includes('hex')

@@ -45,6 +45,7 @@ import { punishHour } from './punish.ts';
 import { bloodchiefHour } from './bloodchief.ts';
 import { SET_TRAP_HOURS, setTrap, setTrapBlocked } from './snare.ts';
 import { HEX_HOURS, hex, hexBlocked } from './hexmage.ts';
+import { FLING_HOURS, fling, torchesOf } from './fling.ts';
 import { ASCEND_HOURS, ascend, ascendBlocked, upkeepUnhurt } from './luminarch.ts';
 import { EON_HOURS, eonLand, holdStill, spendBlocked, spendDay, storeBlocked, storeDay, timeNews } from './eons.ts';
 import { upkeepWins } from './win.ts';
@@ -98,7 +99,7 @@ export function step(state: State, placed: World) {
     actorHour(state, world, a, t);
     // A timed task done: the player's action, or an NPC's bonding, taming or keeping days.
     const done = a.task?.until !== undefined && a.task.until <= t + STEP_MINUTES && !a.travel;
-    const timed = ['bond', 'claim', 'equip', 'store_day', 'spend_day', 'grow', 'fetch', 'learn', 'cast', 'court', 'hire', 'recall', 'bite', 'shield', 'loot', 'scout', 'altar', 'expedition', 'ascend', 'set_trap', 'hex'];
+    const timed = ['bond', 'claim', 'equip', 'store_day', 'spend_day', 'grow', 'fetch', 'learn', 'cast', 'court', 'hire', 'recall', 'bite', 'shield', 'loot', 'scout', 'altar', 'expedition', 'ascend', 'set_trap', 'hex', 'fling'];
     if (done && (a.kind === 'player' || timed.includes(a.task!.kind))) {
       const at = t + STEP_MINUTES;
       if (a.task!.kind === 'bond') bondLand(state, world, a, at, a.region, a.task!.target);
@@ -116,6 +117,7 @@ export function step(state: State, placed: World) {
       if (a.task!.kind === 'ascend') ascend(state, world, a, at);
       if (a.task!.kind === 'set_trap' && a.task!.trap) setTrap(state, world, a, a.task!.trap, at);
       if (a.task!.kind === 'hex' && a.task!.who) hex(state, world, a, a.task!.who, at);
+      if (a.task!.kind === 'fling' && a.task!.who) fling(state, world, a, a.task!.item, a.task!.who, at);
       // An NPC's spell: whom it falls on is asked of the LLM after the hour (the player's was cast as they began).
       if (a.task!.kind === 'cast' && a.kind === 'npc' && a.task!.spell) readyCast(state, world, a, a.task!.spell, at);
       // A court: the beast decides after the hour whether to follow them.
@@ -786,8 +788,9 @@ function npcTask(state: State, world: World, a: Actor, t: number): Task | undefi
     : block.kind === 'ascend' ? ascendBlocked(state, world, a, t)
     : block.kind === 'set_trap' ? setTrapBlocked(state, world, a, block.trap, t)
     : block.kind === 'hex' ? hexBlocked(state, world, a, block.who, t, false)
+    : block.kind === 'fling' ? (torchesOf(state, world, a, t).length ? null : '던질 횃불이 없다.')
     : null;
-  const timed = ['bond', 'claim', 'equip', 'store_day', 'spend_day', 'grow', 'fetch', 'learn', 'cast', 'court', 'hire', 'recall', 'bite', 'shield', 'loot', 'scout', 'altar', 'expedition', 'ascend', 'set_trap', 'hex'];
+  const timed = ['bond', 'claim', 'equip', 'store_day', 'spend_day', 'grow', 'fetch', 'learn', 'cast', 'court', 'hire', 'recall', 'bite', 'shield', 'loot', 'scout', 'altar', 'expedition', 'ascend', 'set_trap', 'hex', 'fling'];
   if (!cannot && timed.includes(block.kind) && a.task?.kind === block.kind) return a.task;
   const task: Task =
     block.kind === 'work' && landUnusable(state, a.region)
@@ -810,6 +813,8 @@ function npcTask(state: State, world: World, a: Actor, t: number): Task | undefi
             ? { kind: 'set_trap', activity: block.activity, emoji: block.emoji, until: t + SET_TRAP_HOURS * 60, trap: block.trap }
           : block.kind === 'hex'
             ? { kind: 'hex', activity: block.activity, emoji: block.emoji, until: t + HEX_HOURS * 60, who: block.who }
+          : block.kind === 'fling'
+            ? { kind: 'fling', activity: block.activity, emoji: block.emoji, until: t + FLING_HOURS * 60, who: block.who }
           : block.kind === 'bite'
             ? { kind: 'bite', activity: block.activity, emoji: block.emoji, until: t + BITE_HOURS * 60, who: block.who }
           : block.kind === 'shield' || block.kind === 'loot' || block.kind === 'scout'

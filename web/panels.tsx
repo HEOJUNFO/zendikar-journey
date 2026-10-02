@@ -16,6 +16,7 @@ import { expeditionBlocked, expeditionOf, expeditionReward } from '../sim/expedi
 import { ascendBlocked, ascendText, ascensionOf } from '../sim/luminarch.ts';
 import { setTrapBlocked, trapsHeld } from '../sim/snare.ts';
 import { hexBlocked, hexNear } from '../sim/hexmage.ts';
+import { flingBlocked, flingTargets, torchesOf } from '../sim/fling.ts';
 import type { TapPower } from '../sim/tapper.ts';
 
 // The buttons for a creature's power on someone (sim/tapper.ts).
@@ -693,6 +694,16 @@ export function CharacterControls(props: {
           </button>
         </div>
       )}
+      {torchesOf(state, world, p, state.minutes).map((x) => (
+        <div className="row" key={`fling-${x.id}`}>
+          <span className="muted">🔥 {x.name} 던지기:</span>
+          {flingTargets(state, world, x.id).map((y) => (
+            <button key={y.id} className="danger" disabled={busy || !!stuck || !!flingBlocked(state, world, p, x.id, y.id, state.minutes)} title={flingBlocked(state, world, p, x.id, y.id, state.minutes) ?? `${shortName(y.name)}에게 피해 ${x.equip?.sacDamage} (횃불은 부서짐)`} onClick={() => onAct({ type: 'fling', to: y.id, item: x.id })}>
+              {shortName(y.name)}
+            </button>
+          ))}
+        </div>
+      ))}
       {hexNear(state, world, p, state.minutes).length > 0 && (
         <div className="row">
           <span className="muted">🩸 주술사의 저주 (그녀는 죽는다):</span>

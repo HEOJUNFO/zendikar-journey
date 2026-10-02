@@ -19,6 +19,8 @@
 // it (sim/altar.ts): they come to know a secret.
 // expedition: ending an Ior Ruin Expedition they own (enough quest counters), anywhere
 // (sim/expedition.ts): it is gone, they come to know secrets.
+// fling: having the bearer of a Blazing Torch they own throw it at the block's `who` on the
+// bearer's tile (sim/fling.ts).
 // hex: having a Vampire Hexmage they control sacrifice itself to strip the counters of the block's
 // `who` ("being:<id>" or "item:<id>") on their tile (sim/hexmage.ts).
 // set_trap: setting the block's `trap` (one they hold, Trapmaker's Snare) where they stand,
@@ -27,7 +29,7 @@
 // paying its cost), anywhere (sim/luminarch.ts).
 // attack: going after the block's `who` (wherever they are) and falling on them: they become
 // foes and fight from the next hour (sim/combat.ts), as the player's attack.
-export const LIFE_KINDS = ['sleep', 'eat', 'work', 'social', 'leisure', 'bond', 'claim', 'store_day', 'spend_day', 'grow', 'fetch', 'learn', 'cast', 'court', 'hire', 'attack', 'recall', 'equip', 'bite', 'shield', 'loot', 'scout', 'altar', 'expedition', 'ascend', 'set_trap', 'hex'] as const;
+export const LIFE_KINDS = ['sleep', 'eat', 'work', 'social', 'leisure', 'bond', 'claim', 'store_day', 'spend_day', 'grow', 'fetch', 'learn', 'cast', 'court', 'hire', 'attack', 'recall', 'equip', 'bite', 'shield', 'loot', 'scout', 'altar', 'expedition', 'ascend', 'set_trap', 'hex', 'fling'] as const;
 export type LifeKind = (typeof LIFE_KINDS)[number];
 
 // start/end are minutes of the game day, 0..1440, end exclusive.

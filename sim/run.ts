@@ -38,6 +38,7 @@ import { applyGust, gustOptions } from './owl.ts';
 import { eventDefOf, trapsHeld } from './snare.ts';
 import { hexmagesOf, hexTargets } from './hexmage.ts';
 import { applyInstigate } from './instigator.ts';
+import { flingTargets, torchesOf } from './fling.ts';
 import type { GustEffect } from './owl.ts';
 import { applyGem, expeditionBlocked, expeditionOf, expeditionReward } from './expedition.ts';
 import { ascendBlocked, ascensionOf } from './luminarch.ts';
@@ -1470,6 +1471,7 @@ async function prepare(state: State, world: World, llm: Llm): Promise<string | n
           altar: altarInput(state, world, a),
           ascend: ascendInput(state, world, a),
           hex: hexInput(state, world, a),
+          fling: flingInput(state, world, a),
           traps: trapsHeld(world, a).map((ev) => ({ id: ev.id, text: `${ev.name}: ${ev.summary} (${ev.cardCost?.text ?? ''})` })),
           expedition: expeditionBlocked(state, world, a) ? undefined : { name: expeditionOf(state, world, a)!.name, reward: expeditionReward(state, world, a).en },
           fetch: fetchInput(state, world, a),
@@ -1518,6 +1520,15 @@ function equipInput(state: State, world: World, a: Actor): PlanDayInput['equip']
     text: `${gear.name} (${gear.summary}; costs ${gear.equip.costText}; the bearer has ${gives}${gear.equip.lure ? ', and whoever they fall on cannot fly off' : ''}${bearer ? `; now on ${shortName(state.actors[bearer]?.name ?? bearer)}` : ''})`,
     who: who.map((x) => ({ id: x.id, text: x.id === a.id ? 'themselves' : `${shortName(x.name)}, who serves them` })),
   };
+}
+
+// A Blazing Torch of theirs someone bears, and whom it could hit now, for their plan.
+function flingInput(state: State, world: World, a: Actor): PlanDayInput['fling'] {
+  const x = torchesOf(state, world, a, state.minutes)[0];
+  if (!x) return undefined;
+  const b = state.actors[state.items![x.id].bearer!];
+  const targets = flingTargets(state, world, x.id).map((y) => ({ id: y.id, text: shortName(y.name) }));
+  return targets.length ? { name: x.name, bearer: b.id === a.id ? 'they themselves' : shortName(b.name), damage: x.equip!.sacDamage!, targets } : undefined;
 }
 
 // What a Vampire Hexmage they control could strip there, for their plan.

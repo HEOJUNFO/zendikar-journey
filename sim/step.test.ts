@@ -7748,6 +7748,29 @@ test('Blade of the Bloodchief: a death on its bearer\'s tile is a +1/+1 counter 
   assert.equal(v.plusCounters, 2);
 });
 
+test('Blazing Torch: a vampire can\'t strike back at its bearer; thrown by the player\'s bearer, it is gone, the bearer is bound, and one there takes 2', async () => {
+  const torch: RawEntity = { id: 'itm-torch', kind: 'item', name: '타오르는 횃불', status: 'canon', sim: { cost: '{0}', at: 'loc-a', equip: { cost: '{0}', unblockable_by: ['cre-vampire'], sac_damage: 2 } } };
+  const world = fixture([torch, lore('cre-vampire', 'creature'), npc('chr-v', { ...npcSim('loc-a', 'work', [2, 3]), creature: 'cre-vampire' }), npc('chr-x', npcSim('loc-a', 'work', [1, 3]))]);
+  const state = character(world, 'loc-a');
+  const [p, v, x] = [state.actors[PLAYER_ID], state.actors['chr-v'], state.actors['chr-x']];
+  for (const a of [v, x]) a.tile = p.tile;
+  state.items = { 'itm-torch': { name: '타오르는 횃불', owner: p.id, counters: 0, carried: true, bearer: p.id } };
+  assert.ok(unblockable(state, world, p, v, state.minutes)?.includes('횃불'));
+  assert.equal(unblockable(state, world, p, x, state.minutes), null);
+  await act(state, world, { type: 'fling', to: 'chr-x', item: 'itm-torch' });
+  assert.ok(state.items['itm-torch'].gone);
+  assert.ok(texts(state).some((l) => l.includes('chr-x가 피해 2를 입었다')));
+  assert.ok(texts(state).some((l) => l.includes('풀려났다')));
+});
+
+test('the real Blazing Torch hangs in Nimana', () => {
+  const world = loadWorld();
+  const x = world.items.find((i) => i.id === 'itm-blazing-torch')!;
+  assert.equal(x.at, 'loc-nimana');
+  assert.deepEqual(x.equip?.unblockableBy, ['cre-vampire']);
+  assert.equal(x.equip?.sacDamage, 2);
+});
+
 test('the real Adventuring Gear lies in Kazandu', () => {
   const world = loadWorld();
   const x = world.items.find((i) => i.id === 'itm-adventuring-gear')!;
