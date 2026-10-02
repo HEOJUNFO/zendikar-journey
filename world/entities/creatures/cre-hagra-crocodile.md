@@ -8,6 +8,7 @@ status: canon
 sources: [ZEN-94]
 tags: [악어, 짐승, 흑색]
 links:
+  - { to: cre-steppe-lynx, rel: 같은 상륙 (+2/+2) }
   - { to: law-mana-colors, rel: 흑색의 존재 }
   - { to: loc-hagra, rel: 사는 늪 }
 sim:

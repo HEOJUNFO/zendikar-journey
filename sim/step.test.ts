@@ -7455,6 +7455,16 @@ test('the real Scythe Tiger prowls Turntimber: a shrouded beast that asks a land
   assert.equal(npcDef(state, world, tg.id)?.joinToll, true);
 });
 
+test('the real Steppe Lynx runs by Graypelt Refuge: a 0/1 beast, +2/+2 on landfall', () => {
+  const world = loadWorld();
+  const state = newState(world, { seed: 1, mode: 'observer' });
+  const l = state.actors['cre-steppe-lynx'];
+  assert.equal(l?.region, 'loc-graypelt-refuge');
+  assert.deepEqual(ptOf(l), [0, 1]);
+  bondLand(state, world, l, state.minutes, 'loc-graypelt-refuge');
+  assert.deepEqual(ptOf(l), [2, 3]);
+});
+
 test('the real Explorer\'s Scope hangs at Kabira Crossroads: equip {1}, it looks ahead when its bearer attacks', () => {
   const x = loadWorld().items.find((i) => i.id === 'itm-explorers-scope')!;
   assert.equal(x.at, 'loc-kabira-crossroads');
