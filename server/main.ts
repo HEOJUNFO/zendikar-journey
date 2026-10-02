@@ -9,6 +9,7 @@ import { z } from 'zod';
 import { createLlm } from '../sim/llm/index.ts';
 import type { Llm } from '../sim/run.ts';
 import { ActSchema, AdvanceSchema, Game, NewGameSchema, UserError } from './game.ts';
+import { handleV2 } from './v2.ts';
 
 try {
   process.loadEnvFile();
@@ -77,7 +78,8 @@ const vite = await createVite({
 const port = Number(process.env.PORT ?? 5173);
 createServer((req, res) => {
   const path = (req.url ?? '/').split('?')[0];
-  if (path.startsWith('/api/')) void api(req, res, path);
+  if (path.startsWith('/api/v2/')) handleV2(req, res, path);
+  else if (path.startsWith('/api/')) void api(req, res, path);
   else vite.middlewares(req, res);
 }).listen(port, () => {
   console.log(`젠디카르: http://localhost:${port}  (LLM: ${process.env.CHAT_PROVIDER ?? '없음'})`);

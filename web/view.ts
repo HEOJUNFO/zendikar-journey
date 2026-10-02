@@ -126,19 +126,20 @@ export function shelves(world: World) {
 export type MapBox = { x: number; y: number; w: number; h: number };
 
 // Room for the names around the outermost lands (more on top, where the full-screen map's bar sits).
-const FIT_PAD = { x: 24, top: 24, bottom: 20 };
+export type FitPad = { x: number; top: number; bottom: number };
+const FIT_PAD: FitPad = { x: 24, top: 24, bottom: 20 };
 const FIT_MIN_W = 384;
 
 // The box that holds every land (with their names), widened to the map's shape so the map
 // opens on the lands rather than on the empty sea around them.
-export function fitView(world: World): MapBox {
+export function fitView(world: World, pad: FitPad = FIT_PAD): MapBox {
   const tops = world.regions.filter((r) => !r.parent);
   if (!tops.length) return { x: 0, y: 0, w: MAP_WIDTH, h: MAP_HEIGHT };
   const boxes = tops.map((r) => landBox(world, r));
-  const x0 = Math.min(...boxes.map((b) => b.x0)) - FIT_PAD.x;
-  const x1 = Math.max(...boxes.map((b) => b.x1)) + FIT_PAD.x;
-  const y0 = Math.min(...boxes.map((b) => b.y0)) - FIT_PAD.top;
-  const y1 = Math.max(...boxes.map((b) => b.y1)) + FIT_PAD.bottom;
+  const x0 = Math.min(...boxes.map((b) => b.x0)) - pad.x;
+  const x1 = Math.max(...boxes.map((b) => b.x1)) + pad.x;
+  const y0 = Math.min(...boxes.map((b) => b.y0)) - pad.top;
+  const y1 = Math.max(...boxes.map((b) => b.y1)) + pad.bottom;
   const aspect = MAP_WIDTH / MAP_HEIGHT;
   const w = Math.min(MAP_WIDTH, Math.max(FIT_MIN_W, x1 - x0, (y1 - y0) * aspect));
   const h = w / aspect;

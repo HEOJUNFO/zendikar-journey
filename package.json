@@ -13,7 +13,9 @@
     "world:check": "node tools/world-check.mjs",
     "world:map": "node tools/world-map.mjs",
     "card:sync": "node tools/card.mjs sync",
-    "card:next": "node tools/card.mjs next"
+    "card:next": "node tools/card.mjs next",
+    "world2:check": "node tools/world2-check.mjs",
+    "world2:map": "node tools/world2-map.mjs"
   },
   "dependencies": {
     "react": "^19.3.0",

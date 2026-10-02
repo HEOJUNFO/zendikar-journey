@@ -1,0 +1,19 @@
+# 지도 v2 의 칸: 겹마다 한 글자가 한 칸이고, 범례는 글자 -> 지역 id 다 (sim/footprint.ts).
+# 첫 겹(world.txt)은 지도 전체다. '.' 은 먼 바다(누구의 것도 아님).
+# 다음 겹은 origin(왼쪽 위 칸)부터 대륙 안의 구역을 그 땅의 칸 위에 칠한다. 다음 겹의 '.' 은 그대로 둔다.
+layers:
+  - file: world.txt
+    legend:
+      S: loc-sejiri   # 세지리
+      A: loc-akoum   # 아쿰
+      B: loc-bala-ged   # 발라 게드
+      G: loc-guul-draz   # 굴 드라즈
+      T: loc-tazeem   # 타짐
+      O: loc-ondu   # 온두
+      M: loc-murasa   # 무라사
+      a: loc-agadeem   # 아게딤
+      b: loc-beyeen   # 베이엔
+      j: loc-jwar-isle   # 즈와르 섬
+      h: loc-halimar   # 할리마르
+      s: loc-silundi-sea   # 실룬디 바다
+      n: loc-narrow-waters   # 좁은 바다

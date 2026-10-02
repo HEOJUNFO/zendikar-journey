@@ -12,11 +12,13 @@ import type { Tile } from '../sim/tiles.ts';
 import { LegendsList, CharacterControls, LogView, NewGame, ObserverControls, PeopleList, PlayerCard, RegionCard } from './panels.tsx';
 import { clock } from './view.ts';
 import { WorldPage } from './WorldPage.tsx';
+import { MapV2Page } from './v2/MapV2Page.tsx';
 
 // Pages: the journey (#/, start screen or play), the whole world (#/world), the
-// full-screen map (#/map) and the operator's map (#/admin).
-type Page = 'journey' | 'world' | 'map' | 'admin';
-const PAGES: Record<string, Page> = { '#/world': 'world', '#/map': 'map', '#/admin': 'admin' };
+// full-screen map (#/map), the operator's map (#/admin) and map v2 (#/v2: the map being
+// redesigned in world-v2/, apart from the game).
+type Page = 'journey' | 'world' | 'map' | 'admin' | 'v2';
+const PAGES: Record<string, Page> = { '#/world': 'world', '#/map': 'map', '#/admin': 'admin', '#/v2': 'v2' };
 const pageOf = (): Page => PAGES[location.hash] ?? 'journey';
 
 function Nav({ page }: { page: Page }) {
@@ -26,6 +28,7 @@ function Nav({ page }: { page: Page }) {
       <a href="#/world" className={page === 'world' ? 'on' : ''}>세계 흐름</a>
       <a href="#/map" className={page === 'map' ? 'on' : ''}>전체 지도</a>
       <a href="#/admin" className={page === 'admin' ? 'on' : ''}>운영자</a>
+      <a href="#/v2" className={page === 'v2' ? 'on' : ''}>지도 v2</a>
     </nav>
   );
 }
@@ -62,6 +65,8 @@ export function App() {
     }
   }
 
+  // Map v2 reads its own world, not the game's.
+  if (page === 'v2') return <MapV2Page nav={<Nav page={page} />} />;
   if (!game) return <div className="loading">{error ?? '젠디카르를 불러오는 중…'}</div>;
   const { state } = game;
   // Wandering places (Goma Fada) where they are now.

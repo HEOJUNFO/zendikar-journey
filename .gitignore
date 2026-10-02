@@ -11,3 +11,6 @@ npm-debug.log*
 
 # game saves
 saves/
+
+# 지도 v2 의 참고 이미지 (팬 지도, 로컬에만 둔다)
+/map/

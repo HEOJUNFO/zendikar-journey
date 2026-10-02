@@ -1,15 +1,15 @@
 import { useEffect, useRef, useState } from 'react';
-import type { PointerEvent as ReactPointerEvent } from 'react';
+import type { PointerEvent as ReactPointerEvent, ReactNode } from 'react';
 import { npcDef } from '../sim/state.ts';
 import type { Actor, State } from '../sim/state.ts';
 import { shortName } from '../sim/text.ts';
 import { hasPowers, MAP_HEIGHT, MAP_WIDTH, placeName, region, spellColors, TERRAINS } from '../sim/world.ts';
-import type { World } from '../sim/world.ts';
+import type { Region, World } from '../sim/world.ts';
 import { moveHours } from '../sim/step.ts';
 import { eventTile, nearestTile, sameTile, TILE, tileCenter, tileKey } from '../sim/tiles.ts';
 import type { Tile } from '../sim/tiles.ts';
 import { areaLabelAt, fitView, halfCircle, isTrap, landColors, nodeAt, PLAIN_NODE, regionLabelAt, shelves, tileRects, trapStatus, visibleActors } from './view.ts';
-import type { MapBox } from './view.ts';
+import type { FitPad, MapBox } from './view.ts';
 
 type Props = {
   world: World;
@@ -27,6 +27,15 @@ type Props = {
   onPickActor?: (id: string) => void;
   onPickTrap?: (id: string) => void;
   onPickSpell?: (id: string) => void;
+  // Drawn over the tiles, under the names (map v2: the reference map laid over it).
+  overlay?: ReactNode;
+  // The shallow water joining a continent and its islands (off on map v2: its shapes are painted).
+  shelves?: boolean;
+  // Where and how large a land's name is written, when the page says (map v2: inside each land,
+  // as large as the land); otherwise above it (web/view.ts).
+  labelFor?: (r: Region) => { x: number; y: number; size: number; sea?: boolean } | null;
+  // Room left around the lands when the map opens fitted to them (map v2: more on top for its bar).
+  fitPad?: FitPad;
 };
 
 const TRAP_GAP = 3.6;
@@ -74,10 +83,10 @@ function kept(box: MapBox): MapBox {
 
 // Zooming (wheel, buttons) and panning (drag) the map. Until the viewer moves it, the view
 // follows the lands (`fitView`), so new lands come into sight on their own.
-function useMapView(world: World) {
+function useMapView(world: World, fitPad?: FitPad) {
   const svgRef = useRef<SVGSVGElement>(null);
   const [moved, setMoved] = useState<MapBox | null>(null);
-  const box = moved ?? fitView(world);
+  const box = moved ?? fitView(world, fitPad);
   const boxRef = useRef(box);
   boxRef.current = box;
   const drag = useRef<{ id: number; cx: number; cy: number; start: MapBox; panning: boolean } | null>(null);
@@ -165,18 +174,18 @@ function position(world: World, state: State, a: Actor) {
   return { x: from.x + (to.x - from.x) * done, y: from.y + (to.y - from.y) * done, travelling: true, from, to };
 }
 
-export function MapView({ world, state, selected, selectedTile, onSelect, all, picked, onPickActor, onPickTrap, onPickSpell }: Props) {
+export function MapView({ world, state, selected, selectedTile, onSelect, all, picked, onPickActor, onPickTrap, onPickSpell, overlay, shelves: withShelves = true, labelFor, fitPad }: Props) {
   const actors = state ? visibleActors(state, all) : [];
   const traps = onPickTrap ? world.events.filter(isTrap) : [];
   const spells = onPickSpell ? world.spells : [];
   // Spread actors standing on the same tile around its middle.
   const slots = new Map<string, number>();
-  const { box, svgProps, zoomIn, zoomOut, fit } = useMapView(world);
+  const { box, svgProps, zoomIn, zoomOut, fit } = useMapView(world, fitPad);
   return (
     <div className="map-wrap">
       <svg className="map" viewBox={`${box.x} ${box.y} ${box.w} ${box.h}`} role="img" aria-label="젠디카르 지도" {...svgProps}>
         <rect width={MAP_WIDTH} height={MAP_HEIGHT} className="map-sea" />
-        {shelves(world).map((sh) => (
+        {withShelves && shelves(world).map((sh) => (
           <g key={`shelf-${sh.id}`} className="map-shelf">
             {sh.bands.map((b, i) => <line key={i} x1={b.x1} y1={b.y1} x2={b.x2} y2={b.y2} strokeWidth={b.width} />)}
             {sh.circles.map((c, i) => <circle key={i} cx={c.x} cy={c.y} r={c.r} />)}
@@ -204,6 +213,7 @@ export function MapView({ world, state, selected, selectedTile, onSelect, all, p
             </g>
           );
         })}
+        {overlay}
         {world.regions.map((r) => {
           const t = TERRAINS[r.terrain];
           const conds = state?.regions[r.id]?.conditions ?? [];
@@ -224,12 +234,17 @@ export function MapView({ world, state, selected, selectedTile, onSelect, all, p
             );
           }
           const label = r.parent ? areaLabelAt(world, r) : regionLabelAt(world, r);
+          const big = labelFor?.(r);
           return (
             <g key={r.id} className={`map-region-name${r.parent ? ' map-area' : ''}`} onClick={() => onSelect(r.id)} tabIndex={0}
               onKeyDown={(e) => (e.key === 'Enter' || e.key === ' ') && onSelect(r.id)}>
               {destroyed && <text x={own.x} y={own.y + 1.4} className="map-destroyed">✕</text>}
               {conds.length > 0 && <text x={own.x + 5} y={own.y - 4} className="map-alert">⚠</text>}
-              <text x={label.x} y={label.y} style={{ textAnchor: label.anchor }} className={r.parent ? 'map-label map-area-label' : 'map-label'}>{r.name}</text>
+              {big ? (
+                <text x={big.x} y={big.y} style={{ fontSize: big.size }} className={`map-label map-label-big${big.sea ? ' map-label-sea' : ''}`}>{r.name}</text>
+              ) : (
+                <text x={label.x} y={label.y} style={{ textAnchor: label.anchor }} className={r.parent ? 'map-label map-area-label' : 'map-label'}>{r.name}</text>
+              )}
             </g>
           );
         })}

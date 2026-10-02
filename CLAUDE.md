@@ -10,6 +10,7 @@
 - `server/`: 게임 서버. JSON API와 웹 UI를 한 프로세스에서 제공하고, 게임을 `saves/current.json` 에 저장한다.
 - `web/`: React UI. 지역 노드 지도, 이야기 로그, 행동 컨트롤로 이루어진다. `sim/` 의 타입과 순수 함수를 같이 쓴다.
 - `tools/`: 세계관 검사(`world-check.mjs`), 지도 미리보기(`world-map.mjs`), 카드 불러오기(`card.mjs`).
+- `world-v2/`: 지도 v2. 레벨 디자인을 처음부터 다시 하는 지도이고, 게임은 아직 쓰지 않는다. 규칙은 `world-v2/README.md`, 아래 "지도 v2".
 
 Node 24 가 `.ts` 를 바로 실행한다 (type stripping). 그래서 import 에 `.ts` 확장자를 붙이고, 타입은 `import type` 으로 가져오고, enum 이나 parameter property 같은 지울 수 없는 TS 문법은 쓰지 않는다 (`tsconfig.json` 의 `erasableSyntaxOnly`).
 
@@ -30,13 +31,26 @@ Node 24 가 `.ts` 를 바로 실행한다 (type stripping). 그래서 import 에
 5. 기존 설정과 연결되는 점, 부딪히는 점을 짚는다.
 6. 카드 하나당 커밋 하나를 만들고 (`카드 ZEN-xxx: <이름>`) 곧바로 `origin main` 으로 푸시한다.
 
+## 지도 v2 (`world-v2/`, 웹 `#/v2`)
+
+레벨 디자인을 처음부터 다시 하는 지도다 (사용자 결정 2026-10-03). 게임과 v1 지도(`world/`)는 그대로 두고, v2 는 `#/v2` 페이지에서만 본다.
+- 순서: 전체 지도(대륙·섬·바다) → 대륙별로 지역과 장소만 (대륙마다 사용자 확인) → 그 뒤 카드는 사용자가 요청할 때만 v2 에 넣는다.
+- MTG 설정을 어기지 않는 선에서 자유롭게 짓는다. 팬 지도(`map/`, 로컬에만 두고 `.gitignore`)는 모양을 참고하고, 설정과 부딪히면 설정을 따른다. 설정끼리 어긋나면 PWG·매직 스토리 > Art of Zendikar > 소설 순이다 (배치 근거는 `world-v2/README.md`).
+- 땅은 격자에 칠한다 (`sim/footprint.ts`, `sim/load-v2.ts`).
+  - `world-v2/map/layers.yaml` 은 겹과 범례(글자 → 지역 id)다. 첫 겹 `world.txt` 는 120×90 글자로 지도 전체이고, `.` 은 먼 바다다. 다음 겹은 대륙 안의 구역을 그 땅의 칸 위에 칠한다.
+  - 구역 안의 구역은 그 구역의 칸 위에, 그 구역을 칠한 겹보다 뒤 겹에 칠한다.
+  - 요소 파일은 v1 location 형식 그대로다. `map` 에 x·y·tiles·pos·order 는 적지 않는다 (칸들의 가운데가 자리). 걸어 다니는 곳(`sim.wanders`)만 칠하지 않고 x·y 를 적는다. canon 만 지도에 오른다.
+  - 레벨 디자인은 `design: { role, danger: 1~5, note }` 로 적는다.
+- 서버의 `/api/v2/world` 는 게임과 따로 요청마다 새로 읽고, `/api/v2/ref/<파일>` 은 `map/` 의 참고 이미지를 내준다. 페이지의 "참고 지도"는 팬 지도 조각을 v2 자리에 겹친다 (`world-v2/map/reference.yaml`).
+
 ## 실행
 
 ```sh
-npm run dev          # http://localhost:5173 (PORT 로 변경)
+npm run dev          # http://localhost:5173 (PORT 로 변경), 지도 v2 는 #/v2
 npm test             # node:test, sim/**/*.test.ts
 npm run typecheck
 npm run world:check
+npm run world2:check # 지도 v2 검사, world2:map 은 미리보기 world-v2/map.svg
 ```
 
 게임을 처음부터 다시 하려면 UI의 "새 게임"을 누른다 (또는 `saves/current.json` 삭제). 서버가 떠 있는 동안 카드를 반영하면 다음 요청 때 새 인물, 지역, 사건이 기존 저장에 합류한다. `npm run dev` 는 `node --watch` 라서 `sim/`, `server/` 코드를 고치면 서버가 저절로 다시 뜬다 (진행 중이던 턴은 저장되지 않는다). 세계 데이터를 다시 읽다 실패하면 이전 세계로 계속하고 경고만 찍는다.

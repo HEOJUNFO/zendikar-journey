@@ -907,3 +907,148 @@ button.link {
 .admin-goto {
   margin: 4px 0 8px;
 }
+
+/* --- map v2 (#/v2): the lands listed on the right, the picked one's card on the left --- */
+
+.v2-list,
+.v2-region {
+  position: absolute;
+  background: color-mix(in srgb, var(--panel) 90%, transparent);
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  backdrop-filter: blur(4px);
+  overflow-y: auto;
+}
+.v2-list {
+  top: var(--v2-top, 72px);
+  right: 12px;
+  max-height: calc(100% - var(--v2-top, 72px) - 12px);
+  width: min(240px, calc(100% - 24px));
+  padding: 8px 10px;
+}
+.v2-list[hidden] {
+  display: none;
+}
+.v2-list h3 {
+  font-size: 13px;
+  margin: 8px 0 2px;
+}
+.v2-list .region-list button {
+  padding: 2px 4px;
+  border: 0;
+}
+.v2 .fullmap-top button.on {
+  color: var(--accent);
+}
+.v2 .fullmap-top button.v2-error-count {
+  color: var(--danger);
+  border-color: var(--danger);
+}
+/* map v2: names written inside the lands, as large as the land (font-size set per land); the
+   tiles under them take the clicks */
+.map-label.map-label-big {
+  font-weight: 700;
+  stroke-width: 0.2em;
+  letter-spacing: 0.02em;
+  pointer-events: none;
+}
+/* map v2: the map starts below the top bar, however tall it wraps */
+.fullmap.v2 .map-wrap {
+  position: absolute;
+  top: var(--v2-top, 72px);
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: auto;
+}
+.map-label.map-label-sea {
+  fill: #b9d3f2;
+  font-weight: 500;
+  font-style: italic;
+  letter-spacing: 0.12em;
+}
+.v2-list .v2-name {
+  flex: 1;
+}
+.fullmap-region.v2-region {
+  top: var(--v2-top, 72px);
+  bottom: 12px;
+  width: min(400px, calc(100% - 24px));
+}
+.v2-errors {
+  color: var(--danger);
+  font-size: 12px;
+  border: 1px solid var(--danger);
+  border-radius: 8px;
+  padding: 6px 8px;
+  margin-bottom: 6px;
+}
+.v2-errors ul {
+  margin: 4px 0 0;
+  padding-left: 16px;
+}
+.v2-danger {
+  font-size: 9px;
+  letter-spacing: -1px;
+  color: var(--muted);
+}
+.v2-danger-3 {
+  color: var(--accent);
+}
+.v2-danger-4,
+.v2-danger-5 {
+  color: var(--danger);
+}
+.v2-note {
+  border-left: 2px solid var(--accent);
+  padding-left: 8px;
+}
+.v2-body {
+  font-size: 13px;
+  color: var(--ink);
+}
+.v2-body h3 {
+  font-size: 14px;
+  margin: 10px 0 2px;
+}
+.v2-body ul {
+  margin: 2px 0;
+  padding-left: 18px;
+}
+.v2-ref {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+}
+.v2-ref input[type='range'] {
+  width: 90px;
+}
+/* the zoom buttons step left of the open list */
+.v2.list-open .map-zoom {
+  right: 264px;
+}
+@media (max-width: 720px) {
+  .v2-list {
+    top: auto;
+    bottom: 12px;
+    height: 40%;
+    max-height: none;
+  }
+  .v2.list-open .map-zoom {
+    right: 10px;
+    top: 12px;
+    transform: none;
+  }
+  .fullmap-region.v2-region {
+    bottom: 12px;
+  }
+  /* a picked land's card takes the screen; the list and zoom come back when it closes */
+  .v2.card-open .v2-list,
+  .v2.card-open .map-zoom {
+    display: none;
+  }
+}
+.v2-list .swatch {
+  box-shadow: 0 0 0 1px var(--muted);
+}
