@@ -99,7 +99,7 @@ export function castBlocked(state: State, world: World, a: Actor, spellId: strin
   if (need && castTargets(state, a, s).length < need) return `${josa(s.name, '은', '는')} 대상이 ${need === 2 ? '둘' : need}이 있어야 한다 (곁의 자신과 권속).`;
   const doom = destroyBarred(world, state, s, target);
   if (doom) return doom;
-  if (s.effects.some((e) => e.type === 'pump_target') && target.loyalty !== undefined) return `${josa(shortName(target.name), '은', '는')} 생물이 아니다 (플레인즈워커).`;
+  if (s.effects.some((e) => e.type === 'pump_target' || e.type === 'weaken_target') && target.loyalty !== undefined) return `${josa(shortName(target.name), '은', '는')} 생물이 아니다 (플레인즈워커).`;
   if (s.effects.some((e) => e.type === 'copy_target') && !copyable(target)) return `${josa(shortName(target.name), '은', '는')} 생물이 아니다 (플레인즈워커). 복제할 수 없다.`;
   if (s.effects.some((e) => e.type === 'destroy_relics') && !relicsHere(state, world, a.region, a.tile).length) return '여기엔 부술 마법물체도 부여마법도 없다.';
   if (s.effects.some((e) => e.type === 'demolish') && !demolishOptions(state, world, a).length) return '여기엔 부술 마법물체도 땅도 없다.';
@@ -216,7 +216,7 @@ export function castableSpells(state: State, world: World, a: Actor, t: number) 
 
 // Whether a spell does harm (the target takes it as an attack).
 export function harmful(s: SpellDef) {
-  return s.effects.some((e) => e.type === 'lose_half_life' || (e.type === 'aura' && e.no_untap) || e.type === 'exile_library' || e.type === 'exile_until' || e.type === 'weaken_controlled' || e.type === 'damage' || e.type === 'threaten' || e.type === 'destroy_target' || e.type === 'destroy_land' || e.type === 'discard' || e.type === 'discard_per_land' || e.type === 'damage_per_land');
+  return s.effects.some((e) => e.type === 'lose_half_life' || (e.type === 'aura' && e.no_untap) || e.type === 'exile_library' || e.type === 'exile_until' || e.type === 'weaken_controlled' || e.type === 'weaken_target' || e.type === 'damage' || e.type === 'threaten' || e.type === 'destroy_target' || e.type === 'destroy_land' || e.type === 'discard' || e.type === 'discard_per_land' || e.type === 'damage_per_land');
 }
 
 // Pays and resolves. A harmful spell's target (if an NPC) takes it as an attack. Returns whether
@@ -397,15 +397,17 @@ export function resolveSpell(state: State, world: World, a: Actor, spellId: stri
     } else if (eff.type === 'pump_controlled') {
       const { pt, abilities } = kicked && eff.kicked ? eff.kicked : eff;
       for (const x of controlledCreatures(state, world, a).filter((y) => together(y, a))) boostTillMidnight(state, x, pt, abilities, t);
-    } else if (eff.type === 'weaken_controlled') {
-      // The target and those who serve them, there with the caster (no planeswalker).
-      const pt = kicked && eff.kicked_pt ? eff.kicked_pt : eff.pt;
-      const theirs = controlledCreatures(state, world, target).filter((y) => y.id === target.id || together(y, a));
+    } else if (eff.type === 'weaken_controlled' || eff.type === 'weaken_target') {
+      // The target and those who serve them, there with the caster (no planeswalker); or the
+      // target alone.
+      const pt = eff.type === 'weaken_controlled' && kicked && eff.kicked_pt ? eff.kicked_pt : eff.pt;
+      const theirs = eff.type === 'weaken_target' ? [target] : controlledCreatures(state, world, target).filter((y) => y.id === target.id || together(y, a));
       for (const x of theirs) {
         if (x.dead || x.loyalty !== undefined) continue;
         x.pumps = [...(x.pumps ?? []), { pt: [pt[0], pt[1]], until: untapTime(t) }];
         const [, toughness] = ptOf(x);
-        addLog(state, { kind: 'effect', text: `${josa(shortName(x.name), '이', '가')} 늪에 붙들려 힘이 빠졌다 (${pt.join('/')}, 자정까지, ${ptOf(x).join('/')}).`, regions: [x.region], actors: [x.id, a.id], t });
+        const how = eff.type === 'weaken_target' ? `${s.name}에 일그러져` : '늪에 붙들려';
+        addLog(state, { kind: 'effect', text: `${josa(shortName(x.name), '이', '가')} ${how} 힘이 빠졌다 (${pt.join('/')}, 자정까지, ${ptOf(x).join('/')}).`, regions: [x.region], actors: [x.id, a.id], t });
         if (toughness <= 0 || woundsOf(x, t) >= toughness) die(state, x, t, s.name, a);
         else if (x.kind !== 'player' && x.id !== target.id) addFoe(x, a.id, t);
       }

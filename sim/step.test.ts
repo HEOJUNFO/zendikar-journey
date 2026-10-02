@@ -7423,6 +7423,32 @@ test('Marsh Casualties: the target and their retainers there get -1/-1 until mid
   assert.deepEqual(ptOf(m), [1, 1]);
 });
 
+test('Disfigure: the target alone gets -2/-2 until midnight, not their retainers; a 2-toughness one dies, NPCs too; no planeswalker', () => {
+  const dis: RawEntity = { id: 'spl-df', kind: 'spell', name: '흉터 새기기', status: 'canon', sim: { cost: '{0}', speed: 'instant', learn_at: 'loc-a', target: 'other_here', effects: [{ type: 'weaken_target', pt: [-2, -2] }] } };
+  const world = fixture([dis, npc('chr-c', npcSim('loc-a')), npc('chr-m', npcSim('loc-a', 'work', [3, 3])), npc('chr-r', npcSim('loc-a', 'work', [2, 2])), npc('chr-w', npcSim('loc-a', 'work', [2, 2]))]);
+  const state = newState(world, { seed: 1, mode: 'observer' });
+  const [c, m, r, w] = ['chr-c', 'chr-m', 'chr-r', 'chr-w'].map((id) => state.actors[id]);
+  for (const a of [m, r, w]) a.tile = c.tile;
+  r.master = m.id;
+  c.spells = ['spl-df'];
+  castSpell(state, world, c, 'spl-df', 'chr-m', false, state.minutes);
+  assert.deepEqual(ptOf(m), [1, 1]);
+  assert.deepEqual(ptOf(r), [2, 2]);
+  assert.ok(m.foes?.ids.includes('chr-c'));
+  delete c.used;
+  castSpell(state, world, c, 'spl-df', 'chr-w', false, state.minutes);
+  assert.ok(w.dead);
+  expireGranted(state, untapTime(state.minutes));
+  assert.deepEqual(ptOf(m), [3, 3]);
+});
+
+test('the real Disfigure is taught at the Ghet estate: {B}, an instant, -2/-2 on one', () => {
+  const s = loadWorld().spells.find((x) => x.id === 'spl-disfigure')!;
+  assert.equal(s.learnAt, 'loc-ghet-estate');
+  assert.equal(s.speed, 'instant');
+  assert.deepEqual(s.effects, [{ type: 'weaken_target', pt: [-2, -2] }]);
+});
+
 test('Nissa\'s Chosen: killed, it goes into no graveyard; seven days on it wakes at home, whole and serving no one; a token of it is simply gone', () => {
   const world = fixture([besideA, npc('chr-n', { ...npcSim('loc-az', 'work', [2, 3]), revives_after: 7 }), npc('chr-m', npcSim('loc-a')), npc('chr-k', npcSim('loc-a'))]);
   const state = newState(world, { seed: 1, mode: 'observer' });
