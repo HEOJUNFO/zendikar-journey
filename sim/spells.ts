@@ -331,7 +331,7 @@ export function resolveSpell(state: State, world: World, a: Actor, spellId: stri
       delete target.boundUntil;
       for (const ab of eff.abilities) grantAbility(state, target, ab, until, s.name, t);
     } else if (eff.type === 'damage') {
-      dealDamage(state, world, target, eff.amount, t, s.name, false, a);
+      dealDamage(state, world, target, kicked && eff.kicked_amount ? eff.kicked_amount : eff.amount, t, s.name, false, a);
     } else if (eff.type === 'sacrifice_land') {
       const owed = harrowOwed(state, world, a, { type: 'harrow', spell: s.name, left: 0, given: false }, t);
       if (owed) (state.choices ??= []).push(owed);

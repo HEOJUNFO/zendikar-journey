@@ -757,7 +757,8 @@ export const SpellSimSchema = z.strictObject({
         z.strictObject({ type: z.literal('threaten'), counters: z.number().int().min(0).default(0), abilities: z.array(z.enum(ABILITIES)).default([]) }),
         // "Deals N damage to target creature" (Magma Rift): no planeswalker; `any`: "to target
         // creature or player" (Punishing Fire): anyone, a planeswalker's loyalty too.
-        z.strictObject({ type: z.literal('damage'), amount: z.number().int().positive(), any: z.boolean().default(false) }),
+        // `kicked_amount`: the damage if kicked (Burst Lightning).
+        z.strictObject({ type: z.literal('damage'), amount: z.number().int().positive(), any: z.boolean().default(false), kicked_amount: z.number().int().positive().optional() }),
         // "Destroy all creatures" (Day of Judgment): every being on the caster's tile, the caster
         // too (user decision 2026-10-01), not planeswalkers; the indestructible stand.
         z.strictObject({ type: z.literal('destroy_all') }),

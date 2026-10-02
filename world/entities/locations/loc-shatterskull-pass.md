@@ -5,9 +5,10 @@ name: 섀터스컬 고개
 name_en: Shatterskull Pass
 summary: 아쿰의 이빨 산맥을 넘는 험한 고개. 밤새 바위가 망치처럼 떨어져 내리고, 늘 화가 나 있는 거인들이 산다
 status: canon
-sources: [ZEN-148, ZEN-155]
+sources: [ZEN-148, ZEN-155, ZEN-119]
 tags: [고개, 산, 거인, 적색]
 links:
+  - { to: spl-burst-lightning, rel: 가르치는 주문 (터지는 번개) }
   - { to: itm-zektar-shrine-expedition, rel: 높은 곳의 젝타르 성소 원정 }
   - { to: loc-teeth-of-akoum, rel: 바깥 구역 }
   - { to: cre-shatterskull-giant, rel: 사는 거인 }
@@ -25,3 +26,4 @@ map: { in: loc-teeth-of-akoum, terrain: rocky, pos: [-0.3, 0.2], tiles: 10 }   #
 - 섀터스컬 거인(`cre-shatterskull-giant`, ZEN-148)이 산다.
 - 밤새 떨어지는 바위는 설명뿐이다: 게임 규칙은 없다 ([결정] 2026-10-01).
 - 북동쪽 높은 곳, 정령이 들끓는 젝타르 성소의 바위 제단에 젝타르 성소 원정(`itm-zektar-shrine-expedition`, ZEN-155)이 선다 ([결정] 2026-10-02, [배경] 검은 돌의 섀터스컬 산맥 높은 곳): 땅과 이어질 때마다 탐색이 쌓이고, 셋이면 7/1 불의 정령이 하루 섬긴다.
+- 터지는 번개(`spl-burst-lightning`, ZEN-119)를 4시간 들여 배운다 ([결정] 2026-10-02): 누구에게든 피해 2, 킥커 {4}면 4.

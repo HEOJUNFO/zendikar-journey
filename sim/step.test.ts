@@ -7476,6 +7476,20 @@ test('Punishing Fire: 2 to anyone (a planeswalker\'s loyalty too); forgotten, it
   assert.equal(manaAvailable(state, world, c, state.minutes).R, 1);
 });
 
+test('Burst Lightning: 2 to one there, 4 kicked', () => {
+  const bolt: RawEntity = { id: 'spl-bl', kind: 'spell', name: '터지는 번개', status: 'canon', sim: { cost: '{0}', speed: 'instant', learn_at: 'loc-a', target: 'other_here', kicker: { mana: '{4}' }, effects: [{ type: 'damage', amount: 2, any: true, kicked_amount: 4 }] } };
+  const world = fixture([bolt, npc('chr-c', { ...npcSim('loc-a'), mana: { R: 4 } }), npc('chr-x', npcSim('loc-a', 'work', [1, 9]))]);
+  const state = newState(world, { seed: 1, mode: 'observer' });
+  const [c, x] = [state.actors['chr-c'], state.actors['chr-x']];
+  x.tile = c.tile;
+  c.spells = ['spl-bl'];
+  castSpell(state, world, c, 'spl-bl', 'chr-x', false, state.minutes);
+  assert.equal(woundsOf(x, state.minutes), 2);
+  delete c.used;
+  castSpell(state, world, c, 'spl-bl', 'chr-x', true, state.minutes);
+  assert.equal(woundsOf(x, state.minutes), 6);
+});
+
 test('the real Punishing Fire is taught on the Teeth of Akoum', () => {
   const world = loadWorld();
   const s = world.spells.find((x) => x.id === 'spl-punishing-fire')!;
