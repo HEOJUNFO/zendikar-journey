@@ -344,6 +344,8 @@ export type State = {
   possessions?: { target: string; by: string; from: number; until: number }[];
   // The dead exiled from a graveyard: erased from the world for good (sim/erase.ts), never made
   // anew from their card.
+  // Life gained since the hour began: who and where (sim/punish.ts).
+  lifeGains?: { id: string; region: string }[];
   erased?: string[];
   // Picks the player owes (an Ally's rally in their party): they answer with a "choose" action
   // before anything else (sim/run.ts).

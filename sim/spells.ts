@@ -133,7 +133,7 @@ export function castTargets(state: State, a: Actor, s: SpellDef, world?: World) 
 // "Destroy target non<color> creature": why `x` can't be it, or null.
 function destroyBarred(world: World, state: State, s: SpellDef, x: Actor) {
   // "Target creature": a planeswalker is none.
-  if (s.effects.some((e) => e.type === 'damage' || e.type === 'destroy_target' || e.type === 'threaten' || e.type === 'exile_until') && x.loyalty !== undefined) return `${josa(shortName(x.name), '은', '는')} 생물이 아니다 (플레인즈워커).`;
+  if (s.effects.some((e) => (e.type === 'damage' && !e.any) || e.type === 'destroy_target' || e.type === 'threaten' || e.type === 'exile_until') && x.loyalty !== undefined) return `${josa(shortName(x.name), '은', '는')} 생물이 아니다 (플레인즈워커).`;
   const eff = s.effects.find((e) => e.type === 'destroy_target');
   if (eff?.type !== 'destroy_target') return null;
   if (eff.not_color && actorColors(state, world, x).includes(eff.not_color)) return `${josa(shortName(x.name), '은', '는')} ${COLOR_LABELS[eff.not_color]}색이라 고를 수 없다.`;

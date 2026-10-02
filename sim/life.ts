@@ -51,6 +51,8 @@ export function gainLife(state: State, a: Actor, amount: number, t: number, caus
   if (a.dead || amount <= 0) return;
   a.lifeGained = gameDay(t);
   a.life = life + amount;
+  // For what answers another's gain (Punishing Fire, sim/punish.ts), each hour.
+  (state.lifeGains ??= []).push({ id: a.id, region: a.region });
   addLog(state, {
     kind: 'effect',
     text: `${josa(shortName(a.name), '이', '가')} ${toward(cause)} 생명 ${amount}을 얻었다 (생명 ${a.life}).`,

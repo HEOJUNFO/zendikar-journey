@@ -637,6 +637,9 @@ export const SpellSimSchema = z.strictObject({
   // "Cast this spell only if you control N or more <kind>" (Feast of Blood: two Vampires): the caster
   // and those who serve them hold that many of a creature kind (a creature entity, e.g. cre-vampire).
   requires: z.strictObject({ kind: z.string(), count: z.number().int().positive() }).optional(),
+  // "Whenever an opponent gains life, you may pay <cost>. If you do, return this card from your
+  // graveyard to your hand" (Punishing Fire): sim/punish.ts.
+  return_on_life_gain: CostSchema.optional(),
   // Where it is learned, and how long that takes.
   learn_at: z.string(),
   learn_hours: z.number().int().min(1).default(4),
@@ -737,8 +740,9 @@ export const SpellSimSchema = z.strictObject({
         // it. It gains <abilities> until end of turn" (Mark of Mutiny): held as the caster's
         // retainer until midnight, then back to whom it served (sim/retainers.ts `seize`).
         z.strictObject({ type: z.literal('threaten'), counters: z.number().int().min(0).default(0), abilities: z.array(z.enum(ABILITIES)).default([]) }),
-        // "Deals N damage to target creature" (Magma Rift): no planeswalker.
-        z.strictObject({ type: z.literal('damage'), amount: z.number().int().positive() }),
+        // "Deals N damage to target creature" (Magma Rift): no planeswalker; `any`: "to target
+        // creature or player" (Punishing Fire): anyone, a planeswalker's loyalty too.
+        z.strictObject({ type: z.literal('damage'), amount: z.number().int().positive(), any: z.boolean().default(false) }),
         // "Destroy all creatures" (Day of Judgment): every being on the caster's tile, the caster
         // too (user decision 2026-10-01), not planeswalkers; the indestructible stand.
         z.strictObject({ type: z.literal('destroy_all') }),
@@ -1076,6 +1080,7 @@ export type SpellDef = {
   costText: string;
   speed: 'sorcery' | 'instant';
   requires?: { kind: string; count: number };
+  returnOnLifeGain?: { cost: ManaCost; text: string };
   target: 'other_here' | 'any_here' | 'self';
   learnAt: string;
   learnHours: number;
@@ -1349,6 +1354,7 @@ export function buildWorld(entities: RawEntity[]): { world: World; errors: strin
         costText: d.cost,
         speed: d.speed,
         ...(d.requires ? { requires: d.requires } : {}),
+        ...(d.return_on_life_gain ? { returnOnLifeGain: { cost: parseManaCost(d.return_on_life_gain)!, text: d.return_on_life_gain } } : {}),
         target: d.target,
         learnAt: d.learn_at,
         learnHours: d.learn_hours,

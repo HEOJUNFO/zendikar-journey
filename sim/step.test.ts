@@ -54,6 +54,7 @@ import { altarBlocked } from './altar.ts';
 import { expeditionBlocked } from './expedition.ts';
 import { ascendBlocked, upkeepUnhurt } from './luminarch.ts';
 import { reviveHour } from './revive.ts';
+import { punishHour } from './punish.ts';
 import { applyHarrow } from './harrow.ts';
 import type { HarrowEffect } from './harrow.ts';
 import { applySacrament } from './sacrament.ts';
@@ -4410,7 +4411,7 @@ test('the real Magma Rift is taught in the Teeth of Akoum', () => {
   const world = loadWorld();
   const s = world.spells.find((x) => x.id === 'spl-magma-rift')!;
   assert.equal(s.learnAt, 'loc-teeth-of-akoum');
-  assert.deepEqual(s.effects, [{ type: 'sacrifice_land' }, { type: 'damage', amount: 5 }]);
+  assert.deepEqual(s.effects, [{ type: 'sacrifice_land' }, { type: 'damage', amount: 5, any: false }]);
 });
 
 const mutiny: RawEntity = { id: 'spl-mm', kind: 'spell', name: '반란의 낙인', status: 'canon', sim: { cost: '{1}', speed: 'sorcery', learn_at: 'loc-a', effects: [{ type: 'threaten', counters: 1, abilities: ['haste'] }] } };
@@ -7295,6 +7296,37 @@ test('the real Nissa\'s Chosen lives in the Tangled Vale by Nissa: a talking elf
   assert.ok(def.types?.includes('elf'));
   assert.equal(c.revives, 7);
   assert.equal(swayBlocked(state, world, c), null);
+});
+
+const punishSpell: RawEntity = { id: 'spl-pf', kind: 'spell', name: '징벌의 불', status: 'canon', sim: { cost: '{0}', speed: 'instant', learn_at: 'loc-a', target: 'other_here', return_on_life_gain: '{R}', effects: [{ type: 'damage', amount: 2, any: true }] } };
+
+test('Punishing Fire: 2 to anyone (a planeswalker\'s loyalty too); forgotten, it comes back for {R} when another in the same land gains life, not one in another land', () => {
+  const world = fixture([punishSpell, besideA, npc('chr-c', { ...npcSim('loc-a'), mana: { R: 2 } }), npc('chr-pw', { ...npcSim('loc-a'), loyalty: 5 }), npc('chr-g', npcSim('loc-a')), npc('chr-far', npcSim('loc-b'))]);
+  const state = newState(world, { seed: 1, mode: 'observer' });
+  const [c, pw, g, far] = ['chr-c', 'chr-pw', 'chr-g', 'chr-far'].map((id) => state.actors[id]);
+  pw.tile = c.tile;
+  c.spells = ['spl-pf'];
+  assert.equal(castBlocked(state, world, c, 'spl-pf', 'chr-pw', false, state.minutes), null);
+  castSpell(state, world, c, 'spl-pf', 'chr-pw', false, state.minutes);
+  assert.equal(pw.loyalty, 3);
+  c.spells = [];
+  c.graveyard = ['spl-pf'];
+  gainLife(state, far, 2, state.minutes, '시험');
+  punishHour(state, world, state.minutes);
+  assert.deepEqual(c.graveyard, ['spl-pf']);
+  g.region = 'loc-az';
+  gainLife(state, g, 2, state.minutes, '시험');
+  punishHour(state, world, state.minutes);
+  assert.ok(c.spells?.includes('spl-pf') && !c.graveyard?.includes('spl-pf'));
+  assert.equal(manaAvailable(state, world, c, state.minutes).R, 1);
+});
+
+test('the real Punishing Fire is taught on the Teeth of Akoum', () => {
+  const world = loadWorld();
+  const s = world.spells.find((x) => x.id === 'spl-punishing-fire')!;
+  assert.equal(s.learnAt, 'loc-teeth-of-akoum');
+  assert.equal(s.returnOnLifeGain?.text, '{R}');
+  assert.deepEqual(s.effects, [{ type: 'damage', amount: 2, any: true }]);
 });
 
 test('the real Nimbus Wings is taught at Kabira Crossroads: the one it is cast on gets +1/+2 and wings', () => {

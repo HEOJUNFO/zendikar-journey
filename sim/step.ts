@@ -41,6 +41,7 @@ import { CLAIM_HOURS, claimBlocked, claimItem, itemsAt, itemWhere } from './item
 import { EQUIP_HOURS, equipBlocked, equipItem, equipmentOf, syncEquipment } from './equipment.ts';
 import { nowhereHour } from './nowhere.ts';
 import { reviveHour } from './revive.ts';
+import { punishHour } from './punish.ts';
 import { ASCEND_HOURS, ascend, ascendBlocked, upkeepUnhurt } from './luminarch.ts';
 import { EON_HOURS, eonLand, holdStill, spendBlocked, spendDay, storeBlocked, storeDay, timeNews } from './eons.ts';
 import { upkeepWins } from './win.ts';
@@ -71,6 +72,7 @@ export function step(state: State, placed: World) {
   wanderHour(state, placed, t);
   nowhereHour(state, t);
   reviveHour(state, placed, t);
+  punishHour(state, placed, t);
   const world = withPositions(state, placed);
   startDay(state, world, t);
   markSealed(state, world, t);
