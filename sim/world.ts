@@ -754,6 +754,9 @@ export const SpellSimSchema = z.strictObject({
         // "Enchant land. When this enters, draw a card. Enchanted land is an Island" (Spreading
         // Seas): after casting, a land someone on the tile holds becomes an Island (sim/flood.ts).
         z.strictObject({ type: z.literal('flood_land') }),
+        // "Prevent all combat damage that would be dealt this turn by creatures without trample"
+        // (Tanglesap): on the caster's tile, until midnight (sim/combat.ts `fogged`).
+        z.strictObject({ type: z.literal('fog') }),
         z.strictObject({ type: z.literal('damage_grounded'), amount: z.number().int().positive() }),
         // "Reveal the top N cards of your library. Put all creature cards revealed this way into
         // your hand and the rest into your graveyard" (Beast Hunt): N unknown secrets turn up; the

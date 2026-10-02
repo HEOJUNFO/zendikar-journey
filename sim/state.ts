@@ -346,6 +346,8 @@ export type State = {
   possessions?: { target: string; by: string; from: number; until: number }[];
   // The dead exiled from a graveyard: erased from the world for good (sim/erase.ts), never made
   // anew from their card.
+  // Tanglesap: tiles where combat damage of those without trample is prevented until `until`.
+  fogs?: { region: string; tile?: Tile; until: number; by: string }[];
   // Life gained since the hour began: who and where (sim/punish.ts).
   lifeGains?: { id: string; region: string }[];
   erased?: string[];

@@ -5,9 +5,10 @@ name: 탱글드 베일
 name_en: Tangled Vale
 summary: 발라 게드 남쪽, 가파른 언덕 사이로 이어진 밀림 골짜기들. 사람을 잡아먹는 덩굴이 얽힌 위험한 수렁이고, 조라가 엘프 부족의 본거지다
 status: canon
-sources: [ZEN-166, ZEN-170, ZEN-181, ZEN-149, ZEN-171]
+sources: [ZEN-166, ZEN-170, ZEN-181, ZEN-149, ZEN-171, ZEN-186]
 tags: [골짜기, 밀림, 엘프, 조라가, 녹색]
 links:
+  - { to: spl-tanglesap, rel: 가르치는 주문 (얽히는 수액) }
   - { to: cre-nissas-chosen, rel: 니사가 고른 엘프 전사 }
   - { to: spl-slaughter-cry, rel: 가르치는 주문 (살육의 함성) }
   - { to: spl-savage-silhouette, rel: 가르치는 주문 (야성의 그림자) }
@@ -34,6 +35,7 @@ map: { in: loc-bala-ged, terrain: forest, pos: [-0.3, 0.75], tiles: 10 }   # 기
 
 - 살육의 함성(`spl-slaughter-cry`, ZEN-149)을 배울 수 있다 (4시간, [결정] 2026-10-01): 곁의 하나가 자정까지 +3/+0, 선제공격을 얻는 적색 순간마법. 조라가 음유시인 니코우의 이야기에서.
 - 북동쪽 볕 드는 숲에 니사의 선택받은 자(`cre-nissas-chosen`, ZEN-171)가 산다 ([결정] 2026-10-02): 쓰러져도 무덤에 들지 않고 이레 뒤 이곳에서 다시 눈을 뜨는 엘프 전사.
+- 얽히는 수액(`spl-tanglesap`, ZEN-186)을 4시간 들여 배운다 ([결정] 2026-10-02): 그 자리에서 자정까지 돌진 없는 이의 싸움 피해를 막는다.
 
 ## 미정/질문
 

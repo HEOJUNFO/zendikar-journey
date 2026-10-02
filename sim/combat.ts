@@ -3,6 +3,7 @@
 // fighting is one exchange: both sides strike at once, except that a tapped (bound) defender
 // can't strike back. A fight with no player in it is not to the death: whoever goes down is
 // knocked out for a few hours and the fight is over.
+import { sameTile } from './tiles.ts';
 import { attackQuest } from './ascension.ts';
 import { formatClock, gameDay, STEP_MINUTES, untapTime } from './clock.ts';
 import { remember } from './relations.ts';
@@ -307,6 +308,15 @@ export function clash(state: State, world: World, attacker: Actor, defender: Act
     regions: [attacker.region],
     actors: [attacker.id, defender.id],
   });
+  // Tanglesap there: the blows of those without trample land for nothing (until midnight).
+  if (fogged(state, attacker, t)) {
+    for (const [from, power] of [[attacker, ap], [defender, dp]] as const) {
+      if (power <= 0 || hasAbility(from, 'trample', t)) continue;
+      if (from === attacker) ap = 0;
+      else dp = 0;
+      addLog(state, { kind: 'combat', text: `${josa(shortName(from.name), '이', '가')} 휘두르지만 끈적한 수액에 얽혀 아무도 다치게 하지 못한다.`, regions: [attacker.region], actors: [from.id] });
+    }
+  }
   for (const [from, to] of [[attacker, defender], [defender, attacker]] as const) {
     const c = shielded(from, to);
     if (c && (from === attacker || !tapped)) addLog(state, { kind: 'combat', text: `${josa(shortName(to.name), '은', '는')} ${COLOR_LABELS[c]}색으로부터 보호받아 ${shortName(from.name)}의 공격에 다치지 않는다.`, regions: [attacker.region], actors: [to.id, from.id] });
@@ -556,4 +566,10 @@ export function hostileNpcs(state: State, world: World, t: number) {
       addLog(state, { kind: 'combat', text, regions: [a.region], actors: [a.id, foe.id] });
     }
   }
+}
+
+// Tanglesap (spell `fog`): "Prevent all combat damage that would be dealt this turn by creatures
+// without trample." On the caster's tile, until midnight (user decision 2026-10-02).
+export function fogged(state: State, a: Actor, t: number) {
+  return !!state.fogs?.some((f) => f.until > t && f.region === a.region && sameTile(f.tile, a.tile));
 }

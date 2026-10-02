@@ -8,7 +8,7 @@ import type { PlanDayInput } from './llm/planner.ts';
 import type { Action } from './actions.ts';
 import { startAction } from './actions.ts';
 import type { World } from './world.ts';
-import { addFoe, attackBlocked, caughtAsleep, clash, dealDamage, destroy, die, foesOf, hostileNpcs, intimidated, knockedOut, landwalked, unblockable, woundsOf } from './combat.ts';
+import { addFoe, attackBlocked, caughtAsleep, clash, fogged, dealDamage, destroy, die, foesOf, hostileNpcs, intimidated, knockedOut, landwalked, unblockable, woundsOf } from './combat.ts';
 import { landSealed, powersSealed, sealedBy, sealToday, setSeal } from './seal.ts';
 import { castableSpells, castBlocked, castSpell, castTargets, learnBlocked, npcCastBlocked, readyCast, tappable } from './spells.ts';
 import { anthemHour } from './monument.ts';
@@ -7465,6 +7465,30 @@ test('the real Spreading Seas is taught at Sea Gate', () => {
   const s = world.spells.find((x) => x.id === 'spl-spreading-seas')!;
   assert.equal(s.learnAt, 'loc-sea-gate');
   assert.deepEqual(s.effects, [{ type: 'flood_land' }]);
+});
+
+test('Tanglesap: on the caster\'s tile until midnight, fighters without trample deal no combat damage; one with trample still does; elsewhere, as ever', () => {
+  const sap: RawEntity = { id: 'spl-ts', kind: 'spell', name: '얽히는 수액', status: 'canon', sim: { cost: '{0}', speed: 'instant', learn_at: 'loc-a', target: 'self', effects: [{ type: 'fog' }] } };
+  const world = fixture([sap, npc('chr-c', npcSim('loc-a')), npc('chr-x', npcSim('loc-a', 'work', [3, 9])), npc('chr-y', npcSim('loc-a', 'work', [3, 9])), npc('chr-t', { ...npcSim('loc-a', 'work', [3, 9]), abilities: ['trample'] })]);
+  const state = newState(world, { seed: 1, mode: 'observer' });
+  const [c, x, y, tr] = ['chr-c', 'chr-x', 'chr-y', 'chr-t'].map((id) => state.actors[id]);
+  for (const a of [x, y, tr]) a.tile = c.tile;
+  c.spells = ['spl-ts'];
+  castSpell(state, world, c, 'spl-ts', c.id, false, state.minutes);
+  clash(state, world, x, y, state.minutes);
+  assert.equal(woundsOf(y, state.minutes), 0);
+  assert.equal(woundsOf(x, state.minutes), 0);
+  clash(state, world, tr, y, state.minutes);
+  assert.equal(woundsOf(y, state.minutes), 3);
+  assert.equal(woundsOf(tr, state.minutes), 0);
+  assert.ok(!fogged(state, x, untapTime(state.minutes)));
+});
+
+test('the real Tanglesap is taught in the Tangled Vale', () => {
+  const world = loadWorld();
+  const s = world.spells.find((x) => x.id === 'spl-tanglesap')!;
+  assert.equal(s.learnAt, 'loc-tangled-vale');
+  assert.deepEqual(s.effects, [{ type: 'fog' }]);
 });
 
 test('the real Nimbus Wings is taught at Kabira Crossroads: the one it is cast on gets +1/+2 and wings', () => {

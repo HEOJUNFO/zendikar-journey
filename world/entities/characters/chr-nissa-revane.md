@@ -5,9 +5,10 @@ name: 니사 레베인
 name_en: Nissa Revane
 summary: 조라가 엘프 출신의 플레인즈워커. 엘프를 다른 종족보다 높이 여기고 흩어진 엘프들이 하나로 뭉치기를 바란다. 지팡이 끝으로 숲의 마나를 부려 자신을 따를 엘프를 부른다
 status: canon
-sources: [ZEN-170]
+sources: [ZEN-170, ZEN-186]
 tags: [플레인즈워커, 엘프, 조라가, 녹색, 전설]
 links:
+  - { to: spl-tanglesap, rel: 그녀의 말이 실린 주문 (플레이버) }
   - { to: law-planeswalkers, rel: 플레인즈워커 }
   - { to: law-mana-colors, rel: 녹색의 존재 }
   - { to: loc-tangled-vale, rel: 나고 자란 조라가의 골짜기 }
