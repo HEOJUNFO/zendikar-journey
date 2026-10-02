@@ -7529,6 +7529,22 @@ test('the real Kazandu Blademaster hires out in the Kazandu Refuge for 20 coin: 
   assert.deepEqual(ptOf(b), [3, 3]);
 });
 
+test('the real Ondu Cleric hires out at Kabira Crossroads for 20 coin; as it joins and as each Ally joins after, its master gains life for each Ally of the party', () => {
+  const world = loadWorld();
+  const state = newState(world, { seed: 1, mode: 'observer' });
+  const c = state.actors['chr-ondu-cleric'];
+  assert.equal(c?.region, 'loc-kabira-crossroads');
+  const def = npcDef(state, world, c.id)!;
+  assert.ok(def.ally && def.hireable && def.types?.includes('kor'));
+  assert.equal(hirePrice(def), 20);
+  const m = state.actors['chr-reckless-scholar'];
+  const life = lifeOf(m);
+  bindRetainer(state, world, c, m, state.minutes, '고용');
+  assert.equal(lifeOf(m), life + 1);
+  bindRetainer(state, world, state.actors['chr-highland-berserker'], m, state.minutes, '고용');
+  assert.equal(lifeOf(m), life + 3);
+});
+
 test('the real Highland Berserker hires out on the Teeth of Akoum for 20 coin; joining a party, its Allies strike first today', () => {
   const world = loadWorld();
   const state = newState(world, { seed: 1, mode: 'observer' });

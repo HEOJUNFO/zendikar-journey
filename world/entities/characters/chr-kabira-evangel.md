@@ -8,6 +8,7 @@ status: canon
 sources: [ZEN-15]
 tags: [사람, 성직자, 동료, 백색]
 links:
+  - { to: chr-ondu-cleric, rel: 같은 도시의 성직자 동료 }
   - { to: law-mana-colors, rel: 백색의 존재 }
   - { to: loc-kabira-crossroads, rel: 설교하는 곳 }
   - { to: law-allies, rel: 동료 }

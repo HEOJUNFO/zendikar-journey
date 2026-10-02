@@ -7,7 +7,7 @@
 // sim/asks.ts) or, for an NPC, the LLM's. Mercenaries (`sim.hireable`) serve whoever pays.
 import { summon } from './counter.ts';
 import { addFoe, dealDamage } from './combat.ts';
-import { loseLife } from './life.ts';
+import { gainLife, loseLife } from './life.ts';
 import { revealHand } from './discard.ts';
 import { bindRetainer, masterOf, retainersOf, swayBlocked } from './retainers.ts';
 import { untapTime } from './clock.ts';
@@ -46,6 +46,8 @@ export function allyJoined(state: State, world: World, a: Actor, master: Actor, 
     for (const eff of rally) if (eff.type === 'counters_allies') alliesCounter(state, world, x, master, t);
     // "You may put a +1/+1 counter on this": the same, on themselves only.
     for (const eff of rally) if (eff.type === 'counter_self') selfCounter(state, x, t);
+    // "You may gain life equal to the number of Allies you control": the party's master, always.
+    for (const eff of rally) if (eff.type === 'gain_life_allies') gainLife(state, master, alliesOf(state, world, master).length, t, `${shortName(x.name)}의 축복 (동료 ${alliesOf(state, world, master).length})`);
     // "You may create a <token>. If you do, put a +1/+1 counter on this": born at their side, the
     // controller's; always.
     for (const eff of rally) if (eff.type === 'token_counter') tokenCounter(state, world, x, master, eff, t);
@@ -67,7 +69,7 @@ export function allyJoined(state: State, world: World, a: Actor, master: Actor, 
 
 // A rally that falls on someone picked (not the counters on the party's Allies).
 function targeted(eff: { type: string }) {
-  return eff.type !== 'counters_allies' && eff.type !== 'counter_self' && eff.type !== 'token_counter' && eff.type !== 'grant_allies' && eff.type !== 'ward_allies';
+  return eff.type !== 'counters_allies' && eff.type !== 'counter_self' && eff.type !== 'gain_life_allies' && eff.type !== 'token_counter' && eff.type !== 'grant_allies' && eff.type !== 'ward_allies';
 }
 
 // Kazuul Warlord's war cry: a +1/+1 counter (Actor.plusCounters, for good) on each Ally of the party.
