@@ -33,7 +33,7 @@ import { drawKnowledge, handSize, huntKnowledge, knownSecrets, secretsOf } from 
 import { letGo, revealHand } from './discard.ts';
 import { claimBlocked, claimItem, itemOwner, itemsAt, itemTile, itemWhere } from './items.ts';
 import { spendBlocked, storeBlocked } from './eons.ts';
-import { applyEnterDestroy, applyLure, applySearch, bondBlocked, enterDestroy, onEnter, bondLand, bondTargets, callForth, fetchTargets, fireTargets, firesOnBond, growBlocked, spawnWild, summonLibrary, useAbility } from './abilities.ts';
+import { applyEnterDestroy, expireGranted, applyLure, applySearch, bondBlocked, enterDestroy, onEnter, bondLand, bondTargets, callForth, fetchTargets, fireTargets, firesOnBond, growBlocked, spawnWild, summonLibrary, useAbility } from './abilities.ts';
 import { DEPLETED_LABEL, DESTROYED_DAYS, TRAVEL_UNITS_PER_HOUR } from './rules.ts';
 import { bindRetainer, controlledCreatures, controlsKind, courtBlocked, courtTargets, creatureOf, followBlocked, refusedToday, releaseRetainer, retainersOf, swayBlocked, upkeepPossessions } from './retainers.ts';
 import { joinedToday } from './bounce.ts';
@@ -43,6 +43,7 @@ import { upkeepWins } from './win.ts';
 import { allyJoined, applyRally, hireMerc, hirePrice } from './allies.ts';
 import { askOptions, askText } from './asks.ts';
 import { applyEscape, escapeOptions } from './escape.ts';
+import { applyLift, enterGrant } from './aeronaut.ts';
 import { applyTorch, enterDamage } from './torch.ts';
 import { applyToll, enterSacrifice } from './toll.ts';
 import { applyShortcut, enterNoBlock } from './shortcut.ts';
@@ -6695,6 +6696,39 @@ test('the real Torch Slinger roams the dark woods of Ora Ondar: a talking goblin
   assert.equal(def.enterDamage?.amount, 2);
   assert.equal(def.enterDamage?.kickerText, '{1}{R}');
   assert.equal(swayBlocked(state, world, s), null);
+});
+
+test('Kor Aeronaut: arriving with {1}{W} to spare, its master may have it lift one there (itself too) into the air until midnight; short of mana, nothing', () => {
+  const aeronaut = (mana: number) => ({ ...npcSim('loc-a', 'work', [2, 2]), mana: { W: mana }, abilities: ['fly'], enter_grant: { ability: 'fly', kicker: '{1}{W}' } });
+  const world = fixture([npc('chr-k', aeronaut(4)), npc('chr-poor', aeronaut(1)), npc('chr-m', npcSim('loc-a')), npc('chr-pw', { ...npcSim('loc-a'), loyalty: 3 })]);
+  const state = newState(world, { seed: 1, mode: 'observer' });
+  const [k, poor, m, pw] = ['chr-k', 'chr-poor', 'chr-m', 'chr-pw'].map((id) => state.actors[id]);
+  for (const a of [poor, m, pw]) a.tile = k.tile;
+  k.master = m.id;
+  enterGrant(state, world, poor, state.minutes);
+  assert.equal(state.choices?.length ?? 0, 0);
+  enterGrant(state, world, k, state.minutes);
+  const c = state.choices!.find((y) => y.effect.type === 'lift')!;
+  assert.equal(c.by, 'chr-m');
+  assert.ok(c.optional && c.candidates.includes('chr-m') && c.candidates.includes('chr-k') && !c.candidates.includes('chr-pw'));
+  assert.ok(!hasAbility(m, 'fly', state.minutes));
+  applyLift(state, world, k, m, state.minutes);
+  assert.ok(hasAbility(m, 'fly', state.minutes));
+  assert.equal(manaAvailable(state, world, k, state.minutes).W, 2);
+  expireGranted(state, untapTime(state.minutes));
+  assert.ok(!hasAbility(m, 'fly', untapTime(state.minutes)));
+});
+
+test('the real Kor Aeronaut flies among the floating rocks of the Makindi Trenches: a talking Kor with a kicked lift', () => {
+  const world = loadWorld();
+  const state = newState(world, { seed: 1, mode: 'observer' });
+  const k = state.actors['chr-kor-aeronaut'];
+  assert.equal(k?.region, 'loc-makindi');
+  const def = npcDef(state, world, k.id)!;
+  assert.deepEqual(def.enterGrant, { ability: 'fly', kicker: def.enterGrant!.kicker, kickerText: '{1}{W}' });
+  assert.ok(hasAbility(k, 'fly', state.minutes));
+  assert.ok(def.types?.includes('kor'));
+  assert.equal(swayBlocked(state, world, k), null);
 });
 
 test('Turntimber Basilisk: bonding, its controller may catch one there in its gaze: foes today, and no flying away', () => {

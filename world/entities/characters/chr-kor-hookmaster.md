@@ -12,6 +12,7 @@ links:
   - { to: loc-makindi, rel: 사는 협곡 }
   - { to: chr-kor-cartographer, rel: 같은 협곡의 코르 }
   - { to: itm-grappling-hook, rel: 코르의 갈고리 }
+  - { to: chr-kor-aeronaut, rel: 같은 협곡의 코르 }
 sim:
   home: loc-makindi        # [배경] 코르의 온두, 밧줄로 협곡을 건너는 코르 ([결정] 2026-10-01)
   home_pos: [0.35, 0.25]   # [가공] 협곡 남동쪽, 밧줄을 걸어 둔 절벽 길목

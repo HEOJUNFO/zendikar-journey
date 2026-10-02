@@ -8,6 +8,7 @@ status: canon
 sources: [ZEN-78]
 tags: [물고기, 뱀장어, 짐승, 청색, 하늘]
 links:
+  - { to: chr-kor-aeronaut, rel: 같은 바람길의 코르 비행사 }
   - { to: law-mana-colors, rel: 청색의 존재 }
   - { to: loc-makindi, rel: 헤엄치는 하늘 }
 sim:

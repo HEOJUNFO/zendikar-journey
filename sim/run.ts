@@ -22,6 +22,7 @@ import { cardLabel, discardOwed, handOf, letGo } from './discard.ts';
 import { applyShatter, crushRelic, demolish, demolishOptions, relicsHere, shatterOptions } from './relics.ts';
 import { applyEscape, escapeOptions } from './escape.ts';
 import { applyTorch } from './torch.ts';
+import { applyLift } from './aeronaut.ts';
 import { applyToll } from './toll.ts';
 import { applyShortcut } from './shortcut.ts';
 import { applySacrament } from './sacrament.ts';
@@ -960,6 +961,20 @@ async function choices(state: State, world: World, llm: Llm) {
       }
       const target = candidates.find((x) => x.id === pick);
       if (target) applyToll(state, world, source, target, state.minutes);
+      continue;
+    }
+    // Kor Aeronaut, arriving kicked: whom its controller has it lift into the air, or no one.
+    if (c.effect.type === 'lift') {
+      const source = state.actors[c.effect.source];
+      if (!source || !llm.choose) continue;
+      let pick: string | null = null;
+      try {
+        pick = await llm.choose({ world, state, npc, candidates, optional: true, what: `${land.name}: ${source.id === by.id ? '당신' : shortName(source.name)}이(가) 이곳에 들어섰다. 힘을 더 들여 여기 있는 이 하나(${source.id === by.id ? '당신' : '그'} 자신도)를 갈고리 밧줄로 끌어올려 자정까지 날 수 있게 할 수 있다 (날면 날지 못하는 이에게서 날아 피하고, 하늘의 땅에 오른다). 아무도 고르지 않을 수도 있다` });
+      } catch (e) {
+        console.warn(`choose (lift) for ${c.by} failed:`, e);
+      }
+      const target = candidates.find((x) => x.id === pick);
+      if (target) applyLift(state, world, source, target, state.minutes);
       continue;
     }
     // Torch Slinger, arriving kicked: whom its controller has it throw its torch at, or no one.

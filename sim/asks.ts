@@ -10,6 +10,7 @@ import { applyDrainGrow, applyEnterDestroy, applyLure, applySearch } from './abi
 import { crushOwed, crushRelic, demolish, demolishOptions, relicsHere } from './relics.ts';
 import { applyEscape, escapeOptions } from './escape.ts';
 import { applyTorch } from './torch.ts';
+import { applyLift } from './aeronaut.ts';
 import { applyToll } from './toll.ts';
 import { applyShortcut } from './shortcut.ts';
 import { applySacrament } from './sacrament.ts';
@@ -85,6 +86,7 @@ export function askText(state: State, world: World, c: Choice) {
   if (c.effect.type === 'quelled') return `${shortName(state.actors[c.effect.source]?.name ?? '')} 앞에서 제 ${QUELL_LABELS[c.effect.kind]} 하나를 내놓아야 한다. 무엇을?`;
   if (c.effect.type === 'shortcut') return `${shortName(state.actors[c.effect.source]?.name ?? '')}이(가) 이곳에 들어섰다. 여기 있는 이 하나를 휘저어 놓아, 그 이는 자정까지 누구도 막아 주지 못한다. 누구를?`;
   if (c.effect.type === 'toll') return `${shortName(state.actors[c.effect.source]?.name ?? '')}이(가) 이곳에 들어섰다. 힘을 더 들여 여기 있는 이 하나에게 피의 통행세를 받아 낼 수 있다 (그 이는 거느린 생물 하나를, 제 몸도, 내놓아야 한다). 누구에게?`;
+  if (c.effect.type === 'lift') return `${shortName(state.actors[c.effect.source]?.name ?? '')}이(가) 이곳에 들어섰다. 힘(${npcDef(state, world, c.effect.source)?.enterGrant?.kickerText ?? ''})을 더 들여 여기 있는 이 하나(자신도)를 갈고리 밧줄로 끌어올려 자정까지 날게 할 수 있다. 누구를?`;
   if (c.effect.type === 'torch') return `${shortName(state.actors[c.effect.source]?.name ?? '')}이(가) 이곳에 들어섰다. 힘(${npcDef(state, world, c.effect.source)?.enterDamage?.kickerText ?? ''})을 더 들여 여기 있는 이 하나에게 횃불을 던져 피해 ${npcDef(state, world, c.effect.source)?.enterDamage?.amount ?? 2}를 줄 수 있다. 누구에게?`;
   if (c.effect.type === 'hook') return `${shortName(state.actors[c.effect.source]?.name ?? '')}이(가) 이곳에 들어섰다. 여기 있는 이 하나를 갈고리 밧줄로 묶는다 (다음 날 자정이 지나 그다음 자정까지). 누구를?`;
   if (c.effect.type === 'destroy') return `이곳에 들어서며 ${c.effect.flying ? '날 수 있는 ' : ''}${c.effect.kind ? `${CREATURE_TYPE_LABELS[c.effect.kind]} ` : ''}하나를 ${c.effect.kicker ? `힘(${c.effect.kicker})을 더 들여 ` : ''}파괴할 수 있다. 누구를? (파괴된 이는 죽는다)`;
@@ -278,6 +280,10 @@ export function answerAsk(state: State, world: World, pick: string | null, t: nu
     const source = state.actors[c.effect.source];
     const target = pick && c.candidates.includes(pick) ? state.actors[pick] : undefined;
     if (source && target) applyToll(state, world, source, target, t);
+  } else if (c.effect.type === 'lift') {
+    const source = state.actors[c.effect.source];
+    const target = pick && c.candidates.includes(pick) ? state.actors[pick] : undefined;
+    if (source && target) applyLift(state, world, source, target, t);
   } else if (c.effect.type === 'torch') {
     const source = state.actors[c.effect.source];
     const target = pick && c.candidates.includes(pick) ? state.actors[pick] : undefined;
