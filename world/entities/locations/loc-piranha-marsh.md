@@ -5,9 +5,10 @@ name: 피라냐 습지
 name_en: Piranha Marsh
 summary: 굴 드라즈의 얽힌 나무 아래 고인 검푸른 늪. 잔잔한 물 밑에 이빨 드러낸 피라냐 떼가 도사린다
 status: canon
-sources: [ZEN-222, ZEN-84, ZEN-97]
+sources: [ZEN-222, ZEN-84, ZEN-97, ZEN-104]
 tags: [늪, 피라냐, 위험, 흑색]
 links:
+  - { to: spl-mire-blight, rel: 가르치는 주문 (늪의 병마) }
   - { to: cre-bog-tatters, rel: 떠도는 망령 }
   - { to: cre-heartstabber-mosquito, rel: 그늘을 나는 모기 }
   - { to: loc-hagra, rel: 바깥 지역 (하그라 저수조) }
@@ -40,6 +41,7 @@ sim:
 - 늪의 누더기(`cre-bog-tatters`, ZEN-84)가 떠돈다. 스스로 희생자를 찾아가 덤비는 망령이고, 늪과 유대를 맺은 자는 그를 막아내지 못한다.
 
 - 심장찌르개 모기(`cre-heartstabber-mosquito`, ZEN-97)가 늪 나무 그늘을 난다.
+- 늪의 병마(`spl-mire-blight`, ZEN-104)를 배울 수 있다 (4시간). 붙은 이가 피해를 입으면 파괴된다 ([결정] 2026-10-02).
 
 ## 미정/질문
 

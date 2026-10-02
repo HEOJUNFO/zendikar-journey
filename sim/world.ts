@@ -710,6 +710,9 @@ export const SpellSimSchema = z.strictObject({
           // would die or fall by damage or be destroyed, whoever controls it pays this if they can,
           // and instead it is healed, bound until midnight and out of today's fights (combat.ts).
           regenerate: CostSchema.optional(),
+          // "When enchanted creature is dealt damage, destroy it" (Mire Blight): any damage that gets
+          // through destroys them (between NPCs in a fight, a knockout; combat.ts `dealDamage`).
+          doom_on_damage: z.boolean().default(false),
         }),
         // "If it was kicked, you may search your library for another <this> and put it onto the
         // battlefield": the caster may cast it once more, free, on someone else there (their pick

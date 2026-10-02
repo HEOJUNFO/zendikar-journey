@@ -7679,6 +7679,33 @@ test('the real Disfigure is taught at the Ghet estate: {B}, an instant, -2/-2 on
   assert.deepEqual(s.effects, [{ type: 'weaken_target', pt: [-2, -2] }]);
 });
 
+test('Mire Blight: once on someone, any damage that gets through destroys them; between NPCs in a fight, a knockout; indestructible holds', () => {
+  const blight: RawEntity = { id: 'spl-mb', kind: 'spell', name: '늪의 병마', status: 'canon', sim: { cost: '{0}', speed: 'sorcery', learn_at: 'loc-a', target: 'other_here', effects: [{ type: 'aura', doom_on_damage: true }] } };
+  const world = fixture([blight, npc('chr-c', npcSim('loc-a')), npc('chr-v', npcSim('loc-a', 'work', [5, 5])), npc('chr-k', npcSim('loc-a', 'work', [5, 5])), npc('chr-i', { ...npcSim('loc-a', 'work', [5, 5]), abilities: ['indestructible'] })]);
+  const state = newState(world, { seed: 1, mode: 'observer' });
+  const [c, v, k, i] = ['chr-c', 'chr-v', 'chr-k', 'chr-i'].map((id) => state.actors[id]);
+  for (const x of [v, k, i]) x.tile = c.tile;
+  c.spells = ['spl-mb'];
+  for (const x of [v, k, i]) {
+    delete c.used;
+    castSpell(state, world, c, 'spl-mb', x.id, false, state.minutes);
+  }
+  assert.ok(v.auras?.some((x) => x.doom));
+  assert.ok(v.foes?.ids.includes('chr-c'));
+  dealDamage(state, world, v, 1, state.minutes, '번개');
+  assert.ok(v.dead);
+  dealDamage(state, world, k, 1, state.minutes, '싸움', true);
+  assert.ok(!k.dead && knockedOut(k));
+  dealDamage(state, world, i, 1, state.minutes, '번개');
+  assert.ok(!i.dead);
+});
+
+test('the real Mire Blight is taught in the Piranha Marsh: {B}, an aura that dooms on damage', () => {
+  const s = loadWorld().spells.find((x) => x.id === 'spl-mire-blight')!;
+  assert.equal(s.learnAt, 'loc-piranha-marsh');
+  assert.deepEqual(s.effects.map((e) => e.type === 'aura' && e.doom_on_damage), [true]);
+});
+
 test('Nissa\'s Chosen: killed, it goes into no graveyard; seven days on it wakes at home, whole and serving no one; a token of it is simply gone', () => {
   const world = fixture([besideA, npc('chr-n', { ...npcSim('loc-az', 'work', [2, 3]), revives_after: 7 }), npc('chr-m', npcSim('loc-a')), npc('chr-k', npcSim('loc-a'))]);
   const state = newState(world, { seed: 1, mode: 'observer' });

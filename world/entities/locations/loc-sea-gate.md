@@ -5,9 +5,10 @@ name: 바다 관문
 name_en: Sea Gate
 summary: 타짐 해안, 할리마르 분지 어귀의 큰 항구 도시. 인어와 인간이 함께 살고, 원정대가 모이고 떠나는 곳
 status: canon
-sources: [ZEN-63, ZEN-66, ZEN-61, ZEN-42, ZEN-54, ZEN-58, ZEN-60, ZEN-70, ZEN-208, ZEN-45]
+sources: [ZEN-63, ZEN-66, ZEN-61, ZEN-42, ZEN-54, ZEN-58, ZEN-60, ZEN-70, ZEN-208, ZEN-45, ZEN-104]
 tags: [도시, 항구, 해안, 인어, 원정대, 청색]
 links:
+  - { to: spl-mire-blight, rel: 플레이버에 나오는 늪의 병마 }
   - { to: chr-cosis-trickster, rel: 물가의 코시를 따르는 인어 }
   - { to: itm-trailblazers-boots, rel: 원정대 본부의 장화 (장비) }
   - { to: spl-spreading-seas, rel: 가르치는 주문 (번지는 바다) }

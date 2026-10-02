@@ -42,6 +42,19 @@ export function dealDamage(state: State, world: World, a: Actor, amount: number,
   amount = shielded(state, a, amount, t);
   if (amount <= 0) return false;
   markHurt(a, amount, t);
+  // Mire Blight: any damage that gets through destroys them (the aura's doing; between NPCs, as
+  // the fight's damage would, a knockout: user decision 2026-10-02). Indestructible holds.
+  const blight = a.loyalty === undefined ? a.auras?.find((x) => x.doom) : undefined;
+  if (blight && !hasAbility(a, 'indestructible', t)) {
+    addLog(state, { kind: 'effect', text: `${blight.name}: 상처가 벌어지자 ${josa(shortName(a.name), '이', '가')} 늪의 병에 무너졌다.`, regions: [a.region], actors: [a.id], t });
+    if (regenerate(state, world, a, t, blight.name)) return false;
+    if (nonlethal) {
+      knockOut(state, a, t, blight.name);
+      return false;
+    }
+    die(state, a, t, blight.name, state.actors[blight.by] ?? by);
+    return true;
+  }
   if (a.loyalty !== undefined) {
     a.loyalty = Math.max(nonlethal ? 1 : 0, a.loyalty - amount);
     addLog(state, { kind: 'combat', text: `${josa(shortName(a.name), '이', '가')} 피해 ${amount}로 기세가 꺾였다 (기세 ${a.loyalty}).`, regions: [a.region], actors: [a.id] });

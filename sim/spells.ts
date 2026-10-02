@@ -99,7 +99,7 @@ export function castBlocked(state: State, world: World, a: Actor, spellId: strin
   if (need && castTargets(state, a, s).length < need) return `${josa(s.name, '은', '는')} 대상이 ${need === 2 ? '둘' : need}이 있어야 한다 (곁의 자신과 권속).`;
   const doom = destroyBarred(world, state, s, target);
   if (doom) return doom;
-  if (s.effects.some((e) => e.type === 'pump_target' || e.type === 'weaken_target') && target.loyalty !== undefined) return `${josa(shortName(target.name), '은', '는')} 생물이 아니다 (플레인즈워커).`;
+  if (s.effects.some((e) => e.type === 'pump_target' || e.type === 'weaken_target' || (e.type === 'aura' && e.doom_on_damage)) && target.loyalty !== undefined) return `${josa(shortName(target.name), '은', '는')} 생물이 아니다 (플레인즈워커).`;
   if (s.effects.some((e) => e.type === 'copy_target') && !copyable(target)) return `${josa(shortName(target.name), '은', '는')} 생물이 아니다 (플레인즈워커). 복제할 수 없다.`;
   if (s.effects.some((e) => e.type === 'destroy_relics') && !relicsHere(state, world, a.region, a.tile).length) return '여기엔 부술 마법물체도 부여마법도 없다.';
   if (s.effects.some((e) => e.type === 'demolish') && !demolishOptions(state, world, a).length) return '여기엔 부술 마법물체도 땅도 없다.';
@@ -216,7 +216,7 @@ export function castableSpells(state: State, world: World, a: Actor, t: number) 
 
 // Whether a spell does harm (the target takes it as an attack).
 export function harmful(s: SpellDef) {
-  return s.effects.some((e) => e.type === 'lose_half_life' || (e.type === 'aura' && e.no_untap) || e.type === 'exile_library' || e.type === 'exile_until' || e.type === 'weaken_controlled' || e.type === 'weaken_target' || e.type === 'damage' || e.type === 'threaten' || e.type === 'destroy_target' || e.type === 'destroy_land' || e.type === 'discard' || e.type === 'discard_per_land' || e.type === 'damage_per_land');
+  return s.effects.some((e) => e.type === 'lose_half_life' || (e.type === 'aura' && (e.no_untap || e.doom_on_damage)) || e.type === 'exile_library' || e.type === 'exile_until' || e.type === 'weaken_controlled' || e.type === 'weaken_target' || e.type === 'damage' || e.type === 'threaten' || e.type === 'destroy_target' || e.type === 'destroy_land' || e.type === 'discard' || e.type === 'discard_per_land' || e.type === 'damage_per_land');
 }
 
 // Pays and resolves. A harmful spell's target (if an NPC) takes it as an attack. Returns whether
@@ -415,7 +415,7 @@ export function resolveSpell(state: State, world: World, a: Actor, spellId: stri
       replicate(state, world, a, target, kicked && eff.kicked_count ? eff.kicked_count : eff.count, t, s.name);
     } else if (eff.type === 'aura') {
       const added = eff.abilities.filter((ab) => !target.abilities.includes(ab));
-      target.auras = [...(target.auras ?? []), { spell: s.id, name: s.name, by: a.id, pt: [...eff.pt], ...(eff.base_pt ? { base: [...eff.base_pt] as [number, number] } : {}), doubleLifeOnHit: eff.double_life_on_hit, ...(added.length ? { added } : {}), ...(eff.no_untap ? { noUntap: true } : {}), ...(eff.regenerate ? { regen: eff.regenerate } : {}) }];
+      target.auras = [...(target.auras ?? []), { spell: s.id, name: s.name, by: a.id, pt: [...eff.pt], ...(eff.base_pt ? { base: [...eff.base_pt] as [number, number] } : {}), doubleLifeOnHit: eff.double_life_on_hit, ...(added.length ? { added } : {}), ...(eff.no_untap ? { noUntap: true } : {}), ...(eff.regenerate ? { regen: eff.regenerate } : {}), ...(eff.doom_on_damage ? { doom: true } : {}) }];
       // What it gives stays as long as the aura does: until they die.
       for (const ab of eff.abilities) if (!target.abilities.includes(ab)) target.abilities = [...target.abilities, ab];
       addLog(state, {

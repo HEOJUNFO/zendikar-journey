@@ -5,9 +5,10 @@ name: 굴 드라즈
 name_en: Guul Draz
 summary: 젠디카르 남동쪽의 음울한 늪 대륙. 얕은 물길이 끝없이 갈라지고, 흡혈귀들이 산다
 status: canon
-sources: [ZEN-219, ZEN-222, ZEN-229, ZEN-99, ZEN-105, ZEN-95, ZEN-92, ZEN-106, ZEN-90, ZEN-83, ZEN-93]
+sources: [ZEN-219, ZEN-222, ZEN-229, ZEN-99, ZEN-105, ZEN-95, ZEN-92, ZEN-106, ZEN-90, ZEN-83, ZEN-93, ZEN-104]
 tags: [대륙, 늪, 흑색, 흡혈귀]
 links:
+  - { to: spl-mire-blight, rel: 플레이버에 나오는 늪의 병마 }
   - { to: chr-guul-draz-vampire, rel: 늪 밀림 나뭇가지 위의 흡혈귀 도적 }
   - { to: chr-bloodghast, rel: 서쪽 늪 안개의 망령 }
   - { to: cre-guul-draz-specter, rel: 늪 위를 나는 망령기사 }

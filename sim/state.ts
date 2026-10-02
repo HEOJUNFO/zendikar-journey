@@ -116,7 +116,7 @@ export type Actor = {
   // Taken nowhere by `by`'s enchantment `spell` (Journey to Nowhere, sim/nowhere.ts): out of
   // the world until it is gone.
   nowhere?: { by: string; spell: string };
-  auras?: { spell: string; name: string; by: string; pt: Pt; base?: Pt; doubleLifeOnHit: boolean; added?: Ability[]; noUntap?: boolean; regen?: string; nowhere?: string }[];
+  auras?: { spell: string; name: string; by: string; pt: Pt; base?: Pt; doubleLifeOnHit: boolean; added?: Ability[]; noUntap?: boolean; regen?: string; nowhere?: string; doom?: boolean }[];
   // Combat damage taken this turn; it wears off when the turn ends (00:00).
   wounds?: { day: number; amount: number };
   // Damage prevented for them today, still to come (Noble Vestige's ward, sim/tapper.ts).
