@@ -871,8 +871,10 @@ export const SpellSimSchema = z.strictObject({
         // joining another on the caster's tile; the joining comes to nothing (sim/counter.ts).
         z.strictObject({ type: z.literal('counter_creature') }),
         // "Counter target spell" (Cancel): the same, for any spell cast on the caster's tile, and
-        // any joining (a creature spell is a spell) (sim/counter.ts).
-        z.strictObject({ type: z.literal('counter_spell') }),
+        // any joining (a creature spell is a spell) (sim/counter.ts). `noncreature`: spells only, no
+        // joining (Spell Pierce); `unless`: it stands unless the caster pays this more (paid for
+        // them if they can).
+        z.strictObject({ type: z.literal('counter_spell'), noncreature: z.boolean().optional(), unless: CostSchema.optional() }),
         z.strictObject({ type: z.literal('copy_target'), count: z.number().int().positive(), kicked_count: z.number().int().positive().optional() }),
       ]),
     )

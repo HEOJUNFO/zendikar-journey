@@ -8,6 +8,7 @@ status: canon
 sources: [ZEN-44]
 tags: [주문, 청색, 순간마법, 무효화]
 links:
+  - { to: spl-spell-pierce, rel: 같은 무효화 }
   - { to: law-mana-colors, rel: 청색 마법 }
   - { to: loc-tazeem, rel: 배우는 곳 }
   - { to: evt-mindbreak-trap, rel: 같은 땅의 주문을 부수는 함정 }

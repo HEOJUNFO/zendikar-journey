@@ -3240,6 +3240,36 @@ test('the real Lullmage Mentor teaches in Sea Gate; the world\'s merfolk are the
   assert.deepEqual(merfolk, ['chr-caller-of-gales', 'chr-cosis-trickster', 'chr-lullmage-mentor', 'chr-merfolk-seastalkers', 'chr-merfolk-wayfinder', 'chr-sea-gate-loremaster', 'chr-seascape-aerialist']);
 });
 
+test('Spell Pierce: answered, a spell scatters unless its caster can pay {2} more (then it takes hold); a joining it does not answer', async () => {
+  const pierce: RawEntity = { id: 'spl-sp', kind: 'spell', name: '주문 꿰뚫기', status: 'canon', sim: { cost: '{U}', speed: 'instant', learn_at: 'loc-a', effects: [{ type: 'counter_spell', noncreature: true, unless: '{2}' }] } };
+  const drain: RawEntity = { id: 'spl-dr', kind: 'spell', name: '흡수', status: 'canon', sim: { cost: '{B}', learn_at: 'loc-a', effects: [{ type: 'lose_half_life' }] } };
+  const run = async (casterMana: number) => {
+    const world = fixture([pierce, drain, npc('chr-c', { ...npcSim('loc-a'), mana: { B: casterMana } }), npc('chr-h', { ...npcSim('loc-a'), mana: { U: 2 } }), npc('chr-x', npcSim('loc-a'))]);
+    const state = newState(world, { seed: 1, mode: 'observer' });
+    const [c, h, x] = [state.actors['chr-c'], state.actors['chr-h'], state.actors['chr-x']];
+    h.tile = x.tile = c.tile;
+    c.spells = ['spl-dr'];
+    h.spells = ['spl-sp'];
+    // A joining (a creature spell) it does not answer.
+    assert.equal(counterHolders(state, world, x, c, state.minutes).length, 0);
+    assert.equal(castSpell(state, world, c, 'spl-dr', x.id, false, state.minutes), 'held');
+    await advance(state, world, 1, { planDay: async () => [], pick: async ({ options }) => options[0].id });
+    return { world, state, c, h, x };
+  };
+  const poor = await run(1);
+  assert.equal(lifeOf(poor.x), 20);
+  assert.ok(texts(poor.state).some((l) => l.includes('허공에서 흩어졌다')));
+  const rich = await run(3);
+  assert.equal(lifeOf(rich.x), 10);
+  assert.ok(texts(rich.state).some((l) => l.includes('구멍을 메웠다')));
+});
+
+test('the real Spell Pierce is taught at Sea Gate: {U}, noncreature only, {2} to save', () => {
+  const s = loadWorld().spells.find((x) => x.id === 'spl-spell-pierce')!;
+  assert.equal(s.learnAt, 'loc-sea-gate');
+  assert.deepEqual(s.effects, [{ type: 'counter_spell', noncreature: true, unless: '{2}' }]);
+});
+
 test('Cancel held by the player: a pick to answer, or let be', async () => {
   const cancel: RawEntity = { id: 'spl-cn', kind: 'spell', name: '취소', status: 'canon', sim: { cost: '{0}', speed: 'instant', learn_at: 'loc-a', effects: [{ type: 'counter_spell' }] } };
   const drain: RawEntity = { id: 'spl-dr', kind: 'spell', name: '흡수', status: 'canon', sim: { cost: '{0}', learn_at: 'loc-a', effects: [{ type: 'lose_half_life' }] } };

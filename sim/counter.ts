@@ -11,7 +11,7 @@
 import { untapTime } from './clock.ts';
 import { down } from './combat.ts';
 import { spawnWild } from './abilities.ts';
-import { manaAvailable, planPayment } from './mana.ts';
+import { manaAvailable, parseManaCost, payMana, planPayment } from './mana.ts';
 import { remember } from './relations.ts';
 import { bindRetainer, controlledCreatures, masterOf, refuse } from './retainers.ts';
 import { powersSealed, sealedBy } from './seal.ts';
@@ -32,7 +32,7 @@ export function reactionSpell(s: SpellDef) {
 function counterSpell(state: State, world: World, x: Actor, t: number, kind: 'creature' | 'spell' = 'creature') {
   return world.spells.find(
     (s) =>
-      s.effects.some((e) => e.type === 'counter_spell' || (kind === 'creature' && e.type === 'counter_creature')) &&
+      s.effects.some((e) => (e.type === 'counter_spell' && !(kind === 'creature' && e.noncreature)) || (kind === 'creature' && e.type === 'counter_creature')) &&
       x.spells?.includes(s.id) &&
       usedUntil(x, s, t) === undefined &&
       !sealedBy(state, x, s, t) &&
@@ -71,6 +71,12 @@ export function answerName(world: World, id: string) {
   if (id.startsWith(CHORUS)) return { name: '잠재움의 합창', costText: `곁의 인어 ${CHORUS_SIZE}을 묶어`, chorus: true };
   const s = spellDef(world, id);
   return { name: s?.name ?? id, costText: s?.costText ?? '', chorus: false };
+}
+
+// The price a spell answered by `id` may still be saved with ("unless its controller pays").
+function unlessOf(world: World, id: string) {
+  const e = spellDef(world, id)?.effects.find((x) => x.type === 'counter_spell');
+  return e?.type === 'counter_spell' && e.unless ? { cost: parseManaCost(e.unless)!, text: e.unless } : undefined;
 }
 
 // Those standing with `at` who could answer (not those named in `not`).
@@ -170,6 +176,13 @@ export function answerCounterCast(state: State, world: World, holder: Actor | un
   if (!caster || caster.dead || !cast) return;
   const s = answerName(world, eff.spell);
   if (counter && holder && !holder.dead && answer(state, world, holder, eff.spell, caster.id, 'spell', t)) {
+    // Spell Pierce: "unless its controller pays {2}" (paid for them if they can: [가공]).
+    const unless = unlessOf(world, eff.spell);
+    if (unless && payMana(state, world, caster, unless.cost, t)) {
+      addLog(state, { kind: 'event', text: `${shortName(caster.name)}이(가) 힘(${unless.text})을 더 쏟아 ${s.name}의 구멍을 메웠다. ${josa(cast.name, '이', '가')} 그대로 풀린다.`, regions: [caster.region], actors: [caster.id, holder.id], t });
+      resolveSpell(state, world, caster, cast.id, eff.target, eff.kicked, t);
+      return;
+    }
     addLog(state, { kind: 'event', text: `${shortName(caster.name)}의 ${josa(cast.name, '이', '가')} 허공에서 흩어졌다. 치른 마나는 돌아오지 않는다.`, regions: [caster.region], actors: [caster.id, holder.id], t });
     remember(caster, holder, `나의 ${josa(cast.name, '을', '를')} ${toward(s.name)} 무산시켰다`, t);
     counterTokens(state, world, holder, t);
