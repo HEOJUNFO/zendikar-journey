@@ -14,6 +14,7 @@ links:
   - { to: loc-tazeem, rel: 깔린 곳 }
 sim:
   region: loc-tazeem
+  card_cost: "{3}{U}{U}"    # [카드] 함정 카드의 마나 비용 (함정장이의 올가미로 놓을 때)
   pos: [-0.602, -0.922]   # [가공] 2026-10-02 그전까지 이름으로 정해지던 칸 (북하다가 생겨도 옮겨지지 않게)
   trigger: enter
   joined: 2             # 그날 권속이 둘 이상 새로 든 이가 들어올 때만 ({U} 대체 비용)

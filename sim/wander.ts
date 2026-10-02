@@ -3,6 +3,7 @@
 // (sim/run.ts `wanderings`). Those in it go with it: they are "in" the place wherever it is.
 // Everything that measures the map (travel, event range, the map view) reads a world with
 // the places where they are now (`withPositions`).
+import { placedEvents } from './snare.ts';
 import { STEP_MINUTES } from './clock.ts';
 import { addLog } from './state.ts';
 import type { State } from './state.ts';
@@ -10,10 +11,17 @@ import { josa } from './text.ts';
 import type { Region, World } from './world.ts';
 
 // The world with wandering places where they are now (the same world when none has moved).
+// The traps someone set (Trapmaker's Snare, sim/snare.ts) join the world's events here too.
 export function withPositions(state: State, world: World): World {
   const w = state.wanderers;
-  if (!w || !world.regions.some((r) => w[r.id])) return world;
-  return { ...world, regions: world.regions.map((r) => (w[r.id] ? { ...r, x: w[r.id].x, y: w[r.id].y } : r)) };
+  const placed = state.placedTraps?.length ? placedEvents(state, world) : [];
+  const moved = !!w && world.regions.some((r) => w[r.id]);
+  if (!moved && !placed.length) return world;
+  return {
+    ...world,
+    ...(moved ? { regions: world.regions.map((r) => (w![r.id] ? { ...r, x: w![r.id].x, y: w![r.id].y } : r)) } : {}),
+    ...(placed.length ? { events: [...world.events.filter((ev) => !ev.setBy), ...placed] } : {}),
+  };
 }
 
 function stateOf(state: State, r: Region) {

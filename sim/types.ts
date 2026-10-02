@@ -19,11 +19,13 @@
 // it (sim/altar.ts): they come to know a secret.
 // expedition: ending an Ior Ruin Expedition they own (enough quest counters), anywhere
 // (sim/expedition.ts): it is gone, they come to know secrets.
+// set_trap: setting the block's `trap` (one they hold, Trapmaker's Snare) where they stand,
+// paying its card's cost (sim/snare.ts).
 // ascend: calling down an angel token with a Luminarch Ascension they own (enough quest counters,
 // paying its cost), anywhere (sim/luminarch.ts).
 // attack: going after the block's `who` (wherever they are) and falling on them: they become
 // foes and fight from the next hour (sim/combat.ts), as the player's attack.
-export const LIFE_KINDS = ['sleep', 'eat', 'work', 'social', 'leisure', 'bond', 'claim', 'store_day', 'spend_day', 'grow', 'fetch', 'learn', 'cast', 'court', 'hire', 'attack', 'recall', 'equip', 'bite', 'shield', 'loot', 'scout', 'altar', 'expedition', 'ascend'] as const;
+export const LIFE_KINDS = ['sleep', 'eat', 'work', 'social', 'leisure', 'bond', 'claim', 'store_day', 'spend_day', 'grow', 'fetch', 'learn', 'cast', 'court', 'hire', 'attack', 'recall', 'equip', 'bite', 'shield', 'loot', 'scout', 'altar', 'expedition', 'ascend', 'set_trap'] as const;
 export type LifeKind = (typeof LIFE_KINDS)[number];
 
 // start/end are minutes of the game day, 0..1440, end exclusive.
@@ -42,6 +44,8 @@ export type ScheduleBlock = {
   // social: one they seek out to talk with (optional); attack: one they go after; bite: one to
   // bite; equip: who bears it.
   who?: string;
+  // set_trap: the trap they set (sim/snare.ts).
+  trap?: string;
 };
 
 export type Schedule = {

@@ -5,9 +5,10 @@ name: 즈와르 섬
 name_en: Jwar Isle
 summary: 온두 남쪽 앞바다의 안개 낀 작은 바위섬. 거친 해류와 짐승 머리 같은 검은 암초가 둘러싸고, 섬 안에는 초록빛이 어린다. 비밀의 섬이라 불린다
 status: canon
-sources: [ZEN-215, ZEN-68, ZEN-41, ZEN-71, ZEN-40]
+sources: [ZEN-215, ZEN-68, ZEN-41, ZEN-71, ZEN-40, ZEN-74]
 tags: [섬, 해안, 암초, 청색]
 links:
+  - { to: spl-trapmakers-snare, rel: 가르치는 주문 (함정장이의 올가미) }
   - { to: cre-aether-figment, rel: 북동쪽 벼랑의 에테르 환영 }
   - { to: loc-nimana, rel: 뱃길이 닿는 굴 드라즈의 항구 }
   - { to: loc-jwar-isle-refuge, rel: 안의 구역 }
@@ -34,6 +35,7 @@ map: { x: 1000.4, y: 1323, terrain: beach, size: island, of: loc-ondu, tiles: 15
 - 소환자의 파멸(`spl-summoners-bane`, ZEN-71)을 배운다: 청색 정신 마법과 환영 ([결정] 2026-10-01, [가공]).
 
 - 에테르 환영(`cre-aether-figment`, ZEN-40)이 북동쪽 벼랑의 에테르 소용돌이를 떠돈다 ([결정] 2026-10-01). 누구도 막아서지 못하는 환영으로, 힘 {3}을 더 들이면 그날 +2/+2로 부푼다.
+- 함정장이의 올가미(`spl-trapmakers-snare`, ZEN-74)를 4시간 들여 배운다 ([결정] 2026-10-02): 세계의 함정 하나를 손에 쥐고, 카드 비용을 들여 선 자리에 숨겨 놓는다.
 
 ## 미정/질문
 

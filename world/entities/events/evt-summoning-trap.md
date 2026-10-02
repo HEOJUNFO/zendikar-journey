@@ -14,6 +14,7 @@ links:
   - { to: loc-bala-ged, rel: 깔린 곳 }
 sim:
   region: loc-guum-wilds
+  card_cost: "{4}{G}{G}"    # [카드] 함정 카드의 마나 비용 (함정장이의 올가미로 놓을 때)
   trigger: enter
   pos: [0.05, 0.1]      # [가공] 굼 밀림 가운데 묻힌 유적, 도둑의 칸 곁 (2026-10-01 굼이 발라 게드 대부분을 덮게 되며 옮김)
   refused: true         # 그날 누군가를 따르게 하려다 거절당한 이가 들어올 때만 ({0} 대체 비용)

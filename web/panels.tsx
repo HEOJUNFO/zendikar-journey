@@ -14,6 +14,7 @@ import { TAP_POWERS, tapBlocked, tappersOf } from '../sim/tapper.ts';
 import { altarBlocked, altarOf, altarVictims } from '../sim/altar.ts';
 import { expeditionBlocked, expeditionOf, expeditionReward } from '../sim/expedition.ts';
 import { ascendBlocked, ascendText, ascensionOf } from '../sim/luminarch.ts';
+import { setTrapBlocked, trapsHeld } from '../sim/snare.ts';
 import type { TapPower } from '../sim/tapper.ts';
 
 // The buttons for a creature's power on someone (sim/tapper.ts).
@@ -689,6 +690,21 @@ export function CharacterControls(props: {
           >
             기억 빌리기
           </button>
+        </div>
+      )}
+      {trapsHeld(world, p).length > 0 && (
+        <div className="row">
+          <span className="muted">🪤 함정 놓기:</span>
+          {trapsHeld(world, p).map((ev, i) => (
+            <button
+              key={`${ev.id}-${i}`}
+              disabled={busy || !!stuck || !!setTrapBlocked(state, world, p, ev.id, state.minutes)}
+              title={setTrapBlocked(state, world, p, ev.id, state.minutes) ?? `${ev.summary} (${ev.cardCost?.text})`}
+              onClick={() => onAct({ type: 'set_trap', trap: ev.id })}
+            >
+              {ev.name}
+            </button>
+          ))}
         </div>
       )}
       {ascensionOf(state, world, p) && (

@@ -35,6 +35,7 @@ import { readyTapper, tapAmount, tapBlocked, tapTargetable } from './tapper.ts';
 import { altarOf } from './altar.ts';
 import { applyFlood, floodOptions } from './flood.ts';
 import { applyGust, gustOptions } from './owl.ts';
+import { eventDefOf, trapsHeld } from './snare.ts';
 import type { GustEffect } from './owl.ts';
 import { applyGem, expeditionBlocked, expeditionOf, expeditionReward } from './expedition.ts';
 import { ascendBlocked, ascensionOf } from './luminarch.ts';
@@ -436,7 +437,7 @@ async function summons(state: State, world: World, llm: Llm) {
   const due = state.summons ?? [];
   state.summons = [];
   for (const s of due) {
-    const trap = world.events.find((e) => e.id === s.event);
+    const trap = eventDefOf(state, world, s.event);
     const creatures = s.creatures.map((id) => state.actors[id]).filter((a) => a && !a.dead);
     const intruders = s.by.map((id) => state.actors[id]).filter((a) => a && !a.dead);
     if (!trap || !creatures.length) continue;
@@ -460,7 +461,7 @@ async function bounces(state: State, world: World, llm: Llm) {
   const due = state.bounces ?? [];
   state.bounces = [];
   for (const b of due) {
-    const trap = world.events.find((e) => e.id === b.event);
+    const trap = eventDefOf(state, world, b.event);
     const creatures = bounceCandidates(state, world, b.region, b.tile, state.minutes);
     const intruders = b.by.map((id) => state.actors[id]).filter((a) => a && !a.dead);
     if (!trap || !creatures.length) continue;
@@ -487,7 +488,7 @@ async function volleys(state: State, world: World, llm: Llm) {
   const due = state.volleys ?? [];
   state.volleys = [];
   for (const v of due) {
-    const trap = world.events.find((e) => e.id === v.event);
+    const trap = eventDefOf(state, world, v.event);
     const targets = v.by.map((id) => state.actors[id]).filter((a) => a && !a.dead);
     if (!trap || !targets.length) continue;
     let split: Record<string, number> | null = null;
@@ -515,7 +516,7 @@ async function burns(state: State, world: World, llm: Llm) {
   const due = state.burns ?? [];
   state.burns = [];
   for (const b of due) {
-    const trap = world.events.find((e) => e.id === b.event);
+    const trap = eventDefOf(state, world, b.event);
     const beset = b.by.map((id) => state.actors[id]).filter((a) => a && !a.dead);
     const targets = burnTargets(state, beset, b.color, state.minutes);
     if (!trap || !targets.length) continue;
@@ -1453,6 +1454,7 @@ async function prepare(state: State, world: World, llm: Llm): Promise<string | n
           scout: tapBlocked(state, world, a, 'scout', a.id, state.minutes) ? undefined : tapInput(state, world, a, 'scout'),
           altar: altarInput(state, world, a),
           ascend: ascendInput(state, world, a),
+          traps: trapsHeld(world, a).map((ev) => ({ id: ev.id, text: `${ev.name}: ${ev.summary} (${ev.cardCost?.text ?? ''})` })),
           expedition: expeditionBlocked(state, world, a) ? undefined : { name: expeditionOf(state, world, a)!.name, reward: expeditionReward(state, world, a).en },
           fetch: fetchInput(state, world, a),
           court: courtInput(state, world, a),

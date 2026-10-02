@@ -195,7 +195,8 @@ export function placeTile(world: World, regionId: string, id: string, pos?: [num
 export function homeTile(world: World, npc: { id: string; home: string; homePos?: [number, number] }) {
   return placeTile(world, npc.home, npc.id, npc.homePos);
 }
-export function eventTile(world: World, ev: { id: string; region: string; pos?: [number, number] }) {
+export function eventTile(world: World, ev: { id: string; region: string; pos?: [number, number]; tile?: Tile }) {
+  if (ev.tile) return ev.tile;
   return placeTile(world, ev.region, ev.id, ev.pos);
 }
 

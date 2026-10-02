@@ -8,6 +8,7 @@ status: canon
 sources: [ZEN-73]
 tags: [주문, 청색, 집중마법, 함정, 비밀]
 links:
+  - { to: spl-trapmakers-snare, rel: 짝을 이루는 함정 주문 }
   - { to: law-mana-colors, rel: 청색 마법 }
   - { to: loc-kazandu, rel: 배우는 곳 (카잔두의 함정꾼) }
   - { to: law-ruin-traps, rel: 숨은 함정을 찾아냄 }

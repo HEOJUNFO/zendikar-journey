@@ -15,6 +15,7 @@ links:
   - { to: loc-turntimber-grove, rel: 도사린 곳 }
 sim:
   region: loc-turntimber-grove   # [결정] 2026-10-01 설정대로 (예전엔 푸른 지하묘지)
+  card_cost: "{4}{G}{G}"    # [카드] 함정 카드의 마나 비용 (함정장이의 올가미로 놓을 때)
   trigger: destroyed      # [결정] 턴팀버 숲의 지속물이 남의 손에 부서질 때
   text: 비틀린 나무뿌리 아래 무너진 무덤 깊은 곳에서, 항아리들 사이로 코브라들이 고개를 쳐들었다.
   effects:

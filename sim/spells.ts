@@ -16,6 +16,7 @@ import { escapeOptions, escapeOwed } from './escape.ts';
 import { sendNowhere } from './nowhere.ts';
 import { floodOptions, floodOwed } from './flood.ts';
 import { pyromancerCast } from './pyromancer.ts';
+import { snareTrap } from './snare.ts';
 import { sacramentOwed } from './sacrament.ts';
 import { discoveryOwed } from './discovery.ts';
 import { harrowGive, harrowOwed } from './harrow.ts';
@@ -337,6 +338,8 @@ export function resolveSpell(state: State, world: World, a: Actor, spellId: stri
     } else if (eff.type === 'harrow') {
       const owed = harrowOwed(state, world, a, { type: 'harrow', spell: s.name, left: eff.count, given: false }, t);
       if (owed) (state.choices ??= []).push(owed);
+    } else if (eff.type === 'snare_trap') {
+      snareTrap(state, world, a, t, s.name);
     } else if (eff.type === 'find_traps') {
       findTraps(state, world, a, t, s.name);
     } else if (eff.type === 'fog') {

@@ -13,6 +13,7 @@ links:
   - { to: loc-ondu, rel: 깔린 곳 }
 sim:
   region: loc-ondu
+  card_cost: "{3}{W}{W}"    # [카드] 함정 카드의 마나 비용 (함정장이의 올가미로 놓을 때)
   trigger: attacked
   attackers: 4          # 같은 시간 온두에서 넷 이상이 덤비면 ({1}{W} 대체 비용: 생물 넷 이상이 공격 중)
   text: 제단 위 보석이 번쩍이더니, 풀 언덕 사방의 틈에서 화살이 비처럼 쏟아졌다.

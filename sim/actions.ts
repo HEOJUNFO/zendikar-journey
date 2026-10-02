@@ -13,6 +13,7 @@ import { BITE_HOURS, biteBlocked, readyBiter } from './bite.ts';
 import { readyTapper, TAP_HOURS, tapAmount, tapBlocked } from './tapper.ts';
 import { ALTAR_HOURS, altarBlocked } from './altar.ts';
 import { ASCEND_HOURS, ascendBlocked, ascendText, ascensionOf } from './luminarch.ts';
+import { SET_TRAP_HOURS, setTrapBlocked } from './snare.ts';
 import { EXPEDITION_HOURS, expeditionBlocked, expeditionOf, expeditionReward } from './expedition.ts';
 import { bondBlocked, bondTargets, FETCH_HOURS, fetchBlocked, firesOnBond, growBlocked, HAND, landDropBlocked, targetedBondEffect, TOP } from './abilities.ts';
 import { handBlocked, topBlocked } from './oracle.ts';
@@ -78,6 +79,8 @@ export const ActionSchema = z.discriminatedUnion('type', [
   z.object({ type: z.literal('expedition') }),
   // Call down an angel with the Luminarch Ascension you own (enough quest counters): pay its cost.
   z.object({ type: z.literal('ascend') }),
+  // Set a trap you hold where you stand, paying its card's cost (Trapmaker's Snare).
+  z.object({ type: z.literal('set_trap'), trap: z.string() }),
   // Hire a mercenary here: pay their price and they serve you for good (sim/allies.ts).
   z.object({ type: z.literal('hire'), to: z.string() }),
   // Answer the pick you owe (an Ally's rally in your party): someone's id, or null for no one.
@@ -317,6 +320,14 @@ export function startAction(state: State, world: World, action: Action): string 
       if (why) return why;
       task = { kind: 'expedition', activity: `${expeditionOf(state, world, p)!.name}을(를) 마침`, emoji: '🗺️', until: until(EXPEDITION_HOURS) };
       text = `원정을 마치고 원정대가 찾아낸 것을 짚어 본다. ${expeditionReward(state, world, p).ko}.`;
+      break;
+    }
+    case 'set_trap': {
+      const why = setTrapBlocked(state, world, p, action.trap, t);
+      if (why) return why;
+      const ev = world.events.find((x) => x.id === action.trap)!;
+      task = { kind: 'set_trap', activity: `${ev.name}을(를) 숨겨 놓음`, emoji: '🪤', until: until(SET_TRAP_HOURS), trap: ev.id };
+      text = `${josa(ev.name, '을', '를')} 이 자리에 숨겨 놓는다 (${ev.cardCost!.text}).`;
       break;
     }
     case 'ascend': {

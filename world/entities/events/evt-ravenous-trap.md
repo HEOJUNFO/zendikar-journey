@@ -14,6 +14,7 @@ links:
   - { to: law-retainers, rel: 죽은 권속을 삼킴 }
 sim:
   region: loc-agadeem-crypt
+  card_cost: "{2}{B}{B}"    # [카드] 함정 카드의 마나 비용 (함정장이의 올가미로 놓을 때)
   trigger: enter
   buried: 3             # 그날 무덤에 셋 이상을 보낸 이가 들어올 때만 ({0} 대체 비용)
   text: 붉은 살덩이 같은 벽이 꿈틀거리며 오므라들고, 이빨 돋은 굴이 아가리처럼 닫혔다. 무덤에 남겨 둔 것들이 그 목구멍 속으로 빨려 들어갔다.

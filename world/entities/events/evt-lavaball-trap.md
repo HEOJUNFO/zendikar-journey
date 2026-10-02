@@ -13,6 +13,7 @@ links:
   - { to: loc-valakut, rel: 함정이 숨은 곳 }
 sim:
   region: loc-valakut
+  card_cost: "{6}{R}{R}"    # [카드] 함정 카드의 마나 비용 (함정장이의 올가미로 놓을 때)
   trigger: landfall
   landfalls: 2          # 발라쿠트가 누군가 그날 두 번째(이상)로 유대를 맺은 땅이면 발동
   cooldown_hours: 72

@@ -13,6 +13,7 @@ links:
   - { to: loc-tazeem, rel: 깔린 곳 }
 sim:
   region: loc-tazeem
+  card_cost: "{2}{U}{U}"    # [카드] 함정 카드의 마나 비용 (함정장이의 올가미로 놓을 때)
   pos: [-0.448, -1]   # [가공] 2026-10-02 그전 칸이 북하다가 되어 서쪽 곁으로
   trigger: cast
   spells: 3             # 그날 셋째 주문을 쓰는 이 ({0} 대체 비용: 상대가 주문을 셋 이상 시전)

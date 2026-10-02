@@ -14,6 +14,7 @@ links:
   - { to: cre-sphinx, rel: 기록을 지키는 이 }
 sim:
   region: loc-jwar-isle
+  card_cost: "{3}{U}{U}"    # [카드] 함정 카드의 마나 비용 (함정장이의 올가미로 놓을 때)
   trigger: enter
   searched: true        # 그날 페치로 땅을 찾아온 이가 들어올 때만 ({0} 대체 비용: 서고를 뒤졌으면)
   text: 서가가 늘어선 옛 기록보관소의 천장이 무너져 내리고, 쏟아지는 돌더미와 먼지 속에서 머릿속이 하얗게 비어 갔다.

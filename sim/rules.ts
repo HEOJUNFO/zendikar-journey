@@ -30,6 +30,7 @@ export const KIND_EFFECTS: Record<LifeKind, Effect> = {
   altar: { energy: -1, hunger: 3, coin: 0 },
   expedition: { energy: -1, hunger: 3, coin: 0 },
   ascend: { energy: -1, hunger: 3, coin: 0 },
+  set_trap: { energy: -1, hunger: 3, coin: 0 },
 };
 // Change per game hour while travelling between regions.
 export const TRAVEL_EFFECT: Effect = { energy: -3, hunger: 4, coin: 0 };

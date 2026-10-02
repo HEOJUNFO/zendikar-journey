@@ -13,6 +13,7 @@ links:
   - { to: loc-guum-wilds, rel: 깔린 곳 }
 sim:
   region: loc-guum-wilds
+  card_cost: "{2}{W}"    # [카드] 함정 카드의 마나 비용 (함정장이의 올가미로 놓을 때)
   pos: [-0.5, 0.2]      # [가공] 굼 밀림 서쪽, 덩굴이 두껍게 늘어진 숲 바닥의 한 칸
   trigger: attacked
   attackers: 1          # [카드] 대체 비용 {W}: 정확히 한 생물이 공격 중

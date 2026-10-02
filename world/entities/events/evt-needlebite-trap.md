@@ -14,6 +14,7 @@ links:
   - { to: loc-malakir, rel: 깔린 곳 }
 sim:
   region: loc-malakir
+  card_cost: "{5}{B}{B}"    # [카드] 함정 카드의 마나 비용 (함정장이의 올가미로 놓을 때)
   trigger: enter
   gained_life: true     # 그날 생명을 얻은 이가 들어올 때만 ({B} 대체 비용)
   text: 도시 어귀의 그늘에서 바늘 같은 가시가 튀어나와 침입자의 목을 물었다.

@@ -13,6 +13,7 @@ links:
   - { to: loc-soaring-seacliff, rel: 깔린 곳 }
 sim:
   region: loc-soaring-seacliff
+  card_cost: "{3}{U}"    # [카드] 함정 카드의 마나 비용 (함정장이의 올가미로 놓을 때)
   trigger: attacked
   attackers: 3          # 같은 시간 바다절벽에서 셋 이상이 덤비면 ({U} 대체 비용: 생물 셋 이상이 공격 중)
   text: 절벽 아래에서 푸른 안개가 피어올라 덤비던 이들을 휘감았다. 팔에서 힘이 빠지고, 싸울 까닭이 아득해졌다.

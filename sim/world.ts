@@ -626,6 +626,8 @@ const EventBase = {
   omen: z.string().optional(),
   // A trap that springs underfoot: where in its land it lies, like `home_pos`.
   pos: z.tuple([z.number().min(-1).max(1), z.number().min(-1).max(1)]).optional(),
+  // A trap's card cost: what setting a copy of it costs (Trapmaker's Snare, sim/snare.ts).
+  card_cost: CostSchema.optional(),
   text: z.string().min(1),
   effects: z.array(EffectSchema).min(1),
 };
@@ -764,6 +766,10 @@ export const SpellSimSchema = z.strictObject({
         // this world, the caster finds every trap hidden in the land they stand in and its areas
         // (sim/knowledge.ts `findTraps`).
         z.strictObject({ type: z.literal('find_traps') }),
+        // "Search your library for a Trap card, put it into your hand" (Trapmaker's Snare): the
+        // caster comes by one of the world's traps at random, to set where they stand later
+        // (sim/snare.ts).
+        z.strictObject({ type: z.literal('snare_trap') }),
         z.strictObject({ type: z.literal('damage_grounded'), amount: z.number().int().positive() }),
         // "Reveal the top N cards of your library. Put all creature cards revealed this way into
         // your hand and the rest into your graveyard" (Beast Hunt): N unknown secrets turn up; the
@@ -1163,6 +1169,10 @@ export type EventDef = {
   effects: Effect[];
   cost?: { by: string; mana: ManaCost; text: string };
   pos?: [number, number];
+  cardCost?: { mana: ManaCost; text: string };
+  // A copy someone set (Trapmaker's Snare): the tile it lies on, and who set it.
+  tile?: [number, number];
+  setBy?: string;
 };
 
 // Every entity in brief, for prompts (laws, creatures, factions...).
@@ -1354,7 +1364,7 @@ export function buildWorld(entities: RawEntity[]): { world: World; errors: strin
         err(e.id, `sim 오류: ${issues(sim.error)}`);
         continue;
       }
-      const { cooldown_hours, effects, cost, ...rest } = sim.data;
+      const { cooldown_hours, effects, cost, card_cost, ...rest } = sim.data;
       if (rest.trigger !== 'attacked' && effects.some((x) => x.type === 'pump_attackers' || x.type === 'destroy_attackers')) err(e.id, 'pump_attackers, destroy_attackers 는 trigger: attacked 사건에만 쓸 수 있음 (덤빈 이들에게)');
       if (rest.trigger !== 'cast' && effects.some((x) => x.type === 'counter_spell')) err(e.id, 'counter_spell 은 trigger: cast 사건에만 쓸 수 있음 (막을 주문이 있어야 함)');
       if (rest.trigger !== 'hurt' && effects.some((x) => x.type === 'burn')) err(e.id, 'burn 은 trigger: hurt 사건에만 쓸 수 있음 (누가 누구에게 다쳤는지 알아야 함)');
@@ -1370,6 +1380,7 @@ export function buildWorld(entities: RawEntity[]): { world: World; errors: strin
         cooldownHours: cooldown_hours,
         effects,
         ...(cost ? { cost: { by: cost.by, mana: parseManaCost(cost.mana)!, text: cost.mana } } : {}),
+        ...(card_cost ? { cardCost: { mana: parseManaCost(card_cost)!, text: card_cost } } : {}),
       });
     } else if (e.kind === 'spell') {
       const sim = SpellSimSchema.safeParse(e.sim);

@@ -29,6 +29,8 @@ export type Task = {
   land?: string;
   // court: the beast whose trust they seek; hire: the mercenary.
   who?: string;
+  // set_trap: the trap being set (sim/snare.ts).
+  trap?: string;
   // bond: whom the land's targeted effect ("target player loses N life") falls on (the player's pick).
   target?: string;
 };
@@ -52,6 +54,8 @@ export type Actor = {
   // When their latest landfall happened (a landfall event may answer it at that hour).
   landfallAt?: number;
   manaSpent?: { day: number; spent: Mana };
+  // Traps they hold to set (Trapmaker's Snare, sim/snare.ts): the world's trap events.
+  traps?: string[];
   // Mana of any color they have until midnight, beyond their own (Lotus Cobra's landfall).
   bonusMana?: { day: number; any: number };
   // The last game day they lost life or took damage (Luminarch Ascension).
@@ -346,6 +350,9 @@ export type State = {
   possessions?: { target: string; by: string; from: number; until: number }[];
   // The dead exiled from a graveyard: erased from the world for good (sim/erase.ts), never made
   // anew from their card.
+  // Traps someone set (Trapmaker's Snare, sim/snare.ts), and how many ever were (for their ids).
+  placedTraps?: { id: string; event: string; region: string; tile?: Tile; by: string; at: number }[];
+  trapCount?: number;
   // Tanglesap: tiles where combat damage of those without trample is prevented until `until`.
   fogs?: { region: string; tile?: Tile; until: number; by: string }[];
   // Life gained since the hour began: who and where (sim/punish.ts).

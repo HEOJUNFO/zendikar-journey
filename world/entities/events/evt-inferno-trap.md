@@ -13,6 +13,7 @@ links:
   - { to: loc-akoum, rel: 깔린 곳 }
 sim:
   region: loc-akoum
+  card_cost: "{3}{R}"    # [카드] 함정 카드의 마나 비용 (함정장이의 올가미로 놓을 때)
   pos: [0.84, 0.44]     # [가공] 2026-10-02 그전까지 이름으로 정해지던 칸 (글래스풀이 생겨도 옮겨지지 않게)
   trigger: hurt
   creatures: 2          # 그날 서로 다른 둘 이상에게 싸움 피해를 입은 이 ({R} 대체 비용)

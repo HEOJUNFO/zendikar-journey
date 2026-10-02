@@ -22,7 +22,6 @@ import { destroyLand, eligibleGmEvents, moveHours, startTravel, step, travelBloc
 import { gainLife, lifeOf, loseLife } from './life.ts';
 import { awayText, buriedToday, hasAbility, here, needsOf, newState, npcDef, outOfTime, PLAYER_ID, present, protectedFrom, ptOf, syncWorld, targetable, together } from './state.ts';
 import { foresightText } from './foresight.ts';
-import { withPositions } from './wander.ts';
 import { nodeAt } from '../web/view.ts';
 import { crushRelic, relicsHere } from './relics.ts';
 import { recallBlocked, recallCount } from './loremaster.ts';
@@ -58,6 +57,8 @@ import { ascendBlocked, upkeepUnhurt } from './luminarch.ts';
 import { reviveHour } from './revive.ts';
 import { punishHour } from './punish.ts';
 import { applyFlood } from './flood.ts';
+import { setTrapBlocked } from './snare.ts';
+import { withPositions } from './wander.ts';
 import { applyHarrow } from './harrow.ts';
 import type { HarrowEffect } from './harrow.ts';
 import { applySacrament } from './sacrament.ts';
@@ -561,6 +562,40 @@ const needle: RawEntity = {
   status: 'canon',
   sim: { region: 'loc-b', trigger: 'enter', gained_life: true, text: '가시가 물었다.', effects: [{ type: 'lose_life', amount: 5 }] },
 };
+
+test('Trapmaker\'s Snare: the caster comes by a trap of the world; setting it where they stand costs its card\'s cost and an hour; a copy lies on that tile, known to them, and springs as the trap does', async () => {
+  const trap: RawEntity = { id: 'evt-t', kind: 'event', name: '가시 함정', status: 'canon', sim: { region: 'loc-b', trigger: 'enter', card_cost: '{1}', text: '가시가 솟았다.', effects: [{ type: 'lose_life', amount: 5 }] } };
+  const snare: RawEntity = { id: 'spl-snare', kind: 'spell', name: '함정장이의 올가미', status: 'canon', sim: { cost: '{0}', speed: 'instant', learn_at: 'loc-a', target: 'self', effects: [{ type: 'snare_trap' }] } };
+  const world = fixture([trap, snare, npc('chr-x', npcSim('loc-a'))]);
+  const state = character(world, 'loc-a');
+  const p = state.actors[PLAYER_ID];
+  p.spells = ['spl-snare'];
+  await act(state, world, { type: 'cast', spell: 'spl-snare', to: p.id, kick: false });
+  assert.deepEqual(p.traps, ['evt-t']);
+  assert.ok(setTrapBlocked(state, world, p, 'evt-t', state.minutes)?.includes('마나'));
+  p.bonds = ['loc-a'];
+  await act(state, world, { type: 'set_trap', trap: 'evt-t' });
+  assert.equal(p.traps, undefined);
+  assert.equal(state.placedTraps?.length, 1);
+  const copy = withPositions(state, world).events.find((ev) => ev.setBy === p.id)!;
+  assert.equal(copy.region, 'loc-a');
+  assert.deepEqual(eventTile(withPositions(state, world), copy), p.tile);
+  assert.ok(p.knowledge?.some((k) => k.id === `trap:${copy.id}`));
+  assert.equal(withPositions(state, world).events.filter((ev) => ev.id === 'evt-t').length, 1);
+  // One steps onto it: it springs.
+  const x = state.actors['chr-x'];
+  Object.assign(x, { region: 'loc-a', tile: p.tile, steppedAt: state.minutes + 60, task: { kind: 'leisure', activity: '쉼', emoji: '🙂' } });
+  step(state, world);
+  assert.equal(lifeOf(x), 15);
+});
+
+test('the real Trapmaker\'s Snare is taught on Jwar Isle; every trap of the world has its card\'s cost to be set', () => {
+  const world = loadWorld();
+  const s = world.spells.find((x) => x.id === 'spl-trapmakers-snare')!;
+  assert.equal(s.learnAt, 'loc-jwar-isle');
+  assert.ok(world.events.filter((ev) => ev.trigger !== 'gm').every((ev) => ev.cardCost));
+  assert.equal(world.events.find((ev) => ev.id === 'evt-pitfall-trap')?.cardCost?.text, '{2}{W}');
+});
 
 test('an enter trap bites only those who gained life today, and takes life', async () => {
   const world = fixture([needle]);
