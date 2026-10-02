@@ -7245,6 +7245,23 @@ test('the real Hedron Scrabbler crawls the hedron fields of Akoum: a colorless a
   assert.deepEqual(ptOf(h), [2, 2]);
 });
 
+test('the real Kazandu Blademaster hires out in the Kazandu Refuge for 20 coin: first strike, vigilance, a +1/+1 counter as it joins and as each Ally joins after', () => {
+  const world = loadWorld();
+  const state = newState(world, { seed: 1, mode: 'observer' });
+  const b = state.actors['chr-kazandu-blademaster'];
+  assert.equal(b?.region, 'loc-kazandu-refuge');
+  const def = npcDef(state, world, b.id)!;
+  assert.ok(def.ally && def.hireable);
+  assert.equal(hirePrice(def), 20);
+  assert.ok(hasAbility(b, 'first_strike', state.minutes) && hasAbility(b, 'vigilance', state.minutes));
+  const m = state.actors['chr-reckless-scholar'];
+  bindRetainer(state, world, b, m, state.minutes, '고용');
+  assert.equal(b.plusCounters, 1);
+  bindRetainer(state, world, state.actors['chr-highland-berserker'], m, state.minutes, '고용');
+  assert.equal(b.plusCounters, 2);
+  assert.deepEqual(ptOf(b), [3, 3]);
+});
+
 test('the real Highland Berserker hires out on the Teeth of Akoum for 20 coin; joining a party, its Allies strike first today', () => {
   const world = loadWorld();
   const state = newState(world, { seed: 1, mode: 'observer' });

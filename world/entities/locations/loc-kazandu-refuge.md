@@ -5,13 +5,14 @@ name: 카잔두 피난처
 name_en: Kazandu Refuge
 summary: 카잔두 협곡의 벼랑 틈, 뒤틀린 거목 뿌리 아래 초록 이끼가 빛나는 은신처. 발아래로 잿빛 호수가 펼쳐진다
 status: canon
-sources: [ZEN-217, ZEN-169]
+sources: [ZEN-217, ZEN-169, ZEN-16]
 tags: [피난처, 거목, 협곡, 적색, 녹색]
 links:
   - { to: loc-kazandu, rel: 바깥 구역 (무라사의 무너진 땅) }
   - { to: loc-murasa, rel: 바깥 지역 }
   - { to: law-life, rel: 들어서면 생명 }
   - { to: cre-mold-shambler, rel: 피난처를 되받아 잠식하는 짐승 }
+  - { to: chr-kazandu-blademaster, rel: 원정대의 등을 지키는 검사 용병 }
 map: { in: loc-kazandu, terrain: forest, color: [R, G], pos: [0, 0], tiles: 10 }   # 카잔두 한가운데 [가공] ([결정] 2026-10-01 카잔두 안의 구역)
 sim:
   nonbasic: true                          # 이름 있는 대지: 숲이 아니다
@@ -34,6 +35,7 @@ sim:
 - **들어올 때 생명 1** ([카드]): 이 땅과 유대를 맺으면 생명 1을 얻는다. 그날은 생명을 얻은 날이 된다.
 
 - 곰팡이 비틀보(`cre-mold-shambler`, ZEN-169)가 피난처 곁을 맴돈다 ([결정] 2026-10-01). 그날 처음 들어서는 곳에서 힘 {1}{G}를 들여 생물이 아닌 지속물(아이템, 오라, 땅) 하나를 무너뜨릴 수 있다.
+- 카잔두 검사(`chr-kazandu-blademaster`, ZEN-16)가 남동쪽 거목 뿌리 아래에서 일거리를 찾는다 ([결정] 2026-10-02). 열일곱 번째 동료, 20코인에 고용하거나 설득한다.
 
 ## 미정/질문
 
