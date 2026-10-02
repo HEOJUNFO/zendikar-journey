@@ -60,6 +60,7 @@ import { applyFlood } from './flood.ts';
 import { setTrapBlocked } from './snare.ts';
 import { hex, hexBlocked, hexNear } from './hexmage.ts';
 import { applyInstigate } from './instigator.ts';
+import { bloodchiefHour } from './bloodchief.ts';
 import { withPositions } from './wander.ts';
 import { applyHarrow } from './harrow.ts';
 import type { HarrowEffect } from './harrow.ts';
@@ -7724,6 +7725,27 @@ test('Adventuring Gear: each land its owner bonds with, its bearer gets +2/+2 un
   assert.deepEqual(ptOf(r), [5, 5]);
   expireGranted(state, untapTime(state.minutes));
   assert.deepEqual(ptOf(r), [1, 1]);
+});
+
+test('Blade of the Bloodchief: a death on its bearer\'s tile is a +1/+1 counter on the bearer (two on a vampire); elsewhere, nothing', () => {
+  const blade: RawEntity = { id: 'itm-blade', kind: 'item', name: '혈족장의 칼날', status: 'canon', sim: { cost: '{0}', at: 'loc-a', equip: { cost: '{0}', death_counters: true } } };
+  const world = fixture([blade, lore('cre-vampire', 'creature'), npc('chr-b', npcSim('loc-a')), npc('chr-v', { ...npcSim('loc-a'), creature: 'cre-vampire' }), npc('chr-d', npcSim('loc-a')), npc('chr-e', npcSim('loc-a')), npc('chr-far', npcSim('loc-b'))]);
+  const state = newState(world, { seed: 1, mode: 'observer' });
+  const [b, d, far] = ['chr-b', 'chr-d', 'chr-far'].map((id) => state.actors[id]);
+  d.tile = b.tile;
+  state.items = { 'itm-blade': { name: '혈족장의 칼날', owner: b.id, counters: 0, carried: true, bearer: b.id } };
+  die(state, d, state.minutes, '시험');
+  die(state, far, state.minutes, '시험');
+  bloodchiefHour(state, world, state.minutes);
+  assert.equal(b.plusCounters, 1);  // A vampire bearing it drinks twice.
+  const v = state.actors['chr-v'];
+  v.tile = b.tile;
+  state.items['itm-blade'].bearer = v.id;
+  const e = state.actors['chr-e'];
+  e.tile = v.tile;
+  die(state, e, state.minutes, '시험');
+  bloodchiefHour(state, world, state.minutes);
+  assert.equal(v.plusCounters, 2);
 });
 
 test('the real Adventuring Gear lies in Kazandu', () => {

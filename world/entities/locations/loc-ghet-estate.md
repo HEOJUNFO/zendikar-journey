@@ -5,9 +5,10 @@ name: 게트 혈족의 영지
 name_en: Ghet Estate
 summary: 흡혈귀 도시 말라키르의 다섯 구역 가운데 하나. 물에 잠긴 가난한 동네로, 게트 혈족이 모여 살고 혈족장 칼리타스가 머문다
 status: canon
-sources: [ZEN-99, ZEN-102, ZEN-103]
+sources: [ZEN-99, ZEN-102, ZEN-103, ZEN-196]
 tags: [늪, 흑색, 흡혈귀, 구역]
 links:
+  - { to: itm-blade-of-the-bloodchief, rel: 혈족장의 무기고의 칼날 }
   - { to: loc-malakir, rel: 바깥 지역 (말라키르의 한 구역) }
   - { to: chr-kalitas, rel: 거처 }
   - { to: fac-ghet, rel: 혈족의 거점 }
@@ -28,6 +29,7 @@ map: { in: loc-malakir, terrain: swamp, pos: [-0.2, 0.6], tiles: 10 }   # 말라
 - 정신 오물(`spl-mind-sludge`, ZEN-102)을 배울 수 있다 (4시간). 시전자가 쥔 늪마다 대상이 주문 하나를 잊는다 ([결정] 2026-09-30).
 - 무심한 공허자(`cre-mindless-null`, ZEN-103)가 남동쪽 물에 잠긴 골목을 사슬을 끌며 떠돈다. 흡혈귀 곁만 따르는 짐승이다 ([결정] 2026-10-01).
 - 굴 드라즈나 말라키르 전체에 일어나는 사건은 이 구역에도 미친다.
+- 남동쪽 혈족장의 무기고에 혈족장의 칼날(`itm-blade-of-the-bloodchief`, ZEN-196)이 걸려 있다 ([결정] 2026-10-02): 맨 이는 곁에서 누가 죽을 때마다 +1/+1 카운터 (흡혈귀면 둘).
 
 ## 미정/질문
 

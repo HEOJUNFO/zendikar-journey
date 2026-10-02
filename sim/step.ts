@@ -42,6 +42,7 @@ import { EQUIP_HOURS, equipBlocked, equipItem, equipmentOf, syncEquipment } from
 import { nowhereHour } from './nowhere.ts';
 import { reviveHour } from './revive.ts';
 import { punishHour } from './punish.ts';
+import { bloodchiefHour } from './bloodchief.ts';
 import { SET_TRAP_HOURS, setTrap, setTrapBlocked } from './snare.ts';
 import { HEX_HOURS, hex, hexBlocked } from './hexmage.ts';
 import { ASCEND_HOURS, ascend, ascendBlocked, upkeepUnhurt } from './luminarch.ts';
@@ -75,6 +76,7 @@ export function step(state: State, placed: World) {
   nowhereHour(state, t);
   reviveHour(state, placed, t);
   punishHour(state, placed, t);
+  bloodchiefHour(state, placed, t);
   const world = withPositions(state, placed);
   startDay(state, world, t);
   markSealed(state, world, t);

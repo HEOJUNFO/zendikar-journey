@@ -122,6 +122,8 @@ export function die(state: State, a: Actor, t: number, cause: string, by?: Actor
   a.travel = undefined;
   delete a.boundUntil;
   if (a.kind === 'player') state.over = { at: t, cause };
+  // For what answers a death there (Blade of the Bloodchief), each hour.
+  (state.deaths ??= []).push({ id: a.id, region: a.region, ...(a.tile ? { tile: a.tile } : {}) });
   addLog(state, {
     kind: 'death',
     text: `${josa(shortName(a.name), '이', '가')} 죽었다 (${cause}).${revives ? ` 무덤에 들지 않고, ${a.revives}일 뒤 거처에서 다시 눈을 뜬다.` : ''}`,

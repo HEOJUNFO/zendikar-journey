@@ -8,6 +8,7 @@ status: canon
 sources: [ZEN-99, ZEN-102, ZEN-103]
 tags: [흡혈귀, 전설, 흑색, 전사]
 links:
+  - { to: itm-blade-of-the-bloodchief, rel: 같은 영지의 혈족장의 칼날 }
   - { to: fac-ghet, rel: 우두머리 }
   - { to: cre-vampire, rel: 종족 }
   - { to: law-mana-colors, rel: 흑색의 존재 }

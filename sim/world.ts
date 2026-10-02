@@ -851,9 +851,11 @@ export const ItemSimSchema = z.strictObject({
   // its owner pays to put it on themselves or a retainer standing with them, who then has
   // `abilities`; `lure`: "whenever equipped creature attacks, you may have target creature
   // block it": the one it falls on can't fly from it (sim/equipment.ts).
+  // `death_counters`: "Whenever a creature dies, put a +1/+1 counter on equipped creature (two on a
+  // Vampire)" (Blade of the Bloodchief): a death on its bearer's tile (sim/bloodchief.ts).
   // `landfall_pump`: "Landfall — equipped creature gets +P/+T until end of turn" (Adventuring
   // Gear): when its owner bonds with a land, its bearer, until midnight (sim/items.ts).
-  equip: z.strictObject({ cost: CostSchema, abilities: z.array(z.enum(ABILITIES)).default([]), lure: z.boolean().default(false), landfall_pump: z.tuple([z.number().int().min(0), z.number().int().min(0)]).optional() }).optional(),
+  equip: z.strictObject({ cost: CostSchema, abilities: z.array(z.enum(ABILITIES)).default([]), lure: z.boolean().default(false), death_counters: z.boolean().default(false), landfall_pump: z.tuple([z.number().int().min(0), z.number().int().min(0)]).optional() }).optional(),
   effects: z
     .array(
       z.discriminatedUnion('type', [
@@ -1148,7 +1150,7 @@ export type ItemDef = {
   at: string;
   effects: ItemEffect[];
   pos?: [number, number];
-  equip?: { cost: ManaCost; costText: string; abilities: Ability[]; lure: boolean; landfallPump?: [number, number] };
+  equip?: { cost: ManaCost; costText: string; abilities: Ability[]; lure: boolean; deathCounters?: boolean; landfallPump?: [number, number] };
 };
 
 // Who answers when spoken to.
@@ -1426,7 +1428,7 @@ export function buildWorld(entities: RawEntity[]): { world: World; errors: strin
         continue;
       }
       const d = sim.data;
-      world.items.push({ id: e.id, name: e.name, summary: e.summary ?? '', cardType: d.card_type, cost: parseManaCost(d.cost)!, costText: d.cost, at: d.at, ...(d.pos ? { pos: d.pos } : {}), effects: d.effects, ...(d.equip ? { equip: { cost: parseManaCost(d.equip.cost)!, costText: d.equip.cost, abilities: d.equip.abilities, lure: d.equip.lure, ...(d.equip.landfall_pump ? { landfallPump: d.equip.landfall_pump } : {}) } } : {}) });
+      world.items.push({ id: e.id, name: e.name, summary: e.summary ?? '', cardType: d.card_type, cost: parseManaCost(d.cost)!, costText: d.cost, at: d.at, ...(d.pos ? { pos: d.pos } : {}), effects: d.effects, ...(d.equip ? { equip: { cost: parseManaCost(d.equip.cost)!, costText: d.equip.cost, abilities: d.equip.abilities, lure: d.equip.lure, ...(d.equip.death_counters ? { deathCounters: true } : {}), ...(d.equip.landfall_pump ? { landfallPump: d.equip.landfall_pump } : {}) } } : {}) });
     } else {
       err(e.id, `sim 은 location, character, creature, event, spell, item 에만 쓸 수 있음 (${e.kind})`);
     }

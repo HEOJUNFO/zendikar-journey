@@ -355,6 +355,8 @@ export type State = {
   trapCount?: number;
   // Tanglesap: tiles where combat damage of those without trample is prevented until `until`.
   fogs?: { region: string; tile?: Tile; until: number; by: string }[];
+  // Deaths since the hour began: who and where (Blade of the Bloodchief, sim/bloodchief.ts).
+  deaths?: { id: string; region: string; tile?: Tile }[];
   // Life gained since the hour began: who and where (sim/punish.ts).
   lifeGains?: { id: string; region: string }[];
   erased?: string[];
