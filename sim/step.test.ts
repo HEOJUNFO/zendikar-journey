@@ -7558,6 +7558,24 @@ test('the real Journey to Nowhere is taught in Emeria: a white enchantment, a so
   assert.deepEqual(s.effects.map((e) => e.type), ['exile_until']);
 });
 
+test('nonbasic landwalk (Trailblazer\'s Boots): one bonded with a land of a land card of its own can\'t strike back; one with only basic lands can', () => {
+  const nonbasic: RawEntity = { id: 'loc-nb', kind: 'location', name: '이름 있는 땅', status: 'canon', map: { in: 'loc-a', terrain: 'grassland', tiles: 1 }, sim: { nonbasic: true } };
+  const world = fixture([nonbasic, npc('chr-w', { ...npcSim('loc-a', 'work', [2, 2]), abilities: ['nonbasic_landwalk'] }), npc('chr-x', npcSim('loc-a')), npc('chr-y', npcSim('loc-a'))]);
+  const state = newState(world, { seed: 1, mode: 'observer' });
+  const [w, x, y] = ['chr-w', 'chr-x', 'chr-y'].map((id) => state.actors[id]);
+  x.bonds = ['loc-nb'];
+  y.bonds = ['loc-b'];
+  assert.ok(unblockable(state, world, w, x, state.minutes)?.includes('이름 있는 땅'));
+  assert.equal(unblockable(state, world, w, y, state.minutes), null);
+});
+
+test('the real Trailblazer\'s Boots hang at Sea Gate: equipment for nonbasic landwalk', () => {
+  const world = loadWorld();
+  const x = world.items.find((i) => i.id === 'itm-trailblazers-boots')!;
+  assert.equal(x.at, 'loc-sea-gate');
+  assert.deepEqual(x.equip?.abilities, ['nonbasic_landwalk']);
+});
+
 test('mountainwalk: one bonded with a mountain can\'t strike back at it; one with none can', () => {
   const world = fixture([npc('chr-c', { ...npcSim('loc-a', 'work', [2, 1]), abilities: ['mountainwalk'] }), npc('chr-x', npcSim('loc-a')), npc('chr-y', npcSim('loc-a'))]);
   const state = newState(world, { seed: 1, mode: 'observer' });

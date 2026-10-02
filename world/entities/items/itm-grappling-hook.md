@@ -8,6 +8,7 @@ status: canon
 sources: [ZEN-203, ZEN-1]
 tags: [마법물체, 장비, 무색, 코르]
 links:
+  - { to: itm-trailblazers-boots, rel: 같은 장비 }
   - { to: chr-kor-outfitter, rel: 장비를 매어 주는 코르 }
   - { to: chr-armament-master, rel: 무장의 달인 }
   - { to: law-permanents, rel: 마법물체 (장비) }

@@ -228,6 +228,8 @@ export function unblockable(state: State, world: World, attacker: Actor, defende
   if (!flight && hasAbility(attacker, 'unblockable', t)) return '막을 수 없는 적에게';
   const walked = !flight && landwalked(world, attacker, defender, t, state);
   if (walked) return `${LAND_TYPE_LABELS[walked]}과 이어진 몸이라 ${LAND_TYPE_LABELS[walked]}을 걷는 적에게`;
+  // Nonbasic landwalk (Trailblazer's Boots): one bonded with a land of a land card of its own.
+  if (!flight && hasAbility(attacker, 'nonbasic_landwalk', t) && (defender.bonds ?? []).some((id) => world.regions.find((r) => r.id === id)?.nonbasic)) return '이름 있는 땅과 이어진 몸이라 어디든 걸어온 적에게';
   // Protection from a color: one of that color can't block them.
   const shield = protectedFrom(attacker, actorColors(state, world, defender), t);
   if (shield) return `${COLOR_LABELS[shield]}색이라 ${COLOR_LABELS[shield]}색으로부터 보호받는 적에게`;
