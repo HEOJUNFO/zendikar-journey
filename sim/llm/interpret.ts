@@ -19,6 +19,7 @@ import { biteable, readyBiter } from '../bite.ts';
 import { readyTapper, TAP_POWERS, tapAmount, tapBlocked, tapTargetable } from '../tapper.ts';
 import { altarBlocked, altarOf, altarVictims } from '../altar.ts';
 import { expeditionBlocked, expeditionOf, expeditionReward } from '../expedition.ts';
+import { ascendBlocked, ascensionOf } from '../luminarch.ts';
 import { enteredToday, fetchTargets, fireTargets, growBlocked, growLand, landDropBlocked, targetedBondEffect } from '../abilities.ts';
 import { topBlocked, topLand } from '../oracle.ts';
 import { eonLand, spendBlocked, storeBlocked } from '../eons.ts';
@@ -79,6 +80,7 @@ export async function interpret({ world, state, text }: InterpretInput): Promise
     days.push(`- {"type":"recall"}  (tap ${shortName(loremastersOf(state, world, p)[0].name)}: come to know ${recallCount(state, world, p)} hidden secret(s) of the world, one per Ally of their party; 1 hour)`);
   }
   // A Carnage Altar they own, standing before it: offer one of theirs.
+  if (!ascendBlocked(state, world, p, state.minutes)) days.push(`- {"type":"ascend"}  (call down a token with ${ascensionOf(state, world, p)!.name}: pay its cost, it serves them; 1 hour)`);
   if (!expeditionBlocked(state, world, p)) days.push(`- {"type":"expedition"}  (end ${expeditionOf(state, world, p)!.name}: it is gone, they ${expeditionReward(state, world, p).en}; 1 hour)`);
   const altar = altarOf(state, world, p);
   if (altar) {

@@ -54,6 +54,8 @@ export type Actor = {
   manaSpent?: { day: number; spent: Mana };
   // Mana of any color they have until midnight, beyond their own (Lotus Cobra's landfall).
   bonusMana?: { day: number; any: number };
+  // The last game day they lost life or took damage (Luminarch Ascension).
+  hurtDay?: number;
   // When they last arrived somewhere (an enter event may answer it at that hour).
   arrivedAt?: number;
   // Spells they drew (came to hold at random) this turn, and the events that already answered

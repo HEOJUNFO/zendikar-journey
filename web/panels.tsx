@@ -13,6 +13,7 @@ import { biteBlocked, bitersOf } from '../sim/bite.ts';
 import { TAP_POWERS, tapBlocked, tappersOf } from '../sim/tapper.ts';
 import { altarBlocked, altarOf, altarVictims } from '../sim/altar.ts';
 import { expeditionBlocked, expeditionOf, expeditionReward } from '../sim/expedition.ts';
+import { ascendBlocked, ascendText, ascensionOf } from '../sim/luminarch.ts';
 import type { TapPower } from '../sim/tapper.ts';
 
 // The buttons for a creature's power on someone (sim/tapper.ts).
@@ -687,6 +688,18 @@ export function CharacterControls(props: {
             onClick={() => onAct({ type: 'recall' })}
           >
             기억 빌리기
+          </button>
+        </div>
+      )}
+      {ascensionOf(state, world, p) && (
+        <div className="row">
+          <span className="muted">👼 {ascensionOf(state, world, p)!.name} (탐색 {state.items?.[ascensionOf(state, world, p)!.id]?.counters ?? 0}):</span>
+          <button
+            disabled={busy || !!stuck || !!ascendBlocked(state, world, p, state.minutes)}
+            title={ascendBlocked(state, world, p, state.minutes) ?? ascendText(state, world, p)}
+            onClick={() => onAct({ type: 'ascend' })}
+          >
+            천사 부르기
           </button>
         </div>
       )}

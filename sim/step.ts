@@ -40,6 +40,7 @@ import { bondBlocked, bondLand, expireGranted, upkeepFleeting, onEnter, FETCH_HO
 import { CLAIM_HOURS, claimBlocked, claimItem, itemsAt, itemWhere } from './items.ts';
 import { EQUIP_HOURS, equipBlocked, equipItem, equipmentOf, syncEquipment } from './equipment.ts';
 import { nowhereHour } from './nowhere.ts';
+import { ASCEND_HOURS, ascend, ascendBlocked, upkeepUnhurt } from './luminarch.ts';
 import { EON_HOURS, eonLand, holdStill, spendBlocked, spendDay, storeBlocked, storeDay, timeNews } from './eons.ts';
 import { upkeepWins } from './win.ts';
 import { CRAWL_FACTOR, dryOut, stranded } from './stranded.ts';
@@ -89,7 +90,7 @@ export function step(state: State, placed: World) {
     actorHour(state, world, a, t);
     // A timed task done: the player's action, or an NPC's bonding, taming or keeping days.
     const done = a.task?.until !== undefined && a.task.until <= t + STEP_MINUTES && !a.travel;
-    const timed = ['bond', 'claim', 'equip', 'store_day', 'spend_day', 'grow', 'fetch', 'learn', 'cast', 'court', 'hire', 'recall', 'bite', 'shield', 'loot', 'scout', 'altar', 'expedition'];
+    const timed = ['bond', 'claim', 'equip', 'store_day', 'spend_day', 'grow', 'fetch', 'learn', 'cast', 'court', 'hire', 'recall', 'bite', 'shield', 'loot', 'scout', 'altar', 'expedition', 'ascend'];
     if (done && (a.kind === 'player' || timed.includes(a.task!.kind))) {
       const at = t + STEP_MINUTES;
       if (a.task!.kind === 'bond') bondLand(state, world, a, at, a.region, a.task!.target);
@@ -104,6 +105,7 @@ export function step(state: State, placed: World) {
       if (a.task!.kind === 'shield' || a.task!.kind === 'loot' || a.task!.kind === 'scout') useTap(state, world, a, a.task!.kind, a.task!.who, at);
       if (a.task!.kind === 'altar') sacrificeAtAltar(state, world, a, a.task!.who, at);
       if (a.task!.kind === 'expedition') finishExpedition(state, world, a, at);
+      if (a.task!.kind === 'ascend') ascend(state, world, a, at);
       // An NPC's spell: whom it falls on is asked of the LLM after the hour (the player's was cast as they began).
       if (a.task!.kind === 'cast' && a.kind === 'npc' && a.task!.spell) readyCast(state, world, a, a.task!.spell, at);
       // A court: the beast decides after the hour whether to follow them.
@@ -140,6 +142,7 @@ function startDay(state: State, world: World, t: number) {
     upkeepScorch(state, world, t);
     upkeepOracle(state, world, t);
     upkeepQuest(state, world, t);
+    upkeepUnhurt(state, world, t);
     upkeepQuell(state, world, t);
     upkeepPossessions(state, t);
   }
@@ -769,8 +772,9 @@ function npcTask(state: State, world: World, a: Actor, t: number): Task | undefi
     : block.kind === 'shield' || block.kind === 'loot' || block.kind === 'scout' ? tapBlocked(state, world, a, block.kind, block.kind === 'scout' ? undefined : block.who, t, false)
     : block.kind === 'altar' ? altarBlocked(state, world, a, block.who, t, false)
     : block.kind === 'expedition' ? expeditionBlocked(state, world, a)
+    : block.kind === 'ascend' ? ascendBlocked(state, world, a, t)
     : null;
-  const timed = ['bond', 'claim', 'equip', 'store_day', 'spend_day', 'grow', 'fetch', 'learn', 'cast', 'court', 'hire', 'recall', 'bite', 'shield', 'loot', 'scout', 'altar', 'expedition'];
+  const timed = ['bond', 'claim', 'equip', 'store_day', 'spend_day', 'grow', 'fetch', 'learn', 'cast', 'court', 'hire', 'recall', 'bite', 'shield', 'loot', 'scout', 'altar', 'expedition', 'ascend'];
   if (!cannot && timed.includes(block.kind) && a.task?.kind === block.kind) return a.task;
   const task: Task =
     block.kind === 'work' && landUnusable(state, a.region)
@@ -787,6 +791,8 @@ function npcTask(state: State, world: World, a: Actor, t: number): Task | undefi
             ? { kind: 'recall', activity: block.activity, emoji: block.emoji, until: t + RECALL_HOURS * 60 }
           : block.kind === 'expedition'
             ? { kind: 'expedition', activity: block.activity, emoji: block.emoji, until: t + EXPEDITION_HOURS * 60 }
+          : block.kind === 'ascend'
+            ? { kind: 'ascend', activity: block.activity, emoji: block.emoji, until: t + ASCEND_HOURS * 60 }
           : block.kind === 'bite'
             ? { kind: 'bite', activity: block.activity, emoji: block.emoji, until: t + BITE_HOURS * 60, who: block.who }
           : block.kind === 'shield' || block.kind === 'loot' || block.kind === 'scout'

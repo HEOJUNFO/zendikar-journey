@@ -8,6 +8,7 @@ status: canon
 sources: [ZEN-11]
 tags: [천사, 백색, 하늘]
 links:
+  - { to: cre-angel, rel: 천사라는 종 }
   - { to: law-mana-colors, rel: 백색의 존재 }
   - { to: loc-emeria, rel: 사는 하늘 폐허 }
   - { to: chr-iona, rel: 섬기는 수호자 }

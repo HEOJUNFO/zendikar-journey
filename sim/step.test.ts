@@ -19,7 +19,7 @@ import { upkeepScorch } from './scorch.ts';
 import { actorColors, ANY_COLOR, COLORS, formatMana, manaAvailable, manaCapacity, parseManaCost, planPayment } from './mana.ts';
 import { MAX_TALKS_PER_DAY, canPledge, usableAbilities, volleyShares, burnTargets } from './run.ts';
 import { destroyLand, eligibleGmEvents, moveHours, startTravel, step, travelBlocked } from './step.ts';
-import { gainLife, lifeOf } from './life.ts';
+import { gainLife, lifeOf, loseLife } from './life.ts';
 import { awayText, buriedToday, hasAbility, here, needsOf, newState, npcDef, outOfTime, PLAYER_ID, present, protectedFrom, ptOf, syncWorld, targetable, together } from './state.ts';
 import { foresightText } from './foresight.ts';
 import { withPositions } from './wander.ts';
@@ -52,6 +52,7 @@ import { bloodHasteHour } from './bloodghast.ts';
 import { bloodSeekHour } from './seeker.ts';
 import { altarBlocked } from './altar.ts';
 import { expeditionBlocked } from './expedition.ts';
+import { ascendBlocked, upkeepUnhurt } from './luminarch.ts';
 import { applyHarrow } from './harrow.ts';
 import type { HarrowEffect } from './harrow.ts';
 import { applySacrament } from './sacrament.ts';
@@ -7125,6 +7126,43 @@ test('the real Khalni Heart Expedition stands by the Khalni Heart in Ora Ondar, 
   assert.equal(x.at, 'loc-ora-ondar');
   assert.deepEqual(x.effects, [{ type: 'landfall_quest' }, { type: 'expedition', counters: 3, lands: 2 }]);
   assert.ok(!sameTile(itemTile(world, x), itemTile(world, world.items.find((i) => i.id === 'itm-khalni-gem')!)));
+});
+
+const luminarch: RawEntity = { id: 'itm-lum', kind: 'item', name: '승천', status: 'canon', sim: { card_type: 'enchantment', cost: '{0}', at: 'loc-a', effects: [{ type: 'quest_unhurt' }, { type: 'quest_token', counters: 4, cost: '{1}', creature: 'cre-angel', pt: [4, 4], colors: ['W'], abilities: ['fly'], types: ['angel'] }] } };
+
+test('Luminarch Ascension: a counter at midnight for an owner who neither lost life nor took damage that day; with four, the player pays and an angel comes to serve them', async () => {
+  const world = fixture([luminarch, lore('cre-angel', 'creature'), npc('chr-m', npcSim('loc-a')), npc('chr-h', npcSim('loc-a'))]);
+  const state = character(world, 'loc-a');
+  const [p, m, h] = [state.actors[PLAYER_ID], state.actors['chr-m'], state.actors['chr-h']];
+  p.bonds = ['loc-a'];
+  state.items = { 'itm-lum': { name: '승천', owner: m.id, counters: 0 } };
+  const t = state.minutes;
+  upkeepUnhurt(state, world, untapTime(t));
+  assert.equal(state.items['itm-lum'].counters, 1);
+  dealDamage(state, world, m, 1, t, '시험', true);
+  upkeepUnhurt(state, world, untapTime(t));
+  assert.equal(state.items['itm-lum'].counters, 1);
+  loseLife(state, h, 1, t, '시험');
+  assert.equal(h.hurtDay, gameDay(t));
+  state.items['itm-lum'] = { name: '승천', owner: p.id, counters: 3 };
+  assert.ok(ascendBlocked(state, world, p, t)?.includes('3/4'));
+  state.items['itm-lum'].counters = 4;
+  assert.equal(ascendBlocked(state, world, p, t), null);
+  await act(state, world, { type: 'ascend' });
+  const angel = Object.values(state.actors).find((x) => x.master === p.id && state.tokens?.[x.id])!;
+  assert.ok(angel);
+  assert.deepEqual(ptOf(angel), [4, 4]);
+  assert.ok(hasAbility(angel, 'fly', state.minutes));
+  assert.deepEqual(state.tokens![angel.id].types, ['angel']);
+  assert.equal(state.items['itm-lum'].counters, 4);
+});
+
+test('the real Luminarch Ascension stands in Emeria: a 4/4 flying angel for {1}{W} at four counters', () => {
+  const world = loadWorld();
+  const x = world.items.find((i) => i.id === 'itm-luminarch-ascension')!;
+  assert.equal(x.at, 'loc-emeria');
+  assert.deepEqual(x.effects.map((e) => e.type), ['quest_unhurt', 'quest_token']);
+  assert.ok(world.lore.some((l) => l.id === 'cre-angel'));
 });
 
 test('the real Ior Ruin Expedition stands by Glasspool, a lake of Akoum and a basic island', () => {

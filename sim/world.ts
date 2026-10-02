@@ -842,6 +842,14 @@ export const ItemSimSchema = z.strictObject({
         // "Landfall — you may put a quest counter on this" (Ior Ruin Expedition): each land its
         // owner bonds with puts one on it (sim/items.ts `itemsOnLandfall`).
         z.strictObject({ type: z.literal('landfall_quest') }),
+        // "At the beginning of each opponent's end step, if you didn't lose life this turn, you may
+        // put a quest counter on this" (Luminarch Ascension): at midnight, for an owner who neither
+        // lost life nor took damage that day (sim/luminarch.ts).
+        z.strictObject({ type: z.literal('quest_unhurt') }),
+        // "<cost>: Create a P/T <creature> token with <abilities>. Activate only if this has N or
+        // more quest counters" (Luminarch Ascension): its owner pays, whenever they will, and it
+        // serves them (sim/luminarch.ts).
+        z.strictObject({ type: z.literal('quest_token'), counters: z.number().int().positive(), cost: CostSchema, creature: z.string(), pt: z.tuple([z.number().int().positive(), z.number().int().positive()]), colors: z.array(z.enum(COLORS)).default([]), abilities: z.array(z.enum(ABILITIES)).default([]), types: z.array(z.enum(CREATURE_TYPES)).default([]) }),
         // "Remove N quest counters from this and sacrifice it: Draw M cards" (Ior Ruin
         // Expedition: `draws`) / "search for up to M basic land cards, put them onto the
         // battlefield tapped" (Khalni Heart Expedition: `lands`): its owner, whenever they will,

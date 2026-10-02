@@ -37,6 +37,7 @@ export function dealDamage(state: State, world: World, a: Actor, amount: number,
   // A ward (Noble Vestige) takes what it can first.
   amount = shielded(state, a, amount, t);
   if (amount <= 0) return false;
+  a.hurtDay = gameDay(t);
   if (a.loyalty !== undefined) {
     a.loyalty = Math.max(nonlethal ? 1 : 0, a.loyalty - amount);
     addLog(state, { kind: 'combat', text: `${josa(shortName(a.name), '이', '가')} 피해 ${amount}로 기세가 꺾였다 (기세 ${a.loyalty}).`, regions: [a.region], actors: [a.id] });
