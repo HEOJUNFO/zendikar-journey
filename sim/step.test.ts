@@ -49,6 +49,7 @@ import { applyShortcut, enterNoBlock } from './shortcut.ts';
 import { bloodHasteHour } from './bloodghast.ts';
 import { bloodSeekHour } from './seeker.ts';
 import { altarBlocked } from './altar.ts';
+import { expeditionBlocked } from './expedition.ts';
 import { applyHarrow } from './harrow.ts';
 import type { HarrowEffect } from './harrow.ts';
 import { applySacrament } from './sacrament.ts';
@@ -6937,6 +6938,54 @@ test('the real Carnage Altar stands in the ruins of the Teeth of Akoum', () => {
   const x = world.items.find((i) => i.id === 'itm-carnage-altar')!;
   assert.equal(x.at, 'loc-teeth-of-akoum');
   assert.deepEqual(x.effects, [{ type: 'sacrifice_draw', cost: '{3}', draws: 1 }]);
+});
+
+const expeditionItem: RawEntity = { id: 'itm-exp', kind: 'item', name: '원정', status: 'canon', sim: { card_type: 'enchantment', cost: '{0}', at: 'loc-a', effects: [{ type: 'landfall_quest' }, { type: 'expedition', counters: 3, draws: 2 }] } };
+
+test('Ior Ruin Expedition: each landfall of its owner puts a quest counter on it; with three, the player ends it anywhere: it is gone and they learn two secrets', async () => {
+  const world = fixture([expeditionItem, altarItem, demolishSpell]);
+  const state = character(world, 'loc-a');
+  const p = state.actors[PLAYER_ID];
+  state.items = { 'itm-exp': { name: '원정', owner: p.id, counters: 0 } };
+  assert.ok(expeditionBlocked(state, world, p)?.includes('0/3'));
+  for (const land of ['loc-a', 'loc-b']) bondLand(state, world, p, state.minutes, land);
+  assert.equal(state.items['itm-exp'].counters, 2);
+  assert.ok((await act(state, world, { type: 'expedition' })).error?.includes('2/3'));
+  state.items['itm-exp'].counters = 3;
+  assert.equal(expeditionBlocked(state, world, p), null);
+  const known = p.knowledge?.length ?? 0;
+  await act(state, world, { type: 'expedition' });
+  assert.ok(state.items['itm-exp'].gone);
+  assert.equal(state.items['itm-exp'].owner, undefined);
+  assert.equal(p.knowledge?.length, known + 2);
+  assert.ok(expeditionBlocked(state, world, p)?.includes('마칠 원정이 없다'));
+});
+
+test('Ior Ruin Expedition by an NPC: offered in their plan once it has three counters, an expedition block ends it', async () => {
+  const plan = [
+    ['00:00', '06:00', 'loc-a', 'sleep', '잠', '😴'],
+    ['06:00', '07:00', 'loc-a', 'expedition', '원정을 마침', '🗺️'],
+    ['07:00', '24:00', 'loc-a', 'work', '일', '🔨'],
+  ];
+  const world = fixture([expeditionItem, altarItem, demolishSpell, npc('chr-m', { ...npcSim('loc-a'), plan })]);
+  const state = newState(world, { seed: 1, mode: 'observer' });
+  const m = state.actors['chr-m'];
+  state.items = { 'itm-exp': { name: '원정', owner: m.id, counters: 3 } };
+  let offered: PlanDayInput | undefined;
+  await advance(state, world, 2, { planDay: async (input) => (input.id === 'chr-m' && (offered = input), planDay!(input)) });
+  assert.deepEqual(offered?.expedition, { name: '원정', draws: 2 });
+  assert.ok(state.items['itm-exp'].gone);
+  assert.equal(m.knowledge?.length, 2);
+});
+
+test('the real Ior Ruin Expedition stands by Glasspool, a lake of Akoum and a basic island', () => {
+  const world = loadWorld();
+  const x = world.items.find((i) => i.id === 'itm-ior-ruin-expedition')!;
+  assert.equal(x.at, 'loc-glasspool');
+  assert.deepEqual(x.effects, [{ type: 'landfall_quest' }, { type: 'expedition', counters: 3, draws: 2 }]);
+  const g = world.regions.find((r) => r.id === 'loc-glasspool')!;
+  assert.equal(g.parent, 'loc-akoum');
+  assert.deepEqual(landTypes(g), ['island']);
 });
 
 test('mountainwalk: one bonded with a mountain can\'t strike back at it; one with none can', () => {

@@ -148,6 +148,12 @@ function returnLand(state: State, world: World, a: Actor, landId: string, itemId
 // counters". Only when that raises it (no one chooses to lose life).
 export function itemsOnLandfall(state: State, world: World, a: Actor, t: number) {
   for (const x of itemsOf(state, world, a.id)) {
+    // "You may put a quest counter on this" (Ior Ruin Expedition): always, it only helps.
+    if (x.effects.some((e) => e.type === 'landfall_quest')) {
+      const s = state.items![x.id];
+      s.counters = (s.counters ?? 0) + 1;
+      addLog(state, { kind: 'effect', text: `${x.name}: ${josa(shortName(a.name), '이', '가')} 새 땅을 밟아 탐색 카운터가 하나 쌓였다 (${s.counters}).`, regions: [a.region], actors: [a.id], t });
+    }
     if (!x.effects.some((e) => e.type === 'landfall_set_life')) continue;
     const life = lifeOf(a);
     const counters = state.items![x.id].counters;

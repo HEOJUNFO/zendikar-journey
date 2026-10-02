@@ -31,6 +31,7 @@ import { loremastersOf, recallBlocked, recallCount } from './loremaster.ts';
 import { biteable, readyBiter } from './bite.ts';
 import { readyTapper, tapAmount, tapBlocked, tapTargetable } from './tapper.ts';
 import { altarOf } from './altar.ts';
+import { expeditionBlocked, expeditionDraws, expeditionOf } from './expedition.ts';
 import type { TapPower } from './tapper.ts';
 import { crumble, sacrifice, sacrificeDefault } from './monument.ts';
 import { answerTide } from './tide.ts';
@@ -1365,6 +1366,7 @@ async function prepare(state: State, world: World, llm: Llm): Promise<string | n
           loot: tapInput(state, world, a, 'loot'),
           scout: tapBlocked(state, world, a, 'scout', a.id, state.minutes) ? undefined : tapInput(state, world, a, 'scout'),
           altar: altarInput(state, world, a),
+          expedition: expeditionBlocked(state, world, a) ? undefined : { name: expeditionOf(state, world, a)!.name, draws: expeditionDraws(state, world, a) },
           fetch: fetchInput(state, world, a),
           court: courtInput(state, world, a),
           hire: hireInput(state, world, a),

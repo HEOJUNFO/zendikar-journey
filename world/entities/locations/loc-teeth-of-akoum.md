@@ -8,6 +8,7 @@ status: canon
 sources: [ZEN-120, ZEN-131, ZEN-152, ZEN-118, ZEN-148, ZEN-127, ZEN-136, ZEN-138, ZEN-198, ZEN-129, ZEN-132]
 tags: [산맥, 산, 용, 고블린, 적색]
 links:
+  - { to: loc-glasspool, rel: 남동쪽 기슭, 봉우리에 둘러싸인 호수 }
   - { to: chr-highland-berserker, rel: 고원의 광전사 용병 }
   - { to: spl-goblin-war-paint, rel: 배우는 주문 (고블린 전투 물감) }
   - { to: itm-carnage-altar, rel: 북서쪽 폐허의 제단 }

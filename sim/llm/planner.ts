@@ -65,6 +65,8 @@ export type PlanDayInput = {
   scout?: { who: string; amount: number };
   // A Carnage Altar they own: where it stands, and whom of theirs they could offer there.
   altar?: { name: string; at: string; who: { id: string; text: string }[] };
+  // An Ior Ruin Expedition they own with enough quest counters to end, and the secrets it brings.
+  expedition?: { name: string; draws: number };
   // Lands they could seek out today by giving up a fetch land they hold (Arid Mesa...).
   fetch?: { id: string; text: string }[];
   // Spells they could learn (where each is taught), and spells they hold and could pay for.
@@ -84,7 +86,7 @@ export type PlanDayInput = {
 
 // Kinds of blocks they may plan: no meals without hunger, taming only if there is an item for
 // them to tame, keeping days only with a land that keeps them.
-function kindsFor(input: Pick<PlanDayInput, 'needs' | 'items' | 'equip' | 'days' | 'grow' | 'recall' | 'bite' | 'shield' | 'loot' | 'scout' | 'altar' | 'fetch' | 'learn' | 'cast' | 'court' | 'hire' | 'people'>) {
+function kindsFor(input: Pick<PlanDayInput, 'needs' | 'items' | 'equip' | 'days' | 'grow' | 'recall' | 'bite' | 'shield' | 'loot' | 'scout' | 'altar' | 'expedition' | 'fetch' | 'learn' | 'cast' | 'court' | 'hire' | 'people'>) {
   return LIFE_KINDS.filter(
     (k) =>
       (k !== 'eat' || input.needs.includes('hunger')) &&
@@ -98,6 +100,7 @@ function kindsFor(input: Pick<PlanDayInput, 'needs' | 'items' | 'equip' | 'days'
       (k !== 'loot' || !!input.loot) &&
       (k !== 'scout' || !!input.scout) &&
       (k !== 'altar' || !!input.altar?.who.length) &&
+      (k !== 'expedition' || !!input.expedition) &&
       (k !== 'fetch' || !!input.fetch?.length) &&
       (k !== 'learn' || !!input.learn?.length) &&
       (k !== 'cast' || !!input.cast?.length) &&
@@ -216,6 +219,10 @@ Rules:
   }${
     kinds.includes('altar')
       ? `\n- "altar" takes 1 hour, in the region where their ${input.altar!.name} stands (regionId "${input.altar!.at}"), and needs "who": one of theirs to offer on it; that one dies, and they come to know a hidden secret of the world. Only when, in character, it is worth a life. Whom they could offer: ${input.altar!.who.map((x) => `"${x.id}" (${x.text})`).join(', ')}.`
+      : ''
+  }${
+    kinds.includes('expedition')
+      ? `\n- "expedition" takes 1 hour, anywhere: they end their ${input.expedition!.name} (it is gone for good) and come to know ${input.expedition!.draws} hidden secrets of the world from what it found. Each land they bond with adds to it, so they may also wait.`
       : ''
   }${
     kinds.includes('scout')

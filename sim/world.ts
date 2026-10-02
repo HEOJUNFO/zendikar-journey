@@ -820,6 +820,13 @@ export const ItemSimSchema = z.strictObject({
         // (Beastmaster Ascension): each creature its owner controls, the first time a day it
         // falls on someone, puts one on it (sim/ascension.ts `attackQuest`).
         z.strictObject({ type: z.literal('attack_quest') }),
+        // "Landfall — you may put a quest counter on this" (Ior Ruin Expedition): each land its
+        // owner bonds with puts one on it (sim/items.ts `itemsOnLandfall`).
+        z.strictObject({ type: z.literal('landfall_quest') }),
+        // "Remove N quest counters from this and sacrifice it: Draw M cards" (Ior Ruin
+        // Expedition): its owner, whenever they will, ends it and comes to know M secrets
+        // (sim/expedition.ts).
+        z.strictObject({ type: z.literal('expedition'), counters: z.number().int().positive(), draws: z.number().int().positive() }),
         // "Whenever a creature enters the battlefield under your control, you may pay <cost>. If
         // you do, that creature deals damage equal to its power to any target" (Electropotence):
         // sim/electro.ts.

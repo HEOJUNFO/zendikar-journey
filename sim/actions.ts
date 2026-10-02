@@ -12,6 +12,7 @@ import { RECALL_HOURS, recallBlocked, recallCount } from './loremaster.ts';
 import { BITE_HOURS, biteBlocked, readyBiter } from './bite.ts';
 import { readyTapper, TAP_HOURS, tapAmount, tapBlocked } from './tapper.ts';
 import { ALTAR_HOURS, altarBlocked } from './altar.ts';
+import { EXPEDITION_HOURS, expeditionBlocked, expeditionDraws, expeditionOf } from './expedition.ts';
 import { bondBlocked, bondTargets, FETCH_HOURS, fetchBlocked, firesOnBond, growBlocked, HAND, landDropBlocked, targetedBondEffect, TOP } from './abilities.ts';
 import { handBlocked, topBlocked } from './oracle.ts';
 import { CLAIM_HOURS, claimBlocked, itemDef } from './items.ts';
@@ -71,6 +72,9 @@ export const ActionSchema = z.discriminatedUnion('type', [
   // Offer `to`, one who serves you standing with you, at your Carnage Altar (before it): they die,
   // you come to know a secret.
   z.object({ type: z.literal('altar'), to: z.string() }),
+  // End the Ior Ruin Expedition you own (enough quest counters): it is gone, you come to know
+  // secrets.
+  z.object({ type: z.literal('expedition') }),
   // Hire a mercenary here: pay their price and they serve you for good (sim/allies.ts).
   z.object({ type: z.literal('hire'), to: z.string() }),
   // Answer the pick you owe (an Ally's rally in your party): someone's id, or null for no one.
@@ -303,6 +307,13 @@ export function startAction(state: State, world: World, action: Action): string 
       const v = state.actors[action.to];
       task = { kind: 'altar', activity: `${shortName(v.name)}을(를) 제단에 바침`, emoji: '🩸', until: until(ALTAR_HOURS), who: v.id };
       text = `${josa(shortName(v.name), '을', '를')} 제단에 바친다. 그 피 속에서 숨은 것 하나를 알게 된다.`;
+      break;
+    }
+    case 'expedition': {
+      const why = expeditionBlocked(state, world, p);
+      if (why) return why;
+      task = { kind: 'expedition', activity: `${expeditionOf(state, world, p)!.name}을(를) 마침`, emoji: '🗺️', until: until(EXPEDITION_HOURS) };
+      text = `원정을 마치고 원정대가 건져 올린 것을 짚어 본다. 숨은 것 ${expeditionDraws(state, world, p)}가지를 알게 된다.`;
       break;
     }
     case 'hire': {

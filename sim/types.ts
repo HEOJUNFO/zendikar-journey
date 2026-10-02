@@ -17,9 +17,11 @@
 // them; sim/tapper.ts).
 // altar: offering the block's `who` (one who serves them) at a Carnage Altar they own, walking to
 // it (sim/altar.ts): they come to know a secret.
+// expedition: ending an Ior Ruin Expedition they own (enough quest counters), anywhere
+// (sim/expedition.ts): it is gone, they come to know secrets.
 // attack: going after the block's `who` (wherever they are) and falling on them: they become
 // foes and fight from the next hour (sim/combat.ts), as the player's attack.
-export const LIFE_KINDS = ['sleep', 'eat', 'work', 'social', 'leisure', 'bond', 'claim', 'store_day', 'spend_day', 'grow', 'fetch', 'learn', 'cast', 'court', 'hire', 'attack', 'recall', 'equip', 'bite', 'shield', 'loot', 'scout', 'altar'] as const;
+export const LIFE_KINDS = ['sleep', 'eat', 'work', 'social', 'leisure', 'bond', 'claim', 'store_day', 'spend_day', 'grow', 'fetch', 'learn', 'cast', 'court', 'hire', 'attack', 'recall', 'equip', 'bite', 'shield', 'loot', 'scout', 'altar', 'expedition'] as const;
 export type LifeKind = (typeof LIFE_KINDS)[number];
 
 // start/end are minutes of the game day, 0..1440, end exclusive.

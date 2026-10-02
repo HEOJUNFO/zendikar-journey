@@ -5,7 +5,7 @@ name: 아쿰
 name_en: Akoum
 summary: 젠디카르 북쪽 가운데의 험한 화산 대륙. 검붉은 바위 협곡이 이어지고, 뒤틀린 땅에서 떨어져 나온 바위 조각들이 하늘에 떠 있다
 status: canon
-sources: [ZEN-210, ZEN-223, ZEN-120, ZEN-131, ZEN-146, ZEN-5, ZEN-150, ZEN-152, ZEN-118, ZEN-123, ZEN-133, ZEN-205, ZEN-130, ZEN-137, ZEN-145, ZEN-204]
+sources: [ZEN-210, ZEN-223, ZEN-120, ZEN-131, ZEN-146, ZEN-5, ZEN-150, ZEN-152, ZEN-118, ZEN-123, ZEN-133, ZEN-205, ZEN-130, ZEN-137, ZEN-145, ZEN-204, ZEN-49]
 tags: [대륙, 화산, 협곡, 적색]
 links:
   - { to: cre-hedron-scrabbler, rel: 남쪽 들의 헤드론 구조물 }
@@ -15,6 +15,7 @@ links:
   - { to: spl-elemental-appeal, rel: 배우는 주문 }
   - { to: evt-inferno-trap, rel: 산속 화산 동굴에 깃든 함정 }
   - { to: loc-ora-ondar, rel: 안의 구역 (불가능한 정원) }
+  - { to: loc-glasspool, rel: 안의 구역 (이오르 폐허가 가라앉은 호수) }
   - { to: cre-bladetusk-boar, rel: 눈 덮인 협곡을 내달리는 멧돼지 }
   - { to: chr-tuktuk-grunts, rel: 사는 고블린 용병 }
   - { to: spl-spire-barrage, rel: 가르치는 주문 }
@@ -45,6 +46,7 @@ map: { x: 1450, y: 620, terrain: volcanic, size: continent, tiles: 180 }
 - 산속 화산 동굴에 지옥불 함정(`evt-inferno-trap`, ZEN-133)이 깃들어 있다. 아쿰(구역 포함)에서 누군가 그날 서로 다른 둘 이상에게 싸움 피해를 입으면, 그를 다치게 한 이 하나에게 불길을 뿜는다 ([결정] 2026-10-01).
 - 북쪽을 눈 덮인 산맥 **아쿰의 이빨**(`loc-teeth-of-akoum`, 기본 산 40칸)이 가로지른다 ([배경], [결정] 2026-10-01 설정대로 더함). 용이 사냥하고 고블린 둥지가 매달리며, 그 아래에 우긴의 눈이 있다. 찬드라, 헬카이트 돌격대, 투크투크 졸개들, 칼엄니 멧돼지가 산다.
 - 내륙의 수정 분지에 다섯 층의 숲 오라 온다르(`loc-ora-ondar`, 기본 숲 15칸, '불가능한 정원')가 솟아 있다 ([결정] 2026-10-01, [배경]). 숲의 한가운데에 칼니 보석(`itm-khalni-gem`, ZEN-205)이 숨어 있다.
+- 북쪽 산맥 남동쪽 기슭, 봉우리에 둘러싸인 호수 글래스풀(`loc-glasspool`, 기본 섬 10칸)이 있다 ([결정] 2026-10-02, [배경] 아쿰 산맥의 유일한 청 마나). 호수 밑에 이오르 폐허가 가라앉았고, 호숫가에 이오르 폐허 원정(`itm-ior-ruin-expedition`, ZEN-49)이 선다. 이 구역이 생기며 이름으로 정해지던 지옥불 함정·룬불꽃 함정의 칸을 `pos` 로 박았다.
 - 칼엄니 멧돼지(`cre-bladetusk-boar`, ZEN-118)가 북서쪽 눈 덮인 높은 협곡을 내달리며 사냥한다 ([결정] 2026-10-01). 위협: 적색 기운이 없는 이는 맞받아치지 못한다. 길을 막는 고블린은 내던져진다.
 - 후광 사냥꾼(ZEN-96)은 처음 여기 산속 굴에 두었다가 2026-10-01 에메리아 가까이 타짐의 절벽으로 옮겼다.
 
