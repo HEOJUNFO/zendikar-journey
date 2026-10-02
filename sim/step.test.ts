@@ -7681,6 +7681,27 @@ test('the real Soul Stair Expedition stands in the Agadeem crypt: three landfall
   assert.deepEqual(x.effects, [{ type: 'landfall_quest' }, { type: 'expedition', counters: 3, raise: 2 }]);
 });
 
+test('Sunspring Expedition: landfalls fill it; with three the player ends it and gains 8 life', async () => {
+  const item: RawEntity = { id: 'itm-sun', kind: 'item', name: '햇샘 원정', status: 'canon', sim: { card_type: 'enchantment', cost: '{0}', at: 'loc-a', effects: [{ type: 'landfall_quest' }, { type: 'expedition', counters: 3, life: 8 }] } };
+  const world = fixture([item, altarItem, demolishSpell]);
+  const state = character(world, 'loc-a');
+  const p = state.actors[PLAYER_ID];
+  state.items = { 'itm-sun': { name: '햇샘 원정', owner: p.id, counters: 0 } };
+  for (const land of ['loc-a', 'loc-b']) bondLand(state, world, p, state.minutes, land);
+  assert.equal(state.items['itm-sun'].counters, 2);
+  state.items['itm-sun'].counters = 3;
+  const before = lifeOf(p);
+  await act(state, world, { type: 'expedition' });
+  assert.ok(state.items['itm-sun'].gone);
+  assert.equal(lifeOf(p), before + 8);
+});
+
+test('the real Sunspring Expedition stands at Sejiri Refuge: three landfalls for 8 life', () => {
+  const x = loadWorld().items.find((i) => i.id === 'itm-sunspring-expedition')!;
+  assert.equal(x.at, 'loc-sejiri-refuge');
+  assert.deepEqual(x.effects, [{ type: 'landfall_quest' }, { type: 'expedition', counters: 3, life: 8 }]);
+});
+
 test('Khalni Heart Expedition: with three counters the player ends it; they pick basic lands to bond with from afar, tapped (no mana from them today)', async () => {
   const item: RawEntity = { id: 'itm-khe', kind: 'item', name: '심장 원정', status: 'canon', sim: { card_type: 'enchantment', cost: '{0}', at: 'loc-a', effects: [{ type: 'landfall_quest' }, { type: 'expedition', counters: 3, lands: 2 }] } };
   const world = fixture([item, altarItem, demolishSpell]);

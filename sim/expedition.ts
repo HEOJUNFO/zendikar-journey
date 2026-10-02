@@ -14,6 +14,7 @@ import { spawnWild } from './abilities.ts';
 import { untapTime } from './clock.ts';
 import { ABILITY_LABELS } from './world.ts';
 import { drawKnowledge } from './knowledge.ts';
+import { gainLife } from './life.ts';
 import { addLog, here, ptOf, together } from './state.ts';
 import { masterOf } from './retainers.ts';
 import type { Actor, State } from './state.ts';
@@ -50,8 +51,8 @@ export function expeditionReward(state: State, world: World, a: Actor) {
   const x = expeditionOf(state, world, a);
   const e = x && powerOf(x);
   if (!e) return { ko: '', en: '' };
-  const ko = [e.draws ? `숨은 것 ${e.draws}가지를 알게 된다` : '', e.lands ? `아직 유대 없는 기본 땅 ${e.lands}까지와 멀리서 이어진다 (탭된 채, 오늘은 마나 없음)` : '', e.plus_counters ? `곁의 하나에게 +1/+1 카운터 ${e.plus_counters}을 준다` : '', e.relic ? '주인 없는 장비 하나를 찾아 자신이나 곁의 권속에게 값 없이 맨다' : '', e.raise ? `무덤의 생물 ${e.raise}까지를 제 거처에서 되살린다 (누구도 섬기지 않음)` : '', e.token ? `${e.token.pt.join('/')} ${world.lore.find((l) => l.id === e.token!.creature)?.name ?? e.token.creature}이(가) 곁에 나 섬긴다${e.token.until_midnight ? ' (자정에 사라짐)' : ''}` : ''].filter(Boolean).join(', ');
-  const en = [e.draws ? `come to know ${e.draws} hidden secrets of the world` : '', e.lands ? `bond from afar with up to ${e.lands} basic lands of the world they don't hold yet (tapped: no mana from them today; not their land for the day)` : '', e.plus_counters ? `give ${e.plus_counters} +1/+1 counters, for good, to one standing with them (themselves too), picked after the hour` : '', e.relic ? 'find an Equipment of the world no one holds and put it on themselves or one who serves them there, for nothing (picked after the hour)' : '', e.raise ? `raise up to ${e.raise} of the dead in their creature graveyard, who wake at their homes serving no one (picked after the hour)` : '', e.token ? `have a ${e.token.pt.join('/')} ${world.lore.find((l) => l.id === e.token!.creature)?.name ?? e.token.creature}${e.token.abilities.length ? ` (${e.token.abilities.join(', ')})` : ''} serve them at their side${e.token.until_midnight ? ', gone at midnight' : ''}` : ''].filter(Boolean).join(', and ');
+  const ko = [e.draws ? `숨은 것 ${e.draws}가지를 알게 된다` : '', e.lands ? `아직 유대 없는 기본 땅 ${e.lands}까지와 멀리서 이어진다 (탭된 채, 오늘은 마나 없음)` : '', e.plus_counters ? `곁의 하나에게 +1/+1 카운터 ${e.plus_counters}을 준다` : '', e.relic ? '주인 없는 장비 하나를 찾아 자신이나 곁의 권속에게 값 없이 맨다' : '', e.raise ? `무덤의 생물 ${e.raise}까지를 제 거처에서 되살린다 (누구도 섬기지 않음)` : '', e.life ? `생명 ${e.life}을 얻는다` : '', e.token ? `${e.token.pt.join('/')} ${world.lore.find((l) => l.id === e.token!.creature)?.name ?? e.token.creature}이(가) 곁에 나 섬긴다${e.token.until_midnight ? ' (자정에 사라짐)' : ''}` : ''].filter(Boolean).join(', ');
+  const en = [e.draws ? `come to know ${e.draws} hidden secrets of the world` : '', e.lands ? `bond from afar with up to ${e.lands} basic lands of the world they don't hold yet (tapped: no mana from them today; not their land for the day)` : '', e.plus_counters ? `give ${e.plus_counters} +1/+1 counters, for good, to one standing with them (themselves too), picked after the hour` : '', e.relic ? 'find an Equipment of the world no one holds and put it on themselves or one who serves them there, for nothing (picked after the hour)' : '', e.raise ? `raise up to ${e.raise} of the dead in their creature graveyard, who wake at their homes serving no one (picked after the hour)` : '', e.life ? `gain ${e.life} life` : '', e.token ? `have a ${e.token.pt.join('/')} ${world.lore.find((l) => l.id === e.token!.creature)?.name ?? e.token.creature}${e.token.abilities.length ? ` (${e.token.abilities.join(', ')})` : ''} serve them at their side${e.token.until_midnight ? ', gone at midnight' : ''}` : ''].filter(Boolean).join(', and ');
   return { ko, en };
 }
 
@@ -66,6 +67,8 @@ export function finishExpedition(state: State, world: World, a: Actor, t: number
   state.items![x.id] = { name: s.name, counters: 0, gone: true };
   addLog(state, { kind: 'event', text: `${josa(shortName(a.name), '이', '가')} ${josa(x.name, '을', '를')} 마쳤다 (탐색 카운터 ${e.counters}). 원정대가 찾아낸 것이 펼쳐진다.`, regions: [a.region], actors: [a.id], t });
   if (e.draws) drawKnowledge(state, world, a, e.draws, t, x.name);
+  // Sunspring Expedition: life from the spring.
+  if (e.life) gainLife(state, a, e.life, t, x.name);
   const owed = e.lands ? harrowOwed(state, world, a, { type: 'harrow', spell: x.name, left: e.lands, given: true, tapped: true }, t) : null;
   if (owed) (state.choices ??= []).push(owed);
   // Zektar Shrine Expedition: a creature token serving them at their side.
