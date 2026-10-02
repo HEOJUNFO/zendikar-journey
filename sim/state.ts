@@ -364,6 +364,8 @@ export type State = {
   trapCount?: number;
   // Tanglesap: tiles where combat damage of those without trample is prevented until `until`.
   fogs?: { region: string; tile?: Tile; until: number; by: string }[];
+  // Unstable Footing: tiles where damage can't be prevented until midnight (sim/combat.ts `unpreventable`).
+  noPrevent?: { region: string; tile?: Tile; until: number; by: string }[];
   // Each one's graveyard count as last seen (Bloodchief Ascension, sim/bloodascension.ts).
   buriedSeen?: Record<string, { day: number; count: number }>;
   // Library searches (seeking out a land from afar) since the hour began (Cosi's Trickster).

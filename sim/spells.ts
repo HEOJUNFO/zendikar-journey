@@ -331,7 +331,7 @@ export function resolveSpell(state: State, world: World, a: Actor, spellId: stri
       delete target.boundUntil;
       for (const ab of eff.abilities) grantAbility(state, target, ab, until, s.name, t);
     } else if (eff.type === 'damage') {
-      dealDamage(state, world, target, kicked && eff.kicked_amount ? eff.kicked_amount : eff.amount, t, s.name, false, a);
+      if (!eff.if_kicked || kicked) dealDamage(state, world, target, kicked && eff.kicked_amount ? eff.kicked_amount : eff.amount, t, s.name, false, a);
     } else if (eff.type === 'sacrifice_land') {
       const owed = harrowOwed(state, world, a, { type: 'harrow', spell: s.name, left: 0, given: false }, t);
       if (owed) (state.choices ??= []).push(owed);
@@ -344,6 +344,9 @@ export function resolveSpell(state: State, world: World, a: Actor, spellId: stri
       findTraps(state, world, a, t, s.name);
     } else if (eff.type === 'brave') {
       (state.choices ??= []).push({ by: a.id, land: a.region, effect: { type: 'brave', spell: s.name }, candidates: [...COLORS], t });
+    } else if (eff.type === 'no_prevent') {
+      state.noPrevent = [...(state.noPrevent ?? []).filter((f) => f.until > t), { region: a.region, ...(a.tile ? { tile: a.tile } : {}), until: untapTime(t), by: a.id }];
+      addLog(state, { kind: 'event', text: `${s.name}: 그 자리의 땅이 갈라지고 흔들린다. 자정까지 이곳에서는 어떤 가호도 피해를 막지 못한다.`, regions: [a.region], actors: [a.id], t });
     } else if (eff.type === 'fog') {
       state.fogs = [...(state.fogs ?? []).filter((f) => f.until > t), { region: a.region, ...(a.tile ? { tile: a.tile } : {}), until: untapTime(t), by: a.id }];
       addLog(state, { kind: 'event', text: `${s.name}: 끈적한 초록 수액이 그 자리를 뒤덮는다. 자정까지 짓밟는 힘이 없는 이의 주먹과 칼은 아무도 다치게 하지 못한다.`, regions: [a.region], actors: [a.id], t });

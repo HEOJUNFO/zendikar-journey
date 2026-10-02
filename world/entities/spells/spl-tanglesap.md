@@ -8,6 +8,7 @@ status: canon
 sources: [ZEN-186]
 tags: [주문, 녹색, 순간마법, 피해 막기]
 links:
+  - { to: spl-unstable-footing, rel: 안개를 꺼 버리는 주문 }
   - { to: law-mana-colors, rel: 녹색 마법 }
   - { to: loc-tangled-vale, rel: 배우는 곳 (조라가의 본거지) }
   - { to: chr-nissa-revane, rel: 플레이버의 니사 레베인 }

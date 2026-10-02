@@ -41,8 +41,8 @@ export function dealDamage(state: State, world: World, a: Actor, amount: number,
   if (a.dead || amount <= 0) return false;
   // Quest for Pure Flame ended: what its owner and theirs deal is doubled until midnight.
   amount *= flameMultiplier(state, dealer ?? by, t);
-  // A ward (Noble Vestige) takes what it can first.
-  amount = shielded(state, a, amount, t);
+  // A ward (Noble Vestige) takes what it can first (not where damage can't be prevented).
+  if (!unpreventable(state, a, t)) amount = shielded(state, a, amount, t);
   if (amount <= 0) return false;
   markHurt(a, amount, t);
   flameOnDamage(state, world, dealer ?? by, a, t);
@@ -324,7 +324,7 @@ export function clash(state: State, world: World, attacker: Actor, defender: Act
   refreshEmptyHand(state, world, defender, t);
   onAttack(state, world, attacker, defender, t);
   // Protection from a color: no damage from one of that color.
-  const shielded = (from: Actor, to: Actor) => protectedFrom(to, actorColors(state, world, from), t);
+  const shielded = (from: Actor, to: Actor) => !unpreventable(state, to, t) && protectedFrom(to, actorColors(state, world, from), t);
   let [ap] = shielded(attacker, defender) ? [0] : ptOf(attacker);
   // A tapped (bound) or knocked-out defender can't strike back, nor one who can't block the attacker.
   const helpless = defender.boundUntil !== undefined ? '묶여 있어' : knockedOut(defender) ? '기절해 있어' : unblocked;
@@ -602,6 +602,13 @@ export function hostileNpcs(state: State, world: World, t: number) {
 
 // Tanglesap (spell `fog`): "Prevent all combat damage that would be dealt this turn by creatures
 // without trample." On the caster's tile, until midnight (user decision 2026-10-02).
+// Unstable Footing there: damage can't be prevented on that tile until midnight (no ward, no
+// Tanglesap, no protection from a color keeps a blow off).
+export function unpreventable(state: State, a: Actor, t: number) {
+  return !!state.noPrevent?.some((f) => f.until > t && f.region === a.region && sameTile(f.tile, a.tile));
+}
+
 export function fogged(state: State, a: Actor, t: number) {
+  if (unpreventable(state, a, t)) return false;
   return !!state.fogs?.some((f) => f.until > t && f.region === a.region && sameTile(f.tile, a.tile));
 }

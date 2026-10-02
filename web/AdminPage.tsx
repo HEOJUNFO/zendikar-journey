@@ -469,6 +469,8 @@ function spellEffectText(e: SpellEffect) {
       return '세계의 함정 하나를 무작위로 손에 (나중에 선 자리에 카드 비용을 들여 놓음)';
     case 'find_traps':
       return '시전자가 선 땅과 그 구역에 숨은 함정을 모두 앎';
+    case 'no_prevent':
+      return '그 칸에서 자정까지 피해를 막을 수 없음 (가호·안개·보호 무시)';
     case 'fog':
       return '그 칸에서 자정까지 돌진 없는 이의 싸움 피해를 막음';
     case 'flood_land':

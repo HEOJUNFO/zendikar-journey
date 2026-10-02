@@ -5,9 +5,10 @@ name: 섀터스컬 고개
 name_en: Shatterskull Pass
 summary: 아쿰의 이빨 산맥을 넘는 험한 고개. 밤새 바위가 망치처럼 떨어져 내리고, 늘 화가 나 있는 거인들이 산다
 status: canon
-sources: [ZEN-148, ZEN-155, ZEN-119, ZEN-125]
+sources: [ZEN-148, ZEN-155, ZEN-119, ZEN-125, ZEN-153]
 tags: [고개, 산, 거인, 적색]
 links:
+  - { to: spl-unstable-footing, rel: 가르치는 주문 (불안정한 발판) }
   - { to: chr-goblin-bushwhacker, rel: 바위 틈에 숨은 고블린 기습꾼 }
   - { to: spl-burst-lightning, rel: 가르치는 주문 (터지는 번개) }
   - { to: itm-zektar-shrine-expedition, rel: 높은 곳의 젝타르 성소 원정 }
@@ -29,3 +30,4 @@ map: { in: loc-teeth-of-akoum, terrain: rocky, pos: [-0.3, 0.2], tiles: 10 }   #
 - 북동쪽 높은 곳, 정령이 들끓는 젝타르 성소의 바위 제단에 젝타르 성소 원정(`itm-zektar-shrine-expedition`, ZEN-155)이 선다 ([결정] 2026-10-02, [배경] 검은 돌의 섀터스컬 산맥 높은 곳): 땅과 이어질 때마다 탐색이 쌓이고, 셋이면 7/1 불의 정령이 하루 섬긴다.
 - 터지는 번개(`spl-burst-lightning`, ZEN-119)를 4시간 들여 배운다 ([결정] 2026-10-02): 누구에게든 피해 2, 킥커 {4}면 4.
 - 남서쪽 바위 틈에 고블린 기습꾼(`chr-goblin-bushwhacker`, ZEN-125)이 숨어 산다 ([결정] 2026-10-02): 들어설 때 킥커 {R}로 곁의 제 편을 자정까지 +1/+0·속공.
+- 불안정한 발판(`spl-unstable-footing`, ZEN-153)을 배울 수 있다 (4시간). 그 칸에서 자정까지 피해를 막을 수 없고, 킥커 {3}{R}면 대상에게 피해 5 ([결정] 2026-10-02).

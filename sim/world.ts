@@ -794,7 +794,8 @@ export const SpellSimSchema = z.strictObject({
         // "Deals N damage to target creature" (Magma Rift): no planeswalker; `any`: "to target
         // creature or player" (Punishing Fire): anyone, a planeswalker's loyalty too.
         // `kicked_amount`: the damage if kicked (Burst Lightning).
-        z.strictObject({ type: z.literal('damage'), amount: z.number().int().positive(), any: z.boolean().default(false), kicked_amount: z.number().int().positive().optional() }),
+        // `if_kicked`: only if kicked (Unstable Footing).
+        z.strictObject({ type: z.literal('damage'), amount: z.number().int().positive(), any: z.boolean().default(false), kicked_amount: z.number().int().positive().optional(), if_kicked: z.boolean().optional() }),
         // "Destroy all creatures" (Day of Judgment): every being on the caster's tile, the caster
         // too (user decision 2026-10-01), not planeswalkers; the indestructible stand.
         z.strictObject({ type: z.literal('destroy_all') }),
@@ -806,6 +807,9 @@ export const SpellSimSchema = z.strictObject({
         // "Prevent all combat damage that would be dealt this turn by creatures without trample"
         // (Tanglesap): on the caster's tile, until midnight (sim/combat.ts `fogged`).
         z.strictObject({ type: z.literal('fog') }),
+        // "Damage can't be prevented this turn" (Unstable Footing): on the caster's tile until
+        // midnight (user decision 2026-10-02; combat.ts `unpreventable`).
+        z.strictObject({ type: z.literal('no_prevent') }),
         // "Choose a color. White creatures you control gain protection from it until end of turn"
         // (Brave the Elements): the caster picks after the hour; their white ones on their tile
         // (sim/allies.ts `applyBrave`).

@@ -8059,6 +8059,37 @@ test('the real Shieldmate\'s Blessing is taught in Makindi: {W}, an instant, a w
   assert.deepEqual(s.effects, [{ type: 'ward', amount: 3 }]);
 });
 
+test('Unstable Footing: on the caster\'s tile until midnight no ward or protection keeps damage off; kicked, 5 damage to the target; unkicked, none', () => {
+  const footing: RawEntity = { id: 'spl-uf', kind: 'spell', name: '불안정한 발판', status: 'canon', sim: { cost: '{0}', speed: 'instant', learn_at: 'loc-a', target: 'any_here', kicker: { mana: '{0}' }, effects: [{ type: 'no_prevent' }, { type: 'damage', amount: 5, any: true, if_kicked: true }] } };
+  const world = fixture([footing, npc('chr-c', npcSim('loc-a')), npc('chr-x', npcSim('loc-a', 'work', [1, 20])), npc('chr-y', npcSim('loc-a', 'work', [1, 20])), npc('chr-far', npcSim('loc-a', 'work', [1, 20]))]);
+  const state = newState(world, { seed: 1, mode: 'observer' });
+  const [c, x, y, far] = ['chr-c', 'chr-x', 'chr-y', 'chr-far'].map((id) => state.actors[id]);
+  for (const z of [x, y]) z.tile = c.tile;
+  far.tile = tilesOf(world, 'loc-a').find((tl) => !sameTile(tl, c.tile)) ?? c.tile;
+  c.spells = ['spl-uf'];
+  castSpell(state, world, c, 'spl-uf', 'chr-x', false, state.minutes);
+  assert.equal(woundsOf(x, state.minutes), 0);
+  const day = gameDay(state.minutes);
+  y.shield = { day, amount: 3 };
+  dealDamage(state, world, y, 2, state.minutes, '시험');
+  assert.equal(woundsOf(y, state.minutes), 2);
+  if (!sameTile(far.tile, c.tile)) {
+    far.shield = { day, amount: 3 };
+    dealDamage(state, world, far, 2, state.minutes, '시험');
+    assert.equal(woundsOf(far, state.minutes), 0);
+  }
+  delete c.used;
+  castSpell(state, world, c, 'spl-uf', 'chr-x', true, state.minutes);
+  assert.equal(woundsOf(x, state.minutes), 5);
+});
+
+test('the real Unstable Footing is taught in Shatterskull Pass: {R}, kicker {3}{R} for 5', () => {
+  const s = loadWorld().spells.find((x) => x.id === 'spl-unstable-footing')!;
+  assert.equal(s.learnAt, 'loc-shatterskull-pass');
+  assert.equal(s.kicker?.manaText, '{3}{R}');
+  assert.deepEqual(s.effects, [{ type: 'no_prevent' }, { type: 'damage', amount: 5, any: true, if_kicked: true }]);
+});
+
 test('Nissa\'s Chosen: killed, it goes into no graveyard; seven days on it wakes at home, whole and serving no one; a token of it is simply gone', () => {
   const world = fixture([besideA, npc('chr-n', { ...npcSim('loc-az', 'work', [2, 3]), revives_after: 7 }), npc('chr-m', npcSim('loc-a')), npc('chr-k', npcSim('loc-a'))]);
   const state = newState(world, { seed: 1, mode: 'observer' });
