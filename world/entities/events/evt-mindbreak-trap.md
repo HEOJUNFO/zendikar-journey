@@ -13,6 +13,7 @@ links:
   - { to: loc-tazeem, rel: 깔린 곳 }
 sim:
   region: loc-tazeem
+  pos: [-0.448, -1]   # [가공] 2026-10-02 그전 칸이 북하다가 되어 서쪽 곁으로
   trigger: cast
   spells: 3             # 그날 셋째 주문을 쓰는 이 ({0} 대체 비용: 상대가 주문을 셋 이상 시전)
   text: 석상의 눈이 차갑게 빛나더니, 엮이던 주문의 실타래가 허공에서 끊어졌다.

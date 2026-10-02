@@ -5,9 +5,10 @@ name: 타짐
 name_en: Tazeem
 summary: 젠디카르 남쪽 가운데의 물가 대륙. 깎아지른 절벽과 해안이 이어지고, 하늘에는 에메리아의 폐허가 떠 있으며, 우마라 강에는 거대한 폭포 마고시가 쏟아지고, 오란리프의 숲이 끝없이 자란다
 status: canon
-sources: [ZEN-213, ZEN-218, ZEN-220, ZEN-221, ZEN-225, ZEN-62, ZEN-63, ZEN-77, ZEN-96, ZEN-57, ZEN-44, ZEN-46, ZEN-165, ZEN-56]
+sources: [ZEN-213, ZEN-218, ZEN-220, ZEN-221, ZEN-225, ZEN-62, ZEN-63, ZEN-77, ZEN-96, ZEN-57, ZEN-44, ZEN-46, ZEN-165, ZEN-56, ZEN-141]
 tags: [대륙, 해안, 절벽, 청색]
 links:
+  - { to: loc-north-hada, rel: 안의 구역 (북쪽 고지대의 무법 전초기지) }
   - { to: chr-merfolk-wayfinder, rel: 북서쪽 하늘의 인어 길잡이 }
   - { to: spl-harrow, rel: 배우는 주문 (써레질) }
   - { to: cre-gomazoa, rel: 북쪽 떠 있는 바위 사이의 해파리 }
@@ -40,6 +41,7 @@ map: { x: 1450, y: 1260, terrain: beach, size: continent, tiles: 200 }
 - 뒤틀림이 모습을 얻은 뒤틀림 정령(`cre-roil-elemental`, ZEN-62)이 타짐을 떠돈다 ([결정] 2026-09-30).
 - 석상 얼굴이 늘어선 돌 미로에 정신파괴 함정(`evt-mindbreak-trap`, ZEN-57)이 깃들어 있다 ([결정] 2026-10-01). 타짐(구역 포함)에서 그날 셋째 주문을 쓰는 이가 있으면 그 주문을 부수고 잊게 한다.
 - 취소(`spl-cancel`, ZEN-44)를 배운다 ([결정] 2026-10-01): 곁에서 쓰는 주문이나 권속 들이기를 무효화하는 반응 주문.
+- 북쪽 고지대, 우마라 강 협곡 바로 위에 무법 전초기지 북하다(`loc-north-hada`, 기본 산 10칸)가 있다 ([결정] 2026-10-02, [배경] The Art of Zendikar). 도둑·노예 상인·덫꾼의 거래처.
 
 ## 미정/질문
 

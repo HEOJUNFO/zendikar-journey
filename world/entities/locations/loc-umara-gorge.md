@@ -5,9 +5,10 @@ name: 우마라 강 협곡
 name_en: Umara River Gorge
 summary: 타짐을 남북으로 가르는 우마라 강의 깊은 협곡. 남쪽 할리마르에서 북쪽 끝까지 흐르는 강을 따라 나루터와 폭포가 이어지고, 그 가장 큰 폭포가 마고시다
 status: canon
-sources: [ZEN-218, ZEN-75]
+sources: [ZEN-218, ZEN-75, ZEN-141]
 tags: [강, 협곡, 폭포, 청색]
 links:
+  - { to: loc-north-hada, rel: 강 위쪽 고지대의 전초기지 }
   - { to: cre-umara-raptor, rel: 폭포 바위의 전령 매 }
   - { to: loc-tazeem, rel: 바깥 지역 }
   - { to: loc-magosi, rel: 안의 구역 (가장 큰 폭포) }

@@ -4710,7 +4710,9 @@ test('the world as the lore lays it out: areas in areas, and the continents wher
   // The Guum Wilds covers most of Bala Ged; Oran-Rief most of Tazeem.
   const all = (id: string) => [id, ...descendantsOf(world, id).map((x) => x.id)].reduce((n, x) => n + tilesOf(world, x).length, 0);
   assert.ok(all('loc-guum-wilds') > all('loc-bala-ged') / 2);
-  assert.ok(all('loc-oran-rief') >= all('loc-tazeem') / 2);
+  // (Tazeem grew past 200 with its areas, North Hada 2026-10-02: the mainland keeps its ground.)
+  assert.ok(all('loc-oran-rief') >= all('loc-tazeem') * 0.45);
+  assert.ok(world.regions.filter((r) => r.parent === 'loc-tazeem' && r.id !== 'loc-oran-rief').every((r) => all(r.id) < all('loc-oran-rief')));
   // Ondu southwest of Akoum, Sejiri north of it, Bala Ged east of it; Guul Draz south of Bala
   // Ged, and Tazeem west of Guul Draz across narrow waters.
   const at = (id: string) => region(world, id);
@@ -7555,6 +7557,20 @@ test('the real Oran-Rief Survivalist camps deep in the west of Oran-Rief: an All
   assert.equal(hirePrice(def), 20);
   bindRetainer(state, world, s, state.actors['chr-reckless-scholar'], state.minutes, '고용');
   assert.equal(s.plusCounters, 1);
+});
+
+test('the real Plated Geopede crawls the lava of east Akoum: a first-striking beast, 3/3 the day it takes a land; North Hada is a mountain of Tazeem above the Umara gorge', () => {
+  const world = loadWorld();
+  const state = newState(world, { seed: 1, mode: 'observer' });
+  const g = state.actors['cre-plated-geopede'];
+  assert.equal(g?.region, 'loc-akoum');
+  const def = npcDef(state, world, g.id)!;
+  assert.ok(def.beast && hasAbility(g, 'first_strike', state.minutes));
+  assert.deepEqual(def.landfall?.pt, [2, 2]);
+  const h = world.regions.find((r) => r.id === 'loc-north-hada')!;
+  assert.equal(h.parent, 'loc-tazeem');
+  assert.deepEqual(landTypes(h), ['mountain']);
+  assert.ok(tilesOf(world, h.id).length >= 10);
 });
 
 test('the real Highland Berserker hires out on the Teeth of Akoum for 20 coin; joining a party, its Allies strike first today', () => {
