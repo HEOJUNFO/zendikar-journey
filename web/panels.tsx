@@ -14,6 +14,7 @@ import { TAP_POWERS, tapBlocked, tappersOf } from '../sim/tapper.ts';
 import { altarBlocked, altarOf, altarVictims } from '../sim/altar.ts';
 import { expeditionBlocked, expeditionOf, expeditionReward } from '../sim/expedition.ts';
 import { chartBlocked, chartCost, chartOf } from '../sim/chart.ts';
+import { secretsBlocked, secretsOf } from '../sim/secrets.ts';
 import { ascendBlocked, ascendText, ascensionOf } from '../sim/luminarch.ts';
 import { setTrapBlocked, trapsHeld } from '../sim/snare.ts';
 import { hexBlocked, hexNear } from '../sim/hexmage.ts';
@@ -740,6 +741,18 @@ export function CharacterControls(props: {
             onClick={() => onAct({ type: 'ascend' })}
           >
             천사 부르기
+          </button>
+        </div>
+      )}
+      {secretsOf(state, world, p) && (
+        <div className="row">
+          <span className="muted">📜 {secretsOf(state, world, p)!.name} (탐색 {state.items?.[secretsOf(state, world, p)!.id]?.counters ?? 0}):</span>
+          <button
+            disabled={busy || !!stuck || !!secretsBlocked(state, world, p)}
+            title={secretsBlocked(state, world, p) ?? '탐색을 마치고(사라짐) 곁의 하나(자신도)의 무덤을 세상으로 돌려보낸다'}
+            onClick={() => onAct({ type: 'secrets' })}
+          >
+            탐색 마치기
           </button>
         </div>
       )}

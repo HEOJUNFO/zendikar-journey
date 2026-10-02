@@ -43,6 +43,7 @@ import type { GustEffect } from './owl.ts';
 import { applyGem, expeditionBlocked, expeditionOf, expeditionReward } from './expedition.ts';
 import { applyChart, chartBlocked, chartCost, chartOf } from './chart.ts';
 import { applyMill } from './mill.ts';
+import { applySecrets, secretsBlocked, secretsOf } from './secrets.ts';
 import { ascendBlocked, ascensionOf } from './luminarch.ts';
 import type { TapPower } from './tapper.ts';
 import { crumble, sacrifice, sacrificeDefault } from './monument.ts';
@@ -966,6 +967,19 @@ async function choices(state: State, world: World, llm: Llm) {
       continue;
     }
     // Turntimber Basilisk, bonding: whom (if anyone) its gaze catches.
+    if (c.effect.type === 'secrets') {
+      let pick: string | null = null;
+      if (llm.choose) {
+        try {
+          pick = await llm.choose({ world, state, npc, candidates, optional: false, what: `${c.effect.item}을(를) 마쳤다. 여기 있는 이 하나(당신도)의 무덤이 세상으로 돌아간다: 그가 잊은 주문은 다시 아직 익히지 않은 것이 되고, 그의 생물 무덤에 든 죽은 이들이 제 거처에서 되살아난다(누구도 섬기지 않음). 누구의 무덤을?` });
+        } catch (e) {
+          console.warn(`choose (secrets) for ${c.by} failed:`, e);
+        }
+      }
+      const target = candidates.find((x) => x.id === pick) ?? candidates[0];
+      applySecrets(state, world, target, c.effect.item, state.minutes);
+      continue;
+    }
     if (c.effect.type === 'mill') {
       let pick: string | null = null;
       if (llm.choose) {
@@ -1518,6 +1532,7 @@ async function prepare(state: State, world: World, llm: Llm): Promise<string | n
           hex: hexInput(state, world, a),
           fling: flingInput(state, world, a),
           traps: trapsHeld(world, a).map((ev) => ({ id: ev.id, text: `${ev.name}: ${ev.summary} (${ev.cardCost?.text ?? ''})` })),
+          secrets: secretsBlocked(state, world, a) ? undefined : { name: secretsOf(state, world, a)!.name },
           chart: chartBlocked(state, world, a, state.minutes) ? undefined : { name: chartOf(state, world, a)!.name, cost: chartCost(state, world, a) },
           expedition: expeditionBlocked(state, world, a) ? undefined : { name: expeditionOf(state, world, a)!.name, reward: expeditionReward(state, world, a).en },
           fetch: fetchInput(state, world, a),

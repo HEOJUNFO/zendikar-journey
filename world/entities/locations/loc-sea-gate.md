@@ -5,9 +5,10 @@ name: 바다 관문
 name_en: Sea Gate
 summary: 타짐 해안, 할리마르 분지 어귀의 큰 항구 도시. 인어와 인간이 함께 살고, 원정대가 모이고 떠나는 곳
 status: canon
-sources: [ZEN-63, ZEN-66, ZEN-61, ZEN-42, ZEN-54, ZEN-58, ZEN-60, ZEN-70, ZEN-208, ZEN-45, ZEN-104]
+sources: [ZEN-63, ZEN-66, ZEN-61, ZEN-42, ZEN-54, ZEN-58, ZEN-60, ZEN-70, ZEN-208, ZEN-45, ZEN-104, ZEN-59]
 tags: [도시, 항구, 해안, 인어, 원정대, 청색]
 links:
+  - { to: itm-quest-for-ancient-secrets, rel: 바다 동굴 벼랑 끝의 고대 비밀 탐색 }
   - { to: spl-mire-blight, rel: 플레이버에 나오는 늪의 병마 }
   - { to: chr-cosis-trickster, rel: 물가의 코시를 따르는 인어 }
   - { to: itm-trailblazers-boots, rel: 원정대 본부의 장화 (장비) }
@@ -43,6 +44,7 @@ map: { in: loc-tazeem, terrain: beach, pos: [0, 0.6], tiles: 10 }   # 기본 섬
 - 번지는 바다(`spl-spreading-seas`, ZEN-70)를 4시간 들여 배운다 ([결정] 2026-10-02): 곁의 누군가 쥔 땅 하나를 섬으로 바꾸는 땅 오라.
 - 남서쪽 원정대 본부에 개척자의 장화(`itm-trailblazers-boots`, ZEN-208)가 걸려 있다 ([결정] 2026-10-02): 신은 이는 이름 있는 땅과 이어진 상대에게 막히지 않는다.
 - 북동쪽 얕은 물가에 코시의 속임수(`chr-cosis-trickster`, ZEN-45)가 산다 ([결정] 2026-10-02): 같은 땅의 남이 땅을 찾아 길을 뒤섞을 때마다 +1/+1 카운터.
+- 남서쪽 바다 동굴로 내려가는 벼랑 끝에 고대 비밀 탐색(`itm-quest-for-ancient-secrets`, ZEN-59)이 서 있다 ([결정] 2026-10-02): 무덤이 다섯 차면 누군가의 무덤을 세상으로 돌려보낸다.
 
 ## 미정/질문
 

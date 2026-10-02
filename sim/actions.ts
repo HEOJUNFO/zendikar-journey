@@ -18,6 +18,7 @@ import { HEX_HOURS, hexBlocked } from './hexmage.ts';
 import { FLING_HOURS, flingBlocked } from './fling.ts';
 import { EXPEDITION_HOURS, expeditionBlocked, expeditionOf, expeditionReward } from './expedition.ts';
 import { CHART_HOURS, chartBlocked, chartCost, chartOf } from './chart.ts';
+import { SECRETS_HOURS, secretsBlocked, secretsOf } from './secrets.ts';
 import { bondBlocked, bondTargets, FETCH_HOURS, fetchBlocked, firesOnBond, growBlocked, HAND, landDropBlocked, targetedBondEffect, TOP } from './abilities.ts';
 import { handBlocked, topBlocked } from './oracle.ts';
 import { CLAIM_HOURS, claimBlocked, itemDef } from './items.ts';
@@ -85,6 +86,9 @@ export const ActionSchema = z.discriminatedUnion('type', [
   // Pore over the Expedition Map you own, paying its cost: it is gone, and a land of the world
   // you pick comes into your hand.
   z.object({ type: z.literal('chart') }),
+  // End the Quest for Ancient Secrets you own (enough counters): it is gone, and someone's
+  // graveyards (yours too) go back into their library.
+  z.object({ type: z.literal('secrets') }),
   // Call down an angel with the Luminarch Ascension you own (enough quest counters): pay its cost.
   z.object({ type: z.literal('ascend') }),
   // Set a trap you hold where you stand, paying its card's cost (Trapmaker's Snare).
@@ -336,6 +340,13 @@ export function startAction(state: State, world: World, action: Action): string 
       if (why) return why;
       task = { kind: 'expedition', activity: `${expeditionOf(state, world, p)!.name}을(를) 마침`, emoji: '🗺️', until: until(EXPEDITION_HOURS) };
       text = `원정을 마치고 원정대가 찾아낸 것을 짚어 본다. ${expeditionReward(state, world, p).ko}.`;
+      break;
+    }
+    case 'secrets': {
+      const why = secretsBlocked(state, world, p);
+      if (why) return why;
+      task = { kind: 'secrets', activity: `${secretsOf(state, world, p)!.name}을(를) 마침`, emoji: '📜', until: until(SECRETS_HOURS) };
+      text = '옛 문양을 읽어 탐색을 마친다. 곁의 누군가(자신도)의 무덤이 세상으로 돌아간다.';
       break;
     }
     case 'chart': {

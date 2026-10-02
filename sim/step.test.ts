@@ -55,6 +55,7 @@ import { altarBlocked } from './altar.ts';
 import { expeditionBlocked } from './expedition.ts';
 import { chartBlocked } from './chart.ts';
 import { applyMill } from './mill.ts';
+import { secretsHour } from './secrets.ts';
 import { ascendBlocked, upkeepUnhurt } from './luminarch.ts';
 import { reviveHour } from './revive.ts';
 import { punishHour } from './punish.ts';
@@ -7412,6 +7413,44 @@ test('the real Expedition Map lies at Kabira Crossroads: {1} to claim, {2} to fi
   const x = loadWorld().items.find((i) => i.id === 'itm-expedition-map')!;
   assert.equal(x.at, 'loc-kabira-crossroads');
   assert.deepEqual(x.effects, [{ type: 'search_hand', cost: '{2}' }]);
+});
+
+test('Quest for Ancient Secrets: each thing into its owner\'s graveyard a counter; with five the player ends it, and the one they pick has their spells unforgotten and their dead wake at home, free', async () => {
+  const item: RawEntity = { id: 'itm-qas', kind: 'item', name: '비밀 탐색', status: 'canon', sim: { card_type: 'enchantment', cost: '{0}', at: 'loc-a', effects: [{ type: 'graveyard_quest', counters: 5 }] } };
+  const world = fixture([item, altarItem, demolishSpell, npc('chr-x', npcSim('loc-a')), npc('chr-d', npcSim('loc-b'))]);
+  const state = character(world, 'loc-a');
+  const p = state.actors[PLAYER_ID];
+  const [x, d] = ['chr-x', 'chr-d'].map((id) => state.actors[id]);
+  x.tile = p.tile;
+  state.items = { 'itm-qas': { name: '비밀 탐색', owner: p.id, counters: 0 } };
+  secretsHour(state, world, state.minutes);
+  buryCount(p, 3, state.minutes);
+  secretsHour(state, world, state.minutes);
+  assert.equal(state.items['itm-qas'].counters, 3);
+  secretsHour(state, world, state.minutes);
+  assert.equal(state.items['itm-qas'].counters, 3);
+  assert.ok((await act(state, world, { type: 'secrets' })).error?.includes('3/5'));
+  state.items['itm-qas'].counters = 5;
+  x.graveyard = ['spl-x'];
+  d.dead = { at: state.minutes, cause: '시험' };
+  x.fallen = ['chr-d'];
+  await act(state, world, { type: 'secrets' });
+  if (state.asks?.[0]?.effect.type !== 'secrets') await act(state, world, { type: 'wait', hours: 1 });
+  assert.ok(state.items['itm-qas'].gone);
+  const ask = state.asks!.find((y) => y.effect.type === 'secrets')!;
+  assert.ok(ask.candidates.includes(p.id) && ask.candidates.includes('chr-x'));
+  await act(state, world, { type: 'choose', pick: 'chr-x' });
+  assert.deepEqual(x.graveyard, []);
+  assert.deepEqual(x.fallen, []);
+  assert.ok(!d.dead);
+  assert.equal(d.region, 'loc-b');
+  assert.equal(d.master, undefined);
+});
+
+test('the real Quest for Ancient Secrets stands at Sea Gate: five counters to send a graveyard back', () => {
+  const x = loadWorld().items.find((i) => i.id === 'itm-quest-for-ancient-secrets')!;
+  assert.equal(x.at, 'loc-sea-gate');
+  assert.deepEqual(x.effects, [{ type: 'graveyard_quest', counters: 5 }]);
 });
 
 test('Khalni Heart Expedition: with three counters the player ends it; they pick basic lands to bond with from afar, tapped (no mana from them today)', async () => {

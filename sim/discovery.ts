@@ -39,6 +39,14 @@ export function discoveryOwed(state: State, world: World, a: Actor, spell: strin
     .map(({ kind, options }) => ({ by: a.id, land: a.region, effect: { type: 'discovery', spell, kind }, candidates: options.map((o) => o.id), optional: true, t }));
 }
 
+// One dead comes back to life at their home, whole and free (no one's retainer).
+export function riseAtHome(state: State, world: World, x: Actor, t: number) {
+  const def = npcDef(state, world, x.id);
+  delete x.dead;
+  Object.assign(x, { master: undefined, seized: undefined, travel: undefined, task: undefined, forced: undefined, wounds: undefined, schedule: undefined, plusCounters: undefined, auras: undefined, enteredAt: t });
+  if (def && 'home' in def) Object.assign(x, { region: def.home, tile: homeTile(world, def) });
+}
+
 export function applyDiscovery(state: State, world: World, a: Actor, kind: DiscoveryKind, pick: string | null, spell: string, t: number) {
   if (!pick || !discoveryOptions(state, world, a, kind).some((o) => o.id === pick)) return;
   if (kind === 'land') {
@@ -47,10 +55,7 @@ export function applyDiscovery(state: State, world: World, a: Actor, kind: Disco
     return;
   }
   const x = state.actors[pick];
-  const def = npcDef(state, world, x.id);
-  delete x.dead;
-  Object.assign(x, { master: undefined, seized: undefined, travel: undefined, task: undefined, forced: undefined, wounds: undefined, schedule: undefined, plusCounters: undefined, auras: undefined, enteredAt: t });
-  if (def && 'home' in def) Object.assign(x, { region: def.home, tile: homeTile(world, def) });
+  riseAtHome(state, world, x, t);
   a.fallen = (a.fallen ?? []).filter((id) => id !== x.id);
   addLog(state, { kind: 'event', text: `${spell}: ${josa(shortName(a.name), '이', '가')} 폐허에서 찾은 것으로 ${josa(shortName(x.name), '을', '를')} 되살렸다. ${josa(shortName(x.name), '은', '는')} 제 거처에서 눈을 떴다 (누구도 섬기지 않는다).`, regions: [x.region, a.region], actors: [x.id, a.id], t });
 }
