@@ -14,6 +14,7 @@ import { owesDiscard } from './discard.ts';
 import { crushOwed, demolishOptions, demolishOwed, relicsHere } from './relics.ts';
 import { escapeOptions, escapeOwed } from './escape.ts';
 import { sendNowhere } from './nowhere.ts';
+import { floodOptions, floodOwed } from './flood.ts';
 import { pyromancerCast } from './pyromancer.ts';
 import { sacramentOwed } from './sacrament.ts';
 import { discoveryOwed } from './discovery.ts';
@@ -102,6 +103,7 @@ export function castBlocked(state: State, world: World, a: Actor, spellId: strin
   if (s.effects.some((e) => e.type === 'destroy_relics') && !relicsHere(state, world, a.region, a.tile).length) return '여기엔 부술 마법물체도 부여마법도 없다.';
   if (s.effects.some((e) => e.type === 'demolish') && !demolishOptions(state, world, a).length) return '여기엔 부술 마법물체도 땅도 없다.';
   if (s.effects.some((e) => e.type === 'return_own') && !escapeOptions(state, world, a).length) return '되돌릴 것이 없다.';
+  if (s.effects.some((e) => e.type === 'flood_land') && !floodOptions(state, world, a).length) return '여기엔 바다를 번지게 할 땅이 없다 (곁의 누구도 쥔 땅이 없다).';
   if (s.effects.some((e) => e.type === 'return_nonland') && !escapeOptions(state, world, a, true).length) return '여기엔 되돌릴 것이 없다 (땅이 아닌 지속물).';
   if (s.effects.some((e) => e.type === 'grim_discovery') && !discoveryOwed(state, world, a, s.name, t).length) return '무덤에 되돌릴 생물도 땅도 없다.';
   if (s.effects.some((e) => e.type === 'harrow' || e.type === 'sacrifice_land') && !harrowGive(world, a).length) return `${josa(s.name, '은', '는')} 땅 하나를 내어 주어야 쓴다 (유대를 맺은 땅이 없다).`;
@@ -202,7 +204,7 @@ export function learnableSpells(world: World, a: Actor) {
 export function landsOfType(state: State, world: World, a: Actor, type: LandType) {
   return (a.bonds ?? []).filter((id) => {
     const r = world.regions.find((x) => x.id === id);
-    return !!r && !state.regions[id]?.destroyed && landTypes(r).includes(type);
+    return !!r && !state.regions[id]?.destroyed && landTypes(r, state).includes(type);
   });
 }
 
@@ -334,6 +336,9 @@ export function resolveSpell(state: State, world: World, a: Actor, spellId: stri
       if (owed) (state.choices ??= []).push(owed);
     } else if (eff.type === 'harrow') {
       const owed = harrowOwed(state, world, a, { type: 'harrow', spell: s.name, left: eff.count, given: false }, t);
+      if (owed) (state.choices ??= []).push(owed);
+    } else if (eff.type === 'flood_land') {
+      const owed = floodOwed(state, world, a, s.name, t);
       if (owed) (state.choices ??= []).push(owed);
     } else if (eff.type === 'damage_grounded') {
       const grounded = present(state, a.region, a.tile).filter((x) => x.loyalty === undefined && !hasAbility(x, 'fly', t));

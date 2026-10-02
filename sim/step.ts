@@ -299,6 +299,7 @@ export function destroyLand(state: State, world: World, id: string, by: string[]
   state.regions[id].destroyed = { at: t, source, until: ruinsUntil(t) };
   // Its counters go with it: a burning land stops burning.
   delete state.regions[id].blaze;
+  delete state.regions[id].flooded;
   addLog(state, {
     kind: 'condition',
     text: `${region(world, id).name}: 땅이 부서졌다. ${formatClock(ruinsUntil(t))}까지 이곳에서는 아무것도 얻을 수 없다.`,

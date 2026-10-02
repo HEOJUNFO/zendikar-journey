@@ -14,7 +14,7 @@ import type { SpellDef, World } from './world.ts';
 
 // Instants and sorceries: no enchantment (aura, a held exile).
 export function instantOrSorcery(s: SpellDef) {
-  return !s.effects.some((e) => e.type === 'aura' || e.type === 'exile_until');
+  return !s.effects.some((e) => e.type === 'aura' || e.type === 'exile_until' || e.type === 'flood_land');
 }
 
 // `a` casts `s` (paid, not free): the copy first (counted as it stood), then the counter.

@@ -751,6 +751,9 @@ export const SpellSimSchema = z.strictObject({
         z.strictObject({ type: z.literal('destroy_all') }),
         // "Deals N damage to each creature without flying" (Seismic Shudder): every being on the
         // caster's tile (the caster too) that can't fly now, no planeswalker.
+        // "Enchant land. When this enters, draw a card. Enchanted land is an Island" (Spreading
+        // Seas): after casting, a land someone on the tile holds becomes an Island (sim/flood.ts).
+        z.strictObject({ type: z.literal('flood_land') }),
         z.strictObject({ type: z.literal('damage_grounded'), amount: z.number().int().positive() }),
         // "Reveal the top N cards of your library. Put all creature cards revealed this way into
         // your hand and the rest into your graveyard" (Beast Hunt): N unknown secrets turn up; the
@@ -1485,7 +1488,9 @@ export function landIdOf(world: World, id: string) {
 }
 
 // A land's basic land types (none for a named land card, or a sea), unless it says its own.
-export function landTypes(r: Region): LandType[] {
+// With `state`: a land the sea has spread over (Spreading Seas, sim/flood.ts) is an Island.
+export function landTypes(r: Region, state?: { regions: Record<string, { flooded?: unknown }> }): LandType[] {
+  if (state?.regions[r.oneLandWith ?? r.id]?.flooded) return ['island'];
   if (r.landType) return r.notLand ? [] : [r.landType];
   const type = TERRAINS[r.terrain].type;
   return r.nonbasic || r.notLand || !type ? [] : [type];

@@ -1,6 +1,7 @@
 // Tapping a land for an ability other than its mana ("{T}: ..."): it gives no mana that day
 // (Actor.landsTapped), and it can't be done if its mana is already spent, it came in tapped
 // today, or it was tapped for something already.
+import { flooded } from './flood.ts';
 import { gameDay } from './clock.ts';
 import { manaCapacity } from './mana.ts';
 import { landSealed, sealText } from './seal.ts';
@@ -22,6 +23,7 @@ export function landTapBlocked(state: State, world: World, a: Actor, landId: str
   if (!a.bonds?.includes(r.id)) return `${josa(r.name, '과', '와')} 유대를 맺지 않았다.`;
   const sealer = landSealed(state, a, r, t);
   if (sealer) return `${sealText(sealer, t)} ${josa(r.name, '은', '는')} 마나 말고는 아무것도 내주지 않는다.`;
+  if (flooded(state, world, r)) return `${josa(r.name, '은', '는')} 바다에 잠겨 섬이 되었다. 제 힘이 잠겼다.`;
   const rs = state.regions[r.id];
   if (rs?.destroyed) return `${josa(r.name, '은', '는')} 부서졌다.`;
   if (rs?.conditions.some((c) => c.tapped)) return `${josa(r.name, '은', '는')} 지금 쓸 수 없다.`;

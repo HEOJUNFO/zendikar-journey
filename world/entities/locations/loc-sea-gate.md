@@ -5,9 +5,10 @@ name: 바다 관문
 name_en: Sea Gate
 summary: 타짐 해안, 할리마르 분지 어귀의 큰 항구 도시. 인어와 인간이 함께 살고, 원정대가 모이고 떠나는 곳
 status: canon
-sources: [ZEN-63, ZEN-66, ZEN-61, ZEN-42, ZEN-54, ZEN-58, ZEN-60]
+sources: [ZEN-63, ZEN-66, ZEN-61, ZEN-42, ZEN-54, ZEN-58, ZEN-60, ZEN-70]
 tags: [도시, 항구, 해안, 인어, 원정대, 청색]
 links:
+  - { to: spl-spreading-seas, rel: 가르치는 주문 (번지는 바다) }
   - { to: chr-reckless-scholar, rel: 부둣가의 무모한 학자 }
   - { to: spl-paralyzing-grasp, rel: 가르치는 주문 (할리마르 동굴의 손아귀) }
   - { to: chr-lullmage-mentor, rel: 돌 둑의 잠재움술사 스승 }
@@ -36,6 +37,7 @@ map: { in: loc-tazeem, terrain: beach, pos: [0, 0.6], tiles: 10 }   # 기본 섬
 - 마비시키는 손아귀(`spl-paralyzing-grasp`, ZEN-58)를 배울 수 있다 (4시간): 붙은 이가 한 번 묶이면 00:00에 풀려나지 못하는 청색 오라 ([결정] 2026-10-01). 플레이버의 할리마르 바다 동굴은 지역으로 만들지 않았다.
 
 - 무모한 학자(`chr-reckless-scholar`, ZEN-60)가 남서쪽 부둣가에 머문다 ([결정] 2026-10-01). 말하는 인간 마법사 탐사꾼으로, 설득하면 따르고 곁의 이에게 비밀 하나를 알려 주는 대신 주문 하나를 잊게 한다.
+- 번지는 바다(`spl-spreading-seas`, ZEN-70)를 4시간 들여 배운다 ([결정] 2026-10-02): 곁의 누군가 쥔 땅 하나를 섬으로 바꾸는 땅 오라.
 
 ## 미정/질문
 

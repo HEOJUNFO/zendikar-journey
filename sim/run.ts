@@ -33,6 +33,7 @@ import { loremastersOf, recallBlocked, recallCount } from './loremaster.ts';
 import { biteable, readyBiter } from './bite.ts';
 import { readyTapper, tapAmount, tapBlocked, tapTargetable } from './tapper.ts';
 import { altarOf } from './altar.ts';
+import { applyFlood, floodOptions } from './flood.ts';
 import { applyGem, expeditionBlocked, expeditionOf, expeditionReward } from './expedition.ts';
 import { ascendBlocked, ascensionOf } from './luminarch.ts';
 import type { TapPower } from './tapper.ts';
@@ -621,6 +622,23 @@ async function choices(state: State, world: World, llm: Llm) {
     // What a thief turned up of someone's hand (candidates are spells and secrets).
     if (c.effect.type === 'pilfer') {
       if (by && !by.dead && npc) await pilferChoice(state, world, llm, by, npc, c as Choice & { effect: { type: 'pilfer' } });
+      continue;
+    }
+    // Spreading Seas: a land someone there holds for the sea to spread over; one must.
+    if (c.effect.type === 'flood') {
+      if (!by || by.dead || !npc) continue;
+      const options = floodOptions(state, world, by);
+      if (!options.length) continue;
+      let pick: string | null = null;
+      if (llm.pick) {
+        try {
+          pick = await llm.pick({ world, state, npc, what: `${c.effect.spell}: 이 자리의 누군가 쥐고 있는 땅 하나에 바다를 번지게 한다. 그 땅은 섬이 되어, 유대를 맺은 모두에게 청 마나만 내고 제 힘을 잃는다`, options });
+        } catch (e) {
+          console.warn(`pick (flood) for ${by.id} failed:`, e);
+        }
+      }
+      if (!options.some((o) => o.id === pick)) pick = options[Math.floor(random(state) * options.length)].id;
+      applyFlood(state, world, by, pick!, c.effect.spell, state.minutes);
       continue;
     }
     // Demolish: an artifact or a land to destroy; one must go (with no usable answer, at random).

@@ -459,6 +459,8 @@ function spellEffectText(e: SpellEffect) {
       return '같은 칸의 땅 아닌 것(존재, 아이템, 오라) 하나를 되돌림 (남의 존재는 내동댕이쳐져 1시간 기절)';
     case 'weaken_controlled':
       return `대상과 곁의 그 권속들 자정까지 ${e.pt.join('/')}${e.kicked_pt ? ` (킥커 시 ${e.kicked_pt.join('/')})` : ''}`;
+    case 'flood_land':
+      return '곁의 누군가 쥔 땅 하나를 섬으로 (오라가 부서질 때까지), 시전자는 비밀 하나';
     case 'damage_grounded':
       return `같은 칸의 날지 못하는 모두(시전자도)에게 피해 ${e.amount}`;
     case 'exile_until':

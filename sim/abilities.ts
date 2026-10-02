@@ -5,6 +5,7 @@ import { enterDamage } from './torch.ts';
 import { enterGrant } from './aeronaut.ts';
 import { enterEquip } from './outfitter.ts';
 import { enterReturn } from './escape.ts';
+import { flooded } from './flood.ts';
 import { enterSacrifice } from './toll.ts';
 import { enterNoBlock } from './shortcut.ts';
 import { landfallReturn } from './bloodghast.ts';
@@ -81,7 +82,7 @@ export function bondTargets(state: State, world: World, a: Actor, regionId: stri
 }
 
 // The effect falls on `target`, if they are still there.
-export function applyBondEffect(state: State, world: World, a: Actor, regionId: string, eff: Exclude<ChoiceEffect, { type: 'cast' | 'follow' | 'rally' | 'seize' | 'pledge' | 'evade' | 'discard' | 'pilfer' | 'pour' | 'demolish' | 'escape' | 'torch' | 'lift' | 'outfit' | 'gem' | 'lure' | 'toll' | 'shortcut' | 'discovery' | 'sacrament' | 'sacrifice' | 'destroy' | 'drain_grow' | 'crush' | 'quell' | 'quelled' | 'return_lands' | 'search' | 'tide' | 'bind' | 'engulf' | 'harrow' | 'ward' | 'hook' | 'shatter' | 'counter' | 'counter_cast' | 'exile' | 'strike' }>, targetId: string | undefined, t: number) {
+export function applyBondEffect(state: State, world: World, a: Actor, regionId: string, eff: Exclude<ChoiceEffect, { type: 'cast' | 'follow' | 'rally' | 'seize' | 'pledge' | 'evade' | 'discard' | 'pilfer' | 'pour' | 'demolish' | 'escape' | 'torch' | 'lift' | 'outfit' | 'gem' | 'flood' | 'lure' | 'toll' | 'shortcut' | 'discovery' | 'sacrament' | 'sacrifice' | 'destroy' | 'drain_grow' | 'crush' | 'quell' | 'quelled' | 'return_lands' | 'search' | 'tide' | 'bind' | 'engulf' | 'harrow' | 'ward' | 'hook' | 'shatter' | 'counter' | 'counter_cast' | 'exile' | 'strike' }>, targetId: string | undefined, t: number) {
   const r = region(world, regionId);
   if (eff.type === 'damage') return mountainFire(state, world, a, r, eff.amount, targetId, t);
   const target = targetId ? bondTargets(state, world, a, regionId, eff).find((x) => x.id === targetId) : undefined;
@@ -143,10 +144,10 @@ export function fireTargets(state: State, world: World, a: Actor, land: Region) 
 // enough other mountains held.
 export function firesOnBond(state: State, world: World, a: Actor, mountainId: string) {
   const mountain = world.regions.find((r) => r.id === mountainId);
-  if (!mountain || !landTypes(mountain).includes('mountain')) return [];
+  if (!mountain || !landTypes(mountain, state).includes('mountain')) return [];
   const held = (a.bonds ?? []).map((id) => world.regions.find((r) => r.id === id)).filter((r) => r && !state.regions[r.id]?.destroyed) as Region[];
-  const others = held.filter((r) => r.id !== mountainId && landTypes(r).includes('mountain')).length;
-  return held.filter((r) => r.mountainFire && others >= r.mountainFire.others);
+  const others = held.filter((r) => r.id !== mountainId && landTypes(r, state).includes('mountain')).length;
+  return held.filter((r) => r.mountainFire && !flooded(state, world, r) && others >= r.mountainFire.others);
 }
 
 function mountainFire(state: State, world: World, a: Actor, land: Region, amount: number, targetId: string | undefined, t: number) {
@@ -241,10 +242,10 @@ export function bondLand(state: State, world: World, a: Actor, t: number, region
     });
   }
   // The land's own: "enters tapped", "When this land enters, you gain N life".
-  if (r.entersTapped)
+  if (r.entersTapped && !flooded(state, world, r))
     addLog(state, { kind: 'status', text: `${josa(r.name, '은', '는')} 탭된 채 들어왔다. 오늘은 마나를 내지 않는다.`, regions: [r.id], actors: [a.id], t });
   // The land's color sealed against them: it gives them its mana, nothing else.
-  for (const eff of landSealed(state, a, r, t) ? [] : r.onBond) {
+  for (const eff of landSealed(state, a, r, t) || flooded(state, world, r) ? [] : r.onBond) {
     if (eff.type === 'gain_life') {
       gainLife(state, a, eff.amount, t, r.name);
       continue;
@@ -286,7 +287,7 @@ export const FETCH_HOURS = 1;
 // Lands `a` could seek out with the fetch land `fromId`: of its types, not held, not destroyed.
 export function fetchTargets(state: State, world: World, a: Actor, fromId: string) {
   const from = world.regions.find((r) => r.id === fromId);
-  if (!from?.fetch) return [];
+  if (!from?.fetch || flooded(state, world, from)) return [];
   return world.regions.filter(
     (r) => r.id !== from.id && !r.oneLandWith && !a.bonds?.includes(r.id) && !a.exiledLands?.includes(r.id) && !state.regions[r.id]?.destroyed && landTypes(r).some((x) => from.fetch!.types.includes(x)),
   );
@@ -372,8 +373,8 @@ export function upkeepRevive(state: State, world: World, t: number) {
     // Out of time: no upkeep for them today.
     if (holder.dead || outOfTime(state, holder, t)) continue;
     const held = (holder.bonds ?? []).map((id) => world.regions.find((r) => r.id === id)).filter((r) => r && !state.regions[r.id]?.destroyed);
-    const plains = held.filter((r) => landTypes(r!).includes('plains')).length;
-    const land = held.find((r) => r!.upkeepRevive && plains >= r!.upkeepRevive.plains && !landSealed(state, holder, r!, t));
+    const plains = held.filter((r) => landTypes(r!, state).includes('plains')).length;
+    const land = held.find((r) => r!.upkeepRevive && !flooded(state, world, r!) && plains >= r!.upkeepRevive.plains && !landSealed(state, holder, r!, t));
     const back = [...(holder.fallen ?? [])].reverse().map((id) => state.actors[id]).find((x) => x?.dead && !x.left);
     if (!land || !back) continue;
     delete back.dead;

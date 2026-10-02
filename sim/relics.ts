@@ -12,7 +12,7 @@ import type { Tile } from './tiles.ts';
 import type { Actor, Choice, State } from './state.ts';
 import { josa, shortName } from './text.ts';
 import { destroyLand } from './step.ts';
-import { placeName, region } from './world.ts';
+import { landIdOf, placeName, region } from './world.ts';
 import type { World } from './world.ts';
 
 export type Relic = { id: string; label: string };
@@ -31,12 +31,23 @@ export function relicsHere(state: State, world: World, regionId: string, tile: T
       return { id: `item:${x.id}`, label: `${x.name} (${kind}${owner ? `, ${shortName(state.actors[owner]?.name ?? owner)}의 것` : ''})` };
     });
   const auras = present(state, regionId, tile).flatMap((a) => (a.auras ?? []).map((au, i) => ({ id: `aura:${a.id}:${i}:${au.spell}`, label: `${shortName(a.name)}에게 걸린 ${au.name}` })));
-  return [...items, ...auras];
+  // An aura on the land they stand in (Spreading Seas).
+  const land = landIdOf(world, regionId);
+  const fl = state.regions[land]?.flooded;
+  const seas = fl ? [{ id: `flood:${land}`, label: `${region(world, land).name}에 번진 ${world.spells.find((s) => s.id === fl.spell)?.name ?? fl.spell} (땅의 오라)` }] : [];
+  return [...items, ...auras, ...seas];
 }
 
 // Destroys it, if it is still there. Returns whether it did.
 export function crushRelic(state: State, world: World, relicId: string, by: Actor, t: number) {
   const [kind, ...rest] = relicId.split(':');
+  if (kind === 'flood') {
+    const rs = state.regions[rest[0]];
+    if (!rs?.flooded || landIdOf(world, by.region) !== rest[0]) return false;
+    delete rs.flooded;
+    addLog(state, { kind: 'condition', text: `${region(world, rest[0]).name}에 번졌던 바다가 물러갔다 (${shortName(by.name)}의 손에). 땅이 제 모습을 되찾는다.`, regions: [rest[0]], actors: [by.id], t });
+    return true;
+  }
   if (kind === 'item') {
     const def = world.items.find((x) => x.id === rest[0]);
     const s = state.items?.[rest[0]];

@@ -178,12 +178,12 @@ export function foesOf(a: Actor, t: number) {
 // with a land of that type can't strike back at the landwalker, nor fly from it. The type it
 // walks, or null.
 const LANDWALK: Partial<Record<Ability, LandType>> = { swampwalk: 'swamp', forestwalk: 'forest', islandwalk: 'island', mountainwalk: 'mountain' };
-export function landwalked(world: World, attacker: Actor, defender: Actor, t: number): LandType | null {
+export function landwalked(world: World, attacker: Actor, defender: Actor, t: number, state?: State): LandType | null {
   for (const [ability, type] of Object.entries(LANDWALK) as [Ability, LandType][]) {
     if (!hasAbility(attacker, ability, t)) continue;
     const bonded = (defender.bonds ?? []).some((id) => {
       const r = world.regions.find((x) => x.id === id);
-      return !!r && landTypes(r).includes(type);
+      return !!r && landTypes(r, state).includes(type);
     });
     if (bonded) return type;
   }
@@ -225,7 +225,7 @@ export function unblockable(state: State, world: World, attacker: Actor, defende
   // "Can't be blocked" (Aether Figment): no one strikes back; a flyer may still fly off (as from
   // a landwalker).
   if (!flight && hasAbility(attacker, 'unblockable', t)) return '막을 수 없는 적에게';
-  const walked = !flight && landwalked(world, attacker, defender, t);
+  const walked = !flight && landwalked(world, attacker, defender, t, state);
   if (walked) return `${LAND_TYPE_LABELS[walked]}과 이어진 몸이라 ${LAND_TYPE_LABELS[walked]}을 걷는 적에게`;
   // Protection from a color: one of that color can't block them.
   const shield = protectedFrom(attacker, actorColors(state, world, defender), t);

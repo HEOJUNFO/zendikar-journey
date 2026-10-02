@@ -102,9 +102,14 @@ export function manaCapacity(state: State, world: World, a: Holder, t?: number):
   for (const id of a.bonds ?? []) {
     const r = world.regions.find((x) => x.id === id);
     const rs = state.regions[id];
-    if (!r || r.noMana || rs?.destroyed || rs?.conditions.some((c) => c.tapped)) continue;
+    if (!r || (r.noMana && !rs?.flooded) || rs?.destroyed || rs?.conditions.some((c) => c.tapped)) continue;
     if (r.entersTapped && t !== undefined && a.landfalls?.day === gameDay(t) && a.landfalls.regions.includes(id)) continue;
     if (t !== undefined && a.landsTapped?.day === gameDay(t) && a.landsTapped.ids.includes(id)) continue;
+    // The sea spread over it (Spreading Seas): an Island, blue only.
+    if (rs?.flooded) {
+      out.U = (out.U ?? 0) + 1;
+      continue;
+    }
     if (r.fallenMana) {
       const { color, cost } = r.fallenMana;
       const n = (a.fallen ?? []).filter((id) => creatureColors(world.npcs.find((x) => x.id === id) ?? state.tokens?.[id]).includes(color)).length;

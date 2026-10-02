@@ -55,6 +55,7 @@ import { expeditionBlocked } from './expedition.ts';
 import { ascendBlocked, upkeepUnhurt } from './luminarch.ts';
 import { reviveHour } from './revive.ts';
 import { punishHour } from './punish.ts';
+import { applyFlood } from './flood.ts';
 import { applyHarrow } from './harrow.ts';
 import type { HarrowEffect } from './harrow.ts';
 import { applySacrament } from './sacrament.ts';
@@ -7429,6 +7430,41 @@ test('the real Seismic Shudder is taught in Akoum', () => {
   const s = world.spells.find((x) => x.id === 'spl-seismic-shudder')!;
   assert.equal(s.learnAt, 'loc-akoum');
   assert.deepEqual(s.effects, [{ type: 'damage_grounded', amount: 1 }]);
+});
+
+test('Spreading Seas: the caster picks a land someone there holds; it is an Island for all bonded with it (blue mana, islandwalk), the caster learns a secret; crushed, it comes back', () => {
+  const seas: RawEntity = { id: 'spl-sp', kind: 'spell', name: '번지는 바다', status: 'canon', sim: { cost: '{0}', speed: 'sorcery', learn_at: 'loc-a', target: 'self', effects: [{ type: 'flood_land' }] } };
+  const crush: RawEntity = { id: 'spl-rc', kind: 'spell', name: '유물 분쇄', status: 'canon', sim: { cost: '{0}', speed: 'instant', learn_at: 'loc-a', target: 'self', effects: [{ type: 'destroy_relics', count: 1 }] } };
+  const world = fixture([seas, crush, npc('chr-c', npcSim('loc-b')), npc('chr-x', npcSim('loc-b')), npc('chr-w', { ...npcSim('loc-b', 'work', [1, 1]), abilities: ['islandwalk'] })]);
+  const state = newState(world, { seed: 1, mode: 'observer' });
+  const [c, x, w] = ['chr-c', 'chr-x', 'chr-w'].map((id) => state.actors[id]);
+  for (const a of [x, w]) a.tile = c.tile;
+  x.bonds = ['loc-b'];
+  c.spells = ['spl-sp', 'spl-rc'];
+  const forest = region(world, 'loc-b');
+  assert.deepEqual(landTypes(forest, state), ['forest']);
+  assert.equal(manaAvailable(state, world, x, state.minutes).G, 1);
+  assert.equal(landwalked(world, w, x, state.minutes, state), null);
+  castSpell(state, world, c, 'spl-sp', c.id, false, state.minutes);
+  const owed = state.choices!.find((ch) => ch.effect.type === 'flood')!;
+  assert.deepEqual(owed.candidates, ['loc-b']);
+  assert.ok(applyFlood(state, world, c, 'loc-b', '번지는 바다', state.minutes));
+  assert.deepEqual(landTypes(forest, state), ['island']);
+  assert.deepEqual(landTypes(forest), ['forest']);
+  assert.equal(manaAvailable(state, world, x, state.minutes).U, 1);
+  assert.equal(manaAvailable(state, world, x, state.minutes).G ?? 0, 0);
+  assert.equal(landwalked(world, w, x, state.minutes, state), 'island');
+  assert.ok(texts(state).some((l) => l.startsWith('번지는 바다:') && (l.includes('알게') || l.includes('알아낼'))));
+  assert.ok(relicsHere(state, world, 'loc-b', c.tile).some((r) => r.id === 'flood:loc-b'));
+  assert.ok(crushRelic(state, world, 'flood:loc-b', c, state.minutes));
+  assert.deepEqual(landTypes(forest, state), ['forest']);
+});
+
+test('the real Spreading Seas is taught at Sea Gate', () => {
+  const world = loadWorld();
+  const s = world.spells.find((x) => x.id === 'spl-spreading-seas')!;
+  assert.equal(s.learnAt, 'loc-sea-gate');
+  assert.deepEqual(s.effects, [{ type: 'flood_land' }]);
 });
 
 test('the real Nimbus Wings is taught at Kabira Crossroads: the one it is cast on gets +1/+2 and wings', () => {
