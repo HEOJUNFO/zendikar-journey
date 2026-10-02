@@ -20,6 +20,7 @@ sim:
     마음에 드는 이라면 따라다니며 불을 빌려준다.
   goal: 불을 던진다. 재미있는 일을 찾는다.
   pt: [2, 2]
+  types: [goblin]          # [카드] 고블린 (ZEN-154 에서 더함: 굴 선동꾼이 부른다)
   mana: { R: 3 }           # 카드 {2}{R}
   needs: [energy, hunger, coin]
   enter_damage: { amount: 2, kicker: "{1}{R}" }   # [카드] 킥커 {1}{R}, 들어올 때 킥커했다면 생물에게 피해 2 (매일 첫 도착)

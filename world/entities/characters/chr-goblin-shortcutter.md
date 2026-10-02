@@ -20,6 +20,7 @@ sim:
     뜻이 맞으면 따른다.
   goal: 지름길로 앞질러 가서 먼저 챙긴다.
   pt: [2, 1]
+  types: [goblin]          # [카드] 고블린 (ZEN-154 에서 더함: 굴 선동꾼이 부른다)
   mana: { R: 2 }           # 카드 {1}{R}
   needs: [energy, hunger, coin]
   enter_no_block: true     # [카드] 들어올 때 대상 생물은 이번 턴 막을 수 없다

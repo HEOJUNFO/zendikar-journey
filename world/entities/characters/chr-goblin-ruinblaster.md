@@ -8,6 +8,7 @@ status: canon
 sources: [ZEN-127]
 tags: [고블린, 주술사, 적색]
 links:
+  - { to: chr-warren-instigator, rel: 같은 둥지의 고블린 }
   - { to: law-mana-colors, rel: 적색의 존재 }
   - { to: loc-teeth-of-akoum, rel: 사는 산맥 }
   - { to: chr-tuktuk-grunts, rel: 같은 산맥의 고블린들 }
@@ -21,6 +22,7 @@ sim:
     성미가 급하고 발이 빠르다. 겁은 많지만 폭발 앞에서는 겁을 잊는다.
   goal: 크고 이름난 것을 터뜨려 고블린들 사이에 이름을 떨친다.
   pt: [2, 1]
+  types: [goblin]          # [카드] 고블린 (ZEN-154 에서 더함: 굴 선동꾼이 부른다)
   mana: { R: 3 }           # 카드 {2}{R}
   needs: [energy, hunger, coin]
   abilities: [haste]       # [카드] 속공 → 이동 시간 절반

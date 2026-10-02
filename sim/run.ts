@@ -37,6 +37,7 @@ import { applyFlood, floodOptions } from './flood.ts';
 import { applyGust, gustOptions } from './owl.ts';
 import { eventDefOf, trapsHeld } from './snare.ts';
 import { hexmagesOf, hexTargets } from './hexmage.ts';
+import { applyInstigate } from './instigator.ts';
 import type { GustEffect } from './owl.ts';
 import { applyGem, expeditionBlocked, expeditionOf, expeditionReward } from './expedition.ts';
 import { ascendBlocked, ascensionOf } from './luminarch.ts';
@@ -1034,6 +1035,19 @@ async function choices(state: State, world: World, llm: Llm) {
         console.warn(`pick (outfit) for ${c.by} failed:`, e);
       }
       if (pick) applyOutfit(state, world, source, pick, state.minutes);
+      continue;
+    }
+    // Warren Instigator, drawing blood: a goblin of the world to call to its side, or none.
+    if (c.effect.type === 'instigate') {
+      const source = state.actors[c.effect.source];
+      if (!source || !llm.choose) continue;
+      let pick: string | null = null;
+      try {
+        pick = await llm.choose({ world, state, npc, candidates, optional: true, what: `${source.id === by.id ? '당신' : shortName(source.name)}이(가) 싸움에서 피를 보고 외친다. 섬기는 이 없는 세계의 고블린 하나를 곁으로 불러 당신의 권속으로 삼을 수 있다. 아무도 부르지 않을 수도 있다` });
+      } catch (e) {
+        console.warn(`choose (instigate) for ${c.by} failed:`, e);
+      }
+      if (pick && candidates.some((x) => x.id === pick)) applyInstigate(state, world, source, pick, state.minutes);
       continue;
     }
     // Kor Aeronaut, arriving kicked: whom its controller has it lift into the air, or no one.

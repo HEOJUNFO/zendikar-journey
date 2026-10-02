@@ -59,6 +59,7 @@ import { punishHour } from './punish.ts';
 import { applyFlood } from './flood.ts';
 import { setTrapBlocked } from './snare.ts';
 import { hex, hexBlocked, hexNear } from './hexmage.ts';
+import { applyInstigate } from './instigator.ts';
 import { withPositions } from './wander.ts';
 import { applyHarrow } from './harrow.ts';
 import type { HarrowEffect } from './harrow.ts';
@@ -7616,6 +7617,33 @@ test('the real Vampire Hexmage lives in Malakir: a talking vampire with first st
   const def = npcDef(state, world, h.id)!;
   assert.ok(def.sacUncounter && def.creature === 'cre-vampire');
   assert.ok(hasAbility(h, 'first_strike', state.minutes));
+});
+
+test('Warren Instigator: drawing blood in a fight, its master may call a goblin of the world who serves no one; it comes to its side and serves the master', () => {
+  const world = fixture([npc('chr-w', { ...npcSim('loc-a', 'work', [1, 1]), abilities: ['double_strike'], types: ['goblin'], instigate: true }), npc('chr-m', npcSim('loc-a')), npc('chr-x', npcSim('loc-a', 'work', [0, 9])), npc('chr-g', { ...npcSim('loc-b'), types: ['goblin'] }), npc('chr-taken', { ...npcSim('loc-b'), types: ['goblin'] })]);
+  const state = newState(world, { seed: 1, mode: 'observer' });
+  const [w, m, x, g, taken] = ['chr-w', 'chr-m', 'chr-x', 'chr-g', 'chr-taken'].map((id) => state.actors[id]);
+  for (const a of [m, x]) a.tile = w.tile;
+  w.master = m.id;
+  taken.master = 'chr-x';
+  clash(state, world, w, x, state.minutes);
+  const c = state.choices!.find((ch) => ch.effect.type === 'instigate')!;
+  assert.equal(c.by, 'chr-m');
+  assert.deepEqual(c.candidates, ['chr-g']);
+  applyInstigate(state, world, w, 'chr-g', state.minutes);
+  assert.equal(g.region, 'loc-a');
+  assert.deepEqual(g.tile, w.tile);
+  assert.equal(g.master, 'chr-m');
+});
+
+test('the real Warren Instigator lives on the Teeth of Akoum; the world\'s goblins are goblins', () => {
+  const world = loadWorld();
+  const state = newState(world, { seed: 1, mode: 'observer' });
+  const w = state.actors['chr-warren-instigator'];
+  assert.equal(w?.region, 'loc-teeth-of-akoum');
+  assert.ok(npcDef(state, world, w.id)?.instigate && hasAbility(w, 'double_strike', state.minutes));
+  const goblins = world.npcs.filter((n) => n.types?.includes('goblin')).map((n) => n.id).sort();
+  assert.deepEqual(goblins, ['chr-goblin-ruinblaster', 'chr-goblin-shortcutter', 'chr-torch-slinger', 'chr-tuktuk-grunts', 'chr-warren-instigator']);
 });
 
 test('the real Nimbus Wings is taught at Kabira Crossroads: the one it is cast on gets +1/+2 and wings', () => {

@@ -19,9 +19,9 @@ export type Ability = (typeof ABILITIES)[number];
 export const ABILITY_LABELS: Record<Ability, string> = { fly: '비행', aquatic: '물에 삶', lifelink: '생명연결', vigilance: '경계', haste: '속공', trample: '돌진', defender: '수비대', shroud: '방어막', swampwalk: '늪걷기', forestwalk: '숲걷기', islandwalk: '섬걷기', indestructible: '파괴불가', intimidate: '위협', first_strike: '선제공격', double_strike: '이중 타격', cant_block: '막지 못함', bite: '물어뜯기', deathtouch: '죽음의 손길', reach: '도달', unblockable: '막을 수 없음', mountainwalk: '산걷기', nonbasic_landwalk: '이름 있는 땅 걷기' };
 // Creature types a card may name ("destroy target Angel"), and `artifact` for an artifact
 // creature (마법물체 생물: it may block an intimidating one).
-export const CREATURE_TYPES = ['angel', 'demon', 'artifact', 'elf', 'merfolk', 'kor'] as const;
+export const CREATURE_TYPES = ['angel', 'demon', 'artifact', 'elf', 'merfolk', 'kor', 'goblin'] as const;
 export type CreatureType = (typeof CREATURE_TYPES)[number];
-export const CREATURE_TYPE_LABELS: Record<CreatureType, string> = { angel: '천사', demon: '악마', artifact: '마법물체', elf: '엘프', merfolk: '인어', kor: '코르' };
+export const CREATURE_TYPE_LABELS: Record<CreatureType, string> = { angel: '천사', demon: '악마', artifact: '마법물체', elf: '엘프', merfolk: '인어', kor: '코르', goblin: '고블린' };
 
 export const TERRAIN_IDS = [
   'grassland',
@@ -492,6 +492,10 @@ export const CharacterSimSchema = z.strictObject({
   // "Sacrifice this creature: Remove all counters from target permanent" (Vampire Hexmage):
   // sim/hexmage.ts.
   sac_uncounter: z.boolean().default(false),
+  // "Whenever this deals damage to an opponent, you may put a Goblin creature card from your hand
+  // onto the battlefield" (Warren Instigator): its controller may call a goblin of the world who
+  // serves no one to its side (sim/instigator.ts).
+  instigate: z.boolean().default(false),
   // "{T}: Draw a card for each Ally you control" (Sea Gate Loremaster): a power of whoever
   // controls them (sim/loremaster.ts).
   tap_draw_allies: z.boolean().default(false),
@@ -1074,6 +1078,7 @@ export type NpcDef = {
   revivesAfter?: number;
   regenerate?: string;
   sacUncounter?: boolean;
+  instigate?: boolean;
   landfallDrain?: { life: number; counters: number };
   landfallLure?: boolean;
   landfallReturn?: boolean;
@@ -1297,7 +1302,7 @@ export function buildWorld(entities: RawEntity[]): { world: World; errors: strin
         err(e.id, `sim 오류: ${issues(sim.error)}`);
         continue;
       }
-      const { knows_colors, activated, wins_at_life, extra_combat, pump, empty_hand_pump, attack_pump, discard_on_hit, landfall_token, landfall_seize, landfall_lose, landfall_grant, landfall_life, landfall_mana, revives_after, regenerate, sac_uncounter, landfall_drain, landfall_lure, landfall_return, drain_on_join, haste_low_life, enter_destroy, enter_drain, enter_draw, enter_search, enter_shatter, enter_exile, enter_tap, enter_damage, enter_grant, enter_equip, enter_return, enter_tap_many, enter_pump, enter_sacrifice, enter_no_block, enter_reveal, upkeep_return_land, extra_lands, reveal_top, tap_foe, tap_draw_allies, engulf, tap_mana, upkeep_burn, counter_tokens, follows_only, cant_block_unless, tap_shield, tap_loot, tap_search, equip_anthem, hit_sacrifice_land, name, home_pos, ...rest } = sim.data;
+      const { knows_colors, activated, wins_at_life, extra_combat, pump, empty_hand_pump, attack_pump, discard_on_hit, landfall_token, landfall_seize, landfall_lose, landfall_grant, landfall_life, landfall_mana, revives_after, regenerate, sac_uncounter, instigate, landfall_drain, landfall_lure, landfall_return, drain_on_join, haste_low_life, enter_destroy, enter_drain, enter_draw, enter_search, enter_shatter, enter_exile, enter_tap, enter_damage, enter_grant, enter_equip, enter_return, enter_tap_many, enter_pump, enter_sacrifice, enter_no_block, enter_reveal, upkeep_return_land, extra_lands, reveal_top, tap_foe, tap_draw_allies, engulf, tap_mana, upkeep_burn, counter_tokens, follows_only, cant_block_unless, tap_shield, tap_loot, tap_search, equip_anthem, hit_sacrifice_land, name, home_pos, ...rest } = sim.data;
 
       world.npcs.push({
         id: e.id,
@@ -1316,6 +1321,7 @@ export function buildWorld(entities: RawEntity[]): { world: World; errors: strin
         ...(revives_after ? { revivesAfter: revives_after } : {}),
         ...(regenerate ? { regenerate } : {}),
         ...(sac_uncounter ? { sacUncounter: true } : {}),
+        ...(instigate ? { instigate: true } : {}),
         ...(enter_destroy
           ? { enterDestroy: typeof enter_destroy === 'string' ? { kind: enter_destroy } : { kind: enter_destroy.kind, ...(enter_destroy.kicker ? { kicker: parseManaCost(enter_destroy.kicker)!, kickerText: enter_destroy.kicker } : {}), ...(enter_destroy.flying ? { flying: true } : {}) } }
           : {}),

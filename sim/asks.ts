@@ -15,6 +15,7 @@ import { applyOutfit, outfitOptions } from './outfitter.ts';
 import { applyGem } from './expedition.ts';
 import { applyFlood, floodOptions } from './flood.ts';
 import { applyGust, gustOptions } from './owl.ts';
+import { applyInstigate } from './instigator.ts';
 import { applyToll } from './toll.ts';
 import { applyShortcut } from './shortcut.ts';
 import { applySacrament } from './sacrament.ts';
@@ -56,6 +57,7 @@ export function askText(state: State, world: World, c: Choice) {
   if (c.effect.type === 'cast' && c.effect.second) return `${world.spells.find((s) => s.id === (c.effect as { spell: string }).spell)?.name ?? ''}의 둘째 대상: 자신이나 곁의 권속 가운데 누구에게?`;
   if (c.effect.type === 'cast') return `${world.spells.find((s) => s.id === (c.effect as { spell: string }).spell)?.name ?? ''}을(를) 하나 더, 값 없이 걸 수 있다. 누구에게?`;
   if (c.effect.type === 'sacrifice') return `${state.items?.[c.effect.item]?.name ?? c.effect.item}이(가) 오늘의 제물을 요구한다. 부리는 이(당신 자신도) 가운데 누구를 바칠까? (바친 이는 죽는다) 아니면 그것을 무너뜨려 내놓는다.`;
+  if (c.effect.type === 'instigate') return `${shortName(state.actors[c.effect.source]?.name ?? '')}이(가) 피를 보고 외친다. 섬기는 이 없는 세계의 고블린 하나를 곁으로 불러 권속으로 삼을 수 있다. 누구를?`;
   if (c.effect.type === 'gust') return `${shortName(state.actors[c.effect.source]?.name ?? '')}이(가) 이곳에 들어섰다. ${c.effect.paid ? '' : `힘(${npcDef(state, world, c.effect.source)?.enterTapMany?.kickerText ?? ''})을 들여 `}폭풍으로 이 자리의 하나를 묶거나 누군가의 땅을 흩을 수 있다 (남은 수 ${c.effect.left}). 무엇을? 그만둘 수도 있다.`;
   if (c.effect.type === 'flood') return `${c.effect.spell}: 이 자리의 누군가 쥐고 있는 땅 하나에 바다를 번지게 한다 (섬이 되어 청 마나만 내고 제 힘을 잃는다). 어느 땅에?`;
   if (c.effect.type === 'demolish') return `${c.effect.spell}: 이 자리의 마법물체 하나나 땅 하나를 부순다 (땅은 7일 동안 누구에게도 아무것도 내주지 않는다). 무엇을?`;
@@ -224,6 +226,9 @@ export function answerAsk(state: State, world: World, pick: string | null, t: nu
     const shown = c.candidates.filter((x) => hand.includes(x));
     const card = pick && shown.includes(pick) ? pick : shown[0];
     if (card) letGo(state, world, target, card, t);
+  } else if (c.effect.type === 'instigate') {
+    const source = state.actors[c.effect.source];
+    if (source && pick && c.candidates.includes(pick)) applyInstigate(state, world, source, pick, t);
   } else if (c.effect.type === 'gust') {
     const next = applyGust(state, world, p, c.effect, pick, t);
     if (next) (state.asks ??= []).unshift(next);

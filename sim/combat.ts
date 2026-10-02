@@ -11,6 +11,7 @@ import { controlsKind, masterOf, releaseRetainer, retainersOf } from './retainer
 import { releaseItems } from './items.ts';
 import { owesDiscard } from './discard.ts';
 import { gembladesHit } from './expedition.ts';
+import { instigate } from './instigator.ts';
 import { hooks } from './equipment.ts';
 import { shielded } from './tapper.ts';
 import { harrowOwed } from './harrow.ts';
@@ -394,6 +395,8 @@ export function clash(state: State, world: World, attacker: Actor, defender: Act
       if (!controller.dead) doubleLife(state, controller, t, `${shortName(x.name)}의 ${aura.name}`);
     }
   }
+  // Warren Instigator: drawing blood, it calls a goblin of the world.
+  for (const [x, dealt] of [[attacker, dealtA], [defender, dealtD]] as const) if (dealt > 0) instigate(state, world, x, t);
   // Quest for the Gemblades: combat damage to a creature (no planeswalker).
   for (const [x, dealt, to] of [[attacker, dealtA, defender], [defender, dealtD, attacker]] as const) if (dealt > 0 && to.loyalty === undefined) gembladesHit(state, world, x, t);
   // "Deals combat damage to a player, that player discards a card": one who holds a spell lets one go.
