@@ -60,6 +60,8 @@ export type Actor = {
   bonusMana?: { day: number; any: number };
   // The last game day they lost life or took damage (Luminarch Ascension).
   hurtDay?: number;
+  // How much life they lost and damage they took that day (Bloodchief Ascension).
+  hurtToday?: { day: number; amount: number };
   // When they last arrived somewhere (an enter event may answer it at that hour).
   arrivedAt?: number;
   // Spells they drew (came to hold at random) this turn, and the events that already answered
@@ -355,6 +357,8 @@ export type State = {
   trapCount?: number;
   // Tanglesap: tiles where combat damage of those without trample is prevented until `until`.
   fogs?: { region: string; tile?: Tile; until: number; by: string }[];
+  // Each one's graveyard count as last seen (Bloodchief Ascension, sim/bloodascension.ts).
+  buriedSeen?: Record<string, { day: number; count: number }>;
   // Deaths since the hour began: who and where (Blade of the Bloodchief, sim/bloodchief.ts).
   deaths?: { id: string; region: string; tile?: Tile }[];
   // Life gained since the hour began: who and where (sim/punish.ts).
@@ -587,6 +591,13 @@ export function outOfTime(state: State, a: Actor, t = state.minutes) {
 }
 
 // `n` more went into `a`'s graveyard at `t` (sim/state.ts `buried`).
+// `a` lost life or took damage at `t` (Luminarch Ascension's day, Bloodchief Ascension's tally).
+export function markHurt(a: Actor, amount: number, t: number) {
+  const day = gameDay(t);
+  a.hurtDay = day;
+  a.hurtToday = { day, amount: (a.hurtToday?.day === day ? a.hurtToday.amount : 0) + amount };
+}
+
 export function buryCount(a: Actor, n: number, t: number) {
   if (n <= 0) return;
   const day = gameDay(t);

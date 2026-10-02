@@ -5,9 +5,10 @@ name: 생명
 name_en: Life
 summary: 생명은 목숨의 몫이다. 잠으로 차는 기운(기력)과 달리 저절로 돌아오지 않고, 다하면 죽는다
 status: canon
-sources: [ZEN-111, ZEN-12, ZEN-105, ZEN-81, ZEN-6, ZEN-200, ZEN-210, ZEN-214, ZEN-215, ZEN-216, ZEN-217, ZEN-222, ZEN-224, ZEN-24, ZEN-100, ZEN-107, ZEN-30, ZEN-142]
+sources: [ZEN-111, ZEN-12, ZEN-105, ZEN-81, ZEN-6, ZEN-200, ZEN-210, ZEN-214, ZEN-215, ZEN-216, ZEN-217, ZEN-222, ZEN-224, ZEN-24, ZEN-100, ZEN-107, ZEN-30, ZEN-142, ZEN-82]
 tags: [규칙, 생명]
 links:
+  - { to: itm-bloodchief-ascension, rel: 남의 무덤이 찰 때 생명을 빨아들임 }
   - { to: spl-punishing-fire, rel: 남이 생명을 얻을 때 되돌아오는 주문 }
   - { to: chr-ondu-cleric, rel: 동료가 들 때 동료 수만큼 생명 }
   - { to: loc-akoum-refuge, rel: 들어서면 생명 }

@@ -903,6 +903,10 @@ export const ItemSimSchema = z.strictObject({
         // while this has N or more, you may copy that spell" (Pyromancer Ascension):
         // sim/pyromancer.ts.
         z.strictObject({ type: z.literal('spell_quest'), counters: z.number().int().positive() }),
+        // "At each end step, if an opponent lost 2 or more life this turn, a quest counter; with N or
+        // more, whenever a card goes into an opponent's graveyard, they lose `drain` life and you
+        // gain as much" (Bloodchief Ascension): sim/bloodascension.ts.
+        z.strictObject({ type: z.literal('bloodchief'), counters: z.number().int().positive(), drain: z.number().int().positive() }),
         // "<cost>: Create a P/T <creature> token with <abilities>. Activate only if this has N or
         // more quest counters" (Luminarch Ascension): its owner pays, whenever they will, and it
         // serves them (sim/luminarch.ts).

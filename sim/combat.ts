@@ -20,7 +20,7 @@ import { actorColors, COLOR_LABELS, manaAvailable, parseManaCost, payMana, planP
 import { HUNT_HUNGER, KILL_FEED, KO_ACTIVITY, KO_HOURS } from './rules.ts';
 import { powersSealed } from './seal.ts';
 import { landsOfType } from './spells.ts';
-import { addLog, awayText, buryCount, hasAbility, needsOf, npcDef, outOfTime, present, protectedFrom, ptOf, random, together } from './state.ts';
+import { addLog, awayText, buryCount, hasAbility, markHurt, needsOf, npcDef, outOfTime, present, protectedFrom, ptOf, random, together } from './state.ts';
 import type { Actor, State } from './state.ts';
 import { hasPowers, LAND_TYPE_LABELS, landTypes } from './world.ts';
 import type { Ability, LandType, World } from './world.ts';
@@ -40,7 +40,7 @@ export function dealDamage(state: State, world: World, a: Actor, amount: number,
   // A ward (Noble Vestige) takes what it can first.
   amount = shielded(state, a, amount, t);
   if (amount <= 0) return false;
-  a.hurtDay = gameDay(t);
+  markHurt(a, amount, t);
   if (a.loyalty !== undefined) {
     a.loyalty = Math.max(nonlethal ? 1 : 0, a.loyalty - amount);
     addLog(state, { kind: 'combat', text: `${josa(shortName(a.name), '이', '가')} 피해 ${amount}로 기세가 꺾였다 (기세 ${a.loyalty}).`, regions: [a.region], actors: [a.id] });

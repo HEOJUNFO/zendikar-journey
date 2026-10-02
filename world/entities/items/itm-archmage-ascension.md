@@ -8,6 +8,7 @@ status: canon
 sources: [ZEN-42]
 tags: [부여마법, 승천, 청색, 탐색]
 links:
+  - { to: itm-bloodchief-ascension, rel: 같은 승천 }
   - { to: itm-pyromancer-ascension, rel: 같은 승천 }
   - { to: itm-luminarch-ascension, rel: 같은 승천 }
   - { to: law-permanents, rel: 부여마법 }

@@ -43,6 +43,7 @@ import { nowhereHour } from './nowhere.ts';
 import { reviveHour } from './revive.ts';
 import { punishHour } from './punish.ts';
 import { bloodchiefHour } from './bloodchief.ts';
+import { bloodchiefDrain, upkeepBloodchief } from './bloodascension.ts';
 import { SET_TRAP_HOURS, setTrap, setTrapBlocked } from './snare.ts';
 import { HEX_HOURS, hex, hexBlocked } from './hexmage.ts';
 import { FLING_HOURS, fling, torchesOf } from './fling.ts';
@@ -78,6 +79,7 @@ export function step(state: State, placed: World) {
   reviveHour(state, placed, t);
   punishHour(state, placed, t);
   bloodchiefHour(state, placed, t);
+  bloodchiefDrain(state, placed, t);
   const world = withPositions(state, placed);
   startDay(state, world, t);
   markSealed(state, world, t);
@@ -155,6 +157,7 @@ function startDay(state: State, world: World, t: number) {
     upkeepOracle(state, world, t);
     upkeepQuest(state, world, t);
     upkeepUnhurt(state, world, t);
+    upkeepBloodchief(state, world, t);
     upkeepQuell(state, world, t);
     upkeepPossessions(state, t);
   }

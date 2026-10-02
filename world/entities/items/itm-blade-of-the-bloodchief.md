@@ -8,6 +8,7 @@ status: canon
 sources: [ZEN-196]
 tags: [마법물체, 장비, 무색, 흡혈귀]
 links:
+  - { to: itm-bloodchief-ascension, rel: 같은 영지의 승천 }
   - { to: law-permanents, rel: 마법물체 (장비) }
   - { to: loc-ghet-estate, rel: 놓여 있는 곳 (흡혈귀 혈족의 영지) }
   - { to: cre-vampire, rel: 흡혈귀가 들면 갑절 }

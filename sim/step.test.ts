@@ -20,7 +20,7 @@ import { actorColors, ANY_COLOR, COLORS, formatMana, manaAvailable, manaCapacity
 import { MAX_TALKS_PER_DAY, canPledge, usableAbilities, volleyShares, burnTargets } from './run.ts';
 import { destroyLand, eligibleGmEvents, moveHours, startTravel, step, travelBlocked } from './step.ts';
 import { gainLife, lifeOf, loseLife } from './life.ts';
-import { awayText, buriedToday, hasAbility, here, needsOf, newState, npcDef, outOfTime, PLAYER_ID, present, protectedFrom, ptOf, syncWorld, targetable, together } from './state.ts';
+import { awayText, buriedToday, buryCount, hasAbility, here, needsOf, newState, npcDef, outOfTime, PLAYER_ID, present, protectedFrom, ptOf, syncWorld, targetable, together } from './state.ts';
 import { foresightText } from './foresight.ts';
 import { nodeAt } from '../web/view.ts';
 import { crushRelic, relicsHere } from './relics.ts';
@@ -61,6 +61,7 @@ import { setTrapBlocked } from './snare.ts';
 import { hex, hexBlocked, hexNear } from './hexmage.ts';
 import { applyInstigate } from './instigator.ts';
 import { bloodchiefHour } from './bloodchief.ts';
+import { bloodchiefDrain, upkeepBloodchief } from './bloodascension.ts';
 import { withPositions } from './wander.ts';
 import { applyHarrow } from './harrow.ts';
 import type { HarrowEffect } from './harrow.ts';
@@ -7289,6 +7290,37 @@ test('the real Zektar Shrine Expedition stands high in Shatterskull Pass', () =>
   const x = world.items.find((i) => i.id === 'itm-zektar-shrine-expedition')!;
   assert.equal(x.at, 'loc-shatterskull-pass');
   assert.ok(x.effects.some((e) => e.type === 'expedition' && e.token?.creature === 'cre-fire-elemental'));
+});
+
+test('Bloodchief Ascension: a counter at midnight when another in its owner\'s land bled 2 or more; with three, each thing into such a one\'s graveyard drains 2 life to the owner', () => {
+  const item: RawEntity = { id: 'itm-ba', kind: 'item', name: '혈족장의 승천', status: 'canon', sim: { card_type: 'enchantment', cost: '{0}', at: 'loc-a', effects: [{ type: 'bloodchief', counters: 3, drain: 2 }] } };
+  const world = fixture([item, npc('chr-o', npcSim('loc-a')), npc('chr-x', npcSim('loc-a', 'work', [1, 9])), npc('chr-far', npcSim('loc-b'))]);
+  const state = newState(world, { seed: 1, mode: 'observer' });
+  const [o, x, far] = ['chr-o', 'chr-x', 'chr-far'].map((id) => state.actors[id]);
+  state.items = { 'itm-ba': { name: '혈족장의 승천', owner: o.id, counters: 0 } };
+  const t = state.minutes;
+  dealDamage(state, world, far, 3, t, '시험', true);
+  upkeepBloodchief(state, world, untapTime(t));
+  assert.equal(state.items['itm-ba'].counters, 0);
+  dealDamage(state, world, x, 1, t, '시험', true);
+  loseLife(state, x, 1, t, '시험');
+  upkeepBloodchief(state, world, untapTime(t));
+  assert.equal(state.items['itm-ba'].counters, 1);
+  state.items['itm-ba'].counters = 3;
+  const [ox, xx] = [lifeOf(o), lifeOf(x)];
+  buryCount(x, 2, t);
+  bloodchiefDrain(state, world, t);
+  assert.equal(lifeOf(x), xx - 4);
+  assert.equal(lifeOf(o), ox + 4);
+  bloodchiefDrain(state, world, t);
+  assert.equal(lifeOf(o), ox + 4);
+});
+
+test('the real Bloodchief Ascension stands in the Ghet estate', () => {
+  const world = loadWorld();
+  const x = world.items.find((i) => i.id === 'itm-bloodchief-ascension')!;
+  assert.equal(x.at, 'loc-ghet-estate');
+  assert.deepEqual(x.effects, [{ type: 'bloodchief', counters: 3, drain: 2 }]);
 });
 
 test('the real Ior Ruin Expedition stands by Glasspool, a lake of Akoum and a basic island', () => {

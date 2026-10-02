@@ -6,7 +6,7 @@
 // fights, they are knocked out and come to with 1 life.
 import { gameDay } from './clock.ts';
 import { die, knockOut } from './combat.ts';
-import { addLog } from './state.ts';
+import { addLog, markHurt } from './state.ts';
 import type { Actor, State } from './state.ts';
 import { josa, shortName, toward } from './text.ts';
 
@@ -31,7 +31,7 @@ export function loseLife(state: State, a: Actor, amount: number, t: number, caus
   const life = lifeOf(a);
   if (a.dead || amount <= 0) return;
   a.life = life - amount;
-  a.hurtDay = gameDay(t);
+  markHurt(a, amount, t);
   addLog(state, {
     kind: 'effect',
     text: `${josa(shortName(a.name), '이', '가')} ${cause}에 생명 ${amount}을 잃었다 (생명 ${a.life}).`,
