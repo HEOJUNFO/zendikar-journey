@@ -22,7 +22,7 @@ import { remember } from './relations.ts';
 import { copyable, replicate } from './replicate.ts';
 import { holdCast, reactionSpell } from './counter.ts';
 import { controlledCreatures, creatureOf, masterOf, retainersOf, seize } from './retainers.ts';
-import { addLog, buryCount, npcDef, present, ptOf, targetable, together, untargetableText } from './state.ts';
+import { addLog, buryCount, hasAbility, npcDef, present, ptOf, targetable, together, untargetableText } from './state.ts';
 import type { Actor, State } from './state.ts';
 import { sealedBy, sealText } from './seal.ts';
 import { josa, shortName } from './text.ts';
@@ -335,6 +335,10 @@ export function resolveSpell(state: State, world: World, a: Actor, spellId: stri
     } else if (eff.type === 'harrow') {
       const owed = harrowOwed(state, world, a, { type: 'harrow', spell: s.name, left: eff.count, given: false }, t);
       if (owed) (state.choices ??= []).push(owed);
+    } else if (eff.type === 'damage_grounded') {
+      const grounded = present(state, a.region, a.tile).filter((x) => x.loyalty === undefined && !hasAbility(x, 'fly', t));
+      addLog(state, { kind: 'event', text: `${s.name}: 땅이 크게 떨려 솟구친다. 날지 못하는 이들이 내동댕이쳐진다.`, regions: [a.region], actors: [a.id, ...grounded.map((x) => x.id)], t });
+      for (const x of grounded) dealDamage(state, world, x, eff.amount, t, s.name, false, a);
     } else if (eff.type === 'destroy_all') {
       judgment(state, world, a, s.name, t);
     } else if (eff.type === 'destroy_relics') {

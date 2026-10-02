@@ -7410,6 +7410,27 @@ test('the real River Boa coils by the Umara river: islandwalk and {G} regenerati
   assert.ok(def.beast && hasAbility(b, 'islandwalk', state.minutes));
 });
 
+test('Seismic Shudder: 1 to everyone on the caster\'s tile who can\'t fly, the caster too; the flying and the planeswalker untouched', () => {
+  const shudder: RawEntity = { id: 'spl-ss', kind: 'spell', name: '지진의 떨림', status: 'canon', sim: { cost: '{0}', speed: 'instant', learn_at: 'loc-a', target: 'self', effects: [{ type: 'damage_grounded', amount: 1 }] } };
+  const world = fixture([shudder, npc('chr-c', npcSim('loc-a', 'work', [2, 3])), npc('chr-g', npcSim('loc-a', 'work', [1, 1])), npc('chr-f', { ...npcSim('loc-a', 'work', [1, 1]), abilities: ['fly'] }), npc('chr-pw', { ...npcSim('loc-a'), loyalty: 3 })]);
+  const state = newState(world, { seed: 1, mode: 'observer' });
+  const [c, g, f, pw] = ['chr-c', 'chr-g', 'chr-f', 'chr-pw'].map((id) => state.actors[id]);
+  for (const x of [g, f, pw]) x.tile = c.tile;
+  c.spells = ['spl-ss'];
+  castSpell(state, world, c, 'spl-ss', c.id, false, state.minutes);
+  assert.equal(woundsOf(c, state.minutes), 1);
+  assert.ok(g.dead);
+  assert.ok(!f.dead && woundsOf(f, state.minutes) === 0);
+  assert.equal(pw.loyalty, 3);
+});
+
+test('the real Seismic Shudder is taught in Akoum', () => {
+  const world = loadWorld();
+  const s = world.spells.find((x) => x.id === 'spl-seismic-shudder')!;
+  assert.equal(s.learnAt, 'loc-akoum');
+  assert.deepEqual(s.effects, [{ type: 'damage_grounded', amount: 1 }]);
+});
+
 test('the real Nimbus Wings is taught at Kabira Crossroads: the one it is cast on gets +1/+2 and wings', () => {
   const world = loadWorld();
   const s = world.spells.find((x) => x.id === 'spl-nimbus-wings')!;

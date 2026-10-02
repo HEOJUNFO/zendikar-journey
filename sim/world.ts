@@ -749,6 +749,9 @@ export const SpellSimSchema = z.strictObject({
         // "Destroy all creatures" (Day of Judgment): every being on the caster's tile, the caster
         // too (user decision 2026-10-01), not planeswalkers; the indestructible stand.
         z.strictObject({ type: z.literal('destroy_all') }),
+        // "Deals N damage to each creature without flying" (Seismic Shudder): every being on the
+        // caster's tile (the caster too) that can't fly now, no planeswalker.
+        z.strictObject({ type: z.literal('damage_grounded'), amount: z.number().int().positive() }),
         // "Reveal the top N cards of your library. Put all creature cards revealed this way into
         // your hand and the rest into your graveyard" (Beast Hunt): N unknown secrets turn up; the
         // caster keeps creatures' whereabouts (sim/knowledge.ts `huntKnowledge`).
