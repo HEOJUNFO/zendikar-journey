@@ -8,6 +8,7 @@ status: canon
 sources: [ZEN-149]
 tags: [주문, 적색, 순간마법, 강화, 선제공격]
 links:
+  - { to: spl-vampires-bite, rel: 같은 부풂 }
   - { to: law-mana-colors, rel: 적색 마법 }
   - { to: loc-tangled-vale, rel: 배우는 곳 (조라가 음유시인의 이야기) }
   - { to: chr-joraga-bard, rel: 플레이버의 조라가 음유시인 }

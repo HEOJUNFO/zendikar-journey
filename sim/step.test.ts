@@ -8114,6 +8114,29 @@ test('the real Unstable Footing is taught in Shatterskull Pass: {R}, kicker {3}{
   assert.deepEqual(s.effects, [{ type: 'no_prevent' }, { type: 'damage', amount: 5, any: true, if_kicked: true }]);
 });
 
+test('Vampire\'s Bite: the one picked gets +3/+0 until midnight; kicked, lifelink too', () => {
+  const bite: RawEntity = { id: 'spl-vb', kind: 'spell', name: '흡혈귀의 이빨', status: 'canon', sim: { cost: '{0}', speed: 'instant', learn_at: 'loc-a', target: 'any_here', kicker: { mana: '{0}' }, effects: [{ type: 'pump_target', pt: [3, 0], kicked_abilities: ['lifelink'] }] } };
+  const world = fixture([bite, npc('chr-c', npcSim('loc-a')), npc('chr-x', npcSim('loc-a', 'work', [1, 1])), npc('chr-y', npcSim('loc-a', 'work', [1, 1]))]);
+  const state = newState(world, { seed: 1, mode: 'observer' });
+  const [c, x, y] = ['chr-c', 'chr-x', 'chr-y'].map((id) => state.actors[id]);
+  for (const z of [x, y]) z.tile = c.tile;
+  c.spells = ['spl-vb'];
+  castSpell(state, world, c, 'spl-vb', 'chr-x', false, state.minutes);
+  assert.deepEqual(ptOf(x), [4, 1]);
+  assert.ok(!hasAbility(x, 'lifelink', state.minutes));
+  delete c.used;
+  castSpell(state, world, c, 'spl-vb', 'chr-y', true, state.minutes);
+  assert.deepEqual(ptOf(y), [4, 1]);
+  assert.ok(hasAbility(y, 'lifelink', state.minutes));
+});
+
+test('the real Vampire\'s Bite is taught in Malakir: {B}, +3/+0, kicker {2}{B} for lifelink', () => {
+  const s = loadWorld().spells.find((x) => x.id === 'spl-vampires-bite')!;
+  assert.equal(s.learnAt, 'loc-malakir');
+  assert.equal(s.kicker?.manaText, '{2}{B}');
+  assert.deepEqual(s.effects, [{ type: 'pump_target', pt: [3, 0], abilities: [], kicked_abilities: ['lifelink'] }]);
+});
+
 test('Nissa\'s Chosen: killed, it goes into no graveyard; seven days on it wakes at home, whole and serving no one; a token of it is simply gone', () => {
   const world = fixture([besideA, npc('chr-n', { ...npcSim('loc-az', 'work', [2, 3]), revives_after: 7 }), npc('chr-m', npcSim('loc-a')), npc('chr-k', npcSim('loc-a'))]);
   const state = newState(world, { seed: 1, mode: 'observer' });

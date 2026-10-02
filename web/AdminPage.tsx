@@ -450,7 +450,7 @@ function spellEffectText(e: SpellEffect) {
     case 'exile_library':
       return `대상이 아직 익히지 않은 주문 ${e.count}${e.kicked_count ? ` (킥커 시 ${e.kicked_count})` : ''}까지 골라 추방 (영영 못 익힘)`;
     case 'pump_target':
-      return `대상 생물 자정까지 +${e.pt.join('/+')}${e.abilities.length ? `, ${e.abilities.join(', ')}` : ''}`;
+      return `대상 생물 자정까지 +${e.pt.join('/+')}${e.abilities.length ? `, ${e.abilities.join(', ')}` : ''}${e.kicked_abilities?.length ? ` (킥커 시 ${e.kicked_abilities.join(', ')})` : ''}`;
     case 'grim_discovery':
       return '무덤의 생물 하나를 되살리고(자유롭게) 무덤의 땅 하나를 손에 (하나 또는 둘 다)';
     case 'return_own':

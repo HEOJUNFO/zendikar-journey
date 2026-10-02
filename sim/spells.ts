@@ -406,8 +406,9 @@ export function resolveSpell(state: State, world: World, a: Actor, spellId: stri
         if (others.length) (state.choices ??= []).push({ by: a.id, land: a.region, effect: { type: 'cast', spell: s.id, free: true, second: true }, candidates: others, optional: false, t });
       }
     } else if (eff.type === 'pump_target') {
-      boostTillMidnight(state, target, eff.pt, eff.abilities, t);
-      addLog(state, { kind: 'status', text: `${josa(shortName(target.name), '이', '가')} 자정까지 +${eff.pt[0]}/+${eff.pt[1]}${eff.abilities.length ? `, ${eff.abilities.map((x) => ABILITY_LABELS[x]).join('·')}` : ''} (${ptOf(target).join('/')}).`, regions: [target.region], actors: [target.id], t });
+      const abilities = [...eff.abilities, ...(kicked && eff.kicked_abilities ? eff.kicked_abilities : [])];
+      boostTillMidnight(state, target, eff.pt, abilities, t);
+      addLog(state, { kind: 'status', text: `${josa(shortName(target.name), '이', '가')} 자정까지 +${eff.pt[0]}/+${eff.pt[1]}${abilities.length ? `, ${abilities.map((x) => ABILITY_LABELS[x]).join('·')}` : ''} (${ptOf(target).join('/')}).`, regions: [target.region], actors: [target.id], t });
     } else if (eff.type === 'pump_controlled') {
       const { pt, abilities } = kicked && eff.kicked ? eff.kicked : eff;
       for (const x of controlledCreatures(state, world, a).filter((y) => together(y, a))) boostTillMidnight(state, x, pt, abilities, t);

@@ -5,9 +5,10 @@ name: 말라키르
 name_en: Malakir
 summary: 굴 드라즈의 흡혈귀 도시. 도시 둘레에 피를 빠는 함정이 깔려 있다
 status: canon
-sources: [ZEN-105, ZEN-81, ZEN-100, ZEN-110, ZEN-116, ZEN-80, ZEN-88, ZEN-89, ZEN-114, ZEN-115]
+sources: [ZEN-105, ZEN-81, ZEN-100, ZEN-110, ZEN-116, ZEN-80, ZEN-88, ZEN-89, ZEN-114, ZEN-115, ZEN-117]
 tags: [흡혈귀, 도시, 흑색, 구역]
 links:
+  - { to: spl-vampires-bite, rel: 가르치는 주문 (흡혈귀의 이빨) }
   - { to: chr-vampire-lacerator, rel: 제단 계단의 흡혈귀 살갗찢개 }
   - { to: chr-vampire-hexmage, rel: 어두운 탑의 흡혈귀 주술사 }
   - { to: chr-gatekeeper-of-malakir, rel: 동쪽 성문의 문지기 }
@@ -47,6 +48,7 @@ map: { in: loc-guul-draz, terrain: swamp, pos: [-0.4, -0.15], tiles: 25 }   # �
 - 말라키르의 문지기(`chr-gatekeeper-of-malakir`, ZEN-89)가 동쪽 성문을 지킨다. 힘 {B}를 더 들여 성문에 든 이에게 피의 통행세, 곧 거느린 목숨 하나를 받아 낸다.
 - 북서쪽 어두운 탑에 흡혈귀 주술사(`chr-vampire-hexmage`, ZEN-114)가 산다 ([결정] 2026-10-02): 선제공격, 제 목숨을 바쳐 곁의 하나에서 카운터를 모두 지운다.
 - 남서쪽 제단 계단에 흡혈귀 살갗찢개(`chr-vampire-lacerator`, ZEN-115)가 산다 ([결정] 2026-10-02): 피 냄새가 없는 밤마다 조종하는 이가 생명 1을 잃는다.
+- 흡혈귀의 이빨(`spl-vampires-bite`, ZEN-117)을 배울 수 있다 (4시간). 대상 +3/+0, 킥커면 생명연결 ([결정] 2026-10-02).
 
 ## 미정/질문
 

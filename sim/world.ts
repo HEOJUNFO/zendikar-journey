@@ -771,7 +771,8 @@ export const SpellSimSchema = z.strictObject({
         z.strictObject({ type: z.literal('grim_discovery') }),
         // "Target creature gets +P/+T and gains <abilities> until end of turn" (Slaughter Cry): the
         // target (no planeswalker), until midnight.
-        z.strictObject({ type: z.literal('pump_target'), pt: PtBonusSchema, abilities: z.array(z.enum(ABILITIES)).default([]) }),
+        // `kicked_abilities`: more it gains if kicked (Vampire's Bite: lifelink).
+        z.strictObject({ type: z.literal('pump_target'), pt: PtBonusSchema, abilities: z.array(z.enum(ABILITIES)).default([]), kicked_abilities: z.array(z.enum(ABILITIES)).optional() }),
         // "Search target player's library for up to N cards, exile them" (Sadistic Sacrament;
         // kicked: `kicked_count`): the spells the target could still learn; the caster picks
         // (sim/sacrament.ts).
