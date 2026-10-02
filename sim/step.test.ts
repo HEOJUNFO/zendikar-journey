@@ -6983,6 +6983,45 @@ test('Aether Figment: arriving with {3} to spare it pays and swells +2/+2 until 
   assert.equal(manaAvailable(state, world, u, state.minutes).U, 2);
 });
 
+test('Goblin Bushwhacker: arriving with {R} to spare, it pays and its controller and theirs on its tile, it too, get +1/+0 and haste until midnight; one elsewhere does not', () => {
+  const gob = (mana: Record<string, number>) => ({ ...npcSim('loc-a', 'work', [1, 1]), mana, types: ['goblin'], enter_rally: { pt: [1, 0], abilities: ['haste'], kicker: '{R}' } });
+  const world = fixture([npc('chr-g', gob({ R: 2 })), npc('chr-poor', gob({ G: 1 })), npc('chr-m', npcSim('loc-a', 'work', [2, 2])), npc('chr-r', npcSim('loc-a', 'work', [2, 2])), npc('chr-far', npcSim('loc-a', 'work', [2, 2]))]);
+  const state = newState(world, { seed: 1, mode: 'observer' });
+  const [g, poor, m, r, far] = ['chr-g', 'chr-poor', 'chr-m', 'chr-r', 'chr-far'].map((id) => state.actors[id]);
+  for (const x of [m, r]) x.tile = g.tile;
+  far.tile = tilesOf(world, 'loc-a').find((tl) => !sameTile(tl, g.tile)) ?? g.tile;
+  for (const x of [g, r, far]) x.master = m.id;
+  onEnter(state, world, g, state.minutes);
+  assert.deepEqual(ptOf(g), [2, 1]);
+  assert.deepEqual(ptOf(m), [3, 2]);
+  assert.deepEqual(ptOf(r), [3, 2]);
+  assert.ok(hasAbility(m, 'haste', state.minutes));
+  if (!sameTile(far.tile, g.tile)) assert.deepEqual(ptOf(far), [2, 2]);
+  assert.equal(manaAvailable(state, world, g, state.minutes).R, 1);
+  onEnter(state, world, poor, state.minutes);
+  assert.deepEqual(ptOf(poor), [1, 1]);
+  expireGranted(state, untapTime(state.minutes));
+  assert.deepEqual(ptOf(m), [2, 2]);
+  assert.ok(!hasAbility(m, 'haste', untapTime(state.minutes)));
+});
+
+test('arriving, a creature whose only power on entering is Kor Aeronaut\'s lift still uses it (onEnter)', () => {
+  const world = fixture([npc('chr-k', { ...npcSim('loc-a', 'work', [2, 2]), mana: { W: 4 }, abilities: ['fly'], enter_grant: { ability: 'fly', kicker: '{1}{W}' } })]);
+  const state = newState(world, { seed: 1, mode: 'observer' });
+  onEnter(state, world, state.actors['chr-k'], state.minutes);
+  assert.ok(state.choices?.some((c) => c.effect.type === 'lift'));
+});
+
+test('the real Goblin Bushwhacker lurks in Shatterskull Pass: a goblin, kicked {R} for +1/+0 and haste', () => {
+  const world = loadWorld();
+  const state = newState(world, { seed: 1, mode: 'observer' });
+  const g = state.actors['chr-goblin-bushwhacker'];
+  assert.equal(g?.region, 'loc-shatterskull-pass');
+  const er = npcDef(state, world, g.id)?.enterRally;
+  assert.deepEqual([er?.pt, er?.abilities, er?.kickerText], [[1, 0], ['haste'], '{R}']);
+  assert.ok(npcDef(state, world, g.id)?.types?.includes('goblin'));
+});
+
 test('the real Aether Figment drifts on Jwar Isle: unblockable, swelling when kicked', () => {
   const world = loadWorld();
   const state = newState(world, { seed: 1, mode: 'observer' });
@@ -7813,7 +7852,7 @@ test('the real Warren Instigator lives on the Teeth of Akoum; the world\'s gobli
   assert.equal(w?.region, 'loc-teeth-of-akoum');
   assert.ok(npcDef(state, world, w.id)?.instigate && hasAbility(w, 'double_strike', state.minutes));
   const goblins = world.npcs.filter((n) => n.types?.includes('goblin')).map((n) => n.id).sort();
-  assert.deepEqual(goblins, ['chr-goblin-ruinblaster', 'chr-goblin-shortcutter', 'chr-torch-slinger', 'chr-tuktuk-grunts', 'chr-warren-instigator']);
+  assert.deepEqual(goblins, ['chr-goblin-bushwhacker', 'chr-goblin-ruinblaster', 'chr-goblin-shortcutter', 'chr-torch-slinger', 'chr-tuktuk-grunts', 'chr-warren-instigator']);
 });
 
 test('Brave the Elements: the caster picks a color; their white ones there (themselves, retainers) are protected from it until midnight; others are not', () => {

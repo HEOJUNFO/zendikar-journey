@@ -731,7 +731,7 @@ export function applyDrainGrow(state: State, world: World, a: Actor, target: Act
 // once a day for balance (user decision 2026-09-30).
 export function onEnter(state: State, world: World, a: Actor, t: number) {
   const def = npcDef(state, world, a.id);
-  if (!def?.enterDestroy && !def?.enterDrain && !def?.enterDraw && !def?.enterSearch && !def?.enterShatter && !def?.enterExile && !def?.enterTap && !def?.enterDamage && !def?.enterPump && !def?.enterSacrifice && !def?.enterNoBlock && !def?.enterReveal) return;
+  if (!def?.enterDestroy && !def?.enterDrain && !def?.enterDraw && !def?.enterSearch && !def?.enterShatter && !def?.enterExile && !def?.enterTap && !def?.enterDamage && !def?.enterPump && !def?.enterRally && !def?.enterSacrifice && !def?.enterNoBlock && !def?.enterReveal && !def?.enterGrant && !def?.enterEquip && !def?.enterReturn && !def?.enterTapMany) return;
   if (a.dead || a.enteredDay === gameDay(t)) return;
   a.enteredDay = gameDay(t);
   enterDestroy(state, world, a, t);
@@ -748,6 +748,7 @@ export function onEnter(state: State, world: World, a: Actor, t: number) {
   enterTapMany(state, world, a, t);
   enterReveal(state, world, a, t);
   enterPump(state, world, a, t);
+  enterRally(state, world, a, t);
   enterSacrifice(state, world, a, t);
   enterNoBlock(state, world, a, t);
 }
@@ -760,6 +761,28 @@ function enterPump(state: State, world: World, a: Actor, t: number) {
   if (!ep || a.dead || powersSealed(state, world, a, t) || !payMana(state, world, a, ep.kicker, t)) return;
   (a.pumps ??= []).push({ pt: [...ep.pt], until: untapTime(t) });
   addLog(state, { kind: 'status', text: `${josa(shortName(a.name), '이', '가')} 힘(${ep.kickerText})을 더 들여 부풀어 들어섰다 (자정까지 +${ep.pt[0]}/+${ep.pt[1]}, ${ptOf(a).join('/')}).`, regions: [a.region], actors: [a.id], t });
+}
+
+// "Kicker <cost>. When this enters, if it was kicked, creatures you control get +P/+T and gain
+// <abilities> until end of turn" (Goblin Bushwhacker): paid from its own mana if it can (always:
+// it only helps), its controller (master, or itself) and theirs on its tile, it too, until
+// midnight. What one has of their own stays theirs past midnight.
+function enterRally(state: State, world: World, a: Actor, t: number) {
+  const er = npcDef(state, world, a.id)?.enterRally;
+  if (!er || a.dead || powersSealed(state, world, a, t) || !payMana(state, world, a, er.kicker, t)) return;
+  const controller = masterOf(state, a) ?? a;
+  const until = untapTime(t);
+  const theirs = controlledCreatures(state, world, controller).filter((y) => !y.dead && together(y, a));
+  for (const x of theirs) {
+    (x.pumps ??= []).push({ pt: [...er.pt], until });
+    for (const ab of er.abilities) {
+      if (x.abilities.includes(ab) && !x.granted?.some((g) => g.ability === ab)) continue;
+      x.granted = [...(x.granted ?? []).filter((g) => g.ability !== ab), { ability: ab, until }];
+      if (!x.abilities.includes(ab)) x.abilities = [...x.abilities, ab];
+    }
+  }
+  const gives = `+${er.pt[0]}/+${er.pt[1]}${er.abilities.length ? `·${er.abilities.map((ab) => ABILITY_LABELS[ab]).join('·')}` : ''}`;
+  addLog(state, { kind: 'event', text: `${josa(shortName(a.name), '이', '가')} 힘(${er.kickerText})을 더 들여 바위 틈에서 덮치듯 뛰어들었다: ${theirs.map((x) => shortName(x.name)).join(', ')} 자정까지 ${gives}.`, regions: [a.region], actors: [a.id, ...theirs.map((x) => x.id)], t });
 }
 
 // "When this enters, you may search your library for a <type> card, put it onto the
