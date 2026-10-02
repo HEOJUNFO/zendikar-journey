@@ -1,10 +1,10 @@
 // Items (MTG artifacts, world/entities/items): permanents that stand in one place. Whoever
 // pays an item's cost there tames it and holds it until they die or leave the plane.
-import { gameDay } from './clock.ts';
+import { gameDay, untapTime } from './clock.ts';
 import { placeTile, sameTile, tileLabel } from './tiles.ts';
 import { gainLife, lifeOf } from './life.ts';
 import { formatMana, manaAvailable, payMana, planPayment } from './mana.ts';
-import { addLog, npcDef } from './state.ts';
+import { addLog, npcDef, ptOf } from './state.ts';
 import type { Actor, Choice, State } from './state.ts';
 import type { Tile } from './tiles.ts';
 import { josa, shortName } from './text.ts';
@@ -153,6 +153,13 @@ export function itemsOnLandfall(state: State, world: World, a: Actor, t: number)
       const s = state.items![x.id];
       s.counters = (s.counters ?? 0) + 1;
       addLog(state, { kind: 'effect', text: `${x.name}: ${josa(shortName(a.name), '이', '가')} 새 땅을 밟아 탐색 카운터가 하나 쌓였다 (${s.counters}).`, regions: [a.region], actors: [a.id], t });
+    }
+    // "Landfall — equipped creature gets +P/+T until end of turn" (Adventuring Gear): its bearer.
+    const bearer = x.equip?.landfallPump && state.items![x.id].bearer ? state.actors[state.items![x.id].bearer!] : undefined;
+    if (bearer && !bearer.dead) {
+      const pt = x.equip!.landfallPump!;
+      bearer.pumps = [...(bearer.pumps ?? []), { pt: [pt[0], pt[1]], until: untapTime(t) }];
+      addLog(state, { kind: 'effect', text: `${x.name}: 새 땅의 기운에 ${josa(shortName(bearer.name), '이', '가')} 자정까지 +${pt[0]}/+${pt[1]} (${ptOf(bearer).join('/')}).`, regions: [bearer.region], actors: [bearer.id, a.id], t });
     }
     if (!x.effects.some((e) => e.type === 'landfall_set_life')) continue;
     const life = lifeOf(a);

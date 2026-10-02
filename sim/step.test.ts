@@ -7710,6 +7710,29 @@ test('nonbasic landwalk (Trailblazer\'s Boots): one bonded with a land of a land
   assert.equal(unblockable(state, world, w, y, state.minutes), null);
 });
 
+test('Adventuring Gear: each land its owner bonds with, its bearer gets +2/+2 until midnight', () => {
+  const gear: RawEntity = { id: 'itm-gear', kind: 'item', name: '모험 장비', status: 'canon', sim: { cost: '{0}', at: 'loc-a', equip: { cost: '{0}', landfall_pump: [2, 2] } } };
+  const world = fixture([gear, npc('chr-m', npcSim('loc-a')), npc('chr-r', npcSim('loc-a', 'work', [1, 1]))]);
+  const state = newState(world, { seed: 1, mode: 'observer' });
+  const [m, r] = [state.actors['chr-m'], state.actors['chr-r']];
+  r.tile = m.tile;
+  r.master = m.id;
+  state.items = { 'itm-gear': { name: '모험 장비', owner: m.id, counters: 0, carried: true, bearer: r.id } };
+  bondLand(state, world, m, state.minutes, 'loc-a');
+  assert.deepEqual(ptOf(r), [3, 3]);
+  bondLand(state, world, m, state.minutes, 'loc-b');
+  assert.deepEqual(ptOf(r), [5, 5]);
+  expireGranted(state, untapTime(state.minutes));
+  assert.deepEqual(ptOf(r), [1, 1]);
+});
+
+test('the real Adventuring Gear lies in Kazandu', () => {
+  const world = loadWorld();
+  const x = world.items.find((i) => i.id === 'itm-adventuring-gear')!;
+  assert.equal(x.at, 'loc-kazandu');
+  assert.deepEqual(x.equip?.landfallPump, [2, 2]);
+});
+
 test('the real Trailblazer\'s Boots hang at Sea Gate: equipment for nonbasic landwalk', () => {
   const world = loadWorld();
   const x = world.items.find((i) => i.id === 'itm-trailblazers-boots')!;

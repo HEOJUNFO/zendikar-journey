@@ -8,6 +8,7 @@ status: canon
 sources: [ZEN-208]
 tags: [마법물체, 장비, 무색, 원정]
 links:
+  - { to: itm-adventuring-gear, rel: 같은 탐험가의 장비 }
   - { to: law-permanents, rel: 마법물체 (장비) }
   - { to: loc-sea-gate, rel: 놓여 있는 곳 (원정대의 도시) }
   - { to: itm-grappling-hook, rel: 같은 장비 }
