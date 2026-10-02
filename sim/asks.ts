@@ -263,7 +263,8 @@ export function answerAsk(state: State, world: World, pick: string | null, t: nu
     const id = pick && options.some((o) => o.id === pick) ? pick : options[0]?.id;
     if (id) demolish(state, world, p, id, c.effect.spell, t);
   } else if (c.effect.type === 'discovery') {
-    applyDiscovery(state, world, p, c.effect.kind, pick, c.effect.spell, t);
+    const next = applyDiscovery(state, world, p, c.effect.kind, pick, c.effect.spell, t, c.effect.left);
+    if (next) (state.asks ??= []).unshift(next);
   } else if (c.effect.type === 'sacrament') {
     const next = applySacrament(state, world, p, c.effect, pick, t);
     if (next) (state.asks ??= []).unshift(next);

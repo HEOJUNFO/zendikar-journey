@@ -8,6 +8,7 @@ status: canon
 sources: [ZEN-91]
 tags: [주문, 흑색, 집중마법, 무덤, 되살림]
 links:
+  - { to: itm-soul-stair-expedition, rel: 같은 되살림 }
   - { to: law-mana-colors, rel: 흑색 마법 }
   - { to: loc-guum-wilds, rel: 배우는 곳 (묻힌 유적) }
   - { to: law-retainers, rel: 무덤의 생물 }

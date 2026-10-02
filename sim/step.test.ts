@@ -7613,6 +7613,34 @@ test('Kor Outfitter by an NPC: the master\'s pick of item and bearer is asked of
   assert.equal(state.items['itm-h'].bearer, 'chr-x');
 });
 
+test('Soul Stair Expedition: with three counters the player ends it and raises up to two of their dead, one at a time, at home and free', async () => {
+  const item: RawEntity = { id: 'itm-sse', kind: 'item', name: '영혼 계단', status: 'canon', sim: { card_type: 'enchantment', cost: '{0}', at: 'loc-a', effects: [{ type: 'landfall_quest' }, { type: 'expedition', counters: 3, raise: 2 }] } };
+  const world = fixture([item, altarItem, demolishSpell, npc('chr-d', npcSim('loc-b')), npc('chr-e', npcSim('loc-b')), npc('chr-f', npcSim('loc-b'))]);
+  const state = character(world, 'loc-a');
+  const p = state.actors[PLAYER_ID];
+  const dead = ['chr-d', 'chr-e', 'chr-f'].map((id) => state.actors[id]);
+  for (const x of dead) x.dead = { at: state.minutes, cause: '시험' };
+  p.fallen = dead.map((x) => x.id);
+  state.items = { 'itm-sse': { name: '영혼 계단', owner: p.id, counters: 3 } };
+  await act(state, world, { type: 'expedition' });
+  if (!state.asks?.some((y) => y.effect.type === 'discovery')) await act(state, world, { type: 'wait', hours: 1 });
+  assert.ok(state.items['itm-sse'].gone);
+  await act(state, world, { type: 'choose', pick: 'chr-d' });
+  const next = state.asks!.find((y) => y.effect.type === 'discovery')!;
+  assert.ok(next && !next.candidates.includes('chr-d'));
+  await act(state, world, { type: 'choose', pick: 'chr-e' });
+  assert.ok(!state.asks?.some((y) => y.effect.type === 'discovery'));
+  assert.ok(!dead[0].dead && !dead[1].dead && dead[2].dead);
+  assert.equal(dead[0].master, undefined);
+  assert.deepEqual(p.fallen, ['chr-f']);
+});
+
+test('the real Soul Stair Expedition stands in the Agadeem crypt: three landfalls to raise two', () => {
+  const x = loadWorld().items.find((i) => i.id === 'itm-soul-stair-expedition')!;
+  assert.equal(x.at, 'loc-agadeem-crypt');
+  assert.deepEqual(x.effects, [{ type: 'landfall_quest' }, { type: 'expedition', counters: 3, raise: 2 }]);
+});
+
 test('Khalni Heart Expedition: with three counters the player ends it; they pick basic lands to bond with from afar, tapped (no mana from them today)', async () => {
   const item: RawEntity = { id: 'itm-khe', kind: 'item', name: '심장 원정', status: 'canon', sim: { card_type: 'enchantment', cost: '{0}', at: 'loc-a', effects: [{ type: 'landfall_quest' }, { type: 'expedition', counters: 3, lands: 2 }] } };
   const world = fixture([item, altarItem, demolishSpell]);

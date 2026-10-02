@@ -47,15 +47,18 @@ export function riseAtHome(state: State, world: World, x: Actor, t: number) {
   if (def && 'home' in def) Object.assign(x, { region: def.home, tile: homeTile(world, def) });
 }
 
-export function applyDiscovery(state: State, world: World, a: Actor, kind: DiscoveryKind, pick: string | null, spell: string, t: number) {
-  if (!pick || !discoveryOptions(state, world, a, kind).some((o) => o.id === pick)) return;
+// `left`: how many more creatures may rise after this one (Soul Stair Expedition: up to two).
+export function applyDiscovery(state: State, world: World, a: Actor, kind: DiscoveryKind, pick: string | null, spell: string, t: number, left = 1): Choice | null {
+  if (!pick || !discoveryOptions(state, world, a, kind).some((o) => o.id === pick)) return null;
   if (kind === 'land') {
     a.handLands = [...(a.handLands ?? []), pick];
     addLog(state, { kind: 'status', text: `${spell}: ${josa(shortName(a.name), '이', '가')} 잃었던 ${region(world, pick).name}로 가는 길을 다시 손에 쥐었다 (언제든 멀리서 이을 수 있다).`, regions: [a.region], actors: [a.id], t });
-    return;
+    return null;
   }
   const x = state.actors[pick];
   riseAtHome(state, world, x, t);
   a.fallen = (a.fallen ?? []).filter((id) => id !== x.id);
-  addLog(state, { kind: 'event', text: `${spell}: ${josa(shortName(a.name), '이', '가')} 폐허에서 찾은 것으로 ${josa(shortName(x.name), '을', '를')} 되살렸다. ${josa(shortName(x.name), '은', '는')} 제 거처에서 눈을 떴다 (누구도 섬기지 않는다).`, regions: [x.region, a.region], actors: [x.id, a.id], t });
+  addLog(state, { kind: 'event', text: `${spell}: ${josa(shortName(a.name), '이', '가')} 무덤에서 ${josa(shortName(x.name), '을', '를')} 되살렸다. ${josa(shortName(x.name), '은', '는')} 제 거처에서 눈을 떴다 (누구도 섬기지 않는다).`, regions: [x.region, a.region], actors: [x.id, a.id], t });
+  const more = graveCreatures(state, a);
+  return left > 1 && more.length ? { by: a.id, land: a.region, effect: { type: 'discovery', spell, kind: 'creature', left: left - 1 }, candidates: more.map((x) => x.id), optional: true, t } : null;
 }

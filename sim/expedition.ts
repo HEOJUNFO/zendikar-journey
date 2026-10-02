@@ -9,6 +9,7 @@
 // their plan.
 import { harrowOwed } from './harrow.ts';
 import { relicOptions } from './relic.ts';
+import { graveCreatures } from './discovery.ts';
 import { spawnWild } from './abilities.ts';
 import { untapTime } from './clock.ts';
 import { ABILITY_LABELS } from './world.ts';
@@ -49,8 +50,8 @@ export function expeditionReward(state: State, world: World, a: Actor) {
   const x = expeditionOf(state, world, a);
   const e = x && powerOf(x);
   if (!e) return { ko: '', en: '' };
-  const ko = [e.draws ? `숨은 것 ${e.draws}가지를 알게 된다` : '', e.lands ? `아직 유대 없는 기본 땅 ${e.lands}까지와 멀리서 이어진다 (탭된 채, 오늘은 마나 없음)` : '', e.plus_counters ? `곁의 하나에게 +1/+1 카운터 ${e.plus_counters}을 준다` : '', e.relic ? '주인 없는 장비 하나를 찾아 자신이나 곁의 권속에게 값 없이 맨다' : '', e.token ? `${e.token.pt.join('/')} ${world.lore.find((l) => l.id === e.token!.creature)?.name ?? e.token.creature}이(가) 곁에 나 섬긴다${e.token.until_midnight ? ' (자정에 사라짐)' : ''}` : ''].filter(Boolean).join(', ');
-  const en = [e.draws ? `come to know ${e.draws} hidden secrets of the world` : '', e.lands ? `bond from afar with up to ${e.lands} basic lands of the world they don't hold yet (tapped: no mana from them today; not their land for the day)` : '', e.plus_counters ? `give ${e.plus_counters} +1/+1 counters, for good, to one standing with them (themselves too), picked after the hour` : '', e.relic ? 'find an Equipment of the world no one holds and put it on themselves or one who serves them there, for nothing (picked after the hour)' : '', e.token ? `have a ${e.token.pt.join('/')} ${world.lore.find((l) => l.id === e.token!.creature)?.name ?? e.token.creature}${e.token.abilities.length ? ` (${e.token.abilities.join(', ')})` : ''} serve them at their side${e.token.until_midnight ? ', gone at midnight' : ''}` : ''].filter(Boolean).join(', and ');
+  const ko = [e.draws ? `숨은 것 ${e.draws}가지를 알게 된다` : '', e.lands ? `아직 유대 없는 기본 땅 ${e.lands}까지와 멀리서 이어진다 (탭된 채, 오늘은 마나 없음)` : '', e.plus_counters ? `곁의 하나에게 +1/+1 카운터 ${e.plus_counters}을 준다` : '', e.relic ? '주인 없는 장비 하나를 찾아 자신이나 곁의 권속에게 값 없이 맨다' : '', e.raise ? `무덤의 생물 ${e.raise}까지를 제 거처에서 되살린다 (누구도 섬기지 않음)` : '', e.token ? `${e.token.pt.join('/')} ${world.lore.find((l) => l.id === e.token!.creature)?.name ?? e.token.creature}이(가) 곁에 나 섬긴다${e.token.until_midnight ? ' (자정에 사라짐)' : ''}` : ''].filter(Boolean).join(', ');
+  const en = [e.draws ? `come to know ${e.draws} hidden secrets of the world` : '', e.lands ? `bond from afar with up to ${e.lands} basic lands of the world they don't hold yet (tapped: no mana from them today; not their land for the day)` : '', e.plus_counters ? `give ${e.plus_counters} +1/+1 counters, for good, to one standing with them (themselves too), picked after the hour` : '', e.relic ? 'find an Equipment of the world no one holds and put it on themselves or one who serves them there, for nothing (picked after the hour)' : '', e.raise ? `raise up to ${e.raise} of the dead in their creature graveyard, who wake at their homes serving no one (picked after the hour)` : '', e.token ? `have a ${e.token.pt.join('/')} ${world.lore.find((l) => l.id === e.token!.creature)?.name ?? e.token.creature}${e.token.abilities.length ? ` (${e.token.abilities.join(', ')})` : ''} serve them at their side${e.token.until_midnight ? ', gone at midnight' : ''}` : ''].filter(Boolean).join(', and ');
   return { ko, en };
 }
 
@@ -74,6 +75,9 @@ export function finishExpedition(state: State, world: World, a: Actor, t: number
     if (e.token.until_midnight) state.tokens![b.id].vanishAt = untapTime(t);
     addLog(state, { kind: 'event', text: `${x.name}: ${josa(shortName(b.name), '이', '가')} 솟구쳐 ${shortName(a.name)} 곁에 섰다 (${e.token.pt.join('/')}${e.token.abilities.length ? `, ${e.token.abilities.map((ab) => ABILITY_LABELS[ab]).join('·')}` : ''}${e.token.until_midnight ? ', 자정에 사라진다' : ''}).`, regions: [a.region], actors: [a.id, b.id], t });
   }
+  // Soul Stair Expedition: up to that many of their dead rise at home, free (Grim Discovery's pick).
+  const dead = e.raise ? graveCreatures(state, a) : [];
+  if (dead.length) (state.choices ??= []).push({ by: a.id, land: a.region, effect: { type: 'discovery', spell: x.name, kind: 'creature', left: e.raise }, candidates: dead.map((y) => y.id), optional: true, t });
   // Quest for the Holy Relic: an Equipment no one holds, put on one of theirs there (their pick).
   const relics = e.relic ? relicOptions(state, world, a) : [];
   if (relics.length) (state.choices ??= []).push({ by: a.id, land: a.region, effect: { type: 'relic', item: x.name }, candidates: relics.map((o) => o.id), optional: true, t });

@@ -701,7 +701,8 @@ async function choices(state: State, world: World, llm: Llm) {
       } catch (e) {
         console.warn(`pick (discovery) for ${by.id} failed:`, e);
       }
-      applyDiscovery(state, world, by, eff.kind, pick, eff.spell, state.minutes);
+      const next = applyDiscovery(state, world, by, eff.kind, pick, eff.spell, state.minutes, eff.left);
+      if (next) (state.choices ??= []).push(next);
       continue;
     }
     // Sadistic Sacrament: spells of the target's to exile, one at a time; they may stop.
