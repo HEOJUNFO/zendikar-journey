@@ -7743,6 +7743,18 @@ test('the real Plated Geopede crawls the lava of east Akoum: a first-striking be
   assert.ok(tilesOf(world, h.id).length >= 10);
 });
 
+test('the real Surrakar Marauder lurks by Riverroot: a talking surrakar who gains intimidate the day it takes a land', () => {
+  const world = loadWorld();
+  const state = newState(world, { seed: 1, mode: 'observer' });
+  const m = state.actors['chr-surrakar-marauder'];
+  assert.equal(m?.region, 'loc-riverroot');
+  assert.deepEqual(npcDef(state, world, m.id)?.landfallGrant, ['intimidate']);
+  assert.ok(!hasAbility(m, 'intimidate', state.minutes));
+  bondLand(state, world, m, state.minutes, 'loc-riverroot');
+  assert.ok(hasAbility(m, 'intimidate', state.minutes));
+  assert.equal(swayBlocked(state, world, m), null);
+});
+
 test('the real Highland Berserker hires out on the Teeth of Akoum for 20 coin; joining a party, its Allies strike first today', () => {
   const world = loadWorld();
   const state = newState(world, { seed: 1, mode: 'observer' });

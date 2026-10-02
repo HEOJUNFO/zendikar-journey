@@ -5,9 +5,10 @@ name: 리버루트
 name_en: Riverroot
 summary: 굼 밀림 깊은 곳, 거목 하나에 통째로 지은 멀 다야 엘프의 마을. 나무 아래에서 망자를 태우고, 동쪽에는 빛나는 이끼 늪이, 뿌리 밑에는 동굴과 땅속 호수가 있다
 status: canon
-sources: [ZEN-172, ZEN-164]
+sources: [ZEN-172, ZEN-164, ZEN-113]
 tags: [마을, 거목, 엘프, 멀 다야, 녹색]
 links:
+  - { to: chr-surrakar-marauder, rel: 동쪽 석회암 굴의 수라카르 }
   - { to: chr-greenweaver-druid, rel: 조상의 흐름을 엮는 멀 다야 드루이드 }
   - { to: loc-guum-wilds, rel: 바깥 구역 }
   - { to: chr-oracle-of-mul-daya, rel: 사는 신탁자 }
@@ -25,6 +26,7 @@ map: { in: loc-guum-wilds, terrain: forest, pos: [-0.35, -0.45], tiles: 10 }   #
 - **굼 밀림 안의 구역**이다 (지형 `forest`): 발라 게드 › 굼 밀림 › 리버루트, 구역 안의 구역 ([결정] 2026-10-01). 10칸, 굼 밀림의 북서쪽 깊은 곳(`pos: [-0.35, -0.45]`, [가공]: 굼의 가운데는 묻힌 유적).
 - **기본 숲**처럼 친다: 유대를 맺으면 녹 마나 1, 숲 종류.
 - 멀 다야의 신탁자(`chr-oracle-of-mul-daya`, ZEN-172)가 산다.
+- 동쪽 이끼 늪 곁 석회암 굴에 수라카르 약탈자(`chr-surrakar-marauder`, ZEN-113)가 산다 ([결정] 2026-10-02): 거친 말을 하는 굶주린 수라카르, 땅을 차지한 날 위협.
 
 ## 미정/질문
 
