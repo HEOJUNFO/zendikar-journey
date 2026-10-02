@@ -60,7 +60,7 @@ import { applyDiscovery } from './discovery.ts';
 import type { SacramentEffect } from './sacrament.ts';
 import { shielded, tapBlocked, useTap } from './tapper.ts';
 import type { Actor, State } from './state.ts';
-import { affectedRegions, buildWorld, descendantsOf, distance, landTypes, placeName, realmOf, region, travelHours, within } from './world.ts';
+import { affectedRegions, buildWorld, canStay, descendantsOf, distance, landTypes, placeName, realmOf, region, travelHours, within } from './world.ts';
 import type { RawEntity } from './world.ts';
 
 // Puts `a` in a land, on its middle tile (as arriving there would).
@@ -7261,6 +7261,22 @@ test('Marsh Casualties: the target and their retainers there get -1/-1 until mid
   delete c.used;
   castSpell(state, world, c, 'spl-mc', 'chr-m', true, state.minutes);
   assert.deepEqual(ptOf(m), [1, 1]);
+});
+
+test('the real Nimbus Wings is taught at Kabira Crossroads: the one it is cast on gets +1/+2 and wings', () => {
+  const world = loadWorld();
+  const s = world.spells.find((x) => x.id === 'spl-nimbus-wings')!;
+  assert.equal(s.learnAt, 'loc-kabira-crossroads');
+  const state = newState(world, { seed: 1, mode: 'observer' });
+  const c = state.actors['chr-kazandu-blademaster'];
+  const before = ptOf(c);
+  c.spells = [s.id];
+  c.bonds = ['loc-kabira-crossroads', 'loc-makindi'];
+  castSpell(state, world, c, s.id, c.id, false, state.minutes);
+  assert.deepEqual(ptOf(c), [before[0] + 1, before[1] + 2]);
+  assert.ok(hasAbility(c, 'fly', state.minutes));
+  assert.ok(canStay(region(world, 'loc-emeria'), c.abilities));
+  assert.ok(c.auras?.some((au) => au.spell === s.id));
 });
 
 test('the real Marsh Casualties is taught in Hagra: a black sorcery, kicker {3}', () => {

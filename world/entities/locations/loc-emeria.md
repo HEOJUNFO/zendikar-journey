@@ -5,9 +5,10 @@ name: 에메리아
 name_en: Emeria, the Sky Ruin
 summary: 타짐 하늘에 떠 있는 고대 석조 폐허. 금빛 하늘 아래 부서진 탑과 바위 조각이 떠다니고, 코르는 밧줄로 절벽을 타고 오른다
 status: canon
-sources: [ZEN-213, ZEN-13, ZEN-6, ZEN-199, ZEN-34, ZEN-66, ZEN-9, ZEN-11, ZEN-38, ZEN-29, ZEN-14, ZEN-25]
+sources: [ZEN-213, ZEN-13, ZEN-6, ZEN-199, ZEN-34, ZEN-66, ZEN-9, ZEN-11, ZEN-38, ZEN-29, ZEN-14, ZEN-25, ZEN-28]
 tags: [하늘, 폐허, 천사, 백색]
 links:
+  - { to: spl-nimbus-wings, rel: 하늘 폐허로 오르는 날개 (플레이버) }
   - { to: itm-luminarch-ascension, rel: 북서쪽 부서진 제단의 승천 }
   - { to: cre-emeria-angel, rel: 새 떼를 거느린 천사 }
   - { to: spl-day-of-judgment, rel: 배우는 주문 }
