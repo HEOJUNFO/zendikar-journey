@@ -50,7 +50,7 @@ import { strandedText } from './stranded.ts';
 import { bounce, bounceCandidates } from './bounce.ts';
 import { eventTile } from './tiles.ts';
 import { applyQuell, permanentsOf, QUELL_KINDS, QUELL_LABELS, quellGive } from './quell.ts';
-import { applyRally, applyWard, hireableFor, hireMerc, hirePrice, rallyText } from './allies.ts';
+import { applyBrave, applyRally, applyWard, hireableFor, hireMerc, hirePrice, rallyText } from './allies.ts';
 import { answerAsk, askText, canServe } from './asks.ts';
 import { eonLand, eonsIn, spendBlocked, storeBlocked } from './eons.ts';
 import { castableSpells, castBlocked, castSpell, harmful, learnableSpells, spellDef } from './spells.ts';
@@ -735,6 +735,19 @@ async function choices(state: State, world: World, llm: Llm) {
       continue;
     }
     // Kabira Evangel's rally: a color for the party's Allies to be protected from, or none.
+    if (c.effect.type === 'brave') {
+      if (!by || by.dead || !npc) continue;
+      let pick: string | null = null;
+      if (llm.pick) {
+        try {
+          pick = await llm.pick({ world, state, npc, what: `${c.effect.spell}: 색 하나를 고르면 당신과 곁의 권속 가운데 백색인 이들이 자정까지 그 색으로부터 보호받는다 (그 색 존재의 싸움 피해를 받지 않고, 그 색 주문·능력에 골라지지 않는다)`, options: COLORS.map((x) => ({ id: x, label: `${COLOR_LABELS[x]}색` })) });
+        } catch (e) {
+          console.warn(`pick (brave) for ${by.id} failed:`, e);
+        }
+      }
+      applyBrave(state, world, by, COLORS.find((x) => x === pick) ?? COLORS[Math.floor(random(state) * COLORS.length)], c.effect.spell, state.minutes);
+      continue;
+    }
     if (c.effect.type === 'ward') {
       if (!by || by.dead || !npc || !llm.pick) continue;
       let pick: string | null = null;

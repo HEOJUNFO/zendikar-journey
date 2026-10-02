@@ -62,6 +62,7 @@ import { hex, hexBlocked, hexNear } from './hexmage.ts';
 import { applyInstigate } from './instigator.ts';
 import { bloodchiefHour } from './bloodchief.ts';
 import { bloodchiefDrain, upkeepBloodchief } from './bloodascension.ts';
+import { applyBrave } from './allies.ts';
 import { withPositions } from './wander.ts';
 import { applyHarrow } from './harrow.ts';
 import type { HarrowEffect } from './harrow.ts';
@@ -7698,6 +7699,21 @@ test('the real Warren Instigator lives on the Teeth of Akoum; the world\'s gobli
   assert.ok(npcDef(state, world, w.id)?.instigate && hasAbility(w, 'double_strike', state.minutes));
   const goblins = world.npcs.filter((n) => n.types?.includes('goblin')).map((n) => n.id).sort();
   assert.deepEqual(goblins, ['chr-goblin-ruinblaster', 'chr-goblin-shortcutter', 'chr-torch-slinger', 'chr-tuktuk-grunts', 'chr-warren-instigator']);
+});
+
+test('Brave the Elements: the caster picks a color; their white ones there (themselves, retainers) are protected from it until midnight; others are not', () => {
+  const brave: RawEntity = { id: 'spl-bte', kind: 'spell', name: '원소를 무릅쓰고', status: 'canon', sim: { cost: '{0}', speed: 'instant', learn_at: 'loc-a', target: 'self', effects: [{ type: 'brave' }] } };
+  const world = fixture([brave, npc('chr-c', { ...npcSim('loc-a'), mana: { W: 1 } }), npc('chr-w', { ...npcSim('loc-a'), mana: { W: 2 } }), npc('chr-g', { ...npcSim('loc-a'), mana: { G: 2 } })]);
+  const state = newState(world, { seed: 1, mode: 'observer' });
+  const [c, w, g] = ['chr-c', 'chr-w', 'chr-g'].map((id) => state.actors[id]);
+  for (const a of [w, g]) Object.assign(a, { tile: c.tile, master: c.id });
+  c.spells = ['spl-bte'];
+  castSpell(state, world, c, 'spl-bte', c.id, false, state.minutes);
+  const ch = state.choices!.find((x) => x.effect.type === 'brave')!;
+  assert.equal(ch.by, 'chr-c');
+  applyBrave(state, world, c, 'B', '원소를 무릅쓰고', state.minutes);
+  assert.ok(protectedFrom(c, ['B'], state.minutes) && protectedFrom(w, ['B'], state.minutes));
+  assert.ok(!protectedFrom(g, ['B'], state.minutes));
 });
 
 test('the real Nimbus Wings is taught at Kabira Crossroads: the one it is cast on gets +1/+2 and wings', () => {

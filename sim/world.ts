@@ -769,6 +769,10 @@ export const SpellSimSchema = z.strictObject({
         // "Prevent all combat damage that would be dealt this turn by creatures without trample"
         // (Tanglesap): on the caster's tile, until midnight (sim/combat.ts `fogged`).
         z.strictObject({ type: z.literal('fog') }),
+        // "Choose a color. White creatures you control gain protection from it until end of turn"
+        // (Brave the Elements): the caster picks after the hour; their white ones on their tile
+        // (sim/allies.ts `applyBrave`).
+        z.strictObject({ type: z.literal('brave') }),
         // "Target player reveals their hand and discards all Trap cards" (Trapfinder's Trick): in
         // this world, the caster finds every trap hidden in the land they stand in and its areas
         // (sim/knowledge.ts `findTraps`).

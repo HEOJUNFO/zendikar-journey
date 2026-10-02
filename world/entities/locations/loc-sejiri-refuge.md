@@ -5,9 +5,10 @@ name: 세지리 피난처
 name_en: Sejiri Refuge
 summary: 세지리의 얼음 절벽 틈에 숨은 작은 쉼터. 눈보라 속에서 따뜻한 불빛이 새어 나온다
 status: canon
-sources: [ZEN-224]
+sources: [ZEN-224, ZEN-4]
 tags: [피난처, 얼음, 백색, 청색]
 links:
+  - { to: spl-brave-the-elements, rel: 가르치는 주문 (원소를 무릅쓰고) }
   - { to: loc-sejiri, rel: 바깥 지역 }
   - { to: law-life, rel: 들어서면 생명 }
 map: { in: loc-sejiri, terrain: settlement, color: [W, U], pos: [0, 0.1], tiles: 10 }
@@ -30,6 +31,7 @@ sim:
 - **백 또는 청** 땅 ([카드] {T}: Add {W} or {U}): 유대를 맺으면 하루 마나 1을 얻고, 쓸 때 백이나 청 중 필요한 쪽이 된다.
 - **탭된 채 들어온다** ([카드]): 유대를 맺은 그날은 이 땅의 마나가 나오지 않는다 (아쿰 피난처와 같다).
 - **들어올 때 생명 1** ([카드]): 이 땅과 유대를 맺으면 생명 1을 얻는다.
+- 원소를 무릅쓰고(`spl-brave-the-elements`, ZEN-4)를 4시간 들여 배운다 ([결정] 2026-10-02): 곁의 백색인 내 편이 고른 한 색으로부터 자정까지 보호받는다.
 
 ## 미정/질문
 

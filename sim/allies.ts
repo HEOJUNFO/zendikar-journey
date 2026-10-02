@@ -9,10 +9,10 @@ import { summon } from './counter.ts';
 import { addFoe, dealDamage } from './combat.ts';
 import { gainLife, loseLife } from './life.ts';
 import { revealHand } from './discard.ts';
-import { bindRetainer, masterOf, retainersOf, swayBlocked } from './retainers.ts';
+import { bindRetainer, controlledCreatures, masterOf, retainersOf, swayBlocked } from './retainers.ts';
 import { untapTime } from './clock.ts';
 import { grantAbility, spawnWild } from './abilities.ts';
-import { COLOR_LABELS, COLORS, creatureColors } from './mana.ts';
+import { actorColors, COLOR_LABELS, COLORS, creatureColors } from './mana.ts';
 import type { Color } from './mana.ts';
 import { powersSealed } from './seal.ts';
 import { addLog, awayText, hasAbility, npcDef, present, targetable, together } from './state.ts';
@@ -225,6 +225,16 @@ export function hireableFor(state: State, world: World, a: Actor) {
 }
 
 // Kabira Evangel's color named: each Ally of `master`'s party is protected from it until midnight.
+// Brave the Elements (spell `brave`): the caster's white creatures there (themselves and those who
+// serve them on their tile, user decision 2026-10-02) are protected from the color they pick until
+// midnight.
+export function applyBrave(state: State, world: World, caster: Actor, color: Color, spell: string, t: number) {
+  const until = untapTime(t);
+  const whites = controlledCreatures(state, world, caster).filter((y) => (y.id === caster.id || together(y, caster)) && actorColors(state, world, y).includes('W'));
+  for (const y of whites) y.warded = [...(y.warded ?? []).filter((w) => w.until > t && w.color !== color), { color, until }];
+  addLog(state, { kind: 'status', text: whites.length ? `${spell}: ${whites.map((y) => shortName(y.name)).join(', ')}이(가) 자정까지 ${COLOR_LABELS[color]}색으로부터 보호받는다.` : `${spell}: 곁에 백색인 이가 없어 아무 일도 없었다.`, regions: [caster.region], actors: [caster.id, ...whites.map((y) => y.id)], t });
+}
+
 export function applyWard(state: State, world: World, master: Actor, sourceId: string, color: Color, t: number) {
   const x = state.actors[sourceId];
   if (!x || x.dead || (masterOf(state, x) ?? x).id !== master.id) return;
