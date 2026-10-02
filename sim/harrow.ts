@@ -13,7 +13,8 @@ import { josa, shortName, toward } from './text.ts';
 import { landTypes, placeName, region } from './world.ts';
 import type { World } from './world.ts';
 
-export type HarrowEffect = { type: 'harrow'; spell: string; left: number; given: boolean };
+// `tapped`: the lands sought come in tapped (no mana from them today; Khalni Heart Expedition).
+export type HarrowEffect = { type: 'harrow'; spell: string; left: number; given: boolean; tapped?: boolean };
 
 // Basic lands `a` could seek out: a basic land type (no named land card), not theirs yet, not
 // destroyed, not barred to them.
@@ -55,5 +56,10 @@ export function applyHarrow(state: State, world: World, a: Actor, eff: HarrowEff
   a.fetched = [...(a.fetched ?? []), id];
   a.searched = gameDay(t);
   bondLand(state, world, a, t, id);
+  if (eff.tapped) {
+    const day = gameDay(t);
+    if (a.landsTapped?.day !== day) a.landsTapped = { day, ids: [] };
+    a.landsTapped.ids.push(id);
+  }
   return harrowOwed(state, world, a, { ...eff, left: eff.left - 1 }, t);
 }

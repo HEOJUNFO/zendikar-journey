@@ -66,7 +66,7 @@ export type PlanDayInput = {
   // A Carnage Altar they own: where it stands, and whom of theirs they could offer there.
   altar?: { name: string; at: string; who: { id: string; text: string }[] };
   // An Ior Ruin Expedition they own with enough quest counters to end, and the secrets it brings.
-  expedition?: { name: string; draws: number };
+  expedition?: { name: string; reward: string };
   // Lands they could seek out today by giving up a fetch land they hold (Arid Mesa...).
   fetch?: { id: string; text: string }[];
   // Spells they could learn (where each is taught), and spells they hold and could pay for.
@@ -222,7 +222,7 @@ Rules:
       : ''
   }${
     kinds.includes('expedition')
-      ? `\n- "expedition" takes 1 hour, anywhere: they end their ${input.expedition!.name} (it is gone for good) and come to know ${input.expedition!.draws} hidden secrets of the world from what it found. Each land they bond with adds to it, so they may also wait.`
+      ? `\n- "expedition" takes 1 hour, anywhere: they end their ${input.expedition!.name} (it is gone for good) and, from what it found, ${input.expedition!.reward}. Each land they bond with adds to it, so they may also wait.`
       : ''
   }${
     kinds.includes('scout')

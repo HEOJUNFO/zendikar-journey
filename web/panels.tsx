@@ -12,7 +12,7 @@ import { loremastersOf, recallBlocked, recallCount } from '../sim/loremaster.ts'
 import { biteBlocked, bitersOf } from '../sim/bite.ts';
 import { TAP_POWERS, tapBlocked, tappersOf } from '../sim/tapper.ts';
 import { altarBlocked, altarOf, altarVictims } from '../sim/altar.ts';
-import { expeditionBlocked, expeditionDraws, expeditionOf } from '../sim/expedition.ts';
+import { expeditionBlocked, expeditionOf, expeditionReward } from '../sim/expedition.ts';
 import type { TapPower } from '../sim/tapper.ts';
 
 // The buttons for a creature's power on someone (sim/tapper.ts).
@@ -695,7 +695,7 @@ export function CharacterControls(props: {
           <span className="muted">🗺️ {expeditionOf(state, world, p)!.name} (탐색 {state.items?.[expeditionOf(state, world, p)!.id]?.counters ?? 0}):</span>
           <button
             disabled={busy || !!stuck || !!expeditionBlocked(state, world, p)}
-            title={expeditionBlocked(state, world, p) ?? `원정을 마치고(사라짐) 숨은 것 ${expeditionDraws(state, world, p)}가지를 알게 된다`}
+            title={expeditionBlocked(state, world, p) ?? `원정을 마치고(사라짐) ${expeditionReward(state, world, p).ko}`}
             onClick={() => onAct({ type: 'expedition' })}
           >
             원정 마치기

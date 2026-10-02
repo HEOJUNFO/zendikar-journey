@@ -828,9 +828,11 @@ export const ItemSimSchema = z.strictObject({
         // owner bonds with puts one on it (sim/items.ts `itemsOnLandfall`).
         z.strictObject({ type: z.literal('landfall_quest') }),
         // "Remove N quest counters from this and sacrifice it: Draw M cards" (Ior Ruin
-        // Expedition): its owner, whenever they will, ends it and comes to know M secrets
-        // (sim/expedition.ts).
-        z.strictObject({ type: z.literal('expedition'), counters: z.number().int().positive(), draws: z.number().int().positive() }),
+        // Expedition: `draws`) / "search for up to M basic land cards, put them onto the
+        // battlefield tapped" (Khalni Heart Expedition: `lands`): its owner, whenever they will,
+        // ends it and comes to know M secrets, or bonds from afar with up to M basic lands,
+        // tapped (sim/expedition.ts).
+        z.strictObject({ type: z.literal('expedition'), counters: z.number().int().positive(), draws: z.number().int().positive().optional(), lands: z.number().int().positive().optional() }).refine((e) => !!e.draws || !!e.lands, '보상(draws 또는 lands)이 있어야 한다'),
         // "Whenever a creature enters the battlefield under your control, you may pay <cost>. If
         // you do, that creature deals damage equal to its power to any target" (Electropotence):
         // sim/electro.ts.

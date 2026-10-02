@@ -31,7 +31,7 @@ import { loremastersOf, recallBlocked, recallCount } from './loremaster.ts';
 import { biteable, readyBiter } from './bite.ts';
 import { readyTapper, tapAmount, tapBlocked, tapTargetable } from './tapper.ts';
 import { altarOf } from './altar.ts';
-import { expeditionBlocked, expeditionDraws, expeditionOf } from './expedition.ts';
+import { expeditionBlocked, expeditionOf, expeditionReward } from './expedition.ts';
 import type { TapPower } from './tapper.ts';
 import { crumble, sacrifice, sacrificeDefault } from './monument.ts';
 import { answerTide } from './tide.ts';
@@ -332,7 +332,7 @@ async function harrowChoice(state: State, world: World, llm: Llm, a: Actor, npc:
     if (llm.pick) {
       try {
         const what = eff.given
-          ? `${eff.spell}: 아직 이어지지 않은 기본 땅(세계 어디든) 하나와 멀리서 유대를 맺는다 (그날 마나를 낸다, 하루 한 땅에 들지 않는다). 그만둘 수도 있다 (남은 수 ${eff.left})`
+          ? `${eff.spell}: 아직 이어지지 않은 기본 땅(세계 어디든) 하나와 멀리서 유대를 맺는다 (${eff.tapped ? '탭된 채라 그날 마나는 내지 않는다' : '그날 마나를 낸다'}, 하루 한 땅에 들지 않는다). 그만둘 수도 있다 (남은 수 ${eff.left})`
           : `${eff.spell}: ${eff.left > 0 ? '먼저 ' : ''}유대를 맺은 땅 하나를 내어 준다 (다시 맺을 수 있다). 어느 땅을?`;
         pick = await llm.pick({ world, state, npc, what, options, optional: eff.given });
       } catch (e) {
@@ -1366,7 +1366,7 @@ async function prepare(state: State, world: World, llm: Llm): Promise<string | n
           loot: tapInput(state, world, a, 'loot'),
           scout: tapBlocked(state, world, a, 'scout', a.id, state.minutes) ? undefined : tapInput(state, world, a, 'scout'),
           altar: altarInput(state, world, a),
-          expedition: expeditionBlocked(state, world, a) ? undefined : { name: expeditionOf(state, world, a)!.name, draws: expeditionDraws(state, world, a) },
+          expedition: expeditionBlocked(state, world, a) ? undefined : { name: expeditionOf(state, world, a)!.name, reward: expeditionReward(state, world, a).en },
           fetch: fetchInput(state, world, a),
           court: courtInput(state, world, a),
           hire: hireInput(state, world, a),

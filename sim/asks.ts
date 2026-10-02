@@ -56,7 +56,7 @@ export function askText(state: State, world: World, c: Choice) {
   if (c.effect.type === 'sacrament') return `${c.effect.spell}: ${shortName(state.actors[c.effect.target]?.name ?? '')}이(가) 아직 익히지 않은 주문 하나를 그의 앞날에서 도려낸다 (남은 수 ${c.effect.left}). 무엇을? 그만둘 수도 있다.`;
   if (c.effect.type === 'escape' && c.effect.any) return `${c.effect.spell}: 이 자리의 땅 아닌 것 하나를 뒤틀림 물살로 되돌린다 (남의 존재는 몸에 붙은 힘을 잃고 섬기던 이에게서 풀려나 다른 곳으로 내동댕이쳐져 1시간 정신을 잃고, 자신·권속은 몸을 빼 달아나고, 아이템은 쌓인 것이 흩어지고, 오라는 떨어진다). 무엇을?`;
   if (c.effect.type === 'escape') return `${c.effect.spell}: 조종하는 것 하나를 거두어들인다 (자신·권속은 몸에 붙은 힘을 잃고 싸움에서 벗어나 다른 곳으로 달아나고, 땅은 다시 맺을 수 있고, 오라는 다시 걸 수 있다). 무엇을?`;
-  if (c.effect.type === 'harrow') return c.effect.given ? `${c.effect.spell}: 아직 이어지지 않은 기본 땅 하나와 멀리서 유대를 맺는다 (남은 수 ${c.effect.left}). 어디와?` : `${c.effect.spell}: ${c.effect.left > 0 ? '먼저 ' : ''}유대를 맺은 땅 하나를 내어 준다 (다시 맺을 수 있다). 어느 땅을?`;
+  if (c.effect.type === 'harrow') return c.effect.given ? `${c.effect.spell}: 아직 이어지지 않은 기본 땅 하나와 멀리서 유대를 맺는다 (${c.effect.tapped ? '탭된 채라 오늘은 마나 없음, ' : ''}남은 수 ${c.effect.left}). 어디와?` : `${c.effect.spell}: ${c.effect.left > 0 ? '먼저 ' : ''}유대를 맺은 땅 하나를 내어 준다 (다시 맺을 수 있다). 어느 땅을?`;
   if (c.effect.type === 'crush') return `${c.effect.spell}: 이 자리의 마법물체나 부여마법을 ${c.effect.first ? '부순다. 무엇을?' : '하나 더 부술 수 있다. 무엇을?'}`;
   if (c.effect.type === 'lure') return `${shortName(state.actors[c.effect.source]?.name ?? '')}의 눈이 번득인다. 여기 있는 이 하나를 사로잡아 오늘 그와 맞서게 한다 (서로 적이 되고, 날아 피하지 못한다). 누구를?`;
   if (c.effect.type === 'drain_grow') return `땅의 타락한 마나가 흐른다. 누구에게서 생명 ${c.effect.life}을 빼앗아 +1/+1 카운터 ${c.effect.counters}을 얻을까?`;

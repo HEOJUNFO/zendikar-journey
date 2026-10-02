@@ -11,6 +11,7 @@ links:
   - { to: law-permanents, rel: 부여마법 }
   - { to: law-mana-colors, rel: 청색 }
   - { to: loc-glasspool, rel: 서 있는 곳 (이오르 폐허를 내려다보는 바위) }
+  - { to: itm-khalni-heart-expedition, rel: 같은 원정 }
 sim:
   card_type: enchantment   # 오라가 아닌 부여마법: 한곳에 서 있다 ([결정] 2026-09-30)
   cost: "{1}{U}"           # 카드 그대로

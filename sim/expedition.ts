@@ -3,8 +3,11 @@
 // cards." Each land its owner bonds with puts a counter on it (always: it only helps, sim/items.ts
 // `itemsOnLandfall`). With enough, its owner may end the expedition whenever they will, wherever
 // they are (user decision 2026-10-02: an action): it is gone, and they come to know that many
-// secrets of the world ("draw", sim/knowledge.ts). The player uses it by an action, an NPC by an
-// `expedition` block in their plan.
+// secrets of the world ("draw", sim/knowledge.ts; `draws`), or bond from afar with up to that many
+// basic lands of the world, tapped (Khalni Heart Expedition, `lands`: picked one at a time as
+// Harrow's, sim/harrow.ts). The player uses it by an action, an NPC by an `expedition` block in
+// their plan.
+import { harrowOwed } from './harrow.ts';
 import { drawKnowledge } from './knowledge.ts';
 import { addLog } from './state.ts';
 import type { Actor, State } from './state.ts';
@@ -34,10 +37,14 @@ export function expeditionBlocked(state: State, world: World, a: Actor): string 
   return null;
 }
 
-// How many secrets ending it brings.
-export function expeditionDraws(state: State, world: World, a: Actor) {
+// What ending it brings, in Korean (`ko`) and for the LLM (`en`).
+export function expeditionReward(state: State, world: World, a: Actor) {
   const x = expeditionOf(state, world, a);
-  return x ? powerOf(x)!.draws : 0;
+  const e = x && powerOf(x);
+  if (!e) return { ko: '', en: '' };
+  const ko = [e.draws ? `숨은 것 ${e.draws}가지를 알게 된다` : '', e.lands ? `아직 유대 없는 기본 땅 ${e.lands}까지와 멀리서 이어진다 (탭된 채, 오늘은 마나 없음)` : ''].filter(Boolean).join(', ');
+  const en = [e.draws ? `come to know ${e.draws} hidden secrets of the world` : '', e.lands ? `bond from afar with up to ${e.lands} basic lands of the world they don't hold yet (tapped: no mana from them today; not their land for the day)` : ''].filter(Boolean).join(', and ');
+  return { ko, en };
 }
 
 export function finishExpedition(state: State, world: World, a: Actor, t: number) {
@@ -49,6 +56,8 @@ export function finishExpedition(state: State, world: World, a: Actor, t: number
   const e = powerOf(x)!;
   const s = state.items![x.id];
   state.items![x.id] = { name: s.name, counters: 0, gone: true };
-  addLog(state, { kind: 'event', text: `${josa(shortName(a.name), '이', '가')} ${josa(x.name, '을', '를')} 마쳤다 (탐색 카운터 ${e.counters}). 원정대가 가라앉은 폐허에서 건져 올린 것이 펼쳐진다.`, regions: [a.region], actors: [a.id], t });
-  drawKnowledge(state, world, a, e.draws, t, x.name);
+  addLog(state, { kind: 'event', text: `${josa(shortName(a.name), '이', '가')} ${josa(x.name, '을', '를')} 마쳤다 (탐색 카운터 ${e.counters}). 원정대가 찾아낸 것이 펼쳐진다.`, regions: [a.region], actors: [a.id], t });
+  if (e.draws) drawKnowledge(state, world, a, e.draws, t, x.name);
+  const owed = e.lands ? harrowOwed(state, world, a, { type: 'harrow', spell: x.name, left: e.lands, given: true, tapped: true }, t) : null;
+  if (owed) (state.choices ??= []).push(owed);
 }

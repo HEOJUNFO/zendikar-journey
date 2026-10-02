@@ -12,7 +12,7 @@ import { RECALL_HOURS, recallBlocked, recallCount } from './loremaster.ts';
 import { BITE_HOURS, biteBlocked, readyBiter } from './bite.ts';
 import { readyTapper, TAP_HOURS, tapAmount, tapBlocked } from './tapper.ts';
 import { ALTAR_HOURS, altarBlocked } from './altar.ts';
-import { EXPEDITION_HOURS, expeditionBlocked, expeditionDraws, expeditionOf } from './expedition.ts';
+import { EXPEDITION_HOURS, expeditionBlocked, expeditionOf, expeditionReward } from './expedition.ts';
 import { bondBlocked, bondTargets, FETCH_HOURS, fetchBlocked, firesOnBond, growBlocked, HAND, landDropBlocked, targetedBondEffect, TOP } from './abilities.ts';
 import { handBlocked, topBlocked } from './oracle.ts';
 import { CLAIM_HOURS, claimBlocked, itemDef } from './items.ts';
@@ -313,7 +313,7 @@ export function startAction(state: State, world: World, action: Action): string 
       const why = expeditionBlocked(state, world, p);
       if (why) return why;
       task = { kind: 'expedition', activity: `${expeditionOf(state, world, p)!.name}을(를) 마침`, emoji: '🗺️', until: until(EXPEDITION_HOURS) };
-      text = `원정을 마치고 원정대가 건져 올린 것을 짚어 본다. 숨은 것 ${expeditionDraws(state, world, p)}가지를 알게 된다.`;
+      text = `원정을 마치고 원정대가 찾아낸 것을 짚어 본다. ${expeditionReward(state, world, p).ko}.`;
       break;
     }
     case 'hire': {

@@ -31,7 +31,7 @@ import { pumpMax, pumpsDue } from './pump.ts';
 import { bindTargets } from './bind.ts';
 import { drawKnowledge, handSize, huntKnowledge, knownSecrets, secretsOf } from './knowledge.ts';
 import { letGo, revealHand } from './discard.ts';
-import { claimBlocked, claimItem, itemOwner, itemsAt, itemWhere } from './items.ts';
+import { claimBlocked, claimItem, itemOwner, itemsAt, itemTile, itemWhere } from './items.ts';
 import { spendBlocked, storeBlocked } from './eons.ts';
 import { applyEnterDestroy, applyLure, applySearch, bondBlocked, enterDestroy, onEnter, bondLand, bondTargets, callForth, fetchTargets, fireTargets, firesOnBond, growBlocked, spawnWild, summonLibrary, useAbility } from './abilities.ts';
 import { DEPLETED_LABEL, DESTROYED_DAYS, TRAVEL_UNITS_PER_HOUR } from './rules.ts';
@@ -6973,9 +6973,34 @@ test('Ior Ruin Expedition by an NPC: offered in their plan once it has three cou
   state.items = { 'itm-exp': { name: '원정', owner: m.id, counters: 3 } };
   let offered: PlanDayInput | undefined;
   await advance(state, world, 2, { planDay: async (input) => (input.id === 'chr-m' && (offered = input), planDay!(input)) });
-  assert.deepEqual(offered?.expedition, { name: '원정', draws: 2 });
+  assert.deepEqual(offered?.expedition, { name: '원정', reward: 'come to know 2 hidden secrets of the world' });
   assert.ok(state.items['itm-exp'].gone);
   assert.equal(m.knowledge?.length, 2);
+});
+
+test('Khalni Heart Expedition: with three counters the player ends it; they pick basic lands to bond with from afar, tapped (no mana from them today)', async () => {
+  const item: RawEntity = { id: 'itm-khe', kind: 'item', name: '심장 원정', status: 'canon', sim: { card_type: 'enchantment', cost: '{0}', at: 'loc-a', effects: [{ type: 'landfall_quest' }, { type: 'expedition', counters: 3, lands: 2 }] } };
+  const world = fixture([item, altarItem, demolishSpell]);
+  const state = character(world, 'loc-a');
+  const p = state.actors[PLAYER_ID];
+  state.items = { 'itm-khe': { name: '심장 원정', owner: p.id, counters: 3 } };
+  await act(state, world, { type: 'expedition' });
+  if (state.asks?.[0]?.effect.type !== 'harrow') await act(state, world, { type: 'wait', hours: 1 });
+  assert.ok(state.items['itm-khe'].gone);
+  const ask = state.asks![0];
+  assert.deepEqual(ask.effect, { type: 'harrow', spell: '심장 원정', left: 2, given: true, tapped: true });
+  const land = ask.candidates[0];
+  await act(state, world, { type: 'choose', pick: land });
+  assert.ok(p.bonds?.includes(land));
+  assert.ok(p.landsTapped?.ids.includes(land));
+});
+
+test('the real Khalni Heart Expedition stands by the Khalni Heart in Ora Ondar, on a tile of its own', () => {
+  const world = loadWorld();
+  const x = world.items.find((i) => i.id === 'itm-khalni-heart-expedition')!;
+  assert.equal(x.at, 'loc-ora-ondar');
+  assert.deepEqual(x.effects, [{ type: 'landfall_quest' }, { type: 'expedition', counters: 3, lands: 2 }]);
+  assert.ok(!sameTile(itemTile(world, x), itemTile(world, world.items.find((i) => i.id === 'itm-khalni-gem')!)));
 });
 
 test('the real Ior Ruin Expedition stands by Glasspool, a lake of Akoum and a basic island', () => {
