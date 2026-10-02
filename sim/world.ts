@@ -313,6 +313,9 @@ export const CharacterSimSchema = z.strictObject({
   // "When this enters, target creature can't block this turn" (Goblin Shortcutter): its controller
   // picks one on its tile, who can't block until midnight (sim/shortcut.ts).
   enter_no_block: z.boolean().default(false),
+  // "Whenever this attacks, defending player reveals the top card of their library; a land, they
+  // put it into their hand" (Goblin Guide): sim/scope.ts `guideOnAttack`.
+  attack_gift: z.boolean().default(false),
   enter_sacrifice: z.strictObject({ kicker: CostSchema }).optional(),
   enter_pump: z.strictObject({ pt: z.tuple([z.number().int().min(0), z.number().int().min(0)]), kicker: CostSchema }).optional(),
   // "Kicker <cost>. When this enters, if it was kicked, creatures you control get +P/+T and gain
@@ -1116,6 +1119,7 @@ export type NpcDef = {
   sacUncounter?: boolean;
   instigate?: boolean;
   shuffleCounter?: boolean;
+  attackGift?: boolean;
   landfallDrain?: { life: number; counters: number };
   landfallLure?: boolean;
   landfallReturn?: boolean;
@@ -1340,7 +1344,7 @@ export function buildWorld(entities: RawEntity[]): { world: World; errors: strin
         err(e.id, `sim 오류: ${issues(sim.error)}`);
         continue;
       }
-      const { knows_colors, activated, wins_at_life, extra_combat, pump, empty_hand_pump, attack_pump, discard_on_hit, landfall_token, landfall_seize, landfall_lose, landfall_grant, landfall_life, landfall_mana, revives_after, regenerate, sac_uncounter, instigate, shuffle_counter, landfall_drain, landfall_lure, landfall_return, drain_on_join, haste_low_life, enter_destroy, enter_drain, enter_draw, enter_search, enter_shatter, enter_exile, enter_tap, enter_damage, enter_grant, enter_equip, enter_return, enter_tap_many, enter_pump, enter_rally, enter_sacrifice, enter_no_block, enter_reveal, upkeep_return_land, extra_lands, reveal_top, tap_foe, tap_draw_allies, engulf, tap_mana, upkeep_burn, counter_tokens, follows_only, cant_block_unless, tap_shield, tap_grant, tap_loot, tap_search, equip_anthem, hit_sacrifice_land, name, home_pos, ...rest } = sim.data;
+      const { knows_colors, activated, wins_at_life, extra_combat, pump, empty_hand_pump, attack_pump, discard_on_hit, landfall_token, landfall_seize, landfall_lose, landfall_grant, landfall_life, landfall_mana, revives_after, regenerate, sac_uncounter, instigate, shuffle_counter, attack_gift, landfall_drain, landfall_lure, landfall_return, drain_on_join, haste_low_life, enter_destroy, enter_drain, enter_draw, enter_search, enter_shatter, enter_exile, enter_tap, enter_damage, enter_grant, enter_equip, enter_return, enter_tap_many, enter_pump, enter_rally, enter_sacrifice, enter_no_block, enter_reveal, upkeep_return_land, extra_lands, reveal_top, tap_foe, tap_draw_allies, engulf, tap_mana, upkeep_burn, counter_tokens, follows_only, cant_block_unless, tap_shield, tap_grant, tap_loot, tap_search, equip_anthem, hit_sacrifice_land, name, home_pos, ...rest } = sim.data;
 
       world.npcs.push({
         id: e.id,
@@ -1361,6 +1365,7 @@ export function buildWorld(entities: RawEntity[]): { world: World; errors: strin
         ...(sac_uncounter ? { sacUncounter: true } : {}),
         ...(instigate ? { instigate: true } : {}),
         ...(shuffle_counter ? { shuffleCounter: true } : {}),
+        ...(attack_gift ? { attackGift: true } : {}),
         ...(enter_destroy
           ? { enterDestroy: typeof enter_destroy === 'string' ? { kind: enter_destroy } : { kind: enter_destroy.kind, ...(enter_destroy.kicker ? { kicker: parseManaCost(enter_destroy.kicker)!, kickerText: enter_destroy.kicker } : {}), ...(enter_destroy.flying ? { flying: true } : {}) } }
           : {}),

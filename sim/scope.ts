@@ -7,11 +7,36 @@
 // hold already is nothing.
 import { gameDay } from './clock.ts';
 import { bondLand } from './abilities.ts';
-import { addLog, random } from './state.ts';
+import { powersSealed } from './seal.ts';
+import { addLog, npcDef, random } from './state.ts';
 import type { Actor, State } from './state.ts';
 import { josa, shortName, toward } from './text.ts';
 import { landIdOf, region } from './world.ts';
 import type { World } from './world.ts';
+
+// The top of someone's library: always a land, one of the world at random (user decision 2026-10-02).
+function topOfLibrary(state: State, world: World) {
+  const lands = [...new Set(world.regions.filter((r) => !r.notLand && !r.wanders).map((r) => landIdOf(world, r.id)))];
+  return lands.length ? lands[Math.floor(random(state) * lands.length)] : undefined;
+}
+
+// Goblin Guide (`sim.attack_gift`): "Whenever this attacks, defending player reveals the top card
+// of their library. If it's a land card, that player puts it into their hand." The first time each
+// day it falls on someone, the top of their library shows; one they don't hold, nor have in hand,
+// nor lost for good, comes into their hand (`Actor.handLands`, sim/oracle.ts).
+export function guideOnAttack(state: State, world: World, a: Actor, defender: Actor, t: number) {
+  if (!npcDef(state, world, a.id)?.attackGift || powersSealed(state, world, a, t) || defender.dead) return;
+  const land = topOfLibrary(state, world);
+  if (!land) return;
+  const name = region(world, land).name;
+  const why = defender.bonds?.includes(land) ? '이미 이어진 땅이다' : defender.handLands?.includes(land) ? '이미 손에 든 땅이다' : defender.exiledLands?.includes(land) ? '영영 잃은 땅이다' : null;
+  if (why) {
+    addLog(state, { kind: 'status', text: `${josa(shortName(a.name), '이', '가')} 덤벼들며 떠벌렸다: "${name} 가 봤어?" ${shortName(defender.name)}에게는 ${why}.`, regions: [a.region], actors: [a.id, defender.id], t });
+    return;
+  }
+  defender.handLands = [...(defender.handLands ?? []), land];
+  addLog(state, { kind: 'status', text: `${josa(shortName(a.name), '이', '가')} 덤벼들며 떠벌리다 ${shortName(defender.name)}에게 ${toward(name)} 가는 길을 흘렸다 (손에 든 땅: 언제든 멀리서 그날의 땅으로 이을 수 있다).`, regions: [a.region], actors: [a.id, defender.id], t });
+}
 
 export function scopeOnAttack(state: State, world: World, a: Actor, t: number) {
   for (const x of world.items) {
@@ -19,9 +44,8 @@ export function scopeOnAttack(state: State, world: World, a: Actor, t: number) {
     if (!x.equip?.attackReveal || !s || s.gone || s.bearer !== a.id || !s.owner) continue;
     const owner = state.actors[s.owner];
     if (!owner || owner.dead) continue;
-    const lands = [...new Set(world.regions.filter((r) => !r.notLand && !r.wanders).map((r) => landIdOf(world, r.id)))];
-    if (!lands.length) continue;
-    const land = lands[Math.floor(random(state) * lands.length)];
+    const land = topOfLibrary(state, world);
+    if (!land) continue;
     const name = region(world, land).name;
     const why = owner.bonds?.includes(land) ? '이미 이어진 땅이다' : owner.exiledLands?.includes(land) ? '영영 잃은 땅이다' : state.regions[land]?.destroyed ? '부서진 땅이다' : null;
     if (why) {

@@ -7243,6 +7243,29 @@ test('Explorer\'s Scope: the first time its bearer attacks each day, a land of t
   assert.equal(o.bonds?.length, 1);
 });
 
+test('Goblin Guide: the first time each day it attacks, a land of the world shows atop the defender\'s library and, new to them, comes into their hand', () => {
+  const world = fixture([npc('chr-g', { ...npcSim('loc-a', 'work', [2, 2]), types: ['goblin'], abilities: ['haste'], attack_gift: true }), npc('chr-d', npcSim('loc-a', 'work', [1, 9]))]);
+  const state = newState(world, { seed: 1, mode: 'observer' });
+  const [g, d] = ['chr-g', 'chr-d'].map((id) => state.actors[id]);
+  d.tile = g.tile;
+  d.bonds = [];
+  clash(state, world, g, d, state.minutes);
+  assert.equal(d.handLands?.length, 1);
+  assert.ok(!d.bonds?.length);
+  assert.ok(!g.handLands?.length);
+  clash(state, world, g, d, state.minutes + 60);
+  assert.equal(d.handLands?.length, 1);
+});
+
+test('the real Goblin Guide roams Ora Ondar: a hasty goblin that gives lands away', () => {
+  const world = loadWorld();
+  const state = newState(world, { seed: 1, mode: 'observer' });
+  const g = state.actors['chr-goblin-guide'];
+  assert.equal(g?.region, 'loc-ora-ondar');
+  assert.ok(hasAbility(g, 'haste', state.minutes));
+  assert.equal(npcDef(state, world, g.id)?.attackGift, true);
+});
+
 test('the real Explorer\'s Scope hangs at Kabira Crossroads: equip {1}, it looks ahead when its bearer attacks', () => {
   const x = loadWorld().items.find((i) => i.id === 'itm-explorers-scope')!;
   assert.equal(x.at, 'loc-kabira-crossroads');
@@ -7852,7 +7875,7 @@ test('the real Warren Instigator lives on the Teeth of Akoum; the world\'s gobli
   assert.equal(w?.region, 'loc-teeth-of-akoum');
   assert.ok(npcDef(state, world, w.id)?.instigate && hasAbility(w, 'double_strike', state.minutes));
   const goblins = world.npcs.filter((n) => n.types?.includes('goblin')).map((n) => n.id).sort();
-  assert.deepEqual(goblins, ['chr-goblin-bushwhacker', 'chr-goblin-ruinblaster', 'chr-goblin-shortcutter', 'chr-torch-slinger', 'chr-tuktuk-grunts', 'chr-warren-instigator']);
+  assert.deepEqual(goblins, ['chr-goblin-bushwhacker', 'chr-goblin-guide', 'chr-goblin-ruinblaster', 'chr-goblin-shortcutter', 'chr-torch-slinger', 'chr-tuktuk-grunts', 'chr-warren-instigator']);
 });
 
 test('Brave the Elements: the caster picks a color; their white ones there (themselves, retainers) are protected from it until midnight; others are not', () => {

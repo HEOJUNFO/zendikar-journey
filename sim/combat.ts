@@ -15,7 +15,7 @@ import { instigate } from './instigator.ts';
 import { hooks } from './equipment.ts';
 import { shielded } from './tapper.ts';
 import { harrowOwed } from './harrow.ts';
-import { scopeOnAttack } from './scope.ts';
+import { guideOnAttack, scopeOnAttack } from './scope.ts';
 import { doubleLife, gainLife, lifeOf } from './life.ts';
 import { actorColors, COLOR_LABELS, manaAvailable, parseManaCost, payMana, planPayment } from './mana.ts';
 import { HUNT_HUNGER, KILL_FEED, KO_ACTIVITY, KO_HOURS } from './rules.ts';
@@ -287,12 +287,13 @@ export function attackPump(state: State, world: World, a: Actor, t: number) {
 
 // "Whenever this (a creature you control) attacks": the first time each day one falls on
 // someone (a turn is a day, user decision 2026-10-01).
-function onAttack(state: State, world: World, a: Actor, t: number) {
+function onAttack(state: State, world: World, a: Actor, defender: Actor, t: number) {
   if (a.attackDay === gameDay(t)) return;
   a.attackDay = gameDay(t);
   attackPump(state, world, a, t);
   attackQuest(state, world, a, t);
   scopeOnAttack(state, world, a, t);
+  guideOnAttack(state, world, a, defender, t);
 }
 
 export function clash(state: State, world: World, attacker: Actor, defender: Actor, t: number, unblocked: string | null = null) {
@@ -304,7 +305,7 @@ export function clash(state: State, world: World, attacker: Actor, defender: Act
   addFoe(attacker, defender.id, t);
   refreshEmptyHand(state, world, attacker, t);
   refreshEmptyHand(state, world, defender, t);
-  onAttack(state, world, attacker, t);
+  onAttack(state, world, attacker, defender, t);
   // Protection from a color: no damage from one of that color.
   const shielded = (from: Actor, to: Actor) => protectedFrom(to, actorColors(state, world, from), t);
   let [ap] = shielded(attacker, defender) ? [0] : ptOf(attacker);
