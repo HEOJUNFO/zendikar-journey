@@ -5,9 +5,10 @@ name: 실룬디 연안
 name_en: Silundi Coast
 summary: 온두 남서쪽 해안, 실룬디 바다를 마주한 모래톱과 얕은 물가. 바다를 오가는 인어들이 뭍에 오르고, 바람의 물결을 부리는 마법사들이 하늘을 또 하나의 바다라 부른다
 status: canon
-sources: [ZEN-64, ZEN-52, ZEN-48, ZEN-43]
+sources: [ZEN-64, ZEN-52, ZEN-48, ZEN-43, ZEN-47]
 tags: [해안, 모래톱, 인어, 청색]
 links:
+  - { to: cre-hedron-crab, rel: 갯바위의 헤드론 게 }
   - { to: chr-caller-of-gales, rel: 바위 끝에서 바람을 부르는 인어 }
   - { to: loc-ondu, rel: 바깥 지역 }
   - { to: loc-silundi-sea, rel: 마주한 바다 }
@@ -31,3 +32,4 @@ sim:
 - 살아 있는 해일(`cre-living-tsunami`, ZEN-52)이 이 물가의 바다에서 몸을 일으킨다 ([결정] 2026-10-01). 따를 이를 스스로 고르고, 섬기는 동안은 주인이 밤마다 땅 하나를 내어 주어야 남는다.
 - 뒤틀림 속으로(`spl-into-the-roil`, ZEN-48)를 4시간 들여 배운다 ([결정] 2026-10-02): 뒤틀림 물살을 아는 뱃사람들의 청색 주문.
 - 북서쪽 바위 끝에서 돌풍을 부르는 이(`chr-caller-of-gales`, ZEN-43)가 바람을 부른다 ([결정] 2026-10-02): 거느린 이가 {1}{U}를 내면 곁의 하나를 자정까지 날게 한다.
+- 남동쪽 떠 있는 바위 아래 갯바위에 헤드론 게(`cre-hedron-crab`, ZEN-47)가 산다 ([결정] 2026-10-02): 거느린 이가 땅과 이어질 때 곁의 하나의 주문 셋을 무덤으로.

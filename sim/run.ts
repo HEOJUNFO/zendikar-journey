@@ -42,6 +42,7 @@ import { flingTargets, torchesOf } from './fling.ts';
 import type { GustEffect } from './owl.ts';
 import { applyGem, expeditionBlocked, expeditionOf, expeditionReward } from './expedition.ts';
 import { applyChart, chartBlocked, chartCost, chartOf } from './chart.ts';
+import { applyMill } from './mill.ts';
 import { ascendBlocked, ascensionOf } from './luminarch.ts';
 import type { TapPower } from './tapper.ts';
 import { crumble, sacrifice, sacrificeDefault } from './monument.ts';
@@ -965,6 +966,19 @@ async function choices(state: State, world: World, llm: Llm) {
       continue;
     }
     // Turntimber Basilisk, bonding: whom (if anyone) its gaze catches.
+    if (c.effect.type === 'mill') {
+      let pick: string | null = null;
+      if (llm.choose) {
+        try {
+          pick = await llm.choose({ world, state, npc, candidates, optional: false, what: `${land.name}: 당신이 땅과 이어지자 ${shortName(state.actors[c.effect.source]?.name ?? '')}이(가) 쥔 헤드론이 웅웅거린다. 여기 있는 이 하나(당신도)의 앞날이 어지러워져, 그가 아직 익히지 않은 주문 ${c.effect.count}이 잊힌 것(무덤)이 된다 (배우는 곳에서 다시 익힐 수 있다). 누구를?` });
+        } catch (e) {
+          console.warn(`choose (mill) for ${c.by} failed:`, e);
+        }
+      }
+      const target = candidates.find((x) => x.id === pick) ?? candidates[0];
+      applyMill(state, world, target, c.effect.count, c.effect.source, state.minutes);
+      continue;
+    }
     if (c.effect.type === 'lure') {
       const source = state.actors[c.effect.source];
       if (!source || !llm.choose) continue;

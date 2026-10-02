@@ -54,6 +54,7 @@ import { bloodSeekHour } from './seeker.ts';
 import { altarBlocked } from './altar.ts';
 import { expeditionBlocked } from './expedition.ts';
 import { chartBlocked } from './chart.ts';
+import { applyMill } from './mill.ts';
 import { ascendBlocked, upkeepUnhurt } from './luminarch.ts';
 import { reviveHour } from './revive.ts';
 import { punishHour } from './punish.ts';
@@ -7293,6 +7294,45 @@ test('the real Goblin Guide roams Ora Ondar: a hasty goblin that gives lands awa
   assert.equal(g?.region, 'loc-ora-ondar');
   assert.ok(hasAbility(g, 'haste', state.minutes));
   assert.equal(npcDef(state, world, g.id)?.attackGift, true);
+});
+
+test('Hedron Crab: its master bonding with a land, the crab awake at their side, three spells the one they pick could still learn go to that one\'s graveyard; the player picks', async () => {
+  const spells: RawEntity[] = ['a', 'b', 'c', 'd'].map((x) => ({ id: `spl-${x}`, kind: 'spell', name: `주문${x}`, status: 'canon', sim: { cost: '{0}', speed: 'sorcery', learn_at: 'loc-a', target: 'self', effects: [{ type: 'gain_life', amount: 1 }] } }));
+  const crab = (id: string) => npc(id, { ...npcSim('loc-a', 'work', [0, 2]), needs: ['energy'], beast: true, landfall_mill: 3 });
+  const world = fixture([...spells, crab('cre-c'), crab('cre-away'), npc('chr-m', npcSim('loc-a')), npc('chr-x', npcSim('loc-a'))]);
+  const state = character(world, 'loc-a');
+  const p = state.actors[PLAYER_ID];
+  const [c, away, m, x] = ['cre-c', 'cre-away', 'chr-m', 'chr-x'].map((id) => state.actors[id]);
+  for (const y of [c, m, x]) y.tile = p.tile;
+  away.tile = tilesOf(world, 'loc-a').find((tl) => !sameTile(tl, p.tile)) ?? p.tile;
+  c.master = m.id;
+  away.master = m.id;
+  x.spells = ['spl-a'];
+  bondLand(state, world, m, state.minutes, 'loc-b');
+  const owed = state.choices!.filter((y) => y.effect.type === 'mill');
+  assert.equal(owed.length, sameTile(away.tile, p.tile) ? 2 : 1);
+  assert.equal(owed[0].by, 'chr-m');
+  assert.ok(owed[0].candidates.includes('chr-m') && owed[0].candidates.includes('chr-x'));
+  applyMill(state, world, x, 3, 'cre-c', state.minutes);
+  assert.equal(x.graveyard?.length, 3);
+  assert.ok(!x.graveyard?.includes('spl-a'));
+  assert.equal(buriedToday(x, state.minutes), 3);
+  c.master = p.id;
+  away.master = undefined;
+  bondLand(state, world, p, state.minutes, 'loc-b');
+  const ask = state.asks!.find((y) => y.effect.type === 'mill')!;
+  assert.ok(ask && !ask.optional);
+  await act(state, world, { type: 'choose', pick: p.id });
+  assert.equal(p.graveyard?.length, 3);
+});
+
+test('the real Hedron Crab clings to the Silundi coast: a beast whose landfall mills three', () => {
+  const world = loadWorld();
+  const state = newState(world, { seed: 1, mode: 'observer' });
+  const c = state.actors['cre-hedron-crab'];
+  assert.equal(c?.region, 'loc-silundi-coast');
+  assert.equal(npcDef(state, world, c.id)?.landfallMill, 3);
+  assert.equal(npcDef(state, world, c.id)?.beast, true);
 });
 
 test('the real Explorer\'s Scope hangs at Kabira Crossroads: equip {1}, it looks ahead when its bearer attacks', () => {
