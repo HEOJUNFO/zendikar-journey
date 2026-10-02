@@ -5,9 +5,10 @@ name: 보주카 만
 name_en: Bojuka Bay
 summary: 발라 게드 굼 밀림의 동쪽 가장자리, 우멍 강이 바다로 나는 어귀의 만. 강을 오가는 배와 강가 마을들을 노리는 인어 바다추적자들이 얕은 물에 숨는다
 status: canon
-sources: [ZEN-55]
+sources: [ZEN-55, ZEN-50]
 tags: [만, 강어귀, 해안, 인어, 청색]
 links:
+  - { to: cre-kraken, rel: 갯벌의 새끼 크라켄 }
   - { to: loc-guum-wilds, rel: 바깥 구역 (굼 밀림) }
   - { to: loc-tangled-vale, rel: 가까운 조라가의 골짜기 }
   - { to: chr-merfolk-seastalkers, rel: 얕은 물에 숨은 인어 무리 }
@@ -25,6 +26,7 @@ map: { in: loc-guum-wilds, terrain: beach, pos: [0.9, 0.45], tiles: 10 }   # 기
 - **기본 섬**처럼 친다 ([결정] 2026-10-01): 얕은 물과 갯가라 누구나 서고 지날 수 있다 (깊은 바다가 아니다). 유대를 맺으면 청 마나 1을 내고, 섬 종류라 섬걷기의 섬이고 페치로 찾을 수 있다.
 - 자리: 굼 밀림의 남동쪽 끝, 발라 게드 동쪽 해안(`pos: [0.9, 0.45]`) ([가공]: 설정에 만의 방위는 없다).
 - 인어 바다추적자(`chr-merfolk-seastalkers`, ZEN-55)가 산다.
+- 남동쪽 갯벌에 새끼 크라켄(`cre-kraken`, ZEN-50)이 기어 다닌다 ([결정] 2026-10-02): 0/4 짐승.
 
 ## 미정/질문
 

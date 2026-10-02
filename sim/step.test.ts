@@ -7350,6 +7350,16 @@ test('the real Hedron Crab clings to the Silundi coast: a beast whose landfall m
   assert.equal(npcDef(state, world, c.id)?.beast, true);
 });
 
+test('the real Kraken Hatchling crawls on the Bojuka Bay shore: a 0/4 beast, not bound to the sea', () => {
+  const world = loadWorld();
+  const state = newState(world, { seed: 1, mode: 'observer' });
+  const k = state.actors['cre-kraken'];
+  assert.equal(k?.region, 'loc-bojuka-bay');
+  assert.deepEqual(ptOf(k), [0, 4]);
+  assert.ok(!hasAbility(k, 'aquatic', state.minutes));
+  assert.equal(npcDef(state, world, k.id)?.beast, true);
+});
+
 test('the real Explorer\'s Scope hangs at Kabira Crossroads: equip {1}, it looks ahead when its bearer attacks', () => {
   const x = loadWorld().items.find((i) => i.id === 'itm-explorers-scope')!;
   assert.equal(x.at, 'loc-kabira-crossroads');
