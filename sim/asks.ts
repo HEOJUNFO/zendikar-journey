@@ -16,6 +16,7 @@ import { applyGem } from './expedition.ts';
 import { applyChart } from './chart.ts';
 import { applyMill } from './mill.ts';
 import { applySecrets } from './secrets.ts';
+import { applyRelic, relicOptions } from './relic.ts';
 import { applyFlood, floodOptions } from './flood.ts';
 import { applyGust, gustOptions } from './owl.ts';
 import { applyInstigate } from './instigator.ts';
@@ -102,6 +103,7 @@ export function askText(state: State, world: World, c: Choice) {
   if (c.effect.type === 'shortcut') return `${shortName(state.actors[c.effect.source]?.name ?? '')}이(가) 이곳에 들어섰다. 여기 있는 이 하나를 휘저어 놓아, 그 이는 자정까지 누구도 막아 주지 못한다. 누구를?`;
   if (c.effect.type === 'toll') return `${shortName(state.actors[c.effect.source]?.name ?? '')}이(가) 이곳에 들어섰다. 힘을 더 들여 여기 있는 이 하나에게 피의 통행세를 받아 낼 수 있다 (그 이는 거느린 생물 하나를, 제 몸도, 내놓아야 한다). 누구에게?`;
   if (c.effect.type === 'gem') return `${c.effect.item}: +1/+1 카운터 ${c.effect.amount}을 줄 곁의 하나 (자신도). 누구에게?`;
+  if (c.effect.type === 'relic') return `${c.effect.item}의 끝: 주인 없는 장비 하나를 찾아 자신이나 곁의 권속에게 값 없이 맬 수 있다. 무엇을 누구에게?`;
   if (c.effect.type === 'outfit') return `${shortName(state.actors[c.effect.source]?.name ?? '')}이(가) 이곳에 들어섰다. 지닌 장비 하나를 자신이나 곁의 권속에게 값 없이 매어 줄 수 있다. 무엇을 누구에게?`;
   if (c.effect.type === 'lift') return `${shortName(state.actors[c.effect.source]?.name ?? '')}이(가) 이곳에 들어섰다. 힘(${npcDef(state, world, c.effect.source)?.enterGrant?.kickerText ?? ''})을 더 들여 여기 있는 이 하나(자신도)를 갈고리 밧줄로 끌어올려 자정까지 날게 할 수 있다. 누구를?`;
   if (c.effect.type === 'torch') return `${shortName(state.actors[c.effect.source]?.name ?? '')}이(가) 이곳에 들어섰다. 힘(${npcDef(state, world, c.effect.source)?.enterDamage?.kickerText ?? ''})을 더 들여 여기 있는 이 하나에게 횃불을 던져 피해 ${npcDef(state, world, c.effect.source)?.enterDamage?.amount ?? 2}를 줄 수 있다. 누구에게?`;
@@ -137,6 +139,10 @@ export function askOptions(state: State, world: World, c: Choice): { pick: strin
     return [...(p ? discoveryOptions(state, world, p, c.effect.kind) : []).map((o) => ({ pick: o.id as string | null, label: o.label })), { pick: null, label: '그만둔다' }];
   }
   if (c.effect.type === 'sacrament') return [...c.candidates.map((id) => ({ pick: id as string | null, label: world.spells.find((s) => s.id === id)?.name ?? id })), { pick: null, label: '그만둔다' }];
+  if (c.effect.type === 'relic') {
+    const p = state.actors[c.by];
+    return [...(p ? relicOptions(state, world, p) : []).filter((o) => c.candidates.includes(o.id)).map((o) => ({ pick: o.id as string | null, label: o.label })), { pick: null, label: '그만둔다' }];
+  }
   if (c.effect.type === 'outfit') {
     const source = state.actors[c.effect.source];
     return [...(source ? outfitOptions(state, world, source, state.minutes) : []).map((o) => ({ pick: o.id as string | null, label: o.label })), { pick: null, label: '그만둔다' }];
@@ -336,6 +342,8 @@ export function answerAsk(state: State, world: World, pick: string | null, t: nu
     // One must be: an answer that isn't one goes to the first.
     const target = state.actors[pick && c.candidates.includes(pick) ? pick : c.candidates[0]];
     if (target) applyGem(state, p, target, c.effect.item, c.effect.amount, t);
+  } else if (c.effect.type === 'relic') {
+    if (pick && c.candidates.includes(pick)) applyRelic(state, world, p, pick, c.effect.item, t);
   } else if (c.effect.type === 'outfit') {
     const source = state.actors[c.effect.source];
     if (source && pick && c.candidates.includes(pick)) applyOutfit(state, world, source, pick, t);

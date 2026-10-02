@@ -45,6 +45,7 @@ import { applyChart, chartBlocked, chartCost, chartOf } from './chart.ts';
 import { applyMill } from './mill.ts';
 import { applySecrets, secretsBlocked, secretsOf } from './secrets.ts';
 import { flameBlocked, flameOf } from './pureflame.ts';
+import { applyRelic, relicOptions } from './relic.ts';
 import { ascendBlocked, ascensionOf } from './luminarch.ts';
 import type { TapPower } from './tapper.ts';
 import { crumble, sacrifice, sacrificeDefault } from './monument.ts';
@@ -936,6 +937,36 @@ async function choices(state: State, world: World, llm: Llm) {
       continue;
     }
     const land = world.regions.find((r) => r.id === c.land);
+    // Quest for the Holy Relic: an Equipment and a bearer together ("item|bearer").
+    if (c.effect.type === 'relic') {
+      if (!land || !by || by.dead || !npc || !llm.pick) continue;
+      const options = relicOptions(state, world, by).filter((o) => c.candidates.includes(o.id));
+      if (!options.length) continue;
+      let pick: string | null = null;
+      try {
+        pick = await llm.pick({ world, state, npc, what: `${c.effect.item}을(를) 마쳤다. 주인 없는 장비 하나를 찾아 당신이나 곁의 권속에게 값 없이 맬 수 있다 (맨 이가 장비의 힘을 지닌다). 그만둘 수도 있다`, options, optional: true });
+      } catch (e) {
+        console.warn(`pick (relic) for ${c.by} failed:`, e);
+      }
+      if (pick) applyRelic(state, world, by, pick, c.effect.item, state.minutes);
+      continue;
+    }
+    // Kor Outfitter: an item and a bearer together ("item|bearer"), not beings: before the check below.
+    if (c.effect.type === 'outfit') {
+      if (!land || !by || by.dead) continue;
+      const source = state.actors[c.effect.source];
+      if (!source || !npc || !llm.pick) continue;
+      const options = outfitOptions(state, world, source, state.minutes);
+      if (!options.length) continue;
+      let pick: string | null = null;
+      try {
+        pick = await llm.pick({ world, state, npc, what: `${land.name}: ${source.id === by.id ? '당신' : shortName(source.name)}이(가) 이곳에 들어섰다. 당신이 지닌 장비 하나를 당신이나 곁의 권속에게 값 없이 매어 줄 수 있다 (맨 이가 장비의 힘을 지닌다). 그만둘 수도 있다`, options, optional: true });
+      } catch (e) {
+        console.warn(`pick (outfit) for ${c.by} failed:`, e);
+      }
+      if (pick) applyOutfit(state, world, source, pick, state.minutes);
+      continue;
+    }
     const candidates = c.candidates.map((id) => state.actors[id]).filter((x) => x && !x.dead);
     if (!by || by.dead || !npc || !land || !candidates.length) continue;
     if (c.effect.type === 'pledge' || c.effect.type === 'evade') continue; // the player's alone
@@ -1083,20 +1114,6 @@ async function choices(state: State, world: World, llm: Llm) {
       continue;
     }
     // Kor Outfitter, arriving: which of their equipment its controller has it put on whom, or none.
-    if (c.effect.type === 'outfit') {
-      const source = state.actors[c.effect.source];
-      if (!source || !npc || !llm.pick) continue;
-      const options = outfitOptions(state, world, source, state.minutes);
-      if (!options.length) continue;
-      let pick: string | null = null;
-      try {
-        pick = await llm.pick({ world, state, npc, what: `${land.name}: ${source.id === by.id ? '당신' : shortName(source.name)}이(가) 이곳에 들어섰다. 당신이 지닌 장비 하나를 당신이나 곁의 권속에게 값 없이 매어 줄 수 있다 (맨 이가 장비의 힘을 지닌다). 그만둘 수도 있다`, options, optional: true });
-      } catch (e) {
-        console.warn(`pick (outfit) for ${c.by} failed:`, e);
-      }
-      if (pick) applyOutfit(state, world, source, pick, state.minutes);
-      continue;
-    }
     // Warren Instigator, drawing blood: a goblin of the world to call to its side, or none.
     if (c.effect.type === 'instigate') {
       const source = state.actors[c.effect.source];

@@ -5,6 +5,7 @@
 //
 // Order within an hour: raised events -> factions -> regions -> characters -> meetings.
 import { electroHour } from './electro.ts';
+import { relicHour } from './relic.ts';
 import { upkeepQuest } from './ascension.ts';
 import { formatClock, gameDay, minuteOfDay, STEP_MINUTES, untapTime } from './clock.ts';
 import {
@@ -98,6 +99,7 @@ export function step(state: State, placed: World) {
   anthemHour(state, world);
   bloodHasteHour(state, world, t);
   electroHour(state, world, t);
+  relicHour(state, world, t);
   dryOut(state, world, t);
   hostileNpcs(state, world, t);
   for (const a of alive(state)) {

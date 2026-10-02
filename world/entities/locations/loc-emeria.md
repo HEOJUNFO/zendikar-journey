@@ -5,9 +5,10 @@ name: 에메리아
 name_en: Emeria, the Sky Ruin
 summary: 타짐 하늘에 떠 있는 고대 석조 폐허. 금빛 하늘 아래 부서진 탑과 바위 조각이 떠다니고, 코르는 밧줄로 절벽을 타고 오른다
 status: canon
-sources: [ZEN-213, ZEN-13, ZEN-6, ZEN-199, ZEN-34, ZEN-66, ZEN-9, ZEN-11, ZEN-38, ZEN-29, ZEN-14, ZEN-25, ZEN-28]
+sources: [ZEN-213, ZEN-13, ZEN-6, ZEN-199, ZEN-34, ZEN-66, ZEN-9, ZEN-11, ZEN-38, ZEN-29, ZEN-14, ZEN-25, ZEN-28, ZEN-33]
 tags: [하늘, 폐허, 천사, 백색]
 links:
+  - { to: itm-quest-for-the-holy-relic, rel: 폐허 무덤의 성물 탐색 }
   - { to: spl-nimbus-wings, rel: 하늘 폐허로 오르는 날개 (플레이버) }
   - { to: itm-luminarch-ascension, rel: 북서쪽 부서진 제단의 승천 }
   - { to: cre-emeria-angel, rel: 새 떼를 거느린 천사 }
@@ -56,6 +57,7 @@ sim:
 - 에메리아 천사(`cre-emeria-angel`, ZEN-11)가 새 떼를 거느리고 산다 ([결정] 2026-10-01). 땅과 유대를 맺을 때마다 1/1 비행 새가 하나씩 곁에 난다. 이오나를 섬긴다.
 
 - 고귀한 잔영(`chr-noble-vestige`, ZEN-29)이 남서쪽 부서진 석조 아치 아래에 머문다 ([결정] 2026-10-01). 희망에 묶인 말하는 영혼으로, 설득하면 따르고 곁의 이에게 다음 피해 1을 막는 가호를 건다.
+- 동쪽 석관이 놓인 무덤에 성물 탐색(`itm-quest-for-the-holy-relic`, ZEN-33)이 서 있다 ([결정] 2026-10-02): 섬기러 오는 이가 다섯이면 주인 없는 장비를 찾아 입힌다.
 
 ## 미정/질문
 

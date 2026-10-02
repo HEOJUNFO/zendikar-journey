@@ -925,6 +925,9 @@ export const ItemSimSchema = z.strictObject({
         // "Whenever a creature dies, you may put a quest counter on this" (Quest for the Gravelord):
         // deaths in its owner's land (sim/bloodchief.ts `gravelordHour`); ended as an expedition.
         z.strictObject({ type: z.literal('death_quest') }),
+        // "Whenever you cast a creature spell, you may put a quest counter on this" (Quest for the
+        // Holy Relic): one coming to serve its owner (sim/relic.ts).
+        z.strictObject({ type: z.literal('cast_quest') }),
         z.strictObject({ type: z.literal('sacrifice_draw'), cost: CostSchema, draws: z.number().int().positive().default(1) }),
         // "When this enters, return N lands you control to their owner's hand": when tamed, the
         // tamer's bonds with N lands break (they may bond with them again).
@@ -967,7 +970,7 @@ export const ItemSimSchema = z.strictObject({
         // `plus_counters`: "put four +1/+1 counters on target creature" (Quest for the Gemblades).
         // `token`: "create a 7/1 red Elemental with trample and haste. Exile it at the next end step"
         // (Zektar Shrine Expedition): it serves the owner, gone at midnight.
-        z.strictObject({ type: z.literal('expedition'), counters: z.number().int().positive(), draws: z.number().int().positive().optional(), lands: z.number().int().positive().optional(), plus_counters: z.number().int().positive().optional(), token: z.strictObject({ creature: z.string(), pt: z.tuple([z.number().int().positive(), z.number().int().positive()]), colors: z.array(z.enum(COLORS)).default([]), abilities: z.array(z.enum(ABILITIES)).default([]), until_midnight: z.boolean().default(false) }).optional() }).refine((e) => !!e.draws || !!e.lands || !!e.plus_counters || !!e.token, '보상(draws, lands, plus_counters, token)이 있어야 한다'),
+        z.strictObject({ type: z.literal('expedition'), counters: z.number().int().positive(), draws: z.number().int().positive().optional(), lands: z.number().int().positive().optional(), plus_counters: z.number().int().positive().optional(), relic: z.boolean().optional(), token: z.strictObject({ creature: z.string(), pt: z.tuple([z.number().int().positive(), z.number().int().positive()]), colors: z.array(z.enum(COLORS)).default([]), abilities: z.array(z.enum(ABILITIES)).default([]), until_midnight: z.boolean().default(false) }).optional() }).refine((e) => !!e.draws || !!e.lands || !!e.plus_counters || !!e.token || !!e.relic, '보상(draws, lands, plus_counters, token, relic)이 있어야 한다'),
         // "Whenever a creature you control deals combat damage to a creature, you may put a quest
         // counter on this" (Quest for the Gemblades): sim/expedition.ts `gembladesHit`.
         z.strictObject({ type: z.literal('quest_combat') }),

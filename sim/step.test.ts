@@ -30,7 +30,7 @@ import { pumpMax, pumpsDue } from './pump.ts';
 import { bindTargets } from './bind.ts';
 import { drawKnowledge, handSize, huntKnowledge, knownSecrets, secretsOf } from './knowledge.ts';
 import { letGo, revealHand } from './discard.ts';
-import { claimBlocked, claimItem, itemOwner, itemsAt, itemTile, itemWhere } from './items.ts';
+import { claimBlocked, claimItem, itemOwner, itemsAt, itemTile, itemWhere, takeItem } from './items.ts';
 import { spendBlocked, storeBlocked } from './eons.ts';
 import { applyEnterDestroy, expireGranted, applyLure, applySearch, bondBlocked, enterDestroy, onEnter, bondLand, bondTargets, callForth, fetchTargets, fireTargets, firesOnBond, growBlocked, spawnWild, summonLibrary, useAbility } from './abilities.ts';
 import { DEPLETED_LABEL, DESTROYED_DAYS, KO_ACTIVITY, TRAVEL_UNITS_PER_HOUR } from './rules.ts';
@@ -56,6 +56,7 @@ import { expeditionBlocked } from './expedition.ts';
 import { chartBlocked } from './chart.ts';
 import { applyMill } from './mill.ts';
 import { secretsHour } from './secrets.ts';
+import { relicHour } from './relic.ts';
 import { ascendBlocked, upkeepUnhurt } from './luminarch.ts';
 import { reviveHour } from './revive.ts';
 import { punishHour } from './punish.ts';
@@ -7505,6 +7506,48 @@ test('the real Quest for the Gravelord stands in the Agadeem crypt: three deaths
   assert.equal(x.at, 'loc-agadeem-crypt');
   assert.ok(x.effects.some((e) => e.type === 'death_quest'));
   assert.ok(x.effects.some((e) => e.type === 'expedition' && e.counters === 3 && e.token?.creature === 'cre-zombie-giant'));
+});
+
+test('Quest for the Holy Relic: each one come to serve its owner since a counter (not a token); with five the player ends it and puts an Equipment no one holds on one of theirs, for nothing', async () => {
+  const item: RawEntity = { id: 'itm-qhr', kind: 'item', name: '성물 탐색', status: 'canon', sim: { card_type: 'enchantment', cost: '{0}', at: 'loc-a', effects: [{ type: 'cast_quest' }, { type: 'expedition', counters: 5, relic: true }] } };
+  const world = fixture([item, hook, altarItem, demolishSpell, npc('chr-r', npcSim('loc-a', 'work', [2, 2])), npc('chr-s', npcSim('loc-a'))]);
+  const state = character(world, 'loc-a');
+  const p = state.actors[PLAYER_ID];
+  const [r, s2] = ['chr-r', 'chr-s'].map((id) => state.actors[id]);
+  takeItem(state, world, p, world.items.find((x) => x.id === 'itm-qhr')!, state.minutes, '길들였다');
+  r.tile = p.tile;
+  bindRetainer(state, world, r, p, state.minutes + 1, '시험');
+  bindRetainer(state, world, s2, p, state.minutes + 1, '시험');
+  relicHour(state, world, state.minutes + 60);
+  relicHour(state, world, state.minutes + 120);
+  assert.equal(state.items!['itm-qhr'].counters, 2);
+  state.items!['itm-qhr'].counters = 5;
+  await act(state, world, { type: 'expedition' });
+  assert.ok(state.items!['itm-qhr'].gone);
+  const ask = state.asks!.find((y) => y.effect.type === 'relic')!;
+  assert.ok(ask.candidates.includes('itm-h|chr-r'));
+  await act(state, world, { type: 'choose', pick: 'itm-h|chr-r' });
+  assert.equal(state.items!['itm-h'].owner, p.id);
+  assert.equal(state.items!['itm-h'].bearer, 'chr-r');
+});
+
+test('the real Quest for the Holy Relic stands in Emeria: five who come to serve for a relic', () => {
+  const x = loadWorld().items.find((i) => i.id === 'itm-quest-for-the-holy-relic')!;
+  assert.equal(x.at, 'loc-emeria');
+  assert.ok(x.effects.some((e) => e.type === 'cast_quest'));
+  assert.ok(x.effects.some((e) => e.type === 'expedition' && e.counters === 5 && e.relic));
+});
+
+test('Kor Outfitter by an NPC: the master\'s pick of item and bearer is asked of the LLM and lands', async () => {
+  const world = fixture([hook, npc('chr-o', { ...npcSim('loc-a', 'work', [1, 1]), types: ['kor'], enter_equip: true }), npc('chr-m', npcSim('loc-a')), npc('chr-x', npcSim('loc-a', 'work', [2, 2]))]);
+  const state = newState(world, { seed: 1, mode: 'observer' });
+  const [o, m, x] = ['chr-o', 'chr-m', 'chr-x'].map((id) => state.actors[id]);
+  for (const y of [o, x]) { y.tile = m.tile; y.master = m.id; }
+  state.items = { 'itm-h': { name: '갈고리', owner: m.id, counters: 0, carried: true } };
+  onEnter(state, world, o, state.minutes);
+  assert.ok(state.choices?.some((c) => c.effect.type === 'outfit'));
+  await advance(state, world, 1, { planDay: async () => [], pick: async ({ options }) => options.find((y) => y.id === 'itm-h|chr-x')?.id ?? options[0].id });
+  assert.equal(state.items['itm-h'].bearer, 'chr-x');
 });
 
 test('Khalni Heart Expedition: with three counters the player ends it; they pick basic lands to bond with from afar, tapped (no mana from them today)', async () => {

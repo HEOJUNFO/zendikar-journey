@@ -8,6 +8,7 @@
 // Harrow's, sim/harrow.ts). The player uses it by an action, an NPC by an `expedition` block in
 // their plan.
 import { harrowOwed } from './harrow.ts';
+import { relicOptions } from './relic.ts';
 import { spawnWild } from './abilities.ts';
 import { untapTime } from './clock.ts';
 import { ABILITY_LABELS } from './world.ts';
@@ -38,7 +39,7 @@ export function expeditionBlocked(state: State, world: World, a: Actor): string 
   if (!x) return '마칠 원정이 없다.';
   const need = powerOf(x)!.counters;
   const have = state.items![x.id].counters;
-  const how = x.effects.some((e) => e.type === 'quest_combat') ? '부리는 생물이 생물에게 싸움 피해를 줄 때마다' : x.effects.some((e) => e.type === 'death_quest') ? '내가 선 땅에서 누가 죽을 때마다' : '땅과 유대를 맺을 때마다';
+  const how = x.effects.some((e) => e.type === 'quest_combat') ? '부리는 생물이 생물에게 싸움 피해를 줄 때마다' : x.effects.some((e) => e.type === 'death_quest') ? '내가 선 땅에서 누가 죽을 때마다' : x.effects.some((e) => e.type === 'cast_quest') ? '누군가 나를 섬기러 올 때마다' : '땅과 유대를 맺을 때마다';
   if (have < need) return `${x.name}의 탐색 카운터가 모자라다 (${have}/${need}, ${how} 하나).`;
   return null;
 }
@@ -48,8 +49,8 @@ export function expeditionReward(state: State, world: World, a: Actor) {
   const x = expeditionOf(state, world, a);
   const e = x && powerOf(x);
   if (!e) return { ko: '', en: '' };
-  const ko = [e.draws ? `숨은 것 ${e.draws}가지를 알게 된다` : '', e.lands ? `아직 유대 없는 기본 땅 ${e.lands}까지와 멀리서 이어진다 (탭된 채, 오늘은 마나 없음)` : '', e.plus_counters ? `곁의 하나에게 +1/+1 카운터 ${e.plus_counters}을 준다` : '', e.token ? `${e.token.pt.join('/')} ${world.lore.find((l) => l.id === e.token!.creature)?.name ?? e.token.creature}이(가) 곁에 나 섬긴다${e.token.until_midnight ? ' (자정에 사라짐)' : ''}` : ''].filter(Boolean).join(', ');
-  const en = [e.draws ? `come to know ${e.draws} hidden secrets of the world` : '', e.lands ? `bond from afar with up to ${e.lands} basic lands of the world they don't hold yet (tapped: no mana from them today; not their land for the day)` : '', e.plus_counters ? `give ${e.plus_counters} +1/+1 counters, for good, to one standing with them (themselves too), picked after the hour` : '', e.token ? `have a ${e.token.pt.join('/')} ${world.lore.find((l) => l.id === e.token!.creature)?.name ?? e.token.creature}${e.token.abilities.length ? ` (${e.token.abilities.join(', ')})` : ''} serve them at their side${e.token.until_midnight ? ', gone at midnight' : ''}` : ''].filter(Boolean).join(', and ');
+  const ko = [e.draws ? `숨은 것 ${e.draws}가지를 알게 된다` : '', e.lands ? `아직 유대 없는 기본 땅 ${e.lands}까지와 멀리서 이어진다 (탭된 채, 오늘은 마나 없음)` : '', e.plus_counters ? `곁의 하나에게 +1/+1 카운터 ${e.plus_counters}을 준다` : '', e.relic ? '주인 없는 장비 하나를 찾아 자신이나 곁의 권속에게 값 없이 맨다' : '', e.token ? `${e.token.pt.join('/')} ${world.lore.find((l) => l.id === e.token!.creature)?.name ?? e.token.creature}이(가) 곁에 나 섬긴다${e.token.until_midnight ? ' (자정에 사라짐)' : ''}` : ''].filter(Boolean).join(', ');
+  const en = [e.draws ? `come to know ${e.draws} hidden secrets of the world` : '', e.lands ? `bond from afar with up to ${e.lands} basic lands of the world they don't hold yet (tapped: no mana from them today; not their land for the day)` : '', e.plus_counters ? `give ${e.plus_counters} +1/+1 counters, for good, to one standing with them (themselves too), picked after the hour` : '', e.relic ? 'find an Equipment of the world no one holds and put it on themselves or one who serves them there, for nothing (picked after the hour)' : '', e.token ? `have a ${e.token.pt.join('/')} ${world.lore.find((l) => l.id === e.token!.creature)?.name ?? e.token.creature}${e.token.abilities.length ? ` (${e.token.abilities.join(', ')})` : ''} serve them at their side${e.token.until_midnight ? ', gone at midnight' : ''}` : ''].filter(Boolean).join(', and ');
   return { ko, en };
 }
 
@@ -73,6 +74,9 @@ export function finishExpedition(state: State, world: World, a: Actor, t: number
     if (e.token.until_midnight) state.tokens![b.id].vanishAt = untapTime(t);
     addLog(state, { kind: 'event', text: `${x.name}: ${josa(shortName(b.name), '이', '가')} 솟구쳐 ${shortName(a.name)} 곁에 섰다 (${e.token.pt.join('/')}${e.token.abilities.length ? `, ${e.token.abilities.map((ab) => ABILITY_LABELS[ab]).join('·')}` : ''}${e.token.until_midnight ? ', 자정에 사라진다' : ''}).`, regions: [a.region], actors: [a.id, b.id], t });
   }
+  // Quest for the Holy Relic: an Equipment no one holds, put on one of theirs there (their pick).
+  const relics = e.relic ? relicOptions(state, world, a) : [];
+  if (relics.length) (state.choices ??= []).push({ by: a.id, land: a.region, effect: { type: 'relic', item: x.name }, candidates: relics.map((o) => o.id), optional: true, t });
   // Quest for the Gemblades: +1/+1 counters on one there (their pick after the hour; one must).
   const candidates = e.plus_counters ? here(state, a).filter((y) => y.loyalty === undefined).map((y) => y.id) : [];
   if (candidates.length) (state.choices ??= []).push({ by: a.id, land: a.region, effect: { type: 'gem', item: x.name, amount: e.plus_counters! }, candidates, t });

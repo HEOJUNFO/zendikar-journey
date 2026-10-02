@@ -8,6 +8,7 @@ status: canon
 sources: [ZEN-25]
 tags: [부여마법, 승천, 백색, 탐색, 천사]
 links:
+  - { to: itm-quest-for-the-holy-relic, rel: 같은 에메리아의 부여마법 }
   - { to: law-permanents, rel: 부여마법 }
   - { to: law-mana-colors, rel: 백색 }
   - { to: loc-emeria, rel: 서 있는 곳 }
