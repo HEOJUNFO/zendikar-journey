@@ -7096,6 +7096,35 @@ test('Bloodghast: haste while a foe of today has 10 life or less; gone when none
   assert.ok(!hasAbility(bg, 'haste', state.minutes));
 });
 
+test('Guul Draz Vampire: +2/+1 and intimidate while a foe of today (or its master\'s) has 10 life or less; gone when none does', () => {
+  const world = fixture([vampireKind(), npc('chr-v', { ...npcSim('loc-a', 'work', [1, 1]), creature: 'cre-vampire', low_life_boost: { at: 10, pt: [2, 1], abilities: ['intimidate'] } }), npc('chr-m', npcSim('loc-a')), npc('chr-x', npcSim('loc-a'))]);
+  const state = newState(world, { seed: 1, mode: 'observer' });
+  const [v, m, x] = ['chr-v', 'chr-m', 'chr-x'].map((id) => state.actors[id]);
+  v.master = m.id;
+  addFoe(m, 'chr-x', state.minutes);
+  bloodHasteHour(state, world, state.minutes);
+  assert.deepEqual(ptOf(v), [1, 1]);
+  x.life = 9;
+  bloodHasteHour(state, world, state.minutes);
+  assert.deepEqual(ptOf(v), [3, 2]);
+  assert.ok(hasAbility(v, 'intimidate', state.minutes));
+  bloodHasteHour(state, world, state.minutes);
+  assert.deepEqual(ptOf(v), [3, 2]);
+  x.life = 12;
+  bloodHasteHour(state, world, state.minutes);
+  assert.deepEqual(ptOf(v), [1, 1]);
+  assert.ok(!hasAbility(v, 'intimidate', state.minutes));
+});
+
+test('the real Guul Draz Vampire lurks in Guul Draz: a vampire on the scent at 10 life', () => {
+  const world = loadWorld();
+  const state = newState(world, { seed: 1, mode: 'observer' });
+  const v = state.actors['chr-guul-draz-vampire'];
+  assert.equal(v?.region, 'loc-guul-draz');
+  assert.deepEqual(npcDef(state, world, v.id)?.lowLifeBoost, { at: 10, pt: [2, 1], abilities: ['intimidate'] });
+  assert.equal(creatureOf(state, world, v.id), 'cre-vampire');
+});
+
 test('the real Bloodghast drifts in the Guul Draz mists: a vampire that can\'t block, swift on the scent, back from the grave on landfall', () => {
   const world = loadWorld();
   const state = newState(world, { seed: 1, mode: 'observer' });

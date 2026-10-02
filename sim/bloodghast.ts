@@ -1,3 +1,4 @@
+// Guul Draz Vampire (`low_life_boost`) shares the scent: +P/+T and abilities while it holds.
 // Bloodghast. "This creature has haste as long as an opponent has 10 or less life": recounted every
 // hour, its foes of today (or its controller's) at that life or below (sim/step.ts). "Landfall —
 // you may return this card from your graveyard to the battlefield": one lying dead in someone's
@@ -7,19 +8,44 @@ import { allyJoined } from './allies.ts';
 import { foesOf } from './combat.ts';
 import { lifeOf } from './life.ts';
 import { masterOf } from './retainers.ts';
-import { addLog, alive, npcDef } from './state.ts';
+import { powersSealed } from './seal.ts';
+import { addLog, alive, npcDef, ptOf } from './state.ts';
+import { ABILITY_LABELS } from './world.ts';
 import type { Actor, State } from './state.ts';
 import { josa, shortName } from './text.ts';
 import type { World } from './world.ts';
 
+// Whether one of `a`'s foes of today (or its controller's) is at `n` life or below.
+function onScent(state: State, a: Actor, n: number, t: number) {
+  const controller = masterOf(state, a) ?? a;
+  const foes = new Set([...foesOf(a, t), ...foesOf(controller, t)]);
+  return [...foes].some((id) => state.actors[id] && !state.actors[id].dead && lifeOf(state.actors[id]) <= n);
+}
+
+// Guul Draz Vampire: "As long as an opponent has 10 or less life, this gets +2/+1 and has
+// intimidate", the same scent recounted every hour.
+function bloodBoostHour(state: State, world: World, a: Actor, t: number) {
+  const b = npcDef(state, world, a.id)?.lowLifeBoost;
+  if (!b) return;
+  const scent = !powersSealed(state, world, a, t) && onScent(state, a, b.at, t);
+  if (scent && !a.bloodBoost) {
+    const added = b.abilities.filter((x) => !a.abilities.includes(x));
+    a.abilities = [...a.abilities, ...added];
+    a.bloodBoost = { pt: [b.pt[0], b.pt[1]], added };
+    addLog(state, { kind: 'status', text: `${josa(shortName(a.name), '이', '가')} 피 냄새를 맡고 사나워졌다 (+${b.pt[0]}/+${b.pt[1]}${b.abilities.length ? `, ${b.abilities.map((x) => ABILITY_LABELS[x]).join('·')}` : ''}, ${ptOf(a).join('/')}).`, regions: [a.region], actors: [a.id], t });
+  } else if (!scent && a.bloodBoost) {
+    a.abilities = a.abilities.filter((x) => !a.bloodBoost!.added.includes(x));
+    delete a.bloodBoost;
+  }
+}
+
 // Haste on the scent of blood: given or taken away as the hour finds it.
 export function bloodHasteHour(state: State, world: World, t: number) {
   for (const a of alive(state)) {
+    bloodBoostHour(state, world, a, t);
     const n = npcDef(state, world, a.id)?.hasteLowLife;
     if (n === undefined) continue;
-    const controller = masterOf(state, a) ?? a;
-    const foes = new Set([...foesOf(a, t), ...foesOf(controller, t)]);
-    const scent = [...foes].some((id) => state.actors[id] && !state.actors[id].dead && lifeOf(state.actors[id]) <= n);
+    const scent = onScent(state, a, n, t);
     if (scent && !a.bloodHaste && !a.abilities.includes('haste')) {
       a.abilities = [...a.abilities, 'haste'];
       a.bloodHaste = true;

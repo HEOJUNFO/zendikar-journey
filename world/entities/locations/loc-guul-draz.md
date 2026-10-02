@@ -5,9 +5,10 @@ name: 굴 드라즈
 name_en: Guul Draz
 summary: 젠디카르 남동쪽의 음울한 늪 대륙. 얕은 물길이 끝없이 갈라지고, 흡혈귀들이 산다
 status: canon
-sources: [ZEN-219, ZEN-222, ZEN-229, ZEN-99, ZEN-105, ZEN-95, ZEN-92, ZEN-106, ZEN-90, ZEN-83]
+sources: [ZEN-219, ZEN-222, ZEN-229, ZEN-99, ZEN-105, ZEN-95, ZEN-92, ZEN-106, ZEN-90, ZEN-83, ZEN-93]
 tags: [대륙, 늪, 흑색, 흡혈귀]
 links:
+  - { to: chr-guul-draz-vampire, rel: 늪 밀림 나뭇가지 위의 흡혈귀 도적 }
   - { to: chr-bloodghast, rel: 서쪽 늪 안개의 망령 }
   - { to: cre-guul-draz-specter, rel: 늪 위를 나는 망령기사 }
   - { to: cre-giant-scorpion, rel: 뿌리 엉킨 물가를 기는 전갈 }
@@ -35,3 +36,4 @@ map: { x: 1900, y: 1110, terrain: swamp, size: continent, tiles: 150 }
 - 소린 마르코프(ZEN-111)는 처음 여기 두었다가 2026-10-01 설정대로 온두로 옮겼다 (젠디카르의 흡혈귀는 소린이 아니라 엘드라지에서 나왔다 [배경]).
 - 안의 구역 하그라 저수조(`loc-hagra`, ZEN-95): 말라키르 곁의 거대한 분지, 무너진 옛 저수조가 썩은 늪이 된 곳, 오우거 부족의 폐허. 기본 늪이다 (흑 마나). 오우거 용병 하그라 악마술사가 산다.
 - 굴 드라즈 망령기사(`cre-guul-draz-specter`, ZEN-92)가 늪 위를 난다 ([결정] 2026-10-01). 덮친 이의 주문을 앗고, 주문 없는 이 앞에서 5/5가 된다.
+- 북동쪽 늪 위로 뻗은 나뭇가지에 굴 드라즈 흡혈귀(`chr-guul-draz-vampire`, ZEN-93)가 산다 ([결정] 2026-10-02): 적이 생명 10 이하면 +2/+1·위협.

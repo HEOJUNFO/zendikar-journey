@@ -126,6 +126,9 @@ export type Actor = {
   everBonded?: string[];
   // Haste given by the scent of blood this hour (Bloodghast, sim/bloodghast.ts).
   bloodHaste?: boolean;
+  // On the scent (Guul Draz Vampire, `sim.low_life_boost`): +P/+T and the abilities it gave (not
+  // its own), while a foe of today is at that life or below (sim/bloodghast.ts).
+  bloodBoost?: { pt: Pt; added: Ability[] };
   // Those who dealt them combat damage this turn (Inferno Trap: "dealt damage by two or more
   // creatures this turn"). `sprung`: the `hurt` events they set off today.
   hurtBy?: { day: number; ids: string[]; sprung?: string[] };
@@ -682,6 +685,7 @@ export function ptOf(a: Actor): Pt {
   for (const x of [...(a.boost ? [a.boost] : []), ...(a.pumps ?? []), ...(a.auras ?? [])]) [p, t] = [p + x.pt[0], t + x.pt[1]];
   if (a.anthem) [p, t] = [p + a.anthem.pt[0], t + a.anthem.pt[1]];
   if (a.emptyHand) [p, t] = [p + a.emptyHand[0], t + a.emptyHand[1]];
+  if (a.bloodBoost) [p, t] = [p + a.bloodBoost.pt[0], t + a.bloodBoost.pt[1]];
   if (a.dried) t -= a.dried;
   // Power below zero deals no damage: count it as 0 (Lethargy Trap).
   return [Math.max(0, p), t];
