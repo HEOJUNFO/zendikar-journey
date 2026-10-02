@@ -6988,6 +6988,78 @@ test('the real Ior Ruin Expedition stands by Glasspool, a lake of Akoum and a ba
   assert.deepEqual(landTypes(g), ['island']);
 });
 
+const journeySpell: RawEntity = { id: 'spl-jtn', kind: 'spell', name: '무로의 여정', status: 'canon', sim: { cost: '{0}', speed: 'sorcery', learn_at: 'loc-a', target: 'other_here', effects: [{ type: 'exile_until' }] } };
+
+test('Journey to Nowhere: the one it falls on is gone from the world (stripped, freed, out of time) until the caster\'s enchantment is destroyed; then back on their tile', () => {
+  const world = fixture([journeySpell, npc('chr-c', npcSim('loc-a')), npc('chr-m', npcSim('loc-a')), npc('chr-y', npcSim('loc-a'))]);
+  const state = newState(world, { seed: 1, mode: 'observer' });
+  const [c, m, y] = ['chr-c', 'chr-m', 'chr-y'].map((id) => state.actors[id]);
+  for (const a of [m, y]) a.tile = c.tile;
+  const t = state.minutes;
+  bindRetainer(state, world, y, m, t, '설득');
+  y.plusCounters = 2;
+  c.spells = ['spl-jtn'];
+  const tile = y.tile;
+  assert.ok(castSpell(state, world, c, 'spl-jtn', 'chr-y', false, t));
+  assert.deepEqual(y.nowhere, { by: 'chr-c', spell: 'spl-jtn' });
+  assert.equal(y.master, undefined);
+  assert.equal(y.plusCounters, undefined);
+  assert.ok(outOfTime(state, y));
+  assert.ok(!present(state, 'loc-a', tile).includes(y));
+  step(state, world);
+  assert.ok(y.nowhere);
+  const relic = relicsHere(state, world, c.region, c.tile).find((r) => r.id.startsWith('aura:chr-c'))!;
+  assert.ok(relic.label.includes('무로의 여정'));
+  assert.ok(crushRelic(state, world, relic.id, m, state.minutes));
+  step(state, world);
+  assert.equal(y.nowhere, undefined);
+  assert.deepEqual(y.tile, tile);
+  assert.ok(!outOfTime(state, y));
+});
+
+test('Journey to Nowhere: its caster dying brings the one taken back; a token taken is gone for good; a planeswalker can\'t be taken', () => {
+  const world = fixture([journeySpell, lore('cre-w', 'creature'), npc('chr-c', npcSim('loc-a')), npc('chr-y', npcSim('loc-a')), npc('chr-pw', { ...npcSim('loc-a'), loyalty: 3 })]);
+  const state = newState(world, { seed: 1, mode: 'observer' });
+  const [c, y, pw] = ['chr-c', 'chr-y', 'chr-pw'].map((id) => state.actors[id]);
+  for (const a of [y, pw]) a.tile = c.tile;
+  c.spells = ['spl-jtn'];
+  assert.ok(castBlocked(state, world, c, 'spl-jtn', 'chr-pw', false, state.minutes)?.includes('플레인즈워커'));
+  castSpell(state, world, c, 'spl-jtn', 'chr-y', false, state.minutes);
+  assert.ok(y.nowhere);
+  die(state, c, state.minutes, '시험');
+  step(state, world);
+  assert.equal(y.nowhere, undefined);
+  const world2 = fixture([journeySpell, lore('cre-w', 'creature'), npc('chr-c', npcSim('loc-a'))]);
+  const state2 = newState(world2, { seed: 1, mode: 'observer' });
+  const c2 = state2.actors['chr-c'];
+  c2.spells = ['spl-jtn'];
+  const [wolf] = spawnWild(state2, world2, 'cre-w', [2, 2], 1, 'loc-a', ['G'], c2.tile);
+  castSpell(state2, world2, c2, 'spl-jtn', wolf.id, false, state2.minutes);
+  assert.ok(wolf.dead);
+  assert.equal(wolf.nowhere, undefined);
+});
+
+test('Journey to Nowhere on the player: they can only wait, out of the world, while the hours pass', async () => {
+  const world = fixture([journeySpell, npc('chr-c', npcSim('loc-a', 'work', [1, 20]))]);
+  const state = character(world, 'loc-a');
+  const [p, c] = [state.actors[PLAYER_ID], state.actors['chr-c']];
+  c.tile = p.tile;
+  c.spells = ['spl-jtn'];
+  castSpell(state, world, c, 'spl-jtn', p.id, false, state.minutes);
+  assert.ok(p.nowhere);
+  const r = await act(state, world, { type: 'wait', hours: 1 });
+  assert.ok(r.entries.some((e) => e.text.includes('어디에도 없는 곳')));
+  assert.ok(p.nowhere);
+});
+
+test('the real Journey to Nowhere is taught in Emeria: a white enchantment, a sorcery', () => {
+  const world = loadWorld();
+  const s = world.spells.find((x) => x.id === 'spl-journey-to-nowhere')!;
+  assert.equal(s.learnAt, 'loc-emeria');
+  assert.equal(s.speed, 'sorcery');
+  assert.deepEqual(s.effects.map((e) => e.type), ['exile_until']);
+});
+
 test('mountainwalk: one bonded with a mountain can\'t strike back at it; one with none can', () => {
   const world = fixture([npc('chr-c', { ...npcSim('loc-a', 'work', [2, 1]), abilities: ['mountainwalk'] }), npc('chr-x', npcSim('loc-a')), npc('chr-y', npcSim('loc-a'))]);
   const state = newState(world, { seed: 1, mode: 'observer' });

@@ -13,6 +13,7 @@ import { castEvents, destroyLand } from './step.ts';
 import { owesDiscard } from './discard.ts';
 import { crushOwed, demolishOptions, demolishOwed, relicsHere } from './relics.ts';
 import { escapeOptions, escapeOwed } from './escape.ts';
+import { sendNowhere } from './nowhere.ts';
 import { sacramentOwed } from './sacrament.ts';
 import { discoveryOwed } from './discovery.ts';
 import { harrowGive, harrowOwed } from './harrow.ts';
@@ -132,7 +133,7 @@ export function castTargets(state: State, a: Actor, s: SpellDef, world?: World) 
 // "Destroy target non<color> creature": why `x` can't be it, or null.
 function destroyBarred(world: World, state: State, s: SpellDef, x: Actor) {
   // "Target creature": a planeswalker is none.
-  if (s.effects.some((e) => e.type === 'damage' || e.type === 'destroy_target' || e.type === 'threaten') && x.loyalty !== undefined) return `${josa(shortName(x.name), '은', '는')} 생물이 아니다 (플레인즈워커).`;
+  if (s.effects.some((e) => e.type === 'damage' || e.type === 'destroy_target' || e.type === 'threaten' || e.type === 'exile_until') && x.loyalty !== undefined) return `${josa(shortName(x.name), '은', '는')} 생물이 아니다 (플레인즈워커).`;
   const eff = s.effects.find((e) => e.type === 'destroy_target');
   if (eff?.type !== 'destroy_target') return null;
   if (eff.not_color && actorColors(state, world, x).includes(eff.not_color)) return `${josa(shortName(x.name), '은', '는')} ${COLOR_LABELS[eff.not_color]}색이라 고를 수 없다.`;
@@ -211,7 +212,7 @@ export function castableSpells(state: State, world: World, a: Actor, t: number) 
 
 // Whether a spell does harm (the target takes it as an attack).
 export function harmful(s: SpellDef) {
-  return s.effects.some((e) => e.type === 'lose_half_life' || (e.type === 'aura' && e.no_untap) || e.type === 'exile_library' || e.type === 'damage' || e.type === 'threaten' || e.type === 'destroy_target' || e.type === 'destroy_land' || e.type === 'discard' || e.type === 'discard_per_land' || e.type === 'damage_per_land');
+  return s.effects.some((e) => e.type === 'lose_half_life' || (e.type === 'aura' && e.no_untap) || e.type === 'exile_library' || e.type === 'exile_until' || e.type === 'damage' || e.type === 'threaten' || e.type === 'destroy_target' || e.type === 'destroy_land' || e.type === 'discard' || e.type === 'discard_per_land' || e.type === 'damage_per_land');
 }
 
 // Pays and resolves. A harmful spell's target (if an NPC) takes it as an attack. Returns whether
@@ -308,6 +309,8 @@ export function resolveSpell(state: State, world: World, a: Actor, spellId: stri
       if (owed) (state.choices ??= []).push(owed);
     } else if (eff.type === 'draw' && (!eff.if_kicked || kicked)) {
       drawKnowledge(state, world, a, eff.count, t, s.name);
+    } else if (eff.type === 'exile_until') {
+      sendNowhere(state, world, a, target, s, t);
     } else if (eff.type === 'gain_life') {
       gainLife(state, a, eff.amount, t, s.name);
     } else if (eff.type === 'destroy_target') {

@@ -682,6 +682,10 @@ export const SpellSimSchema = z.strictObject({
         // caster picks anyone's on their tile, no land: a being (one not theirs is flung, as
         // Whiplash Trap flings), an item someone owns, an aura (sim/escape.ts `any`).
         z.strictObject({ type: z.literal('return_nonland') }),
+        // "When this enters, exile target creature. When it leaves, return the exiled card"
+        // (Journey to Nowhere): the target (no planeswalker) is taken nowhere until the caster's
+        // enchantment is gone (sim/nowhere.ts).
+        z.strictObject({ type: z.literal('exile_until') }),
         // "Draw N cards" (if kicked, with if_kicked): the caster comes to know N secrets
         // (sim/knowledge.ts).
         z.strictObject({ type: z.literal('draw'), count: z.number().int().positive(), if_kicked: z.boolean().default(false) }),

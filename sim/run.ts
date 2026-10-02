@@ -191,7 +191,7 @@ export async function act(state: State, world: World, input: Action | string, ll
       await conversations(state, world, before, llm);
     await choices(state, world, llm);
     }
-    addLog(state, { kind: 'system', text: `시간 밖에서 ${n}시간이 흘렀다. 이제 다시 움직일 수 있다.`, regions: [p.region], actors: [p.id] });
+    addLog(state, { kind: 'system', text: p.nowhere ? `어디에도 없는 곳에서 ${n}시간이 흘렀다. 아직 돌아가지 못했다.` : `${n}시간이 흐르고, 다시 움직일 수 있다.`, regions: [p.region], actors: [p.id] });
     await narrate(state, world, firstId, llm);
     return { entries: state.log.filter((e) => e.id >= firstId) };
   }

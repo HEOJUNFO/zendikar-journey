@@ -103,7 +103,10 @@ export type Actor = {
   // Auras on them (spells that stay until they die).
   // `base`: base power/toughness it sets (Gigantiform): the latest such aura wins.
   // `added`: the abilities it gave that they didn't have (they go with it).
-  auras?: { spell: string; name: string; by: string; pt: Pt; base?: Pt; doubleLifeOnHit: boolean; added?: Ability[]; noUntap?: boolean; regen?: string }[];
+  // Taken nowhere by `by`'s enchantment `spell` (Journey to Nowhere, sim/nowhere.ts): out of
+  // the world until it is gone.
+  nowhere?: { by: string; spell: string };
+  auras?: { spell: string; name: string; by: string; pt: Pt; base?: Pt; doubleLifeOnHit: boolean; added?: Ability[]; noUntap?: boolean; regen?: string; nowhere?: string }[];
   // Combat damage taken this turn; it wears off when the turn ends (00:00).
   wounds?: { day: number; amount: number };
   // Damage prevented for them today, still to come (Noble Vestige's ward, sim/tapper.ts).
@@ -551,6 +554,8 @@ export function alive(state: State) {
 // Out of time at `t`: skipping this day, or it is someone else's extra day (sim/eons.ts).
 // They stand where they are, untouched and unchanged, until the day ends.
 export function outOfTime(state: State, a: Actor, t = state.minutes) {
+  // Taken nowhere (Journey to Nowhere, sim/nowhere.ts): as one out of time, until they come back.
+  if (a.nowhere) return true;
   const day = gameDay(t);
   if (a.skipDay === day) return true;
   const extra = state.extraDays?.find((x) => x.day === day);

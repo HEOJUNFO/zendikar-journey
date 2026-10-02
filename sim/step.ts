@@ -39,6 +39,7 @@ import { addFoe, attackBlocked, dealDamage, destroy, foesOf, hostileNpcs } from 
 import { bondBlocked, bondLand, expireGranted, upkeepFleeting, onEnter, FETCH_HOURS, fetchLand, fetchSource, growBlocked, HAND, growEntered, growLand, spawnWild, summonLibrary, TOP, upkeepRevive, useAbility } from './abilities.ts';
 import { CLAIM_HOURS, claimBlocked, claimItem, itemsAt, itemWhere } from './items.ts';
 import { EQUIP_HOURS, equipBlocked, equipItem, equipmentOf, syncEquipment } from './equipment.ts';
+import { nowhereHour } from './nowhere.ts';
 import { EON_HOURS, eonLand, holdStill, spendBlocked, spendDay, storeBlocked, storeDay, timeNews } from './eons.ts';
 import { upkeepWins } from './win.ts';
 import { CRAWL_FACTOR, dryOut, stranded } from './stranded.ts';
@@ -66,6 +67,7 @@ export function step(state: State, placed: World) {
   const t = state.minutes;
   // Wandering places (Goma Fada) walk first; the hour then measures the map as it is now.
   wanderHour(state, placed, t);
+  nowhereHour(state, t);
   const world = withPositions(state, placed);
   startDay(state, world, t);
   markSealed(state, world, t);
