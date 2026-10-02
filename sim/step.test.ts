@@ -44,6 +44,7 @@ import { allyJoined, applyRally, hireMerc, hirePrice } from './allies.ts';
 import { askOptions, askText } from './asks.ts';
 import { applyEscape, escapeOptions } from './escape.ts';
 import { applyLift, enterGrant } from './aeronaut.ts';
+import { enterEquip, outfitOptions } from './outfitter.ts';
 import { applyTorch, enterDamage } from './torch.ts';
 import { applyToll, enterSacrifice } from './toll.ts';
 import { applyShortcut, enterNoBlock } from './shortcut.ts';
@@ -6729,6 +6730,39 @@ test('the real Kor Aeronaut flies among the floating rocks of the Makindi Trench
   assert.ok(hasAbility(k, 'fly', state.minutes));
   assert.ok(def.types?.includes('kor'));
   assert.equal(swayBlocked(state, world, k), null);
+});
+
+test('Kor Outfitter: arriving with its master there, the master may have it put their equipment on one who serves them there, for nothing; the player picks item and bearer at once', async () => {
+  const world = fixture([hook, npc('chr-o', { ...npcSim('loc-a', 'work', [1, 20]), enter_equip: true }), npc('chr-x', npcSim('loc-a', 'work', [1, 20]))]);
+  const state = character(world, 'loc-a');
+  const [p, o, x] = [state.actors[PLAYER_ID], state.actors['chr-o'], state.actors['chr-x']];
+  for (const a of [o, x]) a.tile = p.tile;
+  o.master = p.id;
+  x.master = p.id;
+  state.items = { 'itm-h': { name: '갈고리', owner: p.id, counters: 0, carried: true } };
+  assert.equal(outfitOptions(state, world, o, state.minutes).length, 3);
+  enterEquip(state, world, o, state.minutes);
+  await act(state, world, { type: 'wait', hours: 1 });
+  const ask = state.asks?.[0];
+  assert.equal(ask?.effect.type, 'outfit');
+  assert.ok(askOptions(state, world, ask!).some((op) => op.pick === 'itm-h|chr-x' && op.label.includes('갈고리')));
+  await act(state, world, { type: 'choose', pick: 'itm-h|chr-x' });
+  assert.equal(state.items['itm-h'].bearer, 'chr-x');
+  assert.ok(hasAbility(x, 'double_strike', state.minutes));
+  assert.ok(texts(state).some((l) => l.includes('(값 없이)')));
+  // Away from its master, nothing.
+  o.tile = tilesOf(world, 'loc-a').find((tl) => !sameTile(tl, p.tile)) ?? o.tile;
+  if (!sameTile(o.tile, p.tile)) assert.equal(outfitOptions(state, world, o, state.minutes).length, 0);
+});
+
+test('the real Kor Outfitter lives in the Makindi Trenches by the Grappling Hook: a talking Kor', () => {
+  const world = loadWorld();
+  const state = newState(world, { seed: 1, mode: 'observer' });
+  const o = state.actors['chr-kor-outfitter'];
+  assert.equal(o?.region, 'loc-makindi');
+  const def = npcDef(state, world, o.id)!;
+  assert.ok(def.enterEquip && def.types?.includes('kor'));
+  assert.equal(swayBlocked(state, world, o), null);
 });
 
 test('Turntimber Basilisk: bonding, its controller may catch one there in its gaze: foes today, and no flying away', () => {

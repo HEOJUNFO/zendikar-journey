@@ -3,6 +3,7 @@ import { enterExile } from './banish.ts';
 import { enterTap } from './hook.ts';
 import { enterDamage } from './torch.ts';
 import { enterGrant } from './aeronaut.ts';
+import { enterEquip } from './outfitter.ts';
 import { enterSacrifice } from './toll.ts';
 import { enterNoBlock } from './shortcut.ts';
 import { landfallReturn } from './bloodghast.ts';
@@ -79,7 +80,7 @@ export function bondTargets(state: State, world: World, a: Actor, regionId: stri
 }
 
 // The effect falls on `target`, if they are still there.
-export function applyBondEffect(state: State, world: World, a: Actor, regionId: string, eff: Exclude<ChoiceEffect, { type: 'cast' | 'follow' | 'rally' | 'seize' | 'pledge' | 'evade' | 'discard' | 'pilfer' | 'pour' | 'demolish' | 'escape' | 'torch' | 'lift' | 'lure' | 'toll' | 'shortcut' | 'discovery' | 'sacrament' | 'sacrifice' | 'destroy' | 'drain_grow' | 'crush' | 'quell' | 'quelled' | 'return_lands' | 'search' | 'tide' | 'bind' | 'engulf' | 'harrow' | 'ward' | 'hook' | 'shatter' | 'counter' | 'counter_cast' | 'exile' | 'strike' }>, targetId: string | undefined, t: number) {
+export function applyBondEffect(state: State, world: World, a: Actor, regionId: string, eff: Exclude<ChoiceEffect, { type: 'cast' | 'follow' | 'rally' | 'seize' | 'pledge' | 'evade' | 'discard' | 'pilfer' | 'pour' | 'demolish' | 'escape' | 'torch' | 'lift' | 'outfit' | 'lure' | 'toll' | 'shortcut' | 'discovery' | 'sacrament' | 'sacrifice' | 'destroy' | 'drain_grow' | 'crush' | 'quell' | 'quelled' | 'return_lands' | 'search' | 'tide' | 'bind' | 'engulf' | 'harrow' | 'ward' | 'hook' | 'shatter' | 'counter' | 'counter_cast' | 'exile' | 'strike' }>, targetId: string | undefined, t: number) {
   const r = region(world, regionId);
   if (eff.type === 'damage') return mountainFire(state, world, a, r, eff.amount, targetId, t);
   const target = targetId ? bondTargets(state, world, a, regionId, eff).find((x) => x.id === targetId) : undefined;
@@ -724,6 +725,7 @@ export function onEnter(state: State, world: World, a: Actor, t: number) {
   enterTap(state, world, a, t);
   enterDamage(state, world, a, t);
   enterGrant(state, world, a, t);
+  enterEquip(state, world, a, t);
   enterReveal(state, world, a, t);
   enterPump(state, world, a, t);
   enterSacrifice(state, world, a, t);

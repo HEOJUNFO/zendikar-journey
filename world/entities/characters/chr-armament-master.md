@@ -8,6 +8,7 @@ status: canon
 sources: [ZEN-1, ZEN-7]
 tags: [코르, 병사, 백색]
 links:
+  - { to: chr-kor-outfitter, rel: 같은 협곡의 코르 (채비사) }
   - { to: chr-cliff-threader, rel: 같은 코르 (절벽 타는 이) }
   - { to: law-mana-colors, rel: 백색의 존재 }
   - { to: loc-makindi, rel: 코르 야영지 }

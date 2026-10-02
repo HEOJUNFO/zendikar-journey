@@ -24,7 +24,8 @@ export function equipTargets(state: State, a: Actor) {
   return [a, ...Object.values(state.actors).filter((x) => x.master === a.id && !x.dead && together(x, a))];
 }
 
-export function equipBlocked(state: State, world: World, a: Actor, itemId: string | undefined, toId: string | undefined, t: number): string | null {
+// `free`: put on for nothing (Kor Outfitter, sim/outfitter.ts).
+export function equipBlocked(state: State, world: World, a: Actor, itemId: string | undefined, toId: string | undefined, t: number, free = false): string | null {
   const x = itemId ? itemDef(world, itemId) : undefined;
   if (!x?.equip) return '맬 수 있는 것이 아니다.';
   if (state.items?.[x.id]?.owner !== a.id) return `${josa(x.name, '은', '는')} 내 것이 아니다.`;
@@ -33,25 +34,26 @@ export function equipBlocked(state: State, world: World, a: Actor, itemId: strin
   if (to.id !== a.id && to.master !== a.id) return `${josa(shortName(to.name), '은', '는')} 나를 섬기지 않는다.`;
   if (!together(to, a)) return `${josa(shortName(to.name), '은', '는')} 곁에 없다.`;
   if (state.items?.[x.id]?.bearer === to.id) return `${josa(x.name, '은', '는')} 이미 ${to.id === a.id ? '내 몸에' : `${shortName(to.name)}에게`} 매여 있다.`;
-  if (!planPayment(manaAvailable(state, world, a, t), x.equip.cost)) return `마나가 모자라다 (${x.equip.costText}, 지금 ${formatMana(manaAvailable(state, world, a, t))}).`;
+  if (!free && !planPayment(manaAvailable(state, world, a, t), x.equip.cost)) return `마나가 모자라다 (${x.equip.costText}, 지금 ${formatMana(manaAvailable(state, world, a, t))}).`;
   return null;
 }
 
-// `a` pays and puts it on `toId` (themselves if none); it comes off whoever had it.
-export function equipItem(state: State, world: World, a: Actor, itemId: string, toId: string | undefined, t: number) {
-  const why = equipBlocked(state, world, a, itemId, toId, t);
+// `a` pays and puts it on `toId` (themselves if none); it comes off whoever had it. `free`: for
+// nothing, by whose hand (Kor Outfitter).
+export function equipItem(state: State, world: World, a: Actor, itemId: string, toId: string | undefined, t: number, free?: string) {
+  const why = equipBlocked(state, world, a, itemId, toId, t, !!free);
   const x = itemDef(world, itemId);
   if (why || !x?.equip) {
     addLog(state, { kind: 'status', text: `${josa(shortName(a.name), '은', '는')} 매지 못했다: ${why}`, regions: [a.region], actors: [a.id], t });
     return;
   }
   const to = state.actors[toId ?? a.id];
-  payMana(state, world, a, x.equip.cost, t);
+  if (!free) payMana(state, world, a, x.equip.cost, t);
   unequip(state, x.id);
   const added = x.equip.abilities.filter((ab) => !to.abilities.includes(ab));
   to.abilities = [...to.abilities, ...added];
   Object.assign(state.items![x.id], { bearer: to.id, ...(added.length ? { added } : {}) });
-  addLog(state, { kind: 'event', text: `${josa(shortName(a.name), '이', '가')} ${josa(x.name, '을', '를')} ${to.id === a.id ? '몸에' : `${shortName(to.name)}에게`} 맸다.`, regions: [a.region], actors: [a.id, to.id], t });
+  addLog(state, { kind: 'event', text: `${free ? `${free} ` : ''}${josa(shortName(a.name), '이', '가')} ${josa(x.name, '을', '를')} ${to.id === a.id ? '몸에' : `${shortName(to.name)}에게`} 맸다${free ? ' (값 없이)' : ''}.`, regions: [a.region], actors: [a.id, to.id], t });
 }
 
 // Each hour: equipment whose bearer is gone, or no longer serves its owner, comes off.

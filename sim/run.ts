@@ -23,6 +23,7 @@ import { applyShatter, crushRelic, demolish, demolishOptions, relicsHere, shatte
 import { applyEscape, escapeOptions } from './escape.ts';
 import { applyTorch } from './torch.ts';
 import { applyLift } from './aeronaut.ts';
+import { applyOutfit, outfitOptions } from './outfitter.ts';
 import { applyToll } from './toll.ts';
 import { applyShortcut } from './shortcut.ts';
 import { applySacrament } from './sacrament.ts';
@@ -961,6 +962,21 @@ async function choices(state: State, world: World, llm: Llm) {
       }
       const target = candidates.find((x) => x.id === pick);
       if (target) applyToll(state, world, source, target, state.minutes);
+      continue;
+    }
+    // Kor Outfitter, arriving: which of their equipment its controller has it put on whom, or none.
+    if (c.effect.type === 'outfit') {
+      const source = state.actors[c.effect.source];
+      if (!source || !npc || !llm.pick) continue;
+      const options = outfitOptions(state, world, source, state.minutes);
+      if (!options.length) continue;
+      let pick: string | null = null;
+      try {
+        pick = await llm.pick({ world, state, npc, what: `${land.name}: ${source.id === by.id ? '당신' : shortName(source.name)}이(가) 이곳에 들어섰다. 당신이 지닌 장비 하나를 당신이나 곁의 권속에게 값 없이 매어 줄 수 있다 (맨 이가 장비의 힘을 지닌다). 그만둘 수도 있다`, options, optional: true });
+      } catch (e) {
+        console.warn(`pick (outfit) for ${c.by} failed:`, e);
+      }
+      if (pick) applyOutfit(state, world, source, pick, state.minutes);
       continue;
     }
     // Kor Aeronaut, arriving kicked: whom its controller has it lift into the air, or no one.
