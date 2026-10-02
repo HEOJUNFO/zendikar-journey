@@ -5,9 +5,10 @@ name: 북하다
 name_en: North Hada
 summary: 타짐 북쪽 고지대, 우마라 강 발원 가까이의 무법 전초기지. 도둑과 노예 상인이 들끓고, 어둠의 마법과 유물이 거래되며, 덫꾼들이 짐승의 비늘과 발톱을 판다
 status: canon
-sources: [ZEN-141]
+sources: [ZEN-141, ZEN-180]
 tags: [전초기지, 무법, 고지대, 덫꾼, 적색]
 links:
+  - { to: cre-river-boa, rel: 덫꾼 나블루스가 쫓는 보아뱀 (플레이버) }
   - { to: loc-tazeem, rel: 바깥 지역 }
   - { to: loc-umara-gorge, rel: 강 아래로 맞닿은 협곡 }
   - { to: cre-plated-geopede, rel: 덫꾼 나블루스가 잡아 파는 짐승 (플레이버) }

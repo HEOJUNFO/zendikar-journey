@@ -80,8 +80,11 @@ export function dealDamage(state: State, world: World, a: Actor, amount: number,
 // whoever controls them (their master, or they themselves) pays the cost if they can, by itself
 // (user decision 2026-10-01), every time. Instead they are healed, tapped (bound until midnight)
 // and taken out of today's fights. Life lost, sacrifice and exile are no destruction.
+// Its own ("{G}: Regenerate this creature", River Boa; `sim.regenerate`) the same way, unless its
+// powers are sealed.
 function regenerate(state: State, world: World, a: Actor, t: number, cause: string) {
-  const aura = a.auras?.find((x) => x.regen);
+  const own = npcDef(state, world, a.id)?.regenerate;
+  const aura = a.auras?.find((x) => x.regen) ?? (own && !powersSealed(state, world, a, t) ? { name: '제 힘', regen: own } : undefined);
   if (!aura || a.dead || a.loyalty !== undefined) return false;
   const payer = masterOf(state, a) ?? a;
   const cost = parseManaCost(aura.regen!)!;

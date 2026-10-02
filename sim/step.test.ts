@@ -7389,6 +7389,27 @@ test('the real Pyromancer Ascension stands in Valakut', () => {
   assert.deepEqual(x.effects, [{ type: 'spell_quest', counters: 2 }]);
 });
 
+test('River Boa: about to die, it pays {G} by itself and regenerates (healed, bound, out of the fight); with no mana left, it dies', () => {
+  const world = fixture([npc('chr-b', { ...npcSim('loc-a', 'work', [2, 1]), beast: true, mana: { G: 1 }, regenerate: '{G}' })]);
+  const state = newState(world, { seed: 1, mode: 'observer' });
+  const b = state.actors['chr-b'];
+  assert.equal(dealDamage(state, world, b, 3, state.minutes, '시험'), false);
+  assert.ok(!b.dead && b.boundUntil !== undefined);
+  assert.equal(woundsOf(b, state.minutes), 0);
+  dealDamage(state, world, b, 3, state.minutes, '시험');
+  assert.ok(b.dead);
+});
+
+test('the real River Boa coils by the Umara river: islandwalk and {G} regeneration', () => {
+  const world = loadWorld();
+  const state = newState(world, { seed: 1, mode: 'observer' });
+  const b = state.actors['cre-river-boa'];
+  assert.equal(b?.region, 'loc-umara-gorge');
+  const def = npcDef(state, world, b.id)!;
+  assert.equal(def.regenerate, '{G}');
+  assert.ok(def.beast && hasAbility(b, 'islandwalk', state.minutes));
+});
+
 test('the real Nimbus Wings is taught at Kabira Crossroads: the one it is cast on gets +1/+2 and wings', () => {
   const world = loadWorld();
   const s = world.spells.find((x) => x.id === 'spl-nimbus-wings')!;
