@@ -5,9 +5,10 @@ name: 발라쿠트, 녹아내리는 봉우리
 name_en: Valakut, the Molten Pinnacle
 summary: 온두의 섬 베이엔, 탈리브의 왕관 산맥의 최고봉인 거대한 화산. 붉게 녹아내리는 봉우리에서 불길이 치솟고, 산들이 한 사람 아래 모이면 그 불길이 온두와 그 섬들 어디로든 떨어진다
 status: canon
-sources: [ZEN-228, ZEN-135, ZEN-140, ZEN-143]
+sources: [ZEN-228, ZEN-135, ZEN-140, ZEN-143, ZEN-144]
 tags: [화산, 봉우리, 불, 적색]
 links:
+  - { to: itm-quest-for-pure-flame, rel: 화산 동굴의 순수한 불꽃 탐색 }
   - { to: itm-pyromancer-ascension, rel: 끓는 아궁이 위의 승천 }
   - { to: loc-crown-of-talib, rel: 바깥 구역 (베이엔의 산맥) }
   - { to: loc-beyeen, rel: 바깥 지역 (온두의 섬) }
@@ -39,6 +40,7 @@ sim:
 
 - 흑요석 불심장(`cre-obsidian-fireheart`, ZEN-140)이 용암 속에 깃든다 ([결정] 2026-10-01). 아침 LLM이 고른 이의 땅에 불씨를 박아, 그 땅과 이어진 이들이 밤마다 생명 1을 잃게 한다.
 - 북동쪽 끓는 아궁이 위에 화염술사의 승천(`itm-pyromancer-ascension`, ZEN-143)이 서 있다 ([결정] 2026-10-02): 한 번 잊었던 주문을 다시 부를 때마다 탐색이 쌓이고, 둘이면 쓰는 주문마다 한 번 더 값 없이 걸 수 있다.
+- 남서쪽 화산 동굴에 순수한 불꽃 탐색(`itm-quest-for-pure-flame`, ZEN-144)이 서 있다 ([결정] 2026-10-02): 남에게 피해를 넷 주면 마쳐 자정까지 피해 두 배.
 
 ## 미정/질문
 

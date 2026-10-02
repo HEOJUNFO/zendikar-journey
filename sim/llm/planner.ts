@@ -74,6 +74,8 @@ export type PlanDayInput = {
   chart?: { name: string; cost: string };
   // A Quest for Ancient Secrets they own with enough counters to end.
   secrets?: { name: string };
+  // A Quest for Pure Flame they own with enough counters to end.
+  flame?: { name: string };
   // A Luminarch Ascension they own that could call down a token now: its name and what it brings.
   ascend?: { name: string; cost: string; token: string };
   // Traps they hold and could set where they stand (Trapmaker's Snare): id, what it does, its cost.
@@ -101,7 +103,7 @@ export type PlanDayInput = {
 
 // Kinds of blocks they may plan: no meals without hunger, taming only if there is an item for
 // them to tame, keeping days only with a land that keeps them.
-function kindsFor(input: Pick<PlanDayInput, 'needs' | 'items' | 'equip' | 'days' | 'grow' | 'recall' | 'bite' | 'shield' | 'loot' | 'gale' | 'scout' | 'altar' | 'expedition' | 'chart' | 'secrets' | 'ascend' | 'traps' | 'hex' | 'fling' | 'fetch' | 'learn' | 'cast' | 'court' | 'hire' | 'people'>) {
+function kindsFor(input: Pick<PlanDayInput, 'needs' | 'items' | 'equip' | 'days' | 'grow' | 'recall' | 'bite' | 'shield' | 'loot' | 'gale' | 'scout' | 'altar' | 'expedition' | 'chart' | 'secrets' | 'flame' | 'ascend' | 'traps' | 'hex' | 'fling' | 'fetch' | 'learn' | 'cast' | 'court' | 'hire' | 'people'>) {
   return LIFE_KINDS.filter(
     (k) =>
       (k !== 'eat' || input.needs.includes('hunger')) &&
@@ -119,6 +121,7 @@ function kindsFor(input: Pick<PlanDayInput, 'needs' | 'items' | 'equip' | 'days'
       (k !== 'expedition' || !!input.expedition) &&
       (k !== 'chart' || !!input.chart) &&
       (k !== 'secrets' || !!input.secrets) &&
+      (k !== 'flame' || !!input.flame) &&
       (k !== 'ascend' || !!input.ascend) &&
       (k !== 'set_trap' || !!input.traps?.length) &&
       (k !== 'hex' || !!input.hex?.targets.length) &&
@@ -249,6 +252,10 @@ Rules:
   }${
     kinds.includes('expedition')
       ? `\n- "expedition" takes 1 hour, anywhere: they end their ${input.expedition!.name} (it is gone for good) and, from what it found, ${input.expedition!.reward}. Each land they bond with adds to it, so they may also wait.`
+      : ''
+  }${
+    kinds.includes('flame')
+      ? `\n- "flame" takes 1 hour, anywhere: they end their ${input.flame!.name} (it is gone for good), and until midnight all the damage they and those who serve them deal is doubled. Best just before a fight.`
       : ''
   }${
     kinds.includes('secrets')

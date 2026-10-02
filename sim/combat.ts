@@ -16,6 +16,7 @@ import { hooks } from './equipment.ts';
 import { shielded } from './tapper.ts';
 import { harrowOwed } from './harrow.ts';
 import { guideOnAttack, scopeOnAttack } from './scope.ts';
+import { flameMultiplier, flameOnDamage } from './pureflame.ts';
 import { doubleLife, gainLife, lifeOf } from './life.ts';
 import { actorColors, COLOR_LABELS, manaAvailable, parseManaCost, payMana, planPayment } from './mana.ts';
 import { HUNT_HUNGER, KILL_FEED, KO_ACTIVITY, KO_HOURS } from './rules.ts';
@@ -38,10 +39,13 @@ export function woundsOf(a: Actor, t: number) {
 // deathtouch is its.
 export function dealDamage(state: State, world: World, a: Actor, amount: number, t: number, cause: string, nonlethal = false, by?: Actor, dealer?: Actor) {
   if (a.dead || amount <= 0) return false;
+  // Quest for Pure Flame ended: what its owner and theirs deal is doubled until midnight.
+  amount *= flameMultiplier(state, dealer ?? by, t);
   // A ward (Noble Vestige) takes what it can first.
   amount = shielded(state, a, amount, t);
   if (amount <= 0) return false;
   markHurt(a, amount, t);
+  flameOnDamage(state, world, dealer ?? by, a, t);
   // Mire Blight: any damage that gets through destroys them (the aura's doing; between NPCs, as
   // the fight's damage would, a knockout: user decision 2026-10-02). Indestructible holds.
   const blight = a.loyalty === undefined ? a.auras?.find((x) => x.doom) : undefined;

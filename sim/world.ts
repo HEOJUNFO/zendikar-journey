@@ -919,6 +919,9 @@ export const ItemSimSchema = z.strictObject({
         // "Whenever a card is put into your graveyard, a quest counter; remove N and sacrifice: target
         // player shuffles their graveyard into their library" (Quest for Ancient Secrets): sim/secrets.ts.
         z.strictObject({ type: z.literal('graveyard_quest'), counters: z.number().int().positive() }),
+        // "Whenever a source you control deals damage to an opponent, a quest counter; remove N and
+        // sacrifice: your sources deal double damage this turn" (Quest for Pure Flame): sim/pureflame.ts.
+        z.strictObject({ type: z.literal('damage_quest'), counters: z.number().int().positive() }),
         z.strictObject({ type: z.literal('sacrifice_draw'), cost: CostSchema, draws: z.number().int().positive().default(1) }),
         // "When this enters, return N lands you control to their owner's hand": when tamed, the
         // tamer's bonds with N lands break (they may bond with them again).

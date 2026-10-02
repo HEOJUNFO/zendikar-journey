@@ -7453,6 +7453,34 @@ test('the real Quest for Ancient Secrets stands at Sea Gate: five counters to se
   assert.deepEqual(x.effects, [{ type: 'graveyard_quest', counters: 5 }]);
 });
 
+test('Quest for Pure Flame: damage its owner or theirs deals to another a counter (not to their own side); with four the player ends it and their side\'s damage is doubled until midnight', async () => {
+  const item: RawEntity = { id: 'itm-qpf', kind: 'item', name: '불꽃 탐색', status: 'canon', sim: { card_type: 'enchantment', cost: '{0}', at: 'loc-a', effects: [{ type: 'damage_quest', counters: 4 }] } };
+  const world = fixture([item, altarItem, demolishSpell, npc('chr-r', npcSim('loc-a', 'work', [2, 2])), npc('chr-x', npcSim('loc-a', 'work', [1, 20]))]);
+  const state = character(world, 'loc-a');
+  const p = state.actors[PLAYER_ID];
+  const [r, x] = ['chr-r', 'chr-x'].map((id) => state.actors[id]);
+  r.master = p.id;
+  state.items = { 'itm-qpf': { name: '불꽃 탐색', owner: p.id, counters: 0 } };
+  dealDamage(state, world, x, 1, state.minutes, '시험', true, r, r);
+  dealDamage(state, world, x, 1, state.minutes, '시험', true, p, p);
+  assert.equal(state.items['itm-qpf'].counters, 2);
+  dealDamage(state, world, r, 1, state.minutes, '시험', true, p, p);
+  assert.equal(state.items['itm-qpf'].counters, 2);
+  assert.ok((await act(state, world, { type: 'flame' })).error?.includes('2/4'));
+  state.items['itm-qpf'].counters = 4;
+  await act(state, world, { type: 'flame' });
+  assert.ok(state.items['itm-qpf'].gone);
+  const before = woundsOf(x, state.minutes);
+  dealDamage(state, world, x, 2, state.minutes, '시험', true, r, r);
+  assert.equal(woundsOf(x, state.minutes) - before, 4);
+});
+
+test('the real Quest for Pure Flame stands in Valakut: four counters to double the flame', () => {
+  const x = loadWorld().items.find((i) => i.id === 'itm-quest-for-pure-flame')!;
+  assert.equal(x.at, 'loc-valakut');
+  assert.deepEqual(x.effects, [{ type: 'damage_quest', counters: 4 }]);
+});
+
 test('Khalni Heart Expedition: with three counters the player ends it; they pick basic lands to bond with from afar, tapped (no mana from them today)', async () => {
   const item: RawEntity = { id: 'itm-khe', kind: 'item', name: '심장 원정', status: 'canon', sim: { card_type: 'enchantment', cost: '{0}', at: 'loc-a', effects: [{ type: 'landfall_quest' }, { type: 'expedition', counters: 3, lands: 2 }] } };
   const world = fixture([item, altarItem, demolishSpell]);

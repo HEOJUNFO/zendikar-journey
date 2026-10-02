@@ -8,6 +8,7 @@ status: canon
 sources: [ZEN-143]
 tags: [부여마법, 승천, 적색, 탐색, 주문]
 links:
+  - { to: itm-quest-for-pure-flame, rel: 같은 발라쿠트의 탐색 }
   - { to: law-permanents, rel: 부여마법 }
   - { to: law-mana-colors, rel: 적색 }
   - { to: loc-valakut, rel: 서 있는 곳 (끓는 화산 아궁이) }

@@ -15,6 +15,7 @@ import { altarBlocked, altarOf, altarVictims } from '../sim/altar.ts';
 import { expeditionBlocked, expeditionOf, expeditionReward } from '../sim/expedition.ts';
 import { chartBlocked, chartCost, chartOf } from '../sim/chart.ts';
 import { secretsBlocked, secretsOf } from '../sim/secrets.ts';
+import { flameBlocked, flameOf } from '../sim/pureflame.ts';
 import { ascendBlocked, ascendText, ascensionOf } from '../sim/luminarch.ts';
 import { setTrapBlocked, trapsHeld } from '../sim/snare.ts';
 import { hexBlocked, hexNear } from '../sim/hexmage.ts';
@@ -741,6 +742,18 @@ export function CharacterControls(props: {
             onClick={() => onAct({ type: 'ascend' })}
           >
             천사 부르기
+          </button>
+        </div>
+      )}
+      {flameOf(state, world, p) && (
+        <div className="row">
+          <span className="muted">🔥 {flameOf(state, world, p)!.name} (탐색 {state.items?.[flameOf(state, world, p)!.id]?.counters ?? 0}):</span>
+          <button
+            disabled={busy || !!stuck || !!flameBlocked(state, world, p)}
+            title={flameBlocked(state, world, p) ?? '탐색을 마치고(사라짐) 자정까지 나와 내 편이 주는 피해를 두 배로'}
+            onClick={() => onAct({ type: 'flame' })}
+          >
+            불꽃 받아들이기
           </button>
         </div>
       )}

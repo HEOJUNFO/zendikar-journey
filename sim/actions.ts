@@ -19,6 +19,7 @@ import { FLING_HOURS, flingBlocked } from './fling.ts';
 import { EXPEDITION_HOURS, expeditionBlocked, expeditionOf, expeditionReward } from './expedition.ts';
 import { CHART_HOURS, chartBlocked, chartCost, chartOf } from './chart.ts';
 import { SECRETS_HOURS, secretsBlocked, secretsOf } from './secrets.ts';
+import { FLAME_HOURS, flameBlocked, flameOf } from './pureflame.ts';
 import { bondBlocked, bondTargets, FETCH_HOURS, fetchBlocked, firesOnBond, growBlocked, HAND, landDropBlocked, targetedBondEffect, TOP } from './abilities.ts';
 import { handBlocked, topBlocked } from './oracle.ts';
 import { CLAIM_HOURS, claimBlocked, itemDef } from './items.ts';
@@ -89,6 +90,9 @@ export const ActionSchema = z.discriminatedUnion('type', [
   // End the Quest for Ancient Secrets you own (enough counters): it is gone, and someone's
   // graveyards (yours too) go back into their library.
   z.object({ type: z.literal('secrets') }),
+  // End the Quest for Pure Flame you own (enough counters): your and your side's damage doubled
+  // until midnight.
+  z.object({ type: z.literal('flame') }),
   // Call down an angel with the Luminarch Ascension you own (enough quest counters): pay its cost.
   z.object({ type: z.literal('ascend') }),
   // Set a trap you hold where you stand, paying its card's cost (Trapmaker's Snare).
@@ -340,6 +344,13 @@ export function startAction(state: State, world: World, action: Action): string 
       if (why) return why;
       task = { kind: 'expedition', activity: `${expeditionOf(state, world, p)!.name}을(를) 마침`, emoji: '🗺️', until: until(EXPEDITION_HOURS) };
       text = `원정을 마치고 원정대가 찾아낸 것을 짚어 본다. ${expeditionReward(state, world, p).ko}.`;
+      break;
+    }
+    case 'flame': {
+      const why = flameBlocked(state, world, p);
+      if (why) return why;
+      task = { kind: 'flame', activity: `${flameOf(state, world, p)!.name}을(를) 마침`, emoji: '🔥', until: until(FLAME_HOURS) };
+      text = '순수한 불꽃을 몸에 받아들여 탐색을 마친다. 자정까지 나와 내 편이 주는 피해가 두 배가 된다.';
       break;
     }
     case 'secrets': {

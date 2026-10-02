@@ -126,6 +126,8 @@ export type Actor = {
   everBonded?: string[];
   // Haste given by the scent of blood this hour (Bloodghast, sim/bloodghast.ts).
   bloodHaste?: boolean;
+  // Quest for Pure Flame ended: until when the damage they and theirs deal is doubled (sim/pureflame.ts).
+  doubleUntil?: number;
   // On the scent (Guul Draz Vampire, `sim.low_life_boost`): +P/+T and the abilities it gave (not
   // its own), while a foe of today is at that life or below (sim/bloodghast.ts).
   bloodBoost?: { pt: Pt; added: Ability[] };

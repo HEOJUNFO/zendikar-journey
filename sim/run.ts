@@ -44,6 +44,7 @@ import { applyGem, expeditionBlocked, expeditionOf, expeditionReward } from './e
 import { applyChart, chartBlocked, chartCost, chartOf } from './chart.ts';
 import { applyMill } from './mill.ts';
 import { applySecrets, secretsBlocked, secretsOf } from './secrets.ts';
+import { flameBlocked, flameOf } from './pureflame.ts';
 import { ascendBlocked, ascensionOf } from './luminarch.ts';
 import type { TapPower } from './tapper.ts';
 import { crumble, sacrifice, sacrificeDefault } from './monument.ts';
@@ -1532,6 +1533,7 @@ async function prepare(state: State, world: World, llm: Llm): Promise<string | n
           hex: hexInput(state, world, a),
           fling: flingInput(state, world, a),
           traps: trapsHeld(world, a).map((ev) => ({ id: ev.id, text: `${ev.name}: ${ev.summary} (${ev.cardCost?.text ?? ''})` })),
+          flame: flameBlocked(state, world, a) ? undefined : { name: flameOf(state, world, a)!.name },
           secrets: secretsBlocked(state, world, a) ? undefined : { name: secretsOf(state, world, a)!.name },
           chart: chartBlocked(state, world, a, state.minutes) ? undefined : { name: chartOf(state, world, a)!.name, cost: chartCost(state, world, a) },
           expedition: expeditionBlocked(state, world, a) ? undefined : { name: expeditionOf(state, world, a)!.name, reward: expeditionReward(state, world, a).en },
