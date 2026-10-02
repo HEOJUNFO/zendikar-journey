@@ -469,6 +469,8 @@ function spellEffectText(e: SpellEffect) {
       return '세계의 함정 하나를 무작위로 손에 (나중에 선 자리에 카드 비용을 들여 놓음)';
     case 'find_traps':
       return '시전자가 선 땅과 그 구역에 숨은 함정을 모두 앎';
+    case 'veil':
+      return `대상이 자정까지 시전자 편이 아닌 이의 주문·능력에 고를 수 없음${e.kicked_pt ? ` (킥커 시 +${e.kicked_pt.join('/+')})` : ''}`;
     case 'no_prevent':
       return '그 칸에서 자정까지 피해를 막을 수 없음 (가호·안개·보호 무시)';
     case 'fog':

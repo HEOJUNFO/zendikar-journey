@@ -126,6 +126,8 @@ export type Actor = {
   everBonded?: string[];
   // Haste given by the scent of blood this hour (Bloodghast, sim/bloodghast.ts).
   bloodHaste?: boolean;
+  // Vines of Vastwood: until when only `side` (the caster's: their master, or they) may pick them.
+  veiled?: { until: number; side: string };
   // Quest for Pure Flame ended: until when the damage they and theirs deal is doubled (sim/pureflame.ts).
   doubleUntil?: number;
   // On the scent (Guul Draz Vampire, `sim.low_life_boost`): +P/+T and the abilities it gave (not
@@ -667,8 +669,17 @@ export function hasAbility(a: Actor, ability: Ability, t: number) {
 // Isle), not even their own side's. Fights are no targeting: they may still be attacked.
 // `colors`: the colors of what picks them (a spell, a being, a land); protection from any of
 // them keeps them out of reach too.
-export function targetable(a: Actor, t: number, colors: readonly string[] = []) {
-  return !hasAbility(a, 'shroud', t) && !protectedFrom(a, colors, t);
+// `by`: who picks them, if known: Vines of Vastwood keeps them out of reach of all but their
+// caster's side (with no `by`, of all, as shroud).
+export function targetable(a: Actor, t: number, colors: readonly string[] = [], by?: Actor) {
+  return !hasAbility(a, 'shroud', t) && !protectedFrom(a, colors, t) && !veiledFrom(a, t, by);
+}
+
+// Vines of Vastwood on them (`Actor.veiled`) and `by` not of the caster's side (or not known).
+export function veiledFrom(a: Actor, t: number, by?: Actor) {
+  const v = a.veiled;
+  if (!v || v.until <= t) return false;
+  return !by || (by.master ?? by.id) !== v.side;
 }
 
 // Protection from one of `colors` (while their powers aren't sealed): the first one, if any.
@@ -681,6 +692,7 @@ export function protectedFrom(a: Actor, colors: readonly string[], t: number): C
 export function untargetableText(a: Actor, t: number, colors: readonly string[] = []) {
   const c = protectedFrom(a, colors, t);
   const name = josa(shortName(a.name), '은', '는');
+  if (!c && !hasAbility(a, 'shroud', t) && a.veiled && a.veiled.until > t) return `${name} 덩굴에 휘감겨 대상이 될 수 없다.`;
   return c ? `${name} ${COLOR_WORDS[c]}으로부터 보호받아 대상이 될 수 없다.` : `${name} 방어막에 싸여 대상이 될 수 없다.`;
 }
 const COLOR_WORDS: Record<Color, string> = { W: '백색', U: '청색', B: '흑색', R: '적색', G: '녹색' };

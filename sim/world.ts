@@ -814,6 +814,9 @@ export const SpellSimSchema = z.strictObject({
         // "Damage can't be prevented this turn" (Unstable Footing): on the caster's tile until
         // midnight (user decision 2026-10-02; combat.ts `unpreventable`).
         z.strictObject({ type: z.literal('no_prevent') }),
+        // "Target creature can't be the target of spells or abilities your opponents control this turn;
+        // kicked, +P/+T" (Vines of Vastwood): `Actor.veiled` until midnight (state.ts `targetable`).
+        z.strictObject({ type: z.literal('veil'), kicked_pt: PtBonusSchema.optional() }),
         // "Choose a color. White creatures you control gain protection from it until end of turn"
         // (Brave the Elements): the caster picks after the hour; their white ones on their tile
         // (sim/allies.ts `applyBrave`).

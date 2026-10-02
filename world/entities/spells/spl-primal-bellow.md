@@ -8,6 +8,7 @@ status: canon
 sources: [ZEN-176]
 tags: [주문, 녹색, 순간마법, 부풂, 숲]
 links:
+  - { to: spl-vines-of-vastwood, rel: 같은 광대숲의 힘 }
   - { to: law-mana-colors, rel: 녹색 마법 }
   - { to: loc-oran-rief, rel: 배우는 곳 (광대숲의 나무 꼭대기) }
   - { to: cre-vastwood-gorger, rel: 같은 항해사 차디르의 말 }

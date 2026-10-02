@@ -8137,6 +8137,31 @@ test('the real Vampire\'s Bite is taught in Malakir: {B}, +3/+0, kicker {2}{B} f
   assert.deepEqual(s.effects, [{ type: 'pump_target', pt: [3, 0], abilities: [], kicked_abilities: ['lifelink'] }]);
 });
 
+test('Vines of Vastwood: until midnight no spell of one not on the caster\'s side may pick the target, the caster\'s may; kicked, +4/+4', () => {
+  const vines: RawEntity = { id: 'spl-vv', kind: 'spell', name: '광대숲의 덩굴', status: 'canon', sim: { cost: '{0}', speed: 'instant', learn_at: 'loc-a', target: 'any_here', kicker: { mana: '{0}' }, effects: [{ type: 'veil', kicked_pt: [4, 4] }] } };
+  const dis: RawEntity = { id: 'spl-df', kind: 'spell', name: '흉터 새기기', status: 'canon', sim: { cost: '{0}', speed: 'instant', learn_at: 'loc-a', target: 'other_here', effects: [{ type: 'weaken_target', pt: [-2, -2] }] } };
+  const world = fixture([vines, dis, npc('chr-c', npcSim('loc-a')), npc('chr-x', npcSim('loc-a', 'work', [1, 1])), npc('chr-e', npcSim('loc-a'))]);
+  const state = newState(world, { seed: 1, mode: 'observer' });
+  const [c, x, e] = ['chr-c', 'chr-x', 'chr-e'].map((id) => state.actors[id]);
+  for (const z of [x, e]) z.tile = c.tile;
+  x.master = c.id;
+  c.spells = ['spl-vv', 'spl-df'];
+  e.spells = ['spl-df'];
+  castSpell(state, world, c, 'spl-vv', 'chr-x', true, state.minutes);
+  assert.deepEqual(ptOf(x), [5, 5]);
+  assert.match(castBlocked(state, world, e, 'spl-df', 'chr-x', false, state.minutes) ?? '', /덩굴/);
+  assert.equal(castBlocked(state, world, c, 'spl-df', 'chr-x', false, state.minutes), null);
+  assert.ok(!targetable(x, state.minutes));
+  assert.ok(targetable(x, untapTime(state.minutes)));
+});
+
+test('the real Vines of Vastwood is taught in Oran-Rief: {G}, kicker {G} for +4/+4', () => {
+  const s = loadWorld().spells.find((x) => x.id === 'spl-vines-of-vastwood')!;
+  assert.equal(s.learnAt, 'loc-oran-rief');
+  assert.equal(s.kicker?.manaText, '{G}');
+  assert.deepEqual(s.effects, [{ type: 'veil', kicked_pt: [4, 4] }]);
+});
+
 test('Nissa\'s Chosen: killed, it goes into no graveyard; seven days on it wakes at home, whole and serving no one; a token of it is simply gone', () => {
   const world = fixture([besideA, npc('chr-n', { ...npcSim('loc-az', 'work', [2, 3]), revives_after: 7 }), npc('chr-m', npcSim('loc-a')), npc('chr-k', npcSim('loc-a'))]);
   const state = newState(world, { seed: 1, mode: 'observer' });

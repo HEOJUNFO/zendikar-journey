@@ -99,7 +99,7 @@ export function castBlocked(state: State, world: World, a: Actor, spellId: strin
   if (need && castTargets(state, a, s).length < need) return `${josa(s.name, '은', '는')} 대상이 ${need === 2 ? '둘' : need}이 있어야 한다 (곁의 자신과 권속).`;
   const doom = destroyBarred(world, state, s, target);
   if (doom) return doom;
-  if (s.effects.some((e) => e.type === 'pump_target' || e.type === 'pump_per_land' || e.type === 'weaken_target' || (e.type === 'aura' && e.doom_on_damage)) && target.loyalty !== undefined) return `${josa(shortName(target.name), '은', '는')} 생물이 아니다 (플레인즈워커).`;
+  if (s.effects.some((e) => e.type === 'pump_target' || e.type === 'veil' || e.type === 'pump_per_land' || e.type === 'weaken_target' || (e.type === 'aura' && e.doom_on_damage)) && target.loyalty !== undefined) return `${josa(shortName(target.name), '은', '는')} 생물이 아니다 (플레인즈워커).`;
   if (s.effects.some((e) => e.type === 'copy_target') && !copyable(target)) return `${josa(shortName(target.name), '은', '는')} 생물이 아니다 (플레인즈워커). 복제할 수 없다.`;
   if (s.effects.some((e) => e.type === 'destroy_relics') && !relicsHere(state, world, a.region, a.tile).length) return '여기엔 부술 마법물체도 부여마법도 없다.';
   if (s.effects.some((e) => e.type === 'demolish') && !demolishOptions(state, world, a).length) return '여기엔 부술 마법물체도 땅도 없다.';
@@ -108,7 +108,7 @@ export function castBlocked(state: State, world: World, a: Actor, spellId: strin
   if (s.effects.some((e) => e.type === 'return_nonland') && !escapeOptions(state, world, a, true).length) return '여기엔 되돌릴 것이 없다 (땅이 아닌 지속물).';
   if (s.effects.some((e) => e.type === 'grim_discovery') && !discoveryOwed(state, world, a, s.name, t).length) return '무덤에 되돌릴 생물도 땅도 없다.';
   if (s.effects.some((e) => e.type === 'harrow' || e.type === 'sacrifice_land') && !harrowGive(world, a).length) return `${josa(s.name, '은', '는')} 땅 하나를 내어 주어야 쓴다 (유대를 맺은 땅이 없다).`;
-  if (s.target !== 'self' && !targetable(target, t, spellColors(s))) return untargetableText(target, t, spellColors(s));
+  if (s.target !== 'self' && !targetable(target, t, spellColors(s), a)) return untargetableText(target, t, spellColors(s));
   if (!planPayment(manaAvailable(state, world, a, t), s.cost))
     return `마나가 모자라다 (${s.costText}, 지금 ${formatMana(manaAvailable(state, world, a, t))}).`;
   if (kick && !s.kicker) return '추가 비용이 없는 주문이다.';
@@ -126,7 +126,7 @@ export function castTargets(state: State, a: Actor, s: SpellDef, world?: World) 
   return present(state, a.region, a.tile).filter(
     (x) =>
       (x.id !== a.id || s.target === 'any_here') &&
-      targetable(x, state.minutes, spellColors(s)) &&
+      targetable(x, state.minutes, spellColors(s), a) &&
       (!needsLand || !!landToDestroy(state, x)) &&
       (!copies || copyable(x)) &&
       (!ownOnly(s) || ownedBy(x, a)) &&
@@ -344,6 +344,10 @@ export function resolveSpell(state: State, world: World, a: Actor, spellId: stri
       findTraps(state, world, a, t, s.name);
     } else if (eff.type === 'brave') {
       (state.choices ??= []).push({ by: a.id, land: a.region, effect: { type: 'brave', spell: s.name }, candidates: [...COLORS], t });
+    } else if (eff.type === 'veil') {
+      target.veiled = { until: untapTime(t), side: a.master ?? a.id };
+      if (kicked && eff.kicked_pt) boostTillMidnight(state, target, eff.kicked_pt, [], t);
+      addLog(state, { kind: 'status', text: `${josa(shortName(target.name), '이', '가')} 광대숲의 덩굴에 휘감겼다: 자정까지 ${shortName(a.name)}의 편이 아닌 이의 주문과 힘이 닿지 않는다${kicked && eff.kicked_pt ? ` (+${eff.kicked_pt[0]}/+${eff.kicked_pt[1]}, ${ptOf(target).join('/')})` : ''}.`, regions: [target.region], actors: [target.id, a.id], t });
     } else if (eff.type === 'no_prevent') {
       state.noPrevent = [...(state.noPrevent ?? []).filter((f) => f.until > t), { region: a.region, ...(a.tile ? { tile: a.tile } : {}), until: untapTime(t), by: a.id }];
       addLog(state, { kind: 'event', text: `${s.name}: 그 자리의 땅이 갈라지고 흔들린다. 자정까지 이곳에서는 어떤 가호도 피해를 막지 못한다.`, regions: [a.region], actors: [a.id], t });

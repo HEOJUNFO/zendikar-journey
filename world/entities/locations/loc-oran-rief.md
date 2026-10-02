@@ -5,9 +5,10 @@ name: 오란리프, 광대숲
 name_en: Oran-Rief, the Vastwood
 summary: 타짐의 끝없이 자라는 산호 바위 숲. 거목의 뿌리가 바위 위로 아치를 이루고, 그 위 이끼 낀 턱에 엘프들이 산다. 이곳의 기운은 새로 태어난 것들을 북돋운다
 status: canon
-sources: [ZEN-221, ZEN-192, ZEN-162, ZEN-121, ZEN-189, ZEN-163, ZEN-173, ZEN-185, ZEN-174, ZEN-176, ZEN-209]
+sources: [ZEN-221, ZEN-192, ZEN-162, ZEN-121, ZEN-189, ZEN-163, ZEN-173, ZEN-185, ZEN-174, ZEN-176, ZEN-209, ZEN-193]
 tags: [숲, 거목, 산호바위, 엘프, 녹색]
 links:
+  - { to: spl-vines-of-vastwood, rel: 배우는 주문 (광대숲의 덩굴) }
   - { to: itm-trusty-machete, rel: 생존주의자 야영지의 마체테 }
   - { to: chr-oran-rief-survivalist, rel: 서쪽 깊은 곳의 생존꾼 욘 바스렐 (동료) }
   - { to: chr-tajuru-archer, rel: 우듬지 타주루 마을의 궁수 }
@@ -46,6 +47,7 @@ sim:
 - 팀버모 애벌레(`cre-timbermaw-larva`, ZEN-189)가 숲 북동쪽 고목들 속에 숨어 산다 (덤빌 때 조종하는 이의 숲마다 부풂).
 - 거대화(`spl-gigantiform`, ZEN-162)를 여기서 배운다. 한 생물을 기본 8/8, 돌진으로 키우는 오라다.
 - 태고의 포효(`spl-primal-bellow`, ZEN-176)를 여기서 배운다 (4시간, [결정] 2026-10-02). 시전자가 쥔 숲마다 한 생물이 자정까지 +1/+1.
+- 광대숲의 덩굴(`spl-vines-of-vastwood`, ZEN-193)을 여기서 배운다 (4시간, [결정] 2026-10-02). 대상이 자정까지 남의 주문·능력에 닿지 않고, 킥커면 +4/+4.
 - 플레이어도 NPC도 쓴다 ([결정] 2026-09-30). NPC는 오늘 녹색 생물이 나온 날 LLM이 짜는 하루에 "숲의 힘"(`grow`)이 열린다.
 
 - 철거(`spl-demolish`, ZEN-121)를 여기서 배운다 (4시간, [결정] 2026-10-01). 이 자리의 마법물체 하나나 땅 하나를 부수는 적색 주문이다. 정착지를 믿지 않는 오란리프 생존주의자들의 주문이다 ([카드] 플레이버).
