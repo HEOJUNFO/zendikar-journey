@@ -5,9 +5,10 @@ name: 오라 온다르
 name_en: Ora Ondar
 summary: 아쿰 내륙의 수정 분지에서 솟은 바위 위로 다섯 층을 이루며 자란 숲, '불가능한 정원'. 백 년 가까이 이어진 생명 개화로, 엘프가 칼니 심장과 칼니 돌을 숨기고 지킨다
 status: canon
-sources: [ZEN-205, ZEN-151, ZEN-167]
+sources: [ZEN-205, ZEN-151, ZEN-167, ZEN-168]
 tags: [숲, 정원, 생명 개화, 엘프, 타주루, 녹색]
 links:
+  - { to: cre-lotus-cobra, rel: 폭포 웅덩이의 연꽃 밭에 사는 코브라 }
   - { to: chr-torch-slinger, rel: 숲을 쏘다니는 고블린 }
   - { to: loc-akoum, rel: 바깥 지역 }
   - { to: itm-khalni-gem, rel: 숲의 심장에 숨은 칼니 보석 }
@@ -29,6 +30,7 @@ map: { in: loc-akoum, terrain: forest, pos: [0.45, 0.1], tiles: 15 }   # 기본 
 - 숲의 한가운데에 칼니 보석(`itm-khalni-gem`, ZEN-205)이 숨어 있다.
 - 칼니 심장의 폭포 아래, 한가운데 바로 남쪽에 칼니 심장 원정(`itm-khalni-heart-expedition`, ZEN-167)이 선다 ([결정] 2026-10-02): 땅과 이어질 때마다 탐색이 쌓이고, 셋이면 기본 땅 둘과 멀리서 이어진다.
 
+- 한가운데 동쪽 폭포 웅덩이 가의 연꽃 밭에 연꽃 코브라(`cre-lotus-cobra`, ZEN-168)가 산다 ([결정] 2026-10-02). 길들인 이가 땅과 이어질 때마다 곁에 있으면 자정까지 쓸 아무 색 마나 1을 내준다.
 - 횃불 투척꾼(`chr-torch-slinger`, ZEN-151)이 남서쪽 숲 가장자리를 횃불 들고 쏘다닌다 ([결정] 2026-10-01). 말하는 고블린 주술사로, 들어서는 곳마다 힘을 더 모으면 횃불을 던진다.
 
 ## 미정/질문

@@ -21,7 +21,7 @@ import { bondFromHand, enterReveal, extraLandDrops, handBlocked, topBlocked, top
 import { gainLife, lifeOf, loseLife, setLife } from './life.ts';
 import { allyJoined } from './allies.ts';
 import { bindRetainer, controlledCreatures, masterOf, releaseRetainer, retainersOf } from './retainers.ts';
-import { DEPLETED_LABEL } from './rules.ts';
+import { DEPLETED_LABEL, KO_ACTIVITY } from './rules.ts';
 import { castSpell, spellDef } from './spells.ts';
 import { drawKnowledge } from './knowledge.ts';
 import { owesDiscard } from './discard.ts';
@@ -263,6 +263,21 @@ export function bondLand(state: State, world: World, a: Actor, t: number, region
     else (state.choices ??= []).push({ by: a.id, land: v.id, effect: eff, candidates: targets.map((x) => x.id), optional: true, t });
   }
   itemsOnLandfall(state, world, a, t);
+  landfallMana(state, world, a, t);
+}
+
+// "Landfall — Whenever a land enters the battlefield under your control, you may add one mana of
+// any color" (Lotus Cobra, `sim.landfall_mana`): the creatures `a` controls (themselves, or those
+// who serve them standing with them, awake, their powers not sealed) give them mana of any color
+// until midnight (always: it only helps).
+function landfallMana(state: State, world: World, a: Actor, t: number) {
+  for (const x of [a, ...retainersOf(state, a.id)]) {
+    const n = npcDef(state, world, x.id)?.landfallMana;
+    if (!n || x.dead || x.forced?.activity === KO_ACTIVITY || powersSealed(state, world, x, t) || (x.id !== a.id && !together(x, a))) continue;
+    const day = gameDay(t);
+    a.bonusMana = { day, any: (a.bonusMana?.day === day ? a.bonusMana.any : 0) + n };
+    addLog(state, { kind: 'effect', text: `${josa(shortName(x.name), '이', '가')} 새 땅의 기운을 비늘에 머금어 ${shortName(a.name)}에게 내준다: 자정까지 아무 색 마나 ${n}.`, regions: [a.region], actors: [a.id, x.id], t });
+  }
 }
 
 // Giving up a fetch land takes an hour, from wherever they are.

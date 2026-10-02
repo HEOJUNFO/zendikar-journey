@@ -52,6 +52,8 @@ export type Actor = {
   // When their latest landfall happened (a landfall event may answer it at that hour).
   landfallAt?: number;
   manaSpent?: { day: number; spent: Mana };
+  // Mana of any color they have until midnight, beyond their own (Lotus Cobra's landfall).
+  bonusMana?: { day: number; any: number };
   // When they last arrived somewhere (an enter event may answer it at that hour).
   arrivedAt?: number;
   // Spells they drew (came to hold at random) this turn, and the events that already answered

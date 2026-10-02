@@ -8,6 +8,7 @@ status: canon
 sources: [ZEN-167]
 tags: [부여마법, 원정, 녹색, 탐색, 상륙]
 links:
+  - { to: cre-lotus-cobra, rel: 같은 숲의 연꽃 코브라 }
   - { to: law-permanents, rel: 부여마법 }
   - { to: law-mana-colors, rel: 녹색 }
   - { to: loc-ora-ondar, rel: 서 있는 곳 (칼니 심장의 폭포 아래) }

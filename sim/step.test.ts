@@ -16,7 +16,7 @@ import { answerCounter, answerCounterCast, counterHolders, reactionSpell, summon
 import { applyExile, banishOptions } from './banish.ts';
 import { engulfTargets } from './engulf.ts';
 import { upkeepScorch } from './scorch.ts';
-import { actorColors, COLORS, formatMana, manaAvailable, manaCapacity, parseManaCost, planPayment } from './mana.ts';
+import { actorColors, ANY_COLOR, COLORS, formatMana, manaAvailable, manaCapacity, parseManaCost, planPayment } from './mana.ts';
 import { MAX_TALKS_PER_DAY, canPledge, usableAbilities, volleyShares, burnTargets } from './run.ts';
 import { destroyLand, eligibleGmEvents, moveHours, startTravel, step, travelBlocked } from './step.ts';
 import { gainLife, lifeOf } from './life.ts';
@@ -34,7 +34,7 @@ import { letGo, revealHand } from './discard.ts';
 import { claimBlocked, claimItem, itemOwner, itemsAt, itemTile, itemWhere } from './items.ts';
 import { spendBlocked, storeBlocked } from './eons.ts';
 import { applyEnterDestroy, expireGranted, applyLure, applySearch, bondBlocked, enterDestroy, onEnter, bondLand, bondTargets, callForth, fetchTargets, fireTargets, firesOnBond, growBlocked, spawnWild, summonLibrary, useAbility } from './abilities.ts';
-import { DEPLETED_LABEL, DESTROYED_DAYS, TRAVEL_UNITS_PER_HOUR } from './rules.ts';
+import { DEPLETED_LABEL, DESTROYED_DAYS, KO_ACTIVITY, TRAVEL_UNITS_PER_HOUR } from './rules.ts';
 import { bindRetainer, controlledCreatures, controlsKind, courtBlocked, courtTargets, creatureOf, followBlocked, refusedToday, releaseRetainer, retainersOf, swayBlocked, upkeepPossessions } from './retainers.ts';
 import { joinedToday } from './bounce.ts';
 import { centroid, eventTile, fixedTile, nearestTile, ownsTile, sameTile, TILE, tileCenter, tilesOf, tileSteps, tooSmall } from './tiles.ts';
@@ -5268,6 +5268,35 @@ test('Greenweaver Druid: {G}{G} a day for whoever controls it, standing with the
   d.forced = undefined;
   d.sealedOut = gameDay(t);
   assert.equal(manaCapacity(state, world, p, t).G ?? 0, 0); // sealed
+});
+
+test('Lotus Cobra: its master bonding with a land, it standing with them, they have one more mana of any color until midnight; away or knocked out, nothing', () => {
+  const world = fixture([npc('chr-c', { ...npcSim('loc-a', 'work', [2, 1]), beast: true, landfall_mana: 1 }), npc('chr-m', npcSim('loc-a'))]);
+  const state = newState(world, { seed: 1, mode: 'observer' });
+  const [cobra, m] = [state.actors['chr-c'], state.actors['chr-m']];
+  cobra.tile = m.tile;
+  cobra.master = m.id;
+  const t = state.minutes;
+  const before = manaAvailable(state, world, m, t)[ANY_COLOR] ?? 0;
+  bondLand(state, world, m, t, 'loc-a');
+  assert.equal(manaAvailable(state, world, m, t)[ANY_COLOR] ?? 0, before + 1);
+  bondLand(state, world, m, t, 'loc-b');
+  assert.equal(manaAvailable(state, world, m, t)[ANY_COLOR] ?? 0, before + 2);
+  assert.equal(manaAvailable(state, world, m, untapTime(t))[ANY_COLOR] ?? 0, before);
+  cobra.forced = { kind: 'sleep', activity: KO_ACTIVITY, emoji: '😵', until: t + 240 };
+  m.bonds = [];
+  bondLand(state, world, m, t, 'loc-a');
+  assert.equal(manaAvailable(state, world, m, t)[ANY_COLOR] ?? 0, before + 2);
+});
+
+test('the real Lotus Cobra coils among the lotuses of Ora Ondar: a beast giving mana on landfall', () => {
+  const world = loadWorld();
+  const state = newState(world, { seed: 1, mode: 'observer' });
+  const c = state.actors['cre-lotus-cobra'];
+  assert.equal(c?.region, 'loc-ora-ondar');
+  const def = npcDef(state, world, c.id)!;
+  assert.equal(def.landfallMana, 1);
+  assert.ok(def.beast);
 });
 
 test('the real Greenweaver Druid lives in Riverroot with the Mul Daya: an elf who weaves {G}{G}', () => {

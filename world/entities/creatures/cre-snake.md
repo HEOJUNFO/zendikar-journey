@@ -8,6 +8,7 @@ status: canon
 sources: [ZEN-160]
 tags: [뱀, 녹색, 짐승]
 links:
+  - { to: cre-lotus-cobra, rel: 같은 뱀 (연꽃 코브라) }
   - { to: evt-cobra-trap, rel: 쏟아져 나오는 함정 }
 ---
 

@@ -90,6 +90,7 @@ type Holder = {
   landfalls?: { day: number; regions: string[] };
   fallen?: string[];
   landsTapped?: { day: number; ids: string[] };
+  bonusMana?: { day: number; any: number };
 };
 
 // What someone can draw on each turn (at `t`: a land that enters tapped gives nothing the day
@@ -118,6 +119,8 @@ export function manaCapacity(state: State, world: World, a: Holder, t?: number):
     if (state.items?.[x.id]?.owner !== a.id || state.items[x.id].gone) continue;
     for (const e of x.effects) if (e.type === 'mana') out[ANY_COLOR] = (out[ANY_COLOR] ?? 0) + e.amount;
   }
+  // Mana given for the day (Lotus Cobra's landfall): any color, until midnight.
+  if (t !== undefined && a.bonusMana?.day === gameDay(t)) out[ANY_COLOR] = (out[ANY_COLOR] ?? 0) + a.bonusMana.any;
   // Creatures that tap for mana ("{T}: Add {G}{G}", Greenweaver Druid; `sim.tap_mana`): theirs
   // to draw on whose they are (their master's, or their own), while they stand with them, awake
   // and their powers not sealed (user decision 2026-10-01).
