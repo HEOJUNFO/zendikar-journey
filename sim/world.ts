@@ -859,6 +859,11 @@ export const ItemSimSchema = z.strictObject({
         // put a quest counter on this" (Luminarch Ascension): at midnight, for an owner who neither
         // lost life nor took damage that day (sim/luminarch.ts).
         z.strictObject({ type: z.literal('quest_unhurt') }),
+        // "Whenever you cast an instant or sorcery spell that has the same name as a card in your
+        // graveyard, you may put a quest counter on this. Whenever you cast an instant or sorcery
+        // while this has N or more, you may copy that spell" (Pyromancer Ascension):
+        // sim/pyromancer.ts.
+        z.strictObject({ type: z.literal('spell_quest'), counters: z.number().int().positive() }),
         // "<cost>: Create a P/T <creature> token with <abilities>. Activate only if this has N or
         // more quest counters" (Luminarch Ascension): its owner pays, whenever they will, and it
         // serves them (sim/luminarch.ts).

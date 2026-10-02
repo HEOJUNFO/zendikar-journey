@@ -5,9 +5,10 @@ name: 발라쿠트, 녹아내리는 봉우리
 name_en: Valakut, the Molten Pinnacle
 summary: 온두의 섬 베이엔, 탈리브의 왕관 산맥의 최고봉인 거대한 화산. 붉게 녹아내리는 봉우리에서 불길이 치솟고, 산들이 한 사람 아래 모이면 그 불길이 온두와 그 섬들 어디로든 떨어진다
 status: canon
-sources: [ZEN-228, ZEN-135, ZEN-140]
+sources: [ZEN-228, ZEN-135, ZEN-140, ZEN-143]
 tags: [화산, 봉우리, 불, 적색]
 links:
+  - { to: itm-pyromancer-ascension, rel: 끓는 아궁이 위의 승천 }
   - { to: loc-crown-of-talib, rel: 바깥 구역 (베이엔의 산맥) }
   - { to: loc-beyeen, rel: 바깥 지역 (온두의 섬) }
   - { to: evt-lavaball-trap, rel: 숨은 함정 }
@@ -37,6 +38,7 @@ sim:
 - **용암공 함정** (`evt-lavaball-trap`, ZEN-135): 누군가 발라쿠트와 그날 두 번째 이상으로 유대를 맺으면(페치로 다른 땅을 먼저 찾아온 날) 1시간 뒤 용암공이 떨어진다. 발라쿠트의 모두가 피해 4, 그 침입자가 그날 들인 땅 최근 두 곳(발라쿠트 포함)이 7일 동안 부서진다 ([결정] 2026-09-30 재배치).
 
 - 흑요석 불심장(`cre-obsidian-fireheart`, ZEN-140)이 용암 속에 깃든다 ([결정] 2026-10-01). 아침 LLM이 고른 이의 땅에 불씨를 박아, 그 땅과 이어진 이들이 밤마다 생명 1을 잃게 한다.
+- 북동쪽 끓는 아궁이 위에 화염술사의 승천(`itm-pyromancer-ascension`, ZEN-143)이 서 있다 ([결정] 2026-10-02): 한 번 잊었던 주문을 다시 부를 때마다 탐색이 쌓이고, 둘이면 쓰는 주문마다 한 번 더 값 없이 걸 수 있다.
 
 ## 미정/질문
 

@@ -14,6 +14,7 @@ import { owesDiscard } from './discard.ts';
 import { crushOwed, demolishOptions, demolishOwed, relicsHere } from './relics.ts';
 import { escapeOptions, escapeOwed } from './escape.ts';
 import { sendNowhere } from './nowhere.ts';
+import { pyromancerCast } from './pyromancer.ts';
 import { sacramentOwed } from './sacrament.ts';
 import { discoveryOwed } from './discovery.ts';
 import { harrowGive, harrowOwed } from './harrow.ts';
@@ -231,6 +232,8 @@ export function castSpell(state: State, world: World, a: Actor, spellId: string,
   // Cast, it is used: not to be cast again for as many hours as its mana value, whatever becomes
   // of it (countered too), and cast free too (user decision 2026-10-01).
   a.used = { ...(a.used ?? {}), [s.id]: t + manaValue(s) * 60 };
+  // Pyromancer Ascension: as it is cast (a copy, a counter).
+  if (!free) pyromancerCast(state, world, a, s, t);
   let kicked = manaKick;
   if (kick && s.kicker?.tap) {
     const tapped = tappable(state, world, a, s.kicker.tap)[0];

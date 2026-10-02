@@ -7329,6 +7329,39 @@ test('the real Punishing Fire is taught on the Teeth of Akoum', () => {
   assert.deepEqual(s.effects, [{ type: 'damage', amount: 2, any: true }]);
 });
 
+test('Pyromancer Ascension: casting a spell once forgotten and learned again puts a quest counter on it; with two as they cast, they may cast it once more, free; no aura counts', () => {
+  const pyro: RawEntity = { id: 'itm-pyro', kind: 'item', name: '화염술사의 승천', status: 'canon', sim: { card_type: 'enchantment', cost: '{0}', at: 'loc-a', effects: [{ type: 'spell_quest', counters: 2 }] } };
+  const world = fixture([pyro, punishSpell, bigAura, npc('chr-c', { ...npcSim('loc-a'), mana: { R: 3 } }), npc('chr-x', npcSim('loc-a', 'work', [5, 9]))]);
+  const state = newState(world, { seed: 1, mode: 'observer' });
+  const [c, x] = [state.actors['chr-c'], state.actors['chr-x']];
+  x.tile = c.tile;
+  state.items = { 'itm-pyro': { name: '화염술사의 승천', owner: c.id, counters: 0 } };
+  c.spells = ['spl-pf', 'spl-g'];
+  castSpell(state, world, c, 'spl-pf', 'chr-x', false, state.minutes);
+  assert.equal(state.items['itm-pyro'].counters, 0);
+  c.graveyard = ['spl-pf', 'spl-g'];
+  delete c.used;
+  castSpell(state, world, c, 'spl-g', 'chr-x', false, state.minutes);
+  assert.equal(state.items['itm-pyro'].counters, 0);
+  castSpell(state, world, c, 'spl-pf', 'chr-x', false, state.minutes);
+  assert.equal(state.items['itm-pyro'].counters, 1);
+  assert.ok(!state.choices?.some((ch) => ch.effect.type === 'cast'));
+  state.items['itm-pyro'].counters = 2;
+  delete c.used;
+  castSpell(state, world, c, 'spl-pf', 'chr-x', false, state.minutes);
+  const copy = state.choices!.find((ch) => ch.effect.type === 'cast')!;
+  assert.deepEqual(copy.effect, { type: 'cast', spell: 'spl-pf', free: true });
+  assert.ok(copy.optional && copy.candidates.includes('chr-x'));
+  assert.equal(state.items['itm-pyro'].counters, 3);
+});
+
+test('the real Pyromancer Ascension stands in Valakut', () => {
+  const world = loadWorld();
+  const x = world.items.find((i) => i.id === 'itm-pyromancer-ascension')!;
+  assert.equal(x.at, 'loc-valakut');
+  assert.deepEqual(x.effects, [{ type: 'spell_quest', counters: 2 }]);
+});
+
 test('the real Nimbus Wings is taught at Kabira Crossroads: the one it is cast on gets +1/+2 and wings', () => {
   const world = loadWorld();
   const s = world.spells.find((x) => x.id === 'spl-nimbus-wings')!;
