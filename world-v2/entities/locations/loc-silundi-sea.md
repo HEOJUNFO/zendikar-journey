@@ -3,7 +3,7 @@ id: loc-silundi-sea
 kind: location
 name: 실룬디 바다
 name_en: Silundi Sea
-summary: 온두가 튀어나온 남서쪽 바다. 아게딤, 즈와르, 베이엔이 이 바다에 떠 있고, 물길이 본토와 섬들을 잇는다. 북쪽 끝은 줄라포트에서 아쿰으로 건너는 작은 바다다
+summary: 온두가 튀어나온 남서쪽 바다. 아게딤, 즈와르, 베이엔이 이 바다에 떠 있고, 물길이 본토와 섬들을 잇는다. 북쪽 끝은 줄라포트와 아쿰 사이의 작은 바다다
 status: canon
 sources: []
 tags: [바다]
@@ -16,7 +16,7 @@ map: { terrain: deepsea }
 design:
   role: 바닷길 (온두의 섬들)
   danger: 2
-  note: 온두 본토와 섬들을 잇는 물길. 즈와르로 가는 길만 거칠다.
+  note: 온두 본토와 섬들을 잇는 물길. 즈와르를 잇는 물길만 거칠다.
 ---
 
 ## 설정
