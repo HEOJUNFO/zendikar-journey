@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { buildWorldV2, labelTile, paintLayers } from './footprint.ts';
+import { buildWorldV2, labelTile, paintLayers, PLACE_MAX, sizeProblems } from './footprint.ts';
 import type { GridLayer } from './footprint.ts';
 import { readNotes, readReference, readWorldV2 } from './load-v2.ts';
 import { CONTINENT_MIN, LAND_MIN, tilesOf } from './tiles.ts';
@@ -131,6 +131,19 @@ test('buildWorldV2: a legend id that is no land is an error', () => {
   const fp = paintLayers([{ name: 'w', text: 'AQ\n', legend: { A: 'loc-a', Q: 'loc-ghost' } }], 2, 1);
   const { errors } = buildWorldV2([loc('loc-a', { terrain: 'grassland' })], fp);
   assert.ok(errors.some((e) => e.startsWith('loc-ghost:')));
+});
+
+test('sizeProblems: a region needs 10 tiles, a place 1 to 4, a continent 100 with its areas', () => {
+  const layers: GridLayer[] = [
+    { name: 'w', text: 'A'.repeat(120) + '\n', legend: { A: 'loc-a' } },
+    { name: 'r', text: 'r'.repeat(12) + 's'.repeat(9), legend: { r: 'loc-r', s: 'loc-small' } },
+    { name: 'p', text: 'pp' + 'q'.repeat(PLACE_MAX + 1), legend: { p: 'loc-p', q: 'loc-big' } },
+  ];
+  const entities = [continent('loc-a'), area('loc-r', 'loc-a'), area('loc-small', 'loc-a'), area('loc-p', 'loc-r'), area('loc-big', 'loc-r')];
+  const { world, errors } = buildWorldV2(entities, paintLayers(layers, 120, 1));
+  assert.deepEqual(errors, []);
+  const problems = sizeProblems(world, new Set(['loc-p', 'loc-big']));
+  assert.deepEqual(problems.sort(), ['loc-big: 장소인데 칸 5개 (1~4)', 'loc-small: 칸 9개 (최소 10)']);
 });
 
 test('labelTile picks the tile deepest inside a land, not its middle when that is off it', () => {

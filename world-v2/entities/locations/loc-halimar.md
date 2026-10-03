@@ -9,6 +9,10 @@ sources: []
 tags: [바다, 내해]
 links:
   - { to: loc-tazeem, rel: 둘러싼 대륙 }
+  - { to: loc-sea-gate, rel: 어귀를 막은 방파제의 도시 }
+  - { to: loc-umara-gorge, rel: 서쪽으로 흘러드는 강 }
+  - { to: loc-ula-temple, rel: 강어귀에 가라앉은 신전 }
+  - { to: loc-halimar-sea-caves, rel: 북쪽 기슭의 바다 동굴 }
 map: { terrain: deepsea }
 design:
   role: 바닷길 (타짐 안쪽)
@@ -18,10 +22,11 @@ design:
 
 ## 설정
 
-타짐의 내해다. 옛 만의 어귀를 바다 관문이 선 고대 방파제가 막고 있고, 바다 관문과 우마라 강 어귀 사이가 가장 안전한 길이라 뱃길 무역이 번성한다 ([배경] A Planeswalker's Guide to Zendikar: 타짐, The Art of Magic: The Gathering – Zendikar). 깊이는 500자쯤이고, 에메리아에서 떨어진 헤드론이 바닥에 깔려 있다 ([배경] Art of Zendikar). 할리마르 바다 동굴은 거대 오징어의 번식지다 ([배경] 마비시키는 손아귀 플레이버).
+타짐의 내해다. 옛 만의 어귀를 바다 관문이 선 고대 방파제가 막고 있고, 바다 관문과 우마라 강 어귀 사이가 가장 안전한 길이라 뱃길 무역이 번성한다 ([배경] A Planeswalker's Guide to Zendikar: 타짐, The Art of Magic: The Gathering – Zendikar). 깊이는 500자쯤이고, 에메리아에서 떨어진 헤드론이 바닥에 깔려 있다. 방파제가 물을 높일 때 잠긴 건물들이 기슭 가까운 얕은 곳에 남아 있다 ([배경] Art of Zendikar, 월드웨이크 대지 할리마르 깊은 곳). 할리마르 바다 동굴은 거대 오징어의 번식지다 ([배경] 마비시키는 손아귀 플레이버).
 
 ## 레벨 디자인
 
+- 바다 관문에서 서쪽 기슭의 인어 은신처와 우마라 강 어귀로 건너는 물길이다. 기슭에 울라 신전, 할리마르 바다 동굴, 비취 방의 굴 어귀가 있다 ([가공]).
 - 지금은 바다 지역으로 둔다. 할리마르 깊은 곳 같은 대지 카드가 오면 타짐의 바다 구역으로 다시 볼 수 있다 ([가공]).
 
 ## 자리

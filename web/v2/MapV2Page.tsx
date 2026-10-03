@@ -14,9 +14,9 @@ import { getWorldV2, refUrl } from './api.ts';
 
 const DANGER = ['', '평온', '거친 땅', '위험', '매우 위험', '죽음의 땅'];
 
-// What a land is on this map: a continent, an island, a sea, or an area inside one.
-function kindOf(r: Region) {
-  if (r.parent) return '구역';
+// What a land is on this map: a continent, an island, a sea, a region inside one, or a place.
+function kindOf(r: Region, notes: Record<string, V2Note> = {}) {
+  if (r.parent) return notes[r.id]?.place ? '장소' : '지역';
   if (TERRAINS[r.terrain].sea) return '바다';
   return r.size === 'continent' ? '대륙' : '섬';
 }
@@ -24,23 +24,42 @@ const GROUPS = ['대륙', '섬', '바다'];
 // The map opens with room above the lands for the top bar.
 const V2_FIT = { x: 24, top: 40, bottom: 24 };
 
+// How deep an area lies under a land (1: a region of it, 2: a place in one of its regions).
+function depthIn(world: World, r: Region, top: string) {
+  let n = 0;
+  for (let x: Region | undefined = r; x && x.id !== top && n < 8; x = world.regions.find((y) => y.id === x!.parent)) n++;
+  return n;
+}
+
 function tileCount(world: World, r: Region) {
   return tilesOf(world, r.id).length + descendantsOf(world, r.id).reduce((n, d) => n + tilesOf(world, d.id).length, 0);
 }
 
+type NamePlace = { x: number; y: number; size: number; sea?: boolean; dot?: { x: number; y: number }; faint?: boolean };
+
 // A land's name inside it, as large as the land (map units): a continent's across many tiles,
-// a small island's or a strait's across a few.
-function namePlaces(world: World) {
-  const out = new Map<string, { x: number; y: number; size: number; sea?: boolean }>();
-  for (const r of world.regions.filter((x) => !x.parent)) {
+// a region's smaller, a small island's or a strait's across a few. A place gets a dot on its
+// middle tile and a small name above it. A continent whose regions are drawn keeps its name
+// faint underneath theirs.
+function namePlaces(world: World, notes: Record<string, V2Note>) {
+  const out = new Map<string, NamePlace>();
+  for (const r of world.regions) {
     const spot = labelSpot(world, r.id);
     if (!spot) continue;
     const [c, row] = spot.tile;
+    const mid = { x: (c + 0.5) * TILE, y: (row + 0.5) * TILE };
+    if (notes[r.id]?.place) {
+      out.set(r.id, { x: mid.x, y: mid.y - 5, size: 8.5, dot: mid });
+      continue;
+    }
     // As large as the land, but no wider than its own ground on that row (a sea ringing a land
-    // would write over it); a sea's letters are spaced wider.
+    // would write over it), and still readable on a narrow region; a sea's letters are spaced
+    // wider.
     const per = TERRAINS[r.terrain].sea ? 1.25 : 1.05;
-    const size = Math.min(44, Math.max(10, Math.sqrt(tileCount(world, r)) * 2.4), (spot.run * TILE * 0.9) / (r.name.length * per));
-    out.set(r.id, { x: (c + 0.5) * TILE, y: (row + 0.5) * TILE + size * 0.35, size, sea: TERRAINS[r.terrain].sea });
+    const [most, least, k, floor] = r.parent ? [22, 8, 1.8, 7] : [44, 10, 2.4, 10];
+    const size = Math.max(floor, Math.min(most, Math.max(least, Math.sqrt(tileCount(world, r)) * k), (spot.run * TILE * 0.9) / (r.name.length * per)));
+    const faint = !r.parent && world.regions.some((x) => x.parent === r.id);
+    out.set(r.id, { x: spot.x * TILE, y: mid.y + size * 0.35, size, sea: TERRAINS[r.terrain].sea, ...(faint ? { faint } : {}) });
   }
   return out;
 }
@@ -69,7 +88,8 @@ function Body({ text }: { text: string }) {
   );
 }
 
-function PlaceCard({ world, id, note, onSelect }: { world: World; id: string; note?: V2Note; onSelect: (id: string) => void }) {
+function PlaceCard({ world, id, notes, onSelect }: { world: World; id: string; notes: Record<string, V2Note>; onSelect: (id: string) => void }) {
+  const note = notes[id];
   const r = region(world, id);
   const t = TERRAINS[r.terrain];
   const type = r.landType ?? t.type;
@@ -82,15 +102,19 @@ function PlaceCard({ world, id, note, onSelect }: { world: World; id: string; no
         <small>{r.nameEn}</small>
       </h2>
       <p className="muted">
-        {kindOf(r)}
+        {kindOf(r, notes)}
         {parent && <> · <button className="link" onClick={() => onSelect(parent.id)}>{parent.name}</button> 안</>}
         {' · '}
         {t.label}
-        {!(t.sea && !r.parent) && (
-          <>
-            {' · '}
-            <span className="swatch" style={{ background: landSwatch(r), display: 'inline-block' }} /> {type ? LAND_TYPE_LABELS[type] : '기본 종류 없음'}
-          </>
+        {r.notLand ? (
+          ' · 땅 아님'
+        ) : (
+          !(t.sea && !r.parent) && (
+            <>
+              {' · '}
+              <span className="swatch" style={{ background: landSwatch(r), display: 'inline-block' }} /> {type ? LAND_TYPE_LABELS[type] : '기본 종류 없음'}
+            </>
+          )
         )}
         {' · '}
         {tileCount(world, r)}칸
@@ -106,10 +130,13 @@ function PlaceCard({ world, id, note, onSelect }: { world: World; id: string; no
       {areas.length > 0 && (
         <p className="muted">
           안의 곳:{' '}
-          {areas.map((a) => (
-            <button key={a.id} className="link" onClick={() => onSelect(a.id)}>
-              {a.name}
-            </button>
+          {areas.map((a, i) => (
+            <span key={a.id}>
+              {i > 0 && ' · '}
+              <button className="link" onClick={() => onSelect(a.id)}>
+                {a.name}
+              </button>
+            </span>
           ))}
         </p>
       )}
@@ -142,7 +169,7 @@ export function MapV2Page({ nav }: { nav: ReactNode }) {
   const [refOn, setRefOn] = useState(false);
   const [opacity, setOpacity] = useState(0.7);
   const [listOpen, setListOpen] = useState(true);
-  const names = useMemo(() => (view ? namePlaces(view.world) : new Map()), [view]);
+  const names = useMemo(() => (view ? namePlaces(view.world, view.notes) : new Map<string, NamePlace>()), [view]);
   // The panels start below the top bar, however many rows it wraps to.
   const bar = useRef<HTMLDivElement>(null);
   const [barBottom, setBarBottom] = useState(72);
@@ -224,16 +251,21 @@ export function MapV2Page({ nav }: { nav: ReactNode }) {
                 {g} <small className="muted">{rs.length}</small>
               </h3>
               <ul className="region-list">
-                {rs.map((r) => (
-                  <li key={r.id}>
-                    <button className={`ghost${sel === r.id ? ' on' : ''}`} onClick={() => setSelected(r.id)}>
-                      <span className="swatch" style={{ background: landSwatch(r) }} />
-                      <span className="v2-name">{r.name}</span>
-                      <small className="muted">{tileCount(world, r)}칸</small>
-                      <Danger level={notes[r.id]?.design?.danger} />
-                    </button>
-                  </li>
-                ))}
+                {rs.flatMap((r) => {
+                  // The picked land's continent opens to its regions and places.
+                  const open = !!sel && (sel === r.id || descendantsOf(world, r.id).some((d) => d.id === sel));
+                  const rows = [{ x: r, depth: 0 }, ...(open ? descendantsOf(world, r.id).map((x) => ({ x, depth: depthIn(world, x, r.id) })) : [])];
+                  return rows.map(({ x, depth }) => (
+                    <li key={x.id} className={depth ? `v2-sub v2-sub-${Math.min(depth, 2)}` : undefined}>
+                      <button className={`ghost${sel === x.id ? ' on' : ''}`} onClick={() => setSelected(x.id)}>
+                        <span className="swatch" style={{ background: landSwatch(x) }} />
+                        <span className="v2-name">{notes[x.id]?.place ? '· ' : ''}{x.name}</span>
+                        <small className="muted">{tileCount(world, x)}칸</small>
+                        <Danger level={notes[x.id]?.design?.danger} />
+                      </button>
+                    </li>
+                  ));
+                })}
               </ul>
             </section>
           );
@@ -244,7 +276,7 @@ export function MapV2Page({ nav }: { nav: ReactNode }) {
           <button className="ghost close" onClick={() => setSelected(null)} aria-label="닫기">
             ✕
           </button>
-          <PlaceCard world={world} id={sel} note={notes[sel]} onSelect={setSelected} />
+          <PlaceCard world={world} id={sel} notes={notes} onSelect={setSelected} />
         </div>
       )}
     </div>

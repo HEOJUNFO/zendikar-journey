@@ -7,7 +7,8 @@ import { parse } from 'yaml';
 
 import { readNotes, readReference, readWorldV2, WORLD_V2_DIR } from '../sim/load-v2.ts';
 import { WORLD_DIR } from '../sim/load.ts';
-import { CONTINENT_MIN, LAND_MIN, tileKey, tilesOf } from '../sim/tiles.ts';
+import { tileKey, tilesOf } from '../sim/tiles.ts';
+import { sizeProblems } from '../sim/footprint.ts';
 import { TERRAINS } from '../sim/world.ts';
 
 // Map v2 holds lands and places only, for now (user decision 2026-10-03): cards come later.
@@ -64,6 +65,10 @@ for (const [kind, { prefix, dir }] of Object.entries(KINDS)) {
     if (!Array.isArray(fm.links)) err(rel, 'links 는 배열이어야 함');
     const map = fm.map && typeof fm.map === 'object' ? fm.map : null;
     const wanders = !!fm.sim?.wanders;
+    // A place (장소): inside a region, not a land (user decision 2026-10-03).
+    if (fm.place !== undefined && fm.place !== true) err(rel, 'place 는 true 이거나 없어야 함');
+    if (fm.place === true && !map?.in) err(rel, '장소(place)는 지역 안에 둔다 (map.in)');
+    if (fm.place === true && fm.sim?.not_land !== true) err(rel, '장소(place)는 땅이 아니다 (sim: { not_land: true })');
     for (const k of PAINTED.filter((k) => map && k in map && !(wanders && (k === 'x' || k === 'y')))) err(rel, `map.${k} 는 지도 v2 에 적지 않는다 (칸과 자리는 격자가 정함: map/layers.yaml)`);
     if (entities.has(id)) err(rel, `중복 요소 id: ${id}`);
     entities.set(id, { rel, fm });
@@ -102,25 +107,34 @@ const world = built?.world;
 const below = (id, seen = new Set([id])) =>
   world.regions.filter((r) => r.parent === id && !seen.has(r.id)).flatMap((r) => (seen.add(r.id), [r, ...below(r.id, seen)]));
 if (world) {
-  // Lands at least as large as their kind (user decision 2026-10-01): a continent 100 tiles with
-  // its areas, any other land 10. A sea holds water, a wandering place one tile of its own.
-  for (const r of world.regions.filter((x) => !x.wanders && !(TERRAINS[x.terrain].sea && !x.parent))) {
-    const n = [r, ...below(r.id)].reduce((m, x) => m + tilesOf(world, x.id).length, 0);
-    const least = r.size === 'continent' ? CONTINENT_MIN : LAND_MIN;
-    if (n < least) report(`${r.id}: 칸 ${n}개 (최소 ${least})`);
+  // Lands as large as their kind: a continent 100 tiles with its areas, a region or island 10, a
+  // place 1 to 4 (sim/footprint.ts sizeProblems).
+  const places = new Set([...entities].filter(([, e]) => e.fm.place === true).map(([id]) => id));
+  for (const msg of sizeProblems(world, places)) report(msg);
+  for (const r of world.regions.filter((x) => x.parent && places.has(x.parent))) report(`${r.id}: 장소(${r.parent}) 안에는 구역을 두지 않는다`);
+  // A place lies in a region, not straight in a continent; a continent with regions is all regions
+  // (README: 지역이 대륙을 모두 나눠 가진다).
+  for (const id of places) {
+    const r = world.regions.find((x) => x.id === id);
+    const parent = r?.parent && world.regions.find((x) => x.id === r.parent);
+    if (parent && !parent.parent) report(`${id}: 장소는 지역 안에 둔다 (${parent.id} 는 대륙·섬)`);
   }
-  // A land (an area too) in one piece with its areas: a stray character in a grid makes a
-  // far-off tile.
+  for (const r of world.regions.filter((x) => !x.parent && world.regions.some((y) => y.parent === x.id && !places.has(y.id)))) {
+    const own = tilesOf(world, r.id).length;
+    if (own) report(`${r.id}: 지역이 있는 땅인데 지역에 들지 않은 칸이 ${own}개 (지역이 모두 나눠 가진다)`);
+  }
+  // A land (an area too) with its areas: a stray character in a grid makes a far-off crumb.
   for (const r of world.regions.filter((x) => !x.wanders)) {
     const ts = [r, ...below(r.id)].flatMap((x) => tilesOf(world, x.id));
     const left = new Set(ts.map(tileKey));
-    let pieces = 0;
+    const sizes = [];
     for (const t of ts) {
       if (!left.has(tileKey(t))) continue;
-      pieces++;
+      sizes.push(0);
       const stack = [t];
       left.delete(tileKey(t));
       while (stack.length) {
+        sizes[sizes.length - 1]++;
         const [c, rr] = stack.pop();
         for (let dc = -1; dc <= 1; dc++) for (let dr = -1; dr <= 1; dr++) {
           const k = tileKey([c + dc, rr + dr]);
@@ -131,7 +145,9 @@ if (world) {
         }
       }
     }
-    if (pieces > 1) warn(entities.get(r.id)?.rel ?? r.id, `칸이 ${pieces}조각으로 떨어져 있음 (격자에 잘못 친 글자가 없는지)`);
+    // A river may cut a land in two; a stray character leaves a crumb.
+    const crumbs = sizes.sort((a, b) => b - a).slice(1).filter((n) => n <= 2);
+    if (crumbs.length) warn(entities.get(r.id)?.rel ?? r.id, `칸이 ${sizes.length}조각으로 떨어져 있고 ${crumbs.length}조각은 ${crumbs.join('·')}칸뿐임 (격자에 잘못 친 글자가 없는지)`);
   }
 }
 for (const id of Object.keys(ref?.pieces ?? {})) if (!entities.has(id)) err('map/reference.yaml', `${id} 가 world-v2 에 없음`);

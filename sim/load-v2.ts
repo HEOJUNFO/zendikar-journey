@@ -83,7 +83,7 @@ export function readNotes(root = WORLD_V2_DIR): { notes: Record<string, V2Note>;
     }
     const design = fm.design === undefined ? undefined : DesignSchema.safeParse(fm.design);
     if (design && !design.success) errors.push(`${fm.id}: design 오류: ${design.error.issues.map((i) => `${i.path.join('.')}: ${i.message}`).join('; ')}`);
-    notes[String(fm.id)] = { design: design?.success ? design.data : undefined, tags: Array.isArray(fm.tags) ? fm.tags.map(String) : [], body: m[2].trim() };
+    notes[String(fm.id)] = { design: design?.success ? design.data : undefined, tags: Array.isArray(fm.tags) ? fm.tags.map(String) : [], body: m[2].trim(), ...(fm.place === true ? { place: true } : {}) };
   }
   return { notes, errors };
 }

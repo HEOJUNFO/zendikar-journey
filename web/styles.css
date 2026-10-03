@@ -952,6 +952,11 @@ button.link {
   letter-spacing: 0.02em;
   pointer-events: none;
 }
+/* map v2: dragging pans the map instead of selecting its names */
+.fullmap.v2 .map {
+  user-select: none;
+  -webkit-user-select: none;
+}
 /* map v2: the map starts below the top bar, however tall it wraps */
 .fullmap.v2 .map-wrap {
   position: absolute;
@@ -961,6 +966,18 @@ button.link {
   bottom: 0;
   height: auto;
 }
+.map-label.map-label-faint {
+  opacity: 0.35;
+}
+.map-label.map-label-place {
+  font-weight: 600;
+}
+.map-place-dot {
+  fill: #f4ecd8;
+  stroke: #16324f;
+  stroke-width: 1.2;
+  pointer-events: none;
+}
 .map-label.map-label-sea {
   fill: #b9d3f2;
   font-weight: 500;
@@ -969,6 +986,15 @@ button.link {
 }
 .v2-list .v2-name {
   flex: 1;
+}
+.v2-list .v2-sub button {
+  font-size: 13px;
+}
+.v2-list .v2-sub-1 button {
+  padding-left: 16px;
+}
+.v2-list .v2-sub-2 button {
+  padding-left: 28px;
 }
 .fullmap-region.v2-region {
   top: var(--v2-top, 72px);

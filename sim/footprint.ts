@@ -9,7 +9,7 @@
 // a tile as 칸 column,row (0-based, as the map counts: the character's place in world.txt).
 import { buildWorld, MAP_HEIGHT, MAP_WIDTH } from './world.ts';
 import type { RawEntity, World } from './world.ts';
-import { radiusOf, TILE, tileAt, tileCenter, tileKey } from './tiles.ts';
+import { CONTINENT_MIN, LAND_MIN, radiusOf, TILE, tileAt, tileCenter, tileKey } from './tiles.ts';
 import type { Tile } from './tiles.ts';
 
 export const GRID_COLS = MAP_WIDTH / TILE;
@@ -158,10 +158,32 @@ export function buildWorldV2(entities: RawEntity[], fp: Footprint, drafts: Set<s
   return { world, errors };
 }
 
+// A place (장소, `place: true`, user decision 2026-10-03): a town, temple, ruin or landmark inside
+// a region, not a land, 1 to this many tiles. A region (지역) is a land of 10 tiles or more.
+export const PLACE_MAX = 4;
+
+// Lands of the wrong size for their kind (user decisions 2026-10-01, 2026-10-03): a continent 100
+// tiles with its areas, any other land 10, a place 1 to PLACE_MAX. A sea holds water and a
+// wandering place one tile of its own, whatever their size.
+export function sizeProblems(world: World, places: Set<string>): string[] {
+  const out: string[] = [];
+  for (const r of world.regions) {
+    if (r.wanders || (r.terrain === 'deepsea' && !r.parent)) continue;
+    const n = [r.id, ...subtree(world, r.id)].reduce((m, id) => m + (world.tiles?.[id]?.length ?? 0), 0);
+    if (places.has(r.id)) {
+      if (n < 1 || n > PLACE_MAX) out.push(`${r.id}: 장소인데 칸 ${n}개 (1~${PLACE_MAX})`);
+    } else {
+      const least = r.size === 'continent' ? CONTINENT_MIN : LAND_MIN;
+      if (n < least) out.push(`${r.id}: 칸 ${n}개 (최소 ${least})`);
+    }
+  }
+  return out;
+}
+
 // What the v2 page shows besides the world: each place's level design and lore notes, and the
 // fan map pieces laid over it for comparison (world-v2/map/reference.yaml).
 export type Design = { role?: string; danger?: number; note?: string };
-export type V2Note = { design?: Design; tags: string[]; body: string };
+export type V2Note = { design?: Design; tags: string[]; body: string; place?: boolean };
 // A piece of the reference image: the outline of it to show (image px) and where it lies on the
 // map (an SVG matrix from image px to map units).
 export type ReferencePiece = { clip: [number, number][]; matrix: [number, number, number, number, number, number] };
@@ -175,9 +197,11 @@ export function labelTile(world: World, id: string): Tile | undefined {
   return labelSpot(world, id)?.tile;
 }
 
-// The name's tile, and how many of the land's tiles run across its row through it (how wide a
-// name fits on the land's own ground there).
-export function labelSpot(world: World, id: string): { tile: Tile; run: number } | undefined {
+// Where a land's name goes: on the row where the land runs longest (weighted towards its inside,
+// so a thin ring or a river gorge writes its name where it runs longest), centred on that run.
+// `tile` is the chosen tile, `run` how many of the land's tiles run across that row through it,
+// `x` the middle of the run (in tiles, the name's centre).
+export function labelSpot(world: World, id: string): { tile: Tile; run: number; x: number } | undefined {
   const mine = new Set([id, ...subtree(world, id)]);
   const ts = [...mine].flatMap((x) => world.tiles?.[x] ?? []);
   if (!ts.length) return undefined;
@@ -200,12 +224,25 @@ export function labelSpot(world: World, id: string): { tile: Tile; run: number }
     edge = next;
   }
   const mid = middle(ts);
-  const deepest = Math.max(...depth.values());
-  const tile = ts
-    .filter((t) => depth.get(tileKey(t)) === deepest)
-    .sort((a, b) => Math.hypot(tileCenter(a).x - mid.x, tileCenter(a).y - mid.y) - Math.hypot(tileCenter(b).x - mid.x, tileCenter(b).y - mid.y) || a[1] - b[1] || a[0] - b[0])[0];
-  let run = 1;
-  for (let c = tile[0] - 1; own.has(tileKey([c, tile[1]])); c--) run++;
-  for (let c = tile[0] + 1; own.has(tileKey([c, tile[1]])); c++) run++;
-  return { tile, run };
+  const runOf = (t: Tile) => {
+    let n = 1;
+    for (let c = t[0] - 1; own.has(tileKey([c, t[1]])); c--) n++;
+    for (let c = t[0] + 1; own.has(tileKey([c, t[1]])); c++) n++;
+    return n;
+  };
+  // A run counts from its middle: a name sits centred on its tile.
+  const room = (t: Tile) => {
+    let l = 0, r = 0;
+    while (own.has(tileKey([t[0] - l - 1, t[1]]))) l++;
+    while (own.has(tileKey([t[0] + r + 1, t[1]]))) r++;
+    return 1 + 2 * Math.min(l, r);
+  };
+  const score = (t: Tile) => room(t) * (1 + 0.15 * (depth.get(tileKey(t)) ?? 1));
+  const away = (t: Tile) => Math.hypot(tileCenter(t).x - mid.x, tileCenter(t).y - mid.y);
+  const tile = [...ts].sort((a, b) => score(b) - score(a) || away(a) - away(b) || a[1] - b[1] || a[0] - b[0])[0];
+  let c0 = tile[0];
+  let c1 = tile[0];
+  while (own.has(tileKey([c0 - 1, tile[1]]))) c0--;
+  while (own.has(tileKey([c1 + 1, tile[1]]))) c1++;
+  return { tile, run: runOf(tile), x: (c0 + c1 + 1) / 2 };
 }

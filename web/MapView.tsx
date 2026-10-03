@@ -33,7 +33,8 @@ type Props = {
   shelves?: boolean;
   // Where and how large a land's name is written, when the page says (map v2: inside each land,
   // as large as the land); otherwise above it (web/view.ts).
-  labelFor?: (r: Region) => { x: number; y: number; size: number; sea?: boolean } | null;
+  // `dot`: a place, marked by a dot at its tile; `faint`: a land whose areas carry the names.
+  labelFor?: (r: Region) => { x: number; y: number; size: number; sea?: boolean; dot?: { x: number; y: number }; faint?: boolean } | null;
   // Room left around the lands when the map opens fitted to them (map v2: more on top for its bar).
   fitPad?: FitPad;
 };
@@ -240,8 +241,9 @@ export function MapView({ world, state, selected, selectedTile, onSelect, all, p
               onKeyDown={(e) => (e.key === 'Enter' || e.key === ' ') && onSelect(r.id)}>
               {destroyed && <text x={own.x} y={own.y + 1.4} className="map-destroyed">✕</text>}
               {conds.length > 0 && <text x={own.x + 5} y={own.y - 4} className="map-alert">⚠</text>}
+              {big?.dot && <circle cx={big.dot.x} cy={big.dot.y} r={3} className="map-place-dot" />}
               {big ? (
-                <text x={big.x} y={big.y} style={{ fontSize: big.size }} className={`map-label map-label-big${big.sea ? ' map-label-sea' : ''}`}>{r.name}</text>
+                <text x={big.x} y={big.y} style={{ fontSize: big.size }} className={`map-label map-label-big${big.sea ? ' map-label-sea' : ''}${big.faint ? ' map-label-faint' : ''}${big.dot ? ' map-label-place' : ''}`}>{r.name}</text>
               ) : (
                 <text x={label.x} y={label.y} style={{ textAnchor: label.anchor }} className={r.parent ? 'map-label map-area-label' : 'map-label'}>{r.name}</text>
               )}

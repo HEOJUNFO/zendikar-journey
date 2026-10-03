@@ -39,6 +39,8 @@ Node 24 가 `.ts` 를 바로 실행한다 (type stripping). 그래서 import 에
 - 땅은 격자에 칠한다 (`sim/footprint.ts`, `sim/load-v2.ts`).
   - `world-v2/map/layers.yaml` 은 겹과 범례(글자 → 지역 id)다. 첫 겹 `world.txt` 는 120×90 글자로 지도 전체이고, `.` 은 먼 바다다. 다음 겹은 대륙 안의 구역을 그 땅의 칸 위에 칠한다.
   - 구역 안의 구역은 그 구역의 칸 위에, 그 구역을 칠한 겹보다 뒤 겹에 칠한다.
+  - 대륙 → 지역 → 장소 (사용자 결정 2026-10-03). 지역은 땅(10칸 이상)으로 대륙을 모두 나눠 갖고 `map/<대륙>.txt` 에 칠한다. 장소는 땅이 아니고(`place: true`, `sim: { not_land: true }`) 1~4칸이며 `map/<대륙>-places.txt` 에 지역 위로 칠한다. 장소를 가리키는 대지 카드가 오면 그때 땅으로 바꾼다.
+  - 시기는 ZEN 블록(2009~10)만 담는다. BFZ·ZNR 이후에만 있는 곳은 넣지 않는다 (사용자 결정 2026-10-03).
   - 요소 파일은 v1 location 형식 그대로다. `map` 에 x·y·tiles·pos·order 는 적지 않는다 (칸들의 가운데가 자리). 걸어 다니는 곳(`sim.wanders`)만 칠하지 않고 x·y 를 적는다. canon 만 지도에 오른다.
   - 레벨 디자인은 `design: { role, danger: 1~5, note }` 로 적는다.
 - 서버의 `/api/v2/world` 는 게임과 따로 요청마다 새로 읽고, `/api/v2/ref/<파일>` 은 `map/` 의 참고 이미지를 내준다. 페이지의 "참고 지도"는 팬 지도 조각을 v2 자리에 겹친다 (`world-v2/map/reference.yaml`).

@@ -17,3 +17,26 @@ layers:
       h: loc-halimar   # 할리마르
       s: loc-silundi-sea   # 실룬디 바다
       n: loc-narrow-waters   # 좁은 바다
+  # 타짐 (2026-10-03): 지역 겹, 그다음 장소 겹. origin 은 [열, 행], world.txt 의 칸 자리.
+  - file: tazeem.txt
+    origin: [53, 60]
+    legend:
+      c: loc-calcite-flats   # 칼사이트 평원: 해안 고리
+      w: loc-bulwark   # 성벽: 그 안쪽 고원 고리, 북쪽이 가장 높다
+      o: loc-oran-rief   # 오란리프, 광대숲: 안쪽
+      u: loc-umara-gorge   # 우마라 강 협곡: 북쪽 성벽 아래에서 할리마르로
+      e: loc-emeria   # 에메리아, 하늘 폐허: 안쪽 가운데 하늘
+  - file: tazeem-places.txt
+    origin: [53, 60]
+    legend:
+      s: loc-sea-gate   # 바다 관문: 방파제 (칼사이트 평원)
+      m: loc-merfolk-enclave   # 인어 은신처: 강어귀 섬 (협곡)
+      t: loc-ula-temple   # 울라 신전: 강어귀 (협곡)
+      f: loc-magosi   # 마고시, 물의 장막: 폭포와 운반 야영지 (협곡)
+      y: loc-ruins-of-ysterid   # 이스테리드 폐허: 폭포 곁 구덩이 동굴 (오란리프)
+      r: loc-wren-grotto   # 렌 동굴: 위쪽 협곡의 벼랑 동굴 (협곡)
+      h: loc-north-hada   # 북하다: 강 발원지 고원 (성벽)
+      p: loc-sunspring   # 햇샘: 높은 성벽 아래 평원 (칼사이트 평원)
+      q: loc-halimar-sea-caves   # 할리마르 바다 동굴: 북쪽 기슭 (오란리프)
+      j: loc-jade-room   # 비취 방: 남쪽 기슭으로 나오는 굴 (오란리프)
+      v: loc-vastwood-village   # 광대숲 나무 위 마을 (오란리프)
