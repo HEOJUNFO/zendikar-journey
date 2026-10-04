@@ -16,6 +16,7 @@ links:
   - { to: loc-halimar-sea-caves, rel: 북쪽 기슭의 바다 동굴 }
   - { to: loc-jade-room, rel: 남쪽 기슭으로 나오는 지하 폐허 }
   - { to: loc-sea-gate, rel: 숲 끝 가까이의 방파제 도시 (경비대가 땔감을 하러 옴) }
+  - { to: loc-southern-hedron-fields, rel: 남쪽 숲 끝 성벽 위의 헤드론 풀밭 }
 map: { in: loc-tazeem, terrain: forest }
 design:
   role: 변경 (깊은 숲)
