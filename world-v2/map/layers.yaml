@@ -41,3 +41,26 @@ layers:
       j: loc-jade-room   # 비취 방: 남쪽 기슭으로 나오는 굴 (오란리프)
       v: loc-vastwood-village   # 광대숲 나무 위 마을 (오란리프)
       k: loc-southern-hedron-fields   # 남쪽 헤드론 들판: 남쪽 성벽 위 풀밭, 코르 장인의 야영지 (성벽)
+  # 굴 드라즈 (2026-10-04): 지역 겹, 그다음 장소 겹.
+  - file: guul-draz.txt
+    origin: [70, 38]
+    legend:
+      d: loc-bordermire   # 보더마이어: 발라 게드와 잇는 북쪽 늪 목
+      z: loc-zof-marsh   # 조프 늪: 북서쪽 맹그로브 해안
+      h: loc-hanging-swamp   # 매달린 늪: 저수조 북쪽, 북쪽 해안의 싱크홀 늪
+      k: loc-pelakka-karst   # 펠라카 카르스트: 저수조의 분지를 두른 석회암 말굽, 동쪽이 열림
+      p: loc-piranha-marsh   # 피라냐 습지: 카르스트 안의 분지
+      s: loc-hagra-swamp   # 하그라 늪: 가운데와 동쪽의 큰 늪
+      j: loc-lake-jeft   # 제프트 호수: 남서쪽 호수와 물길, 좁은 바다를 보는 서해안
+  - file: guul-draz-places.txt
+    origin: [70, 38]
+    legend:
+      m: loc-malakir   # 말라키르: 분지 어귀의 둔덕 (하그라 늪)
+      g: loc-ghet-estate   # 게트 구역: 말라키르 남쪽의 잠긴 구역 (하그라 늪)
+      c: loc-hagra   # 하그라 저수조: 분지 한가운데의 폐허 (피라냐 습지)
+      t: loc-thelzaia-sinkhole   # 텔자이아의 싱크홀: 서쪽 카르스트 깊은 곳 (카르스트)
+      x: loc-helix-of-zof   # 조프의 나선: 맹그로브 한가운데 (조프 늪)
+      f: loc-nimana   # 니마나 자유 도시: 남서쪽 해안의 만 머리 (제프트 호수)
+      l: loc-lulea   # 룰레아: 호수 동쪽 기슭 (제프트 호수)
+      o: loc-nirkana-outpost   # 니르카나 전초기지: 늪 목의 남쪽 어귀 (보더마이어)
+      q: loc-marsh-grotto   # 늪 동굴: 북쪽 해안의 작은 물굽이 곁 (하그라 늪)

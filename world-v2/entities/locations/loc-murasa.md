@@ -12,6 +12,7 @@ links:
   - { to: loc-ondu, rel: 남서쪽 바다 건너 }
   - { to: loc-akoum, rel: 북쪽 바다 건너 }
   - { to: loc-bala-ged, rel: 북동쪽 바다 건너 }
+  - { to: loc-guul-draz, rel: 동쪽 바다 건너 }
 map: { terrain: forest, size: continent }
 design:
   role: 위험지 (닫힌 대륙)

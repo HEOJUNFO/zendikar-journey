@@ -13,6 +13,7 @@ links:
   - { to: loc-sunspring, rel: 높은 성벽 아래의 샘 }
   - { to: loc-sea-gate, rel: 방파제 위의 도시 }
   - { to: loc-southern-hedron-fields, rel: 남쪽 해안 바로 위 성벽의 헤드론 풀밭 }
+  - { to: loc-narrow-waters, rel: 북동쪽 끝 앞의 해협 }
 map: { in: loc-tazeem, terrain: beach }
 design:
   role: 변경 (유목민의 해안)
